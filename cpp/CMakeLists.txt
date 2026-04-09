@@ -289,6 +289,8 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/pcsx2_logo.png
         qml/AppUI/images/duckstation_logo.png
         qml/AppUI/images/ppsspp_logo.png
+        qml/AppUI/images/retroachievements_logo.png
+        qml/AppUI/images/screenscraper_logo.png
         qml/AppUI/images/empty-state-bg.webp
         qml/AppUI/images/ar/pcsx2-4x3.webp
         qml/AppUI/images/ar/pcsx2-16x9.webp
