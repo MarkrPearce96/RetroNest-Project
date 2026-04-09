@@ -225,4 +225,12 @@ private:
     QString m_currentSystem;
     int m_currentTab = 0;
     int m_settingsCategory = 0;
+
+    // setCursorVisible() state. false at startup to match the initial
+    // BlankCursor push in main.cpp, so the first setCursorVisible(true)
+    // actually pops. Tracked explicitly to keep the function idempotent
+    // against repeated calls — QGuiApplication's override cursor is a
+    // stack, and naive paired push/pop is imbalanced by rapid
+    // open/close cycles during the settings overlay slide-out animation.
+    bool m_cursorVisible = false;
 };

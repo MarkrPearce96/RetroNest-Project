@@ -901,6 +901,15 @@ void AppController::showHotkeySettings(const QString& emuId) {
 }
 
 void AppController::setCursorVisible(bool visible) {
+    // QGuiApplication's override cursor is a STACK, not a state. If we
+    // paired push/pop naively, rapid double-close during the settings
+    // slide-out animation would push an extra BlankCursor that no
+    // subsequent open() can pop, leaving the cursor stuck hidden. Track
+    // the intended state explicitly and no-op when the caller asks for
+    // what we already have. m_cursorVisible defaults to false to match
+    // the startup BlankCursor push in main.cpp.
+    if (visible == m_cursorVisible) return;
+    m_cursorVisible = visible;
     if (visible) {
         QGuiApplication::restoreOverrideCursor();
     } else {
