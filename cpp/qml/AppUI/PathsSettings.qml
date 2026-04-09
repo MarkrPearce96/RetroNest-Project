@@ -5,7 +5,13 @@ import QtQuick.Layouts
 Item {
     id: root
 
-    property var emuList: app.allEmulatorStatus()
+    // Only show emulators whose adapter actually exposes configurable paths.
+    // Emulators like PPSSPP that hardcode their directory layout (no INI
+    // overrides) return an empty pathDefs() and are filtered out here so we
+    // don't offer UI that can't take effect.
+    property var emuList: app.allEmulatorStatus().filter(function(emu) {
+        return app.pathDefs(emu.id).length > 0
+    })
     property int currentEmu: 0
     property string currentEmuId: emuList.length > 0 ? emuList[currentEmu].id : ""
 

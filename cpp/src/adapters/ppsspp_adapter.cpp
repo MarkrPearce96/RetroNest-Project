@@ -405,23 +405,18 @@ QString PPSSPPAdapter::resolveExecutable(const EmulatorManifest& manifest,
 // ============================================================================
 
 bool PPSSPPAdapter::createDefaultConfig(const QString& path,
-                                        const QString& biosPath,
-                                        const QString& savesPath) {
-    const QString emuDir = QFileInfo(Paths::dataDir("ppsspp")).absoluteFilePath();
-    const QString savestatesPath = savesPath + "/savestates";
-    const QString memcardsPath = savesPath + "/memcards";
-
+                                        const QString& /*biosPath*/,
+                                        const QString& /*savesPath*/) {
+    // PPSSPP hardcodes every PSP subdirectory (SAVEDATA, PPSSPP_STATE,
+    // SCREENSHOT, TEXTURES, Cheats, GAME, PLUGINS, SYSTEM) as literal
+    // children of {memstick}/PSP/ — see Core/Util/PathUtil.cpp upstream.
+    // There is no INI key to relocate any of them individually, so we only
+    // write wizard suppression, fullscreen, and controller type here.
     QStringList lines = {
         "[General]",
         "FirstRun = False",
         "AutoLoadSaveState = 0",
         "EnableStateUndo = True",
-        "FlashFirmwarePath = " + biosPath + "/",
-        "SaveStatePath = " + savestatesPath + "/",
-        "MemStickSavePath = " + memcardsPath + "/",
-        "ScreenshotPath = " + emuDir + "/screenshots/",
-        "CheatsPath = " + emuDir + "/cheats/",
-        "TextureReplacementPath = " + emuDir + "/textures/",
         "",
         "[Graphics]",
         "FullScreen = True",
@@ -468,28 +463,21 @@ bool PPSSPPAdapter::createDefaultConfig(const QString& path,
 // ============================================================================
 
 bool PPSSPPAdapter::patchExistingConfig(const QString& path,
-                                        const QString& biosPath,
-                                        const QString& savesPath) {
+                                        const QString& /*biosPath*/,
+                                        const QString& /*savesPath*/) {
     QString content;
     if (!readConfigFile(path, content, "PPSSPP"))
         return false;
 
-    const QString emuDir = QFileInfo(Paths::dataDir("ppsspp")).absoluteFilePath();
-
-    // patchIniKeys creates missing sections and keys, so a single call covers
-    // first-run suppression, fullscreen, folder paths, and Pad1 controller type.
+    // See createDefaultConfig() — PPSSPP hardcodes all PSP subdirs under
+    // {memstick}/PSP/, so we only patch wizard suppression, fullscreen,
+    // and controller type.
     QVector<IniKeyPatch> patches = {
-        {"General",  "FirstRun",               "False"},
-        {"General",  "AutoLoadSaveState",      "0"},
-        {"General",  "EnableStateUndo",        "True"},
-        {"Graphics", "FullScreen",             "True"},
-        {"General",  "FlashFirmwarePath",      biosPath + "/"},
-        {"General",  "SaveStatePath",          savesPath + "/savestates/"},
-        {"General",  "MemStickSavePath",       savesPath + "/memcards/"},
-        {"General",  "ScreenshotPath",         emuDir + "/screenshots/"},
-        {"General",  "CheatsPath",             emuDir + "/cheats/"},
-        {"General",  "TextureReplacementPath", emuDir + "/textures/"},
-        {"Pad1",     "Type",                   "Standard"},
+        {"General",  "FirstRun",          "False"},
+        {"General",  "AutoLoadSaveState", "0"},
+        {"General",  "EnableStateUndo",   "True"},
+        {"Graphics", "FullScreen",        "True"},
+        {"Pad1",     "Type",              "Standard"},
     };
 
     if (patchIniKeys(content, patches) && !writeConfigFile(path, content, "PPSSPP"))
@@ -572,14 +560,10 @@ void PPSSPPAdapter::scrubControlsIniHotkeys() {
 // ============================================================================
 
 QVector<PathDef> PPSSPPAdapter::pathsDefs() const {
-    return {
-        {"BIOS",                "General", "FlashFirmwarePath",       "",            PathBase::Bios},
-        {"Save States",         "General", "SaveStatePath",           "savestates",  PathBase::Saves},
-        {"Memory Stick Saves",  "General", "MemStickSavePath",        "memcards",    PathBase::Saves},
-        {"Screenshots",         "General", "ScreenshotPath",          "screenshots", PathBase::Data},
-        {"Cheats",              "General", "CheatsPath",              "cheats",      PathBase::Data},
-        {"Textures",            "General", "TextureReplacementPath",  "textures",    PathBase::Data},
-    };
+    // PPSSPP enforces a fixed directory layout under {memstick}/PSP/ and has
+    // no INI keys to relocate individual subdirs. Returning an empty list
+    // hides PPSSPP from the Paths Settings screen.
+    return {};
 }
 
 QVector<BiosDef> PPSSPPAdapter::biosFiles() const {
