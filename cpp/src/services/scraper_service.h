@@ -18,8 +18,12 @@ public:
     /** Load credentials from disk and configure the scraper. */
     void loadCredentials();
 
-    /** Validate user credentials against ScreenScraper API, save if valid. */
-    bool validateAndSaveCredentials(const QString& ssId, const QString& ssPassword);
+    /**
+     * Validate user credentials against the ScreenScraper API and save on
+     * success. Runs on a worker thread; the result is delivered via the
+     * credentialsValidated() signal on the main thread.
+     */
+    void validateAndSaveCredentials(const QString& ssId, const QString& ssPassword);
 
     /** Clear stored user credentials. */
     void signOut();
@@ -29,14 +33,6 @@ public:
 
     /** Access current credentials (read-only). */
     const ScraperCredentials& credentials() const { return m_creds; }
-
-    /** Scrape a single game by ID (all media types). */
-    struct ScrapeResult {
-        bool success = false;
-        QString message;
-        int mediaDownloaded = 0;
-    };
-    ScrapeResult scrapeGame(int gameId);
 
     /** Batch scrape options. */
     struct ScrapeOptions {

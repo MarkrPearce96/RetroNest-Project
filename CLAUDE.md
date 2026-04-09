@@ -21,12 +21,25 @@ to preserve the illusion. Do not weaken this rule.
 cd cpp
 cmake -B build -DCMAKE_PREFIX_PATH="$(brew --prefix qt@6);$(brew --prefix sdl2)"
 cmake --build build
-# Fast dev loop — direct exec, bypasses Launch Services (no translocation):
+# Default: launch via Launch Services (real activation policy, dock, hotkeys):
+open ./build/RetroNest.app
+# When you want Qt log output in the terminal, use direct exec instead:
 ./build/RetroNest.app/Contents/MacOS/RetroNest            # GUI mode
 ./build/RetroNest.app/Contents/MacOS/RetroNest --cli      # CLI mode
-# To exercise Launch Services / activation policy / dock behavior:
-open ./build/RetroNest.app
 ```
+
+The CMake build has a POST_BUILD step that runs `lsregister -f` against the
+freshly-linked bundle, so `open ./build/RetroNest.app` always launches the
+current build — Launch Services can't cache a stale path for
+`com.markpearce.retronest` across rebuilds, moves, or renames.
+
+**Note on the "never use Launch Services" rule:** that rule applies to how
+**RetroNest launches emulator binaries** (`GameSession`,
+`openNativeEmulatorSettings` — always direct `QProcess::start(execPath, args)`).
+It does **not** apply to how you launch RetroNest itself. Emulator portable
+mode is enforced by RetroNest at runtime (writing `portable.txt` / setting
+the PPSSPP `NSUserDefaults` key) before spawning each emulator, regardless
+of how RetroNest itself was started.
 
 ## Architecture
 - **Manifests** (`manifests/*.json`) = metadata (id, name, systems, github_repo, executable, launch_args)

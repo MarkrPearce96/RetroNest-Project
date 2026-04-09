@@ -46,8 +46,13 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     });
     connect(&m_scraperService, &ScraperService::statusMessage, this, &AppController::setStatus);
     connect(&m_emuService, &EmulatorService::statusMessage, this, &AppController::setStatus);
+    // validateAndSaveCredentials is async (worker thread) — translate the
+    // service signal into a status update and the QML-facing signal here.
     connect(&m_scraperService, &ScraperService::credentialsValidated,
-            this, &AppController::scraperCredentialsValidated);
+            this, [this](bool valid, const QString& message) {
+                setStatus(valid ? "Connected to ScreenScraper." : "Invalid credentials.");
+                emit scraperCredentialsValidated(valid, message);
+            });
     connect(&m_scraperService, &ScraperService::scrapeProgress,
             this, &AppController::scrapeProgress);
     connect(&m_scraperService, &ScraperService::scrapeFinished,
@@ -221,9 +226,10 @@ void AppController::removeGame(int gameId) {
 }
 
 void AppController::scrapeGame(int gameId) {
-    auto result = m_scraperService.scrapeGame(gameId);
-    setStatus(result.message);
-    if (result.success) emit gamesChanged();
+    // Delegates to the async single-game path. The scrapeFinished handler
+    // in our constructor emits gamesChanged() when the worker completes.
+    setStatus("Scraping game...");
+    m_scraperService.startSingleGameScrape(gameId);
 }
 
 void AppController::scrapeGameWithProgress(int gameId) {
@@ -1336,10 +1342,10 @@ void AppController::deleteControllerProfile(const QString& emuId, const QString&
 
 void AppController::validateScraperCredentials(const QString& user, const QString& pass) {
     setStatus("Validating credentials...");
-    bool valid = m_scraperService.validateAndSaveCredentials(user, pass);
-    emit scraperCredentialsValidated(valid,
-        valid ? "Connected to ScreenScraper." : "Invalid credentials.");
-    setStatus(valid ? "Connected to ScreenScraper." : "Invalid credentials.");
+    // validateAndSaveCredentials runs on a worker thread; the result is
+    // delivered via ScraperService::credentialsValidated, which the ctor
+    // connects to status + scraperCredentialsValidated emission.
+    m_scraperService.validateAndSaveCredentials(user, pass);
 }
 
 void AppController::scraperSignOut() {

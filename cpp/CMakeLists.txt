@@ -202,6 +202,19 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     "-framework Carbon"
 )
 
+# Re-register the bundle with Launch Services after every rebuild so
+# `open build/RetroNest.app` always launches the freshly-built binary.
+# Without this, LS can cache a stale path for com.markpearce.retronest and
+# launch an older copy (or fail silently) after moves/renames.
+if(APPLE)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+                -f "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>"
+        COMMENT "Refreshing Launch Services registration for RetroNest.app"
+        VERBATIM
+    )
+endif()
+
 # ── SetupWizard QML module (separate library so types aren't evaluated by app engine) ──
 qt_add_library(setupwizard_backing STATIC)
 target_link_libraries(setupwizard_backing PRIVATE Qt6::Qml Qt6::Quick)

@@ -37,21 +37,33 @@ void ScraperService::loadCredentials() {
         m_scraper->setUserCredentials(m_creds.ssId, m_creds.ssPassword);
 }
 
-bool ScraperService::validateAndSaveCredentials(const QString& ssId, const QString& ssPassword) {
-    // Ensure dev credentials are loaded
+void ScraperService::validateAndSaveCredentials(const QString& ssId, const QString& ssPassword) {
+    // Ensure dev credentials are set on the scraper before the worker starts
+    // reading them.
     m_scraper->setCredentials(m_creds.devId, m_creds.devPassword, m_creds.softname);
 
-    bool valid = m_scraper->validateCredentials(ssId, ssPassword);
-    if (valid) {
-        m_creds.ssId = ssId;
-        m_creds.ssPassword = ssPassword;
-        m_creds.save();
-        m_scraper->setUserCredentials(ssId, ssPassword);
-        emit credentialsValidated(true, "Credentials validated successfully.");
-    } else {
-        emit credentialsValidated(false, "Invalid credentials. Please check your username and password.");
-    }
-    return valid;
+    // Run the HTTP validation on a worker thread. Scraper::httpGet spins a
+    // nested QEventLoop, which must never happen on the GUI thread while a
+    // QML signal handler is on the stack — DeferredDelete processing there
+    // can destroy the in-progress handler's QObject and trip QQmlData's
+    // fatal guard.
+    (void)QtConcurrent::run([this, ssId, ssPassword]() {
+        bool valid = m_scraper->validateCredentials(ssId, ssPassword);
+
+        // Mutate credentials state and emit the result on the main thread.
+        QMetaObject::invokeMethod(this, [this, valid, ssId, ssPassword]() {
+            if (valid) {
+                m_creds.ssId = ssId;
+                m_creds.ssPassword = ssPassword;
+                m_creds.save();
+                m_scraper->setUserCredentials(ssId, ssPassword);
+                emit credentialsValidated(true, "Credentials validated successfully.");
+            } else {
+                emit credentialsValidated(false,
+                    "Invalid credentials. Please check your username and password.");
+            }
+        }, Qt::QueuedConnection);
+    });
 }
 
 void ScraperService::signOut() {
@@ -86,23 +98,6 @@ void ScraperService::applyResultToDb(int gameId, const Scraper::ScrapeResult& re
 
     if (!m_db->updateGameMetadata(gameId, metadata))
         qWarning() << "ScraperService: failed to write metadata for game ID" << gameId;
-}
-
-ScraperService::ScrapeResult ScraperService::scrapeGame(int gameId) {
-    GameRecord target = m_db->gameById(gameId);
-    if (target.id == 0)
-        return {false, "Game not found", 0};
-
-    emit statusMessage("Scraping: " + target.title + "...");
-
-    auto result = m_scraper->scrapeGame(target, Paths::mediaDir(), Scraper::allMediaTypes(), &m_cancelFlag);
-
-    if (result.success) {
-        applyResultToDb(gameId, result);
-        int count = result.mediaPaths.size();
-        return {true, QString("Scraped: %1 (%2 media)").arg(target.title).arg(count), count};
-    }
-    return {false, "Scrape failed: " + result.error, 0};
 }
 
 void ScraperService::startBatchScrape(const ScrapeOptions& options) {

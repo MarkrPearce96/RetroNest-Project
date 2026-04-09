@@ -1,5 +1,6 @@
 #include "scraper.h"
 
+#include <QCoreApplication>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -12,6 +13,7 @@
 #include <QDebug>
 #include <QUrlQuery>
 #include <QFile>
+#include <QThread>
 #include <QTimer>
 
 static const QString API_BASE = QStringLiteral("https://www.screenscraper.fr/api2/");
@@ -377,6 +379,18 @@ bool Scraper::validateCredentials(const QString& userId, const QString& userPass
 }
 
 QByteArray Scraper::httpGet(const QString& url, QAtomicInt* cancelFlag) {
+    // This function spins a nested QEventLoop to wait for the reply. If that
+    // happens on the GUI thread while a QML signal handler is on the stack,
+    // the event loop can process DeferredDelete events that tear down the
+    // handler's QObject, causing QQmlData::destroyed to qFatal. Every caller
+    // must therefore reach here from a worker thread (QtConcurrent::run or
+    // equivalent). Enforce it explicitly to catch future regressions.
+    if (QThread::currentThread() == QCoreApplication::instance()->thread()) {
+        qCritical() << "[Scraper] httpGet called on the GUI thread — this is unsafe "
+                       "from QML signal handlers. Move the call to a worker thread.";
+        return {};
+    }
+
     QNetworkAccessManager mgr;
     QNetworkRequest req{QUrl(url)};
     req.setHeader(QNetworkRequest::UserAgentHeader, m_softname);
