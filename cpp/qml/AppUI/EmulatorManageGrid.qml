@@ -51,26 +51,26 @@ Item {
                     Layout.fillWidth: true
                     Layout.leftMargin: 20
                     Layout.rightMargin: 20
-                    Layout.preferredHeight: 72
+                    Layout.preferredHeight: 108
                     isFocused: index === root.focusIndex
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 14
-                        anchors.rightMargin: 14
-                        spacing: 14
+                        anchors.leftMargin: 18
+                        anchors.rightMargin: 18
+                        spacing: 18
 
                         // Logo area
                         Rectangle {
-                            width: 48
-                            height: 48
-                            radius: 8
+                            width: 72
+                            height: 72
+                            radius: 10
                             color: SettingsTheme.border
 
                             Image {
                                 anchors.centerIn: parent
-                                width: parent.width - 10
-                                height: parent.height - 10
+                                width: parent.width - 12
+                                height: parent.height - 12
                                 source: EmulatorLogos.logoForEmu(modelData.id)
                                 fillMode: Image.PreserveAspectFit
                                 smooth: true
@@ -82,7 +82,7 @@ Item {
                             Text {
                                 anchors.centerIn: parent
                                 text: "\uD83C\uDFAE"
-                                font.pixelSize: 22
+                                font.pixelSize: 32
                                 visible: EmulatorLogos.logoForEmu(modelData.id) === ""
                             }
                         }
@@ -95,7 +95,7 @@ Item {
                             Text {
                                 text: modelData.name || modelData.id
                                 color: SettingsTheme.text
-                                font.pixelSize: 15
+                                font.pixelSize: 22
                                 font.weight: Font.Medium
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
@@ -103,7 +103,7 @@ Item {
                             Text {
                                 text: modelData.system || ""
                                 color: SettingsTheme.textDim
-                                font.pixelSize: 12
+                                font.pixelSize: 16
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
                                 visible: text !== ""
@@ -111,7 +111,7 @@ Item {
                             Text {
                                 text: modelData.description || ""
                                 color: SettingsTheme.textFaint
-                                font.pixelSize: 11
+                                font.pixelSize: 15
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
                                 visible: text !== ""
@@ -120,8 +120,8 @@ Item {
 
                         // Install status badge
                         Rectangle {
-                            width: badgeLabel.width + 20
-                            height: 26
+                            width: badgeLabel.width + 28
+                            height: 36
                             radius: SettingsTheme.pillRadius
                             color: modelData.installed ? SettingsTheme.successDim : SettingsTheme.accentDim
 
@@ -130,7 +130,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: modelData.installed ? "Installed" : "Not Installed"
                                 color: modelData.installed ? SettingsTheme.success : SettingsTheme.accent
-                                font.pixelSize: 11
+                                font.pixelSize: 15
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -139,7 +139,7 @@ Item {
                         Text {
                             text: "\u203A"
                             color: SettingsTheme.textGhost
-                            font.pixelSize: 20
+                            font.pixelSize: 26
                         }
                     }
 
@@ -161,26 +161,26 @@ Item {
                 Layout.fillWidth: true
                 Layout.leftMargin: 20
                 Layout.rightMargin: 20
-                Layout.preferredHeight: 72
+                Layout.preferredHeight: 108
                 isFocused: false
                 opacity: 0.35
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 14
-                    spacing: 14
+                    anchors.leftMargin: 18
+                    anchors.rightMargin: 18
+                    spacing: 18
 
                     Rectangle {
-                        width: 48
-                        height: 48
-                        radius: 8
+                        width: 72
+                        height: 72
+                        radius: 10
                         color: SettingsTheme.border
 
                         Text {
                             anchors.centerIn: parent
                             text: "\u2795"
-                            font.pixelSize: 20
+                            font.pixelSize: 32
                             color: SettingsTheme.textGhost
                         }
                     }
@@ -192,13 +192,13 @@ Item {
                         Text {
                             text: "More Emulators"
                             color: SettingsTheme.text
-                            font.pixelSize: 15
+                            font.pixelSize: 22
                             font.weight: Font.Medium
                         }
                         Text {
                             text: "Coming Soon"
                             color: SettingsTheme.textDim
-                            font.pixelSize: 12
+                            font.pixelSize: 16
                         }
                     }
 
@@ -207,7 +207,7 @@ Item {
                     Text {
                         text: "\u203A"
                         color: SettingsTheme.textGhost
-                        font.pixelSize: 20
+                        font.pixelSize: 26
                     }
                 }
             }
