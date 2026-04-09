@@ -93,8 +93,11 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
                {"Vulkan", "3 (VULKAN)"}}, 0, 0, 0});
     s.append({"Graphics", "Rendering", "", "Graphics", "InternalResolution", "Rendering Resolution",
               "Rendering resolution multiplier.",
-              SettingDef::Combo, "3",
-              {{"720P", "3"}, {"1080P", "4"}, {"1440P", "6"}, {"4K", "8"}}, 0, 0, 0});
+              SettingDef::Combo, "1",
+              {{"Auto (1:1)", "0"}, {"1x PSP (480x272)", "1"}, {"2x (960x544)", "2"},
+               {"3x (1440x816)", "3"}, {"4x (1920x1088)", "4"}, {"5x (2400x1360)", "5"},
+               {"6x (2880x1632)", "6"}, {"7x (3360x1904)", "7"}, {"8x (3840x2176)", "8"},
+               {"9x (4320x2448)", "9"}, {"10x (4800x2720)", "10"}}, 0, 0, 0});
     s.append({"Graphics", "Rendering", "", "Graphics", "SoftwareRenderer", "Software Rendering (slow, accurate)",
               "Uses CPU rendering for maximum accuracy. Very slow.",
               SettingDef::Bool, "false", {}, 0, 0, 0});
