@@ -1,0 +1,21 @@
+# Build output
+cpp/build/
+
+# ScreenScraper developer credentials (build-time secret)
+cpp/dev_credentials.cmake
+
+# Test data
+test-root/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Superpowers brainstorm artifacts
+.superpowers/
+
+# Git worktrees
+.worktrees/

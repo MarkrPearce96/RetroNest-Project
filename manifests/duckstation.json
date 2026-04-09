@@ -1,0 +1,11 @@
+{
+  "id": "duckstation",
+  "name": "DuckStation",
+  "description": "DuckStation is a PlayStation 1 emulator. Fast, accurate PS1 emulation with upscaling, save states, and gamepad support.",
+  "systems": ["psx"],
+  "github_repo": "stenzek/duckstation",
+  "executable": "duckstation-qt",
+  "install_folder": "duckstation",
+  "rom_extensions": ["bin", "cue", "iso", "img", "pbp", "chd", "m3u"],
+  "launch_args": ["-fullscreen", "-nogui", "--", "{rom_path}"]
+}

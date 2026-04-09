@@ -1,0 +1,11 @@
+{
+  "name": "Modern",
+  "version": "1.0",
+  "author": "Built-in",
+  "description": "Clean carousel and grid layout with detail panel",
+  "minAppVersion": "1.0",
+  "pages": {
+    "systemBrowser": "SystemPage.qml",
+    "gameList": "GameListPage.qml"
+  }
+}

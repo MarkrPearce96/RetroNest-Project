@@ -1,0 +1,11 @@
+{
+  "id": "pcsx2",
+  "name": "PCSX2",
+  "description": "PCSX2 is a PlayStation 2 emulator. Play PS2 games in HD with save states, controller support, and custom configurations.",
+  "systems": ["ps2"],
+  "github_repo": "PCSX2/pcsx2",
+  "executable": "pcsx2-qt",
+  "install_folder": "pcsx2",
+  "rom_extensions": ["iso", "bin", "chd", "gz", "cso", "m3u"],
+  "launch_args": ["-batch", "-fullscreen", "{rom_path}"]
+}

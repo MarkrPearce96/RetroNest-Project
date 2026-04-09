@@ -1,0 +1,11 @@
+{
+  "id": "ppsspp",
+  "name": "PPSSPP",
+  "description": "PPSSPP is a PSP emulator. Play PSP games in HD with save states, controller support, and custom configurations.",
+  "systems": ["psp"],
+  "github_repo": "hrydgard/ppsspp",
+  "executable": "PPSSPPSDL",
+  "install_folder": "ppsspp",
+  "rom_extensions": ["iso", "cso", "chd", "pbp", "elf", "prx"],
+  "launch_args": ["--fullscreen", "--escape-exit", "{rom_path}"]
+}
