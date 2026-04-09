@@ -527,216 +527,190 @@ Item {
         // ====================================================================
         // State 0: LOGIN
         // ====================================================================
-        Flickable {
-            contentHeight: loginCol.height
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
+        Item {
+            id: scraperLoginPage
 
-            ColumnLayout {
-                id: loginCol
-                width: parent.width
-                spacing: 16
+            Rectangle {
+                anchors.centerIn: parent
+                width: 360
+                height: loginCardCol.height + 48
+                radius: 12
+                color: SettingsTheme.card
+                border.width: 1
+                border.color: SettingsTheme.border
 
-                Item { height: 8 }
+                Column {
+                    id: loginCardCol
+                    anchors.centerIn: parent
+                    width: parent.width - 48
+                    spacing: 16
 
-                Text {
-                    text: "Scraper"
-                    color: SettingsTheme.text
-                    font.pixelSize: 18
-                    font.weight: Font.Bold
-                    Layout.leftMargin: 24
-                    Layout.rightMargin: 24
-                }
-
-                Text {
-                    text: "Enter your ScreenScraper.fr credentials to download media and metadata for your games."
-                    color: SettingsTheme.textMuted
-                    font.pixelSize: 13
-                    wrapMode: Text.WordWrap
-                    Layout.leftMargin: 24
-                    Layout.rightMargin: 24
-                    Layout.fillWidth: true
-                }
-
-                // Username
-                ColumnLayout {
-                    Layout.leftMargin: 24
-                    Layout.rightMargin: 24
-                    spacing: 6
+                    // ScreenScraper Logo
+                    Image {
+                        width: 64
+                        height: 64
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        source: "images/screenscraper_logo.png"
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                    }
 
                     Text {
-                        text: "Username"
-                        color: SettingsTheme.textMuted
-                        font.pixelSize: 13
+                        text: "ScreenScraper"
+                        color: SettingsTheme.text
+                        font.pixelSize: 20
+                        font.weight: Font.Bold
+                        anchors.horizontalCenter: parent.horizontalCenter
                     }
-                    Rectangle {
-                        Layout.preferredWidth: 300
-                        height: 36
-                        radius: 6
-                        color: SettingsTheme.card
-                        border.width: (root.screenState === "login" && root.loginFocusIndex === 0) ? 2 : 1
-                        border.color: (root.screenState === "login" && root.loginFocusIndex === 0) || loginUserField.activeFocus
-                            ? SettingsTheme.focusBorder : SettingsTheme.border
-
-                        // Focus glow
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: -4
-                            radius: parent.radius + 4
-                            color: "transparent"
-                            border.width: 2
-                            border.color: SettingsTheme.focusBorder
-                            opacity: (root.screenState === "login" && root.loginFocusIndex === 0) ? 0.3 : 0
-                            z: -1
-                            visible: opacity > 0
-                            Behavior on opacity { NumberAnimation { duration: SettingsTheme.animFast } }
-                        }
-
-                        TextField {
-                            id: loginUserField
-                            anchors.fill: parent
-                            placeholderText: "screenscraper.fr username"
-                            placeholderTextColor: SettingsTheme.textDim
-                            color: SettingsTheme.text
-                            font.pixelSize: 13
-                            background: Item {}
-                            leftPadding: 10
-
-                            function _moveToPassword() {
-                                loginFocusIndex = 1
-                                loginPassField.forceActiveFocus()
-                            }
-
-                            Keys.onTabPressed: loginUserField._moveToPassword()
-                            Keys.onReturnPressed: loginUserField._moveToPassword()
-                            Keys.onEnterPressed: loginUserField._moveToPassword()
-                        }
-                    }
-                }
-
-                // Password
-                ColumnLayout {
-                    Layout.leftMargin: 24
-                    Layout.rightMargin: 24
-                    spacing: 6
 
                     Text {
-                        text: "Password"
+                        text: "Enter your ScreenScraper.fr credentials to download media and metadata for your games."
                         color: SettingsTheme.textMuted
                         font.pixelSize: 13
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        horizontalAlignment: Text.AlignHCenter
                     }
-                    Rectangle {
-                        Layout.preferredWidth: 300
-                        height: 36
-                        radius: 6
-                        color: SettingsTheme.card
-                        border.width: (root.screenState === "login" && root.loginFocusIndex === 1) ? 2 : 1
-                        border.color: (root.screenState === "login" && root.loginFocusIndex === 1) || loginPassField.activeFocus
-                            ? SettingsTheme.focusBorder : SettingsTheme.border
 
-                        // Focus glow
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: -4
-                            radius: parent.radius + 4
-                            color: "transparent"
-                            border.width: 2
-                            border.color: SettingsTheme.focusBorder
-                            opacity: (root.screenState === "login" && root.loginFocusIndex === 1) ? 0.3 : 0
-                            z: -1
-                            visible: opacity > 0
-                            Behavior on opacity { NumberAnimation { duration: SettingsTheme.animFast } }
+                    Item { width: 1; height: 4 }
+
+                    // Username field
+                    Column {
+                        width: parent.width
+                        spacing: 4
+
+                        Text {
+                            text: "Username"
+                            color: SettingsTheme.textMuted
+                            font.pixelSize: 12
                         }
 
-                        TextField {
-                            id: loginPassField
-                            anchors.fill: parent
-                            placeholderText: "screenscraper.fr password"
-                            placeholderTextColor: SettingsTheme.textDim
-                            color: SettingsTheme.text
-                            font.pixelSize: 13
-                            echoMode: TextInput.Password
-                            background: Item {}
-                            leftPadding: 10
+                        Rectangle {
+                            width: parent.width
+                            height: 40
+                            radius: 8
+                            color: SettingsTheme.base
+                            border.width: 1
+                            border.color: (root.screenState === "login" && root.loginFocusIndex === 0) || loginUserField.activeFocus
+                                ? SettingsTheme.accent : SettingsTheme.border
 
-                            function _submitLogin() {
-                                if (signInBtn.enabled) {
-                                    signInBtn.enabled = false
-                                    loginError.visible = false
-                                    app.validateScraperCredentials(loginUserField.text, loginPassField.text)
+                            TextField {
+                                id: loginUserField
+                                anchors.fill: parent
+                                placeholderText: "screenscraper.fr username"
+                                placeholderTextColor: SettingsTheme.textDim
+                                color: SettingsTheme.text
+                                font.pixelSize: 14
+                                background: Item {}
+                                leftPadding: 10
+                                rightPadding: 10
+
+                                function _moveToPassword() {
+                                    loginFocusIndex = 1
+                                    loginPassField.forceActiveFocus()
                                 }
-                            }
 
-                            Keys.onTabPressed: {
-                                loginFocusIndex = 2
-                                root.forceActiveFocus()
+                                Keys.onTabPressed: loginUserField._moveToPassword()
+                                Keys.onReturnPressed: loginUserField._moveToPassword()
+                                Keys.onEnterPressed: loginUserField._moveToPassword()
                             }
-                            Keys.onReturnPressed: loginPassField._submitLogin()
-                            Keys.onEnterPressed: loginPassField._submitLogin()
                         }
                     }
-                }
 
-                // Sign In button
-                Rectangle {
-                    id: signInBtn
-                    property bool enabled: true
-                    property bool isFocused: root.screenState === "login" && root.loginFocusIndex === 2
-                    Layout.leftMargin: 24
-                    width: 120
-                    height: 36
-                    radius: 6
-                    color: enabled ? SettingsTheme.accent : SettingsTheme.card
-                    opacity: enabled ? 1.0 : 0.5
-                    border.width: isFocused ? 2 : 0
-                    border.color: SettingsTheme.text
+                    // Password field
+                    Column {
+                        width: parent.width
+                        spacing: 4
 
-                    // Focus glow
+                        Text {
+                            text: "Password"
+                            color: SettingsTheme.textMuted
+                            font.pixelSize: 12
+                        }
+
+                        Rectangle {
+                            width: parent.width
+                            height: 40
+                            radius: 8
+                            color: SettingsTheme.base
+                            border.width: 1
+                            border.color: (root.screenState === "login" && root.loginFocusIndex === 1) || loginPassField.activeFocus
+                                ? SettingsTheme.accent : SettingsTheme.border
+
+                            TextField {
+                                id: loginPassField
+                                anchors.fill: parent
+                                placeholderText: "screenscraper.fr password"
+                                placeholderTextColor: SettingsTheme.textDim
+                                color: SettingsTheme.text
+                                font.pixelSize: 14
+                                echoMode: TextInput.Password
+                                background: Item {}
+                                leftPadding: 10
+                                rightPadding: 10
+
+                                function _submitLogin() {
+                                    if (signInBtn.enabled) {
+                                        signInBtn.enabled = false
+                                        loginError.visible = false
+                                        app.validateScraperCredentials(loginUserField.text, loginPassField.text)
+                                    }
+                                }
+
+                                Keys.onTabPressed: {
+                                    loginFocusIndex = 2
+                                    root.forceActiveFocus()
+                                }
+                                Keys.onReturnPressed: loginPassField._submitLogin()
+                                Keys.onEnterPressed: loginPassField._submitLogin()
+                            }
+                        }
+                    }
+
+                    // Connect button
                     Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: -4
-                        radius: parent.radius + 4
-                        color: "transparent"
-                        border.width: 2
-                        border.color: SettingsTheme.focusBorder
-                        opacity: signInBtn.isFocused ? 0.3 : 0
-                        z: -1
-                        visible: opacity > 0
-                        Behavior on opacity { NumberAnimation { duration: SettingsTheme.animFast } }
-                    }
+                        id: signInBtn
+                        property bool enabled: true
+                        width: parent.width
+                        height: 42
+                        radius: 8
+                        color: (root.screenState === "login" && root.loginFocusIndex === 2)
+                            ? Qt.lighter(SettingsTheme.accent, 1.2)
+                            : SettingsTheme.accent
+                        opacity: enabled ? 1.0 : 0.6
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Sign In"
-                        color: SettingsTheme.background
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                    }
+                        Text {
+                            anchors.centerIn: parent
+                            text: signInBtn.enabled ? "Connect" : "Validating..."
+                            color: SettingsTheme.text
+                            font.pixelSize: 15
+                            font.weight: Font.DemiBold
+                        }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        enabled: signInBtn.enabled
-                        onClicked: {
-                            signInBtn.enabled = false
-                            loginError.visible = false
-                            app.validateScraperCredentials(loginUserField.text, loginPassField.text)
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            enabled: signInBtn.enabled
+                            onClicked: {
+                                signInBtn.enabled = false
+                                loginError.visible = false
+                                app.validateScraperCredentials(loginUserField.text, loginPassField.text)
+                            }
                         }
                     }
-                }
 
-                Text {
-                    id: loginError
-                    visible: false
-                    color: SettingsTheme.error
-                    font.pixelSize: 12
-                    Layout.leftMargin: 24
-                    Layout.rightMargin: 24
-                    wrapMode: Text.WordWrap
-                    Layout.fillWidth: true
+                    // Error text
+                    Text {
+                        id: loginError
+                        visible: false
+                        text: ""
+                        color: SettingsTheme.error
+                        font.pixelSize: 12
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        horizontalAlignment: Text.AlignHCenter
+                    }
                 }
-
-                Item { height: 24 }
             }
         }
 
