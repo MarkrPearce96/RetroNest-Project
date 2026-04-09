@@ -139,6 +139,11 @@ int main(int argc, char* argv[]) {
     }
     Paths::ensureDirectories();
 
+    // Move any legacy {root}/saves/* and {root}/data/* content into the
+    // modern {root}/emulators/{emuId}/{systemId}/ layout. Safe no-op if
+    // nothing needs migrating.
+    Paths::migrateLegacyLayout();
+
     // Open database
     Database db;
     const QString dbPath = Paths::configDir() + "/retronest.db";
@@ -297,9 +302,9 @@ static int runCli(QCoreApplication& /*app*/, QCommandLineParser& parser, Manifes
 
         const QString systemId = Paths::systemIdFor(manifest->id, manifest->systems);
         const QString biosPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
-        const QString savesPath = QFileInfo(Paths::savesDir(systemId)).absoluteFilePath();
-        QDir().mkpath(savesPath);
-        if (!adapter->ensureConfig(*manifest, biosPath, savesPath))
+        const QString dataPath = QFileInfo(Paths::emulatorDataDir(emuId, systemId)).absoluteFilePath();
+        QDir().mkpath(dataPath);
+        if (!adapter->ensureConfig(*manifest, biosPath, dataPath))
             qWarning() << "[CLI] Config creation/patching failed for" << manifest->name;
 
         QStringList args = adapter->buildLaunchArgs(*manifest, romPath);

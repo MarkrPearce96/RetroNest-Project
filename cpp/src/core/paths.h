@@ -19,10 +19,21 @@ public:
     static QString systemIdFor(const QString& emuId, const QStringList& systems);
 
     static QString emulatorsDir(const QString& emuId = {});
-    static QString dataDir(const QString& emuId = {});
+
+    /**
+     * Single per-emulator, per-system data root. Every runtime folder an
+     * emulator needs (savestates, memcards, screenshots, cache, cheats,
+     * textures, videos, logs, patches, …) lives as a subdirectory of this
+     * path. Returns {root}/emulators/{emuId}/{systemId}/.
+     *
+     * This is the modern replacement for the split savesDir()/dataDir()
+     * layout. PPSSPP's forced {memstick}/PSP/<subdir> scheme is the
+     * structural model: every emulator now follows the same
+     * "everything under emulators/{emuId}/{systemId}/" pattern.
+     */
+    static QString emulatorDataDir(const QString& emuId, const QString& systemId);
+
     static QString biosDir();
-    static QString savesDir(const QString& systemId = {});
-    static QString cacheDir(const QString& systemId = {});
     static QString romsDir(const QString& systemId = {});
     /** Media directory for scraped content (ES-DE style). */
     static QString mediaDir();
@@ -36,6 +47,14 @@ public:
 
     /** Create per-system ROM subdirectories. */
     static void ensureRomDirectories(const QStringList& systemIds);
+
+    /**
+     * Migrate legacy {root}/saves/... and {root}/data/... trees into the
+     * new {root}/emulators/{emuId}/{systemId}/ layout. Safe to run on
+     * every startup: if a target already exists and is non-empty the
+     * corresponding move is skipped with a warning.
+     */
+    static void migrateLegacyLayout();
 
     /** Path to the app-level config file (stores root location). */
     static QString appConfigPath();

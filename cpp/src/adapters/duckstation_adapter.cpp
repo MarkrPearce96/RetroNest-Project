@@ -518,14 +518,16 @@ bool DuckStationAdapter::createDefaultConfig(const QString& path,
                                               const QString& biosPath,
                                               const QString& savesPath) {
 
-    // All paths centralized under root
-    const QString emuDir = QFileInfo(Paths::dataDir("duckstation")).absoluteFilePath();
-    const QString memcardsPath = savesPath + "/memcards";
-    const QString savestatesPath = savesPath + "/savestates";
-    const QString screenshotsPath = emuDir + "/screenshots";
-    const QString cachePath = emuDir + "/cache";
-    const QString cheatsPath = emuDir + "/cheats";
-    const QString texturesPath = emuDir + "/textures";
+    // savesPath is this emulator's unified data root for its system,
+    // i.e. {root}/emulators/duckstation/psx/. Every managed subfolder
+    // lives directly under it — see EmulatorService::ensureConfig().
+    const QString& dataRoot = savesPath;
+    const QString memcardsPath    = dataRoot + "/memcards";
+    const QString savestatesPath  = dataRoot + "/savestates";
+    const QString screenshotsPath = dataRoot + "/screenshots";
+    const QString cachePath       = dataRoot + "/cache";
+    const QString cheatsPath      = dataRoot + "/cheats";
+    const QString texturesPath    = dataRoot + "/textures";
 
     // Only write keys required for embedding (wizard suppression, fullscreen,
     // managed paths, controller type).  All other settings are left to the
@@ -584,15 +586,18 @@ bool DuckStationAdapter::patchExistingConfig(const QString& path,
 
     // Ensure folder paths, in-game menu behaviour, and neutered hotkeys
     // in a single patch pass. patchIniKeys injects missing keys/sections.
-    const QString emuDir = QFileInfo(Paths::dataDir("duckstation")).absoluteFilePath();
+    //
+    // savesPath is this emulator's unified data root
+    // ({root}/emulators/duckstation/psx/) — every subfolder lives directly under it.
+    const QString& dataRoot = savesPath;
     QVector<IniKeyPatch> patches = {
         {"BIOS",        "SearchDirectory", biosPath},
-        {"MemoryCards", "Directory",       savesPath + "/memcards"},
-        {"Folders",     "SaveStates",      savesPath + "/savestates"},
-        {"Folders",     "Screenshots",     emuDir + "/screenshots"},
-        {"Folders",     "Cache",           emuDir + "/cache"},
-        {"Folders",     "Cheats",          emuDir + "/cheats"},
-        {"Folders",     "Textures",        emuDir + "/textures"},
+        {"MemoryCards", "Directory",       dataRoot + "/memcards"},
+        {"Folders",     "SaveStates",      dataRoot + "/savestates"},
+        {"Folders",     "Screenshots",     dataRoot + "/screenshots"},
+        {"Folders",     "Cache",           dataRoot + "/cache"},
+        {"Folders",     "Cheats",          dataRoot + "/cheats"},
+        {"Folders",     "Textures",        dataRoot + "/textures"},
 
         {"Main", "PauseOnFocusLoss", "true"},
         {"Main", "SaveStateOnExit",  "true"},
@@ -622,12 +627,12 @@ bool DuckStationAdapter::patchExistingConfig(const QString& path,
 QVector<PathDef> DuckStationAdapter::pathsDefs() const {
     return {
         {"BIOS",         "BIOS",        "SearchDirectory", "",            PathBase::Bios},
-        {"Memory Cards", "MemoryCards", "Directory",       "memcards",    PathBase::Saves},
-        {"Save States",  "Folders",     "SaveStates",      "savestates",  PathBase::Saves},
-        {"Screenshots",  "Folders",     "Screenshots",     "screenshots", PathBase::Data},
-        {"Cache",        "Folders",     "Cache",           "cache",       PathBase::Data},
-        {"Cheats",       "Folders",     "Cheats",          "cheats",      PathBase::Data},
-        {"Textures",     "Folders",     "Textures",        "textures",    PathBase::Data},
+        {"Memory Cards", "MemoryCards", "Directory",       "memcards",    PathBase::EmulatorData},
+        {"Save States",  "Folders",     "SaveStates",      "savestates",  PathBase::EmulatorData},
+        {"Screenshots",  "Folders",     "Screenshots",     "screenshots", PathBase::EmulatorData},
+        {"Cache",        "Folders",     "Cache",           "cache",       PathBase::EmulatorData},
+        {"Cheats",       "Folders",     "Cheats",          "cheats",      PathBase::EmulatorData},
+        {"Textures",     "Folders",     "Textures",        "textures",    PathBase::EmulatorData},
     };
 }
 
@@ -1109,11 +1114,11 @@ QString DuckStationAdapter::matchAsset(const QStringList& assetNames) const {
 // Resume file lookup
 // ============================================================================
 
-QString DuckStationAdapter::findResumeFile(const QString& serial, const QString& savesRoot) const {
+QString DuckStationAdapter::findResumeFile(const QString& serial) const {
     if (serial.isEmpty()) return {};
 
     const QString dsSerial = serialToFilenameFormat(serial);
-    const QString statesDir = savesRoot + "/psx/savestates";
+    const QString statesDir = Paths::emulatorDataDir("duckstation", "psx") + "/savestates";
     QDir dir(statesDir);
     if (!dir.exists()) return {};
 

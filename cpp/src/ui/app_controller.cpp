@@ -407,8 +407,8 @@ void AppController::resetConfiguration(const QString& emuId) {
     // Re-run ensureConfig to regenerate the fresh install defaults
     QString systemId = Paths::systemIdFor(emuId, manifest->systems);
     QString biosPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
-    QString savesPath = QFileInfo(Paths::savesDir(systemId)).absoluteFilePath();
-    adapter->ensureConfig(*manifest, biosPath, savesPath);
+    QString dataPath = QFileInfo(Paths::emulatorDataDir(emuId, systemId)).absoluteFilePath();
+    adapter->ensureConfig(*manifest, biosPath, dataPath);
 
     // Also reset controller bindings and settings to defaults
     resetControllerBindings(emuId);
@@ -566,11 +566,8 @@ QVariantList AppController::pathDefs(const QString& emuId) const {
             case PathBase::Bios:
                 defPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
                 break;
-            case PathBase::Saves:
-                defPath = QFileInfo(Paths::savesDir(systemId) + "/" + pd.defaultSuffix).absoluteFilePath();
-                break;
-            case PathBase::Data:
-                defPath = QFileInfo(Paths::dataDir(emuId) + "/" + pd.defaultSuffix).absoluteFilePath();
+            case PathBase::EmulatorData:
+                defPath = QFileInfo(Paths::emulatorDataDir(emuId, systemId) + "/" + pd.defaultSuffix).absoluteFilePath();
                 break;
         }
         item["defaultPath"] = defPath;
@@ -882,8 +879,9 @@ void AppController::openNativeEmulatorSettings(const QString& emuId) {
 
     // Run the same setup that happens before launching a game so the native
     // UI sees a properly initialized config (wizard suppressed, paths set, etc.)
+    const QString systemId = Paths::systemIdFor(emuId, manifest->systems);
     adapter->ensureConfig(*manifest, Paths::biosDir(),
-                          Paths::savesDir(manifest->systems.value(0)));
+                          Paths::emulatorDataDir(emuId, systemId));
 
     // Direct exec — bypassing Launch Services on macOS. Using `open` would
     // route through Launch Services which applies app translocation/sandbox

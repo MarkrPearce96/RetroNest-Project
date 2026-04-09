@@ -44,10 +44,10 @@ bool GameSession::start(const EmulatorManifest& manifest,
     // Ensure config
     const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
     const QString biosPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
-    const QString savesPath = QFileInfo(Paths::savesDir(systemId)).absoluteFilePath();
-    QDir().mkpath(savesPath);
+    const QString dataPath = QFileInfo(Paths::emulatorDataDir(manifest.id, systemId)).absoluteFilePath();
+    QDir().mkpath(dataPath);
 
-    if (!adapter->ensureConfig(manifest, biosPath, savesPath)) {
+    if (!adapter->ensureConfig(manifest, biosPath, dataPath)) {
         qWarning() << "[GameSession] Config creation/patching failed for" << manifest.name;
     }
 

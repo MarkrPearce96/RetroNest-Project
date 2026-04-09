@@ -40,7 +40,7 @@ public:
                                  bool enabled, bool hardcore,
                                  bool notifications, bool sounds) override;
     QString matchAsset(const QStringList& assetNames) const override;
-    QString findResumeFile(const QString& serial, const QString& savesRoot) const override;
+    QString findResumeFile(const QString& serial) const override;
 
 private:
     /** Get the platform-specific PCSX2 config directory. */

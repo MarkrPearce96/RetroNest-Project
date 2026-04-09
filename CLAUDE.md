@@ -54,20 +54,33 @@ of how RetroNest itself was started.
 All directories derive from a single user-chosen root:
 ```
 {root}/
-  bios/               — shared BIOS (all emulators)
-  saves/{systemId}/   — savestates/ + memcards/ per system
-  data/{emuId}/       — cache, screenshots, cheats, textures (per emulator)
-  emulators/{emuId}/  — binaries + portable config/INI files
-  roms/{systemId}/    — user ROM files
-  config/             — app-level config
-  themes/             — runtime themes
-  downloaded_media/   — scraped artwork
+  bios/                              — shared BIOS (all emulators)
+  emulators/{emuId}/                 — binaries + portable config/INI files
+  emulators/{emuId}/{systemId}/      — ALL runtime data for that emulator
+      savestates/
+      memcards/
+      screenshots/
+      cheats/
+      textures/
+      cache/
+      videos/                        — PCSX2 only
+      logs/, patches/, gamesettings/, inputprofiles/  — PCSX2 only
+  emulators/ppsspp/PSP/              — PPSSPP's forced layout (see below)
+      SYSTEM/                        — ppsspp.ini + controls.ini
+      SAVEDATA/, PPSSPP_STATE/, SCREENSHOT/, TEXTURES/, Cheats/, GAME/, PLUGINS/
+  roms/{systemId}/                   — user ROM files
+  config/                            — app-level config
+  themes/                            — runtime themes
+  downloaded_media/                  — scraped artwork
 ```
 
 **Key rules:**
-- Emulator binaries (`emulators/`) and generated data (`data/`) must stay in separate top-level dirs
-- Every emulator runs in **portable mode** — config/INI lives in `{root}/emulators/{emuId}/`, not system defaults
-- PathDef/PathBase system: `Bios` → `{root}/bios/`, `Saves` → `{root}/saves/{systemId}/{suffix}`, `Data` → `{root}/data/{emuId}/{suffix}`
+- Every emulator runs in **portable mode** — config/INI lives next to its binary under `{root}/emulators/{emuId}/`, not system defaults
+- Every emulator keeps **all of its runtime data self-contained** under `{root}/emulators/{emuId}/{systemId}/`. This mirrors PPSSPP's forced `{memstick}/PSP/<subdir>` layout so every emulator follows the same pattern. Deleting an emulator is a single `rm -rf emulators/{emuId}/`.
+- BIOS stays shared at `{root}/bios/` because a single ROM file can legitimately back multiple emulators for the same system
+- PathDef/PathBase system: `Bios` → `{root}/bios/`, `EmulatorData` → `{root}/emulators/{emuId}/{systemId}/{suffix}`
+- Helper: `Paths::emulatorDataDir(emuId, systemId)` returns `{root}/emulators/{emuId}/{systemId}/` — every adapter resolves its managed folders from there
+- `Paths::migrateLegacyLayout()` (called at startup) moves any pre-refactor `{root}/saves/*` and `{root}/data/*` content into the modern layout; skips entries whose target is already populated
 
 **macOS launch rule:** Always launch emulator binaries via direct exec (`QProcess::start(execPath, args)`), NEVER via `open` or Launch Services. Going through Launch Services applies app translocation and sandbox rules to downloaded `.app` bundles, which blocks `rename()` inside the bundle and breaks portable mode. Both `GameSession` and `openNativeEmulatorSettings` use direct exec for this reason.
 

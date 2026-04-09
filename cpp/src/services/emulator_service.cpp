@@ -24,21 +24,19 @@ void EmulatorService::ensureConfig(const QString& emuId, const EmulatorManifest&
 
     const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
     const QString biosDir = Paths::biosDir();
-    const QString savesDir = Paths::savesDir(systemId);
-    QDir().mkpath(savesDir);
+    const QString dataDir = Paths::emulatorDataDir(emuId, systemId);
+    QDir().mkpath(dataDir);
 
-    // Create all directories defined by the adapter's path definitions
+    // Create all directories defined by the adapter's path definitions.
+    // Every non-BIOS entry resolves under this emulator's unified data root.
     for (const auto& pd : adapter->pathsDefs()) {
         QString dir;
         switch (pd.base) {
             case PathBase::Bios:
                 dir = biosDir;
                 break;
-            case PathBase::Saves:
-                dir = savesDir + "/" + pd.defaultSuffix;
-                break;
-            case PathBase::Data:
-                dir = Paths::dataDir(emuId) + "/" + pd.defaultSuffix;
+            case PathBase::EmulatorData:
+                dir = dataDir + "/" + pd.defaultSuffix;
                 break;
         }
         if (!dir.isEmpty()) QDir().mkpath(dir);
@@ -46,7 +44,7 @@ void EmulatorService::ensureConfig(const QString& emuId, const EmulatorManifest&
 
     adapter->ensureConfig(manifest,
         QFileInfo(biosDir).absoluteFilePath(),
-        QFileInfo(savesDir).absoluteFilePath());
+        QFileInfo(dataDir).absoluteFilePath());
 }
 
 // ── Version Tracking ──────────────────────────────────────

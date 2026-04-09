@@ -71,9 +71,8 @@ struct BiosDef {
  * PathBase — which root directory a PathDef resolves from.
  */
 enum class PathBase {
-    Bios,      // Paths::biosDir()
-    Saves,     // Paths::savesDir(systemId) + "/" + suffix
-    Data,      // Paths::dataDir(emuId) + "/" + suffix
+    Bios,          // Paths::biosDir()
+    EmulatorData,  // Paths::emulatorDataDir(emuId, systemId) + "/" + suffix
 };
 
 /**
@@ -84,7 +83,7 @@ struct PathDef {
     QString section;        // INI section, e.g. "Folders" or "BIOS"
     QString key;            // INI key, e.g. "Bios" or "SearchDirectory"
     QString defaultSuffix;  // appended to base dir, e.g. "savestates"
-    PathBase base = PathBase::Saves;
+    PathBase base = PathBase::EmulatorData;
 };
 
 /**
@@ -244,11 +243,13 @@ public:
     virtual QString extractSerial(const QString& romPath) const;
 
     /**
-     * Find resume state file for a given serial in the saves directories.
+     * Find resume state file for a given serial. Each adapter knows the
+     * emulator-specific savestate directory and file-naming convention, so
+     * no caller-supplied root is needed.
      * Returns the full path to the resume file, or empty string if not found.
      */
-    virtual QString findResumeFile(const QString& serial, const QString& savesRoot) const {
-        Q_UNUSED(serial); Q_UNUSED(savesRoot);
+    virtual QString findResumeFile(const QString& serial) const {
+        Q_UNUSED(serial);
         return {};
     }
 

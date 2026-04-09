@@ -41,7 +41,7 @@ public:
     void patchRetroAchievements(const QString& username, const QString& token,
                                  bool enabled, bool hardcore,
                                  bool notifications, bool sounds) override;
-    QString findResumeFile(const QString& serial, const QString& savesRoot) const override;
+    QString findResumeFile(const QString& serial) const override;
 
 private:
     /** On macOS: path inside .app bundle (Contents/MacOS/). Otherwise: emulators dir. */

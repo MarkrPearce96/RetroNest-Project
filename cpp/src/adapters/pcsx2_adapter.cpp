@@ -361,19 +361,21 @@ bool PCSX2Adapter::createDefaultConfig(const QString& path,
                                        const QString& biosPath,
                                        const QString& savesPath) {
 
-    // Emulator-specific paths under emulators/pcsx2; saves stay under savesPath
-    const QString emuDir = QFileInfo(Paths::dataDir("pcsx2")).absoluteFilePath();
-    const QString savestatesPath = savesPath + "/savestates";
-    const QString memcardsPath = savesPath + "/memcards";
-    const QString screenshotsPath = emuDir + "/screenshots";
-    const QString cachePath = emuDir + "/cache";
-    const QString cheatsPath = emuDir + "/cheats";
-    const QString videosPath = emuDir + "/videos";
-    const QString texturesPath = emuDir + "/textures";
-    const QString logsPath = emuDir + "/logs";
-    const QString inputProfilesPath = savesPath + "/inputprofiles";
-    const QString patchesPath = emuDir + "/patches";
-    const QString gamSettingsPath = emuDir + "/gamesettings";
+    // savesPath is this emulator's unified data root for its system,
+    // i.e. {root}/emulators/pcsx2/ps2/. Every managed subfolder lives
+    // directly under it — see EmulatorService::ensureConfig().
+    const QString& dataRoot = savesPath;
+    const QString savestatesPath    = dataRoot + "/savestates";
+    const QString memcardsPath      = dataRoot + "/memcards";
+    const QString screenshotsPath   = dataRoot + "/screenshots";
+    const QString cachePath         = dataRoot + "/cache";
+    const QString cheatsPath        = dataRoot + "/cheats";
+    const QString videosPath        = dataRoot + "/videos";
+    const QString texturesPath      = dataRoot + "/textures";
+    const QString logsPath          = dataRoot + "/logs";
+    const QString inputProfilesPath = dataRoot + "/inputprofiles";
+    const QString patchesPath       = dataRoot + "/patches";
+    const QString gamSettingsPath   = dataRoot + "/gamesettings";
 
     // Only write keys required for embedding (wizard suppression, fullscreen,
     // managed paths, input sources).  All other settings (graphics, audio,
@@ -459,25 +461,28 @@ bool PCSX2Adapter::patchExistingConfig(const QString& path,
     // neutered hotkeys in one pass. patchIniKeys injects missing keys and
     // sections as needed, so StartFullscreen / PauseOnFocusLoss /
     // RenderToSeparateWindow are force-corrected whether or not they exist.
-    const QString emuDir = QFileInfo(Paths::dataDir("pcsx2")).absoluteFilePath();
+    //
+    // savesPath is this emulator's unified data root
+    // ({root}/emulators/pcsx2/ps2/) — every subfolder lives directly under it.
+    const QString& dataRoot = savesPath;
     QVector<IniKeyPatch> patches = {
         {"UI", "StartFullscreen",        "true"},
         {"UI", "PauseOnFocusLoss",       "true"},
         {"UI", "RenderToSeparateWindow", "false"},
 
         {"Folders", "Bios",          biosPath},
-        {"Folders", "Savestates",    savesPath + "/savestates"},
-        {"Folders", "MemoryCards",   savesPath + "/memcards"},
-        {"Folders", "Screenshots",   emuDir + "/screenshots"},
-        {"Folders", "Cache",         emuDir + "/cache"},
-        {"Folders", "Cheats",        emuDir + "/cheats"},
-        {"Folders", "Snapshots",     emuDir + "/screenshots"},
-        {"Folders", "Videos",        emuDir + "/videos"},
-        {"Folders", "Textures",      emuDir + "/textures"},
-        {"Folders", "Logs",          emuDir + "/logs"},
-        {"Folders", "InputProfiles", savesPath + "/inputprofiles"},
-        {"Folders", "Patches",       emuDir + "/patches"},
-        {"Folders", "GameSettings",  emuDir + "/gamesettings"},
+        {"Folders", "Savestates",    dataRoot + "/savestates"},
+        {"Folders", "MemoryCards",   dataRoot + "/memcards"},
+        {"Folders", "Screenshots",   dataRoot + "/screenshots"},
+        {"Folders", "Cache",         dataRoot + "/cache"},
+        {"Folders", "Cheats",        dataRoot + "/cheats"},
+        {"Folders", "Snapshots",     dataRoot + "/screenshots"},
+        {"Folders", "Videos",        dataRoot + "/videos"},
+        {"Folders", "Textures",      dataRoot + "/textures"},
+        {"Folders", "Logs",          dataRoot + "/logs"},
+        {"Folders", "InputProfiles", dataRoot + "/inputprofiles"},
+        {"Folders", "Patches",       dataRoot + "/patches"},
+        {"Folders", "GameSettings",  dataRoot + "/gamesettings"},
 
         {"EmuCore", "SaveStateOnShutdown", "true"},
 
@@ -524,13 +529,13 @@ bool PCSX2Adapter::patchExistingConfig(const QString& path,
 QVector<PathDef> PCSX2Adapter::pathsDefs() const {
     return {
         {"BIOS",         "Folders", "Bios",        "",            PathBase::Bios},
-        {"Save States",  "Folders", "Savestates",  "savestates",  PathBase::Saves},
-        {"Memory Cards", "Folders", "MemoryCards", "memcards",    PathBase::Saves},
-        {"Screenshots",  "Folders", "Screenshots", "screenshots", PathBase::Data},
-        {"Cache",        "Folders", "Cache",       "cache",       PathBase::Data},
-        {"Cheats",       "Folders", "Cheats",      "cheats",      PathBase::Data},
-        {"Textures",     "Folders", "Textures",    "textures",    PathBase::Data},
-        {"Videos",       "Folders", "Videos",      "videos",      PathBase::Data},
+        {"Save States",  "Folders", "Savestates",  "savestates",  PathBase::EmulatorData},
+        {"Memory Cards", "Folders", "MemoryCards", "memcards",    PathBase::EmulatorData},
+        {"Screenshots",  "Folders", "Screenshots", "screenshots", PathBase::EmulatorData},
+        {"Cache",        "Folders", "Cache",       "cache",       PathBase::EmulatorData},
+        {"Cheats",       "Folders", "Cheats",      "cheats",      PathBase::EmulatorData},
+        {"Textures",     "Folders", "Textures",    "textures",    PathBase::EmulatorData},
+        {"Videos",       "Folders", "Videos",      "videos",      PathBase::EmulatorData},
     };
 }
 
@@ -902,11 +907,11 @@ QString PCSX2Adapter::matchAsset(const QStringList& assetNames) const {
 // Resume file lookup
 // ============================================================================
 
-QString PCSX2Adapter::findResumeFile(const QString& serial, const QString& savesRoot) const {
+QString PCSX2Adapter::findResumeFile(const QString& serial) const {
     if (serial.isEmpty()) return {};
 
     const QString pcsx2Serial = serialToFilenameFormat(serial);
-    const QString statesDir = savesRoot + "/ps2/savestates";
+    const QString statesDir = Paths::emulatorDataDir("pcsx2", "ps2") + "/savestates";
     QDir dir(statesDir);
     if (!dir.exists()) return {};
 

@@ -162,7 +162,7 @@ QString GameService::resumeStateFile(const QString& romPath, const QString& emuI
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return {};
 
-    return adapter->findResumeFile(serial, Paths::savesDir());
+    return adapter->findResumeFile(serial);
 }
 
 void GameService::clearResumeState(const QString& romPath, const QString& emuId) {
