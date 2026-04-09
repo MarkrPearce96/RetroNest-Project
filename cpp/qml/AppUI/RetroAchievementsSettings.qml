@@ -109,23 +109,13 @@ Item {
                 spacing: 16
 
                 // RA Logo
-                Rectangle {
+                Image {
                     width: 64
                     height: 64
-                    radius: 16
                     anchors.horizontalCenter: parent.horizontalCenter
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: SettingsTheme.accent }
-                        GradientStop { position: 1.0; color: Qt.darker(SettingsTheme.accent, 1.3) }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "RA"
-                        color: SettingsTheme.text
-                        font.pixelSize: 24
-                        font.weight: Font.Bold
-                    }
+                    source: "images/retroachievements_logo.png"
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
                 }
 
                 Text {
