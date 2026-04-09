@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 import "EmulatorLogos.js" as EmulatorLogos
 
 Item {
@@ -68,14 +69,27 @@ Item {
                             color: SettingsTheme.border
 
                             Image {
-                                anchors.centerIn: parent
-                                width: parent.width - 12
-                                height: parent.height - 12
+                                id: logoImg
+                                anchors.fill: parent
                                 source: EmulatorLogos.logoForEmu(modelData.id)
-                                fillMode: Image.PreserveAspectFit
+                                fillMode: Image.PreserveAspectCrop
                                 smooth: true
                                 mipmap: true
-                                visible: source !== ""
+                                visible: false
+                            }
+
+                            Rectangle {
+                                id: logoMask
+                                anchors.fill: parent
+                                radius: 10
+                                visible: false
+                            }
+
+                            OpacityMask {
+                                anchors.fill: parent
+                                source: logoImg
+                                maskSource: logoMask
+                                visible: EmulatorLogos.logoForEmu(modelData.id) !== ""
                             }
 
                             // Fallback emoji if no logo
