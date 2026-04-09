@@ -139,11 +139,6 @@ int main(int argc, char* argv[]) {
     }
     Paths::ensureDirectories();
 
-    // Move any legacy {root}/saves/* and {root}/data/* content into the
-    // modern {root}/emulators/{emuId}/{systemId}/ layout. Safe no-op if
-    // nothing needs migrating.
-    Paths::migrateLegacyLayout();
-
     // Open database
     Database db;
     const QString dbPath = Paths::configDir() + "/retronest.db";

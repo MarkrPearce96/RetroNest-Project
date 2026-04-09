@@ -80,7 +80,6 @@ All directories derive from a single user-chosen root:
 - BIOS stays shared at `{root}/bios/` because a single ROM file can legitimately back multiple emulators for the same system
 - PathDef/PathBase system: `Bios` → `{root}/bios/`, `EmulatorData` → `{root}/emulators/{emuId}/{systemId}/{suffix}`
 - Helper: `Paths::emulatorDataDir(emuId, systemId)` returns `{root}/emulators/{emuId}/{systemId}/` — every adapter resolves its managed folders from there
-- `Paths::migrateLegacyLayout()` (called at startup) moves any pre-refactor `{root}/saves/*` and `{root}/data/*` content into the modern layout; skips entries whose target is already populated
 
 **macOS launch rule:** Always launch emulator binaries via direct exec (`QProcess::start(execPath, args)`), NEVER via `open` or Launch Services. Going through Launch Services applies app translocation and sandbox rules to downloaded `.app` bundles, which blocks `rename()` inside the bundle and breaks portable mode. Both `GameSession` and `openNativeEmulatorSettings` use direct exec for this reason.
 

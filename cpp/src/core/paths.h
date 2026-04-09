@@ -48,14 +48,6 @@ public:
     /** Create per-system ROM subdirectories. */
     static void ensureRomDirectories(const QStringList& systemIds);
 
-    /**
-     * Migrate legacy {root}/saves/... and {root}/data/... trees into the
-     * new {root}/emulators/{emuId}/{systemId}/ layout. Safe to run on
-     * every startup: if a target already exists and is non-empty the
-     * corresponding move is skipped with a warning.
-     */
-    static void migrateLegacyLayout();
-
     /** Path to the app-level config file (stores root location). */
     static QString appConfigPath();
 
