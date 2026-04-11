@@ -1,22 +1,11 @@
 #include "pcsx2_settings_dialog.h"
+#include "pcsx2_category_hub.h"
 #include "widgets/pcsx2_description_bar.h"
 #include "pcsx2_theme.h"
 #include "ui/settings/emulator_settings_page.h"
 #include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QLabel>
-
-// Task 13 will replace this stub with the real Pcsx2CategoryHub.
-class Pcsx2CategoryHub : public QWidget {
-    Q_OBJECT
-public:
-    explicit Pcsx2CategoryHub(QWidget* parent = nullptr) : QWidget(parent) {
-        auto* lay = new QVBoxLayout(this);
-        lay->addWidget(new QLabel("Category hub placeholder (Task 13)", this));
-    }
-signals:
-    void categoryActivated(QString category);
-};
 
 Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuId, QWidget* parent)
     : QDialog(parent), m_app(app), m_emuId(emuId) {
@@ -69,5 +58,3 @@ void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
     }
     // Emulation / Audio / Memory Cards branches wired in Tasks 14-16.
 }
-
-#include "pcsx2_settings_dialog.moc"
