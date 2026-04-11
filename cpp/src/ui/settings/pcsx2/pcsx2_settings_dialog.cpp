@@ -31,6 +31,13 @@ Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuI
             [this]{ m_app->openNativeEmulatorSettings(m_emuId); });
     m_stack->addWidget(m_hub);
 
+    // Description bar is only meaningful on settings pages — hide it on the hub.
+    connect(m_stack, &QStackedWidget::currentChanged, this, [this](int index) {
+        m_descBar->setVisible(m_stack->widget(index) != m_hub);
+    });
+    // Initial state: hub is active, bar hidden
+    m_descBar->setVisible(false);
+
     root->addWidget(m_stack, 1);
     root->addWidget(m_descBar, 0);
 }

@@ -11,6 +11,7 @@ signals:
     void categoryActivated(QString category);
     void openNativeRequested();
 private:
-    Pcsx2Card* makeCard(const QString& title, const QString& descriptor,
-                        int settingCount, const QString& categoryKey);
+    Pcsx2Card* makeCard(const QString& icon, const QString& title,
+                        const QString& descriptor, int settingCount,
+                        const QString& categoryKey);
 };
