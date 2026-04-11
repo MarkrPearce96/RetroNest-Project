@@ -327,6 +327,12 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         d.recommendedValue = "50";
         s.append(d);
     }
+    {
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Gamma", "Gamma", "",
+                     SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
+        d.recommendedValue = "50";
+        s.append(d);
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Graphics > OSD

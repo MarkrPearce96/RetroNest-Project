@@ -3,19 +3,32 @@
 #include <QAbstractItemView>
 #include <QComboBox>
 #include <QFrame>
+#include <QBoxLayout>
 #include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QEvent>
 #include <QStyleFactory>
 #include <QListView>
 
-Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
-    auto* lay = new QHBoxLayout(this);
-    lay->setContentsMargins(0, 4, 0, 4);
+Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent, bool stacked) : QWidget(parent) {
+    QBoxLayout* lay = nullptr;
+    if (stacked) {
+        auto* vlay = new QVBoxLayout(this);
+        vlay->setContentsMargins(0, 0, 0, 0);
+        vlay->setSpacing(6);
+        lay = vlay;
+    } else {
+        auto* hlay = new QHBoxLayout(this);
+        hlay->setContentsMargins(0, 4, 0, 4);
+        lay = hlay;
+    }
     m_label = new QLabel(this);
     m_label->setStyleSheet("color:#d0ccc4;font-size:13px;");
-    m_label->setMinimumWidth(180);
+    if (!stacked) {
+        m_label->setMinimumWidth(180);
+    }
     m_label->setMinimumHeight(24);
     m_combo = new QComboBox(this);
     // Force Fusion style on the combo so QSS rules like ::item:selected
@@ -93,8 +106,13 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
     if (auto* vp = m_combo->view()->viewport()) {
         vp->installEventFilter(this);
     }
-    lay->addWidget(m_label, 0);
-    lay->addWidget(m_combo, 1);
+    if (stacked) {
+        lay->addWidget(m_label);
+        lay->addWidget(m_combo);
+    } else {
+        lay->addWidget(m_label, 0);
+        lay->addWidget(m_combo, 1);
+    }
     connect(m_combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, [this](int){ emit valueChanged(value()); });
     m_combo->installEventFilter(this);

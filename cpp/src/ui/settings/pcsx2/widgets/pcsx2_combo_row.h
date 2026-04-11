@@ -11,7 +11,7 @@ class QComboBox;
 class Pcsx2ComboRow : public QWidget {
     Q_OBJECT
 public:
-    explicit Pcsx2ComboRow(QWidget* parent = nullptr);
+    explicit Pcsx2ComboRow(QWidget* parent = nullptr, bool stacked = false);
     void setLabel(const QString& text);
     void setOptions(const QVector<QPair<QString, QString>>& opts);
     void setValue(const QString& iniValue);

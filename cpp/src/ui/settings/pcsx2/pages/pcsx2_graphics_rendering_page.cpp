@@ -38,7 +38,7 @@ void Pcsx2GraphicsRenderingPage::buildUi() {
         v->setContentsMargins(14, 12, 14, 12);
         if (!d) return card;
         card->setSettingDef(*d);
-        auto* row = new Pcsx2ComboRow(card);
+        auto* row = new Pcsx2ComboRow(card, /*stacked=*/true);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
