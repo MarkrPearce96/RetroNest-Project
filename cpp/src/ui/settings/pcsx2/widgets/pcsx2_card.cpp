@@ -66,11 +66,10 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
             return;
         }
         if (auto* c = findChild<QComboBox*>()) {
-            // Defer showPopup to the next event loop tick so Qt's focus
-            // machinery has time to route keys into the popup's list view.
-            // Also don't call setFocus on the combo — the popup grabs focus
-            // natively when shown via showPopup at this deferred point.
-            QTimer::singleShot(0, c, [c]() { c->showPopup(); });
+            QTimer::singleShot(0, c, [c]() {
+                c->setFocus(Qt::PopupFocusReason);
+                c->showPopup();
+            });
             return;
         }
         // No inner interactive widget — fall back to activated() (hub cards).

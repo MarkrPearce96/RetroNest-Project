@@ -2,6 +2,7 @@
 #include "../pcsx2_theme.h"
 #include <QAbstractItemView>
 #include <QComboBox>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QEvent>
@@ -26,6 +27,15 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
             "  border: 1px solid #706c66;"
             "  border-radius: 8px;"
             "}");
+    }
+    // Strip the QListView frame + macOS focus rect so no thin lines
+    // appear at the top and bottom of the popup.
+    if (auto* view = m_combo->view()) {
+        if (auto* frame = qobject_cast<QFrame*>(view)) {
+            frame->setFrameShape(QFrame::NoFrame);
+        }
+        view->setAttribute(Qt::WA_MacShowFocusRect, false);
+        view->setContentsMargins(0, 0, 0, 0);
     }
     // Watch for the popup hiding so we can return focus to the parent
     // Pcsx2Card (otherwise arrow keys get trapped on the combo itself).
