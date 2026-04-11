@@ -1,6 +1,7 @@
 #include "pcsx2_settings_dialog.h"
 #include "pcsx2_category_hub.h"
 #include "pages/pcsx2_emulation_page.h"
+#include "pages/pcsx2_audio_page.h"
 #include "widgets/pcsx2_description_bar.h"
 #include "pcsx2_theme.h"
 #include "ui/settings/emulator_settings_page.h"
@@ -53,6 +54,12 @@ void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
     if (category == "Emulation") {
         auto* page = new Pcsx2EmulationPage(this);
         connect(page, &Pcsx2EmulationPage::settingFocused, this, &Pcsx2SettingsDialog::setFocusedSetting);
+        pushPage(page);
+        return;
+    }
+    if (category == "Audio") {
+        auto* page = new Pcsx2AudioPage(this);
+        connect(page, &Pcsx2AudioPage::settingFocused, this, &Pcsx2SettingsDialog::setFocusedSetting);
         pushPage(page);
         return;
     }
