@@ -110,7 +110,93 @@ void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
 }
 
 void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
-    Q_UNUSED(topRow);
+    auto* card = new Pcsx2Card(this);
+    card->setPreviewStyle(true);
+    if (const SettingDef* d = findDef("StretchY"))
+        card->setSettingDef(*d);
+    connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+
+    auto* v = new QVBoxLayout(card);
+    v->setContentsMargins(14, 12, 14, 12);
+    v->setSpacing(10);
+
+    auto* lbl = new QLabel(QStringLiteral("ASPECT RATIO PREVIEW"), card);
+    lbl->setStyleSheet("color:#9a9690;font-size:11px;font-weight:600;"
+                       "letter-spacing:0.8px;");
+    v->addWidget(lbl);
+
+    m_preview = new Pcsx2AspectRatioPreview(card);
+    m_preview->setMinimumHeight(180);
+    m_preview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    v->addWidget(m_preview, 1);
+
+    if (const SettingDef* d = findDef("StretchY")) {
+        m_stretchSlider = new Pcsx2SliderRow(card);
+        m_stretchSlider->setLabel(d->label);
+        m_stretchSlider->setRange(int(d->minVal), int(d->maxVal));
+        m_stretchSlider->setSuffix(d->suffix);
+        m_stretchSlider->setSettingDef(*d);
+        connect(m_stretchSlider, &Pcsx2SliderRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(m_stretchSlider, &Pcsx2SliderRow::valueChanged, this, [this](int val) {
+            const SettingDef* dd = findDef("StretchY");
+            if (dd) saveValue(dd->section, dd->key, QString::number(val));
+            if (m_preview) m_preview->setStretchY(val);
+        });
+        v->addWidget(m_stretchSlider);
+    }
+
+    auto* cropLabel = new QLabel(QStringLiteral("Crop"), card);
+    cropLabel->setStyleSheet("color:#d0ccc4;font-size:12px;font-weight:500;");
+    v->addWidget(cropLabel);
+
+    auto* cropRow = new QHBoxLayout();
+    cropRow->setSpacing(8);
+
+    auto makeCropSpin = [&](const QString& key, const QString& axis) -> QSpinBox* {
+        auto* w = new QWidget(card);
+        auto* h = new QHBoxLayout(w);
+        h->setContentsMargins(0, 0, 0, 0);
+        h->setSpacing(4);
+
+        auto* axisLbl = new QLabel(axis, w);
+        axisLbl->setStyleSheet("color:#9a9690;font-size:11px;font-weight:600;");
+        h->addWidget(axisLbl);
+
+        auto* spin = new QSpinBox(w);
+        spin->setRange(0, 100);
+        spin->setSuffix(QStringLiteral(" px"));
+        spin->setStyleSheet(
+            "QSpinBox {"
+            "  background:#585450; color:#f2efe8;"
+            "  border:1px solid #706c66; border-radius:4px;"
+            "  padding:2px 4px; min-width:58px;"
+            "}"
+            "QSpinBox:focus { border-color:#f59e0b; }");
+        h->addWidget(spin, 1);
+
+        cropRow->addWidget(w, 1);
+
+        connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
+                [this, key](int val) {
+            const SettingDef* dd = findDef(key);
+            if (dd) saveValue(dd->section, dd->key, QString::number(val));
+            if (m_preview && m_cropL && m_cropT && m_cropR && m_cropB) {
+                m_preview->setCrop(
+                    m_cropL->value(), m_cropT->value(),
+                    m_cropR->value(), m_cropB->value());
+            }
+        });
+        return spin;
+    };
+
+    m_cropL = makeCropSpin("CropLeft",   QStringLiteral("L"));
+    m_cropT = makeCropSpin("CropTop",    QStringLiteral("T"));
+    m_cropR = makeCropSpin("CropRight",  QStringLiteral("R"));
+    m_cropB = makeCropSpin("CropBottom", QStringLiteral("B"));
+
+    v->addLayout(cropRow);
+
+    topRow->addWidget(card, 1);
 }
 
 void Pcsx2GraphicsDisplayPage::buildBottomToggleGrid(QVBoxLayout* root) {
