@@ -5,6 +5,7 @@
 #include "pages/pcsx2_memory_cards_page.h"
 #include "widgets/pcsx2_description_bar.h"
 #include "pcsx2_theme.h"
+#include "ui/app_controller.h"
 #include "ui/settings/emulator_settings_page.h"
 #include <QStackedWidget>
 #include <QVBoxLayout>
@@ -26,6 +27,8 @@ Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuI
     m_hub = new Pcsx2CategoryHub(this);
     connect(m_hub, &Pcsx2CategoryHub::categoryActivated,
             this, &Pcsx2SettingsDialog::onCategoryActivated);
+    connect(m_hub, &Pcsx2CategoryHub::openNativeRequested, this,
+            [this]{ m_app->openNativeEmulatorSettings(m_emuId); });
     m_stack->addWidget(m_hub);
 
     root->addWidget(m_stack, 1);
@@ -71,11 +74,13 @@ void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
         return;
     }
     if (category == "Graphics") {
-        // Plan 1 fallback; replaced by Pcsx2GraphicsPage in a later plan.
+        // Plan 1 fallback: opens the legacy schema-driven page as a modal.
+        // Plans 2-4 replace this with the real Pcsx2GraphicsPage + sub-tabs.
         auto* legacy = new EmulatorSettingsPage(m_app, m_emuId);
         legacy->setAttribute(Qt::WA_DeleteOnClose);
         legacy->setWindowModality(Qt::ApplicationModal);
         legacy->show();
+        return;
     }
     // Emulation / Audio / Memory Cards branches wired in Tasks 14-16.
 }
