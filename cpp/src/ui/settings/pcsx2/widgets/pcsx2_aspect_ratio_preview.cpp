@@ -186,8 +186,10 @@ void Pcsx2AspectRatioPreview::paintEvent(QPaintEvent*) {
     const QRectF full = rect();
     p.fillRect(full, Pcsx2Theme::letterbox());
 
-    // Inset so the preview "screen" has a little breathing room.
-    const QRectF client = full.adjusted(6, 6, -6, -6);
+    // No inset — the widget IS the preview screen. When the user picks
+    // Stretch, the draw rect fills the entire widget edge-to-edge with
+    // no visible bezel.
+    const QRectF client = full;
 
     // Compute the draw rect from current state.
     const QRectF dst = computeDrawRect(client);
