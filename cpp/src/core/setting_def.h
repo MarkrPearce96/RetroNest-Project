@@ -43,4 +43,8 @@ struct SettingDef {
     // bit is set/cleared in the existing int and the full int is written
     // back. Used by PPSSPP for iShowStatusFlags. Default 0 = normal Bool.
     int bitmask = 0;
+
+    // Optional recommended value shown in the new PCSX2 dialog description bar.
+    // When empty, UI falls back to displaying defaultValue.
+    QString recommendedValue;
 };

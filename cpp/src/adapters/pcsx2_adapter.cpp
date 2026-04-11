@@ -49,53 +49,117 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         {"1000% [600 FPS (NTSC) / 500 FPS (PAL)]","10"},
         {"Unlimited", "0"},
     };
-    s.append({"Emulation", "", "Speed Control", "Framerate", "NominalScalar", "Normal Speed",
-              "Sets the target speed for normal gameplay.", SettingDef::Combo, "1", speedOptions, 0, 0, 0});
-    s.append({"Emulation", "", "Speed Control", "Framerate", "TurboScalar", "Fast-Forward Speed",
-              "Sets the target speed when turbo mode is activated.", SettingDef::Combo, "2", speedOptions, 0, 0, 0});
-    s.append({"Emulation", "", "Speed Control", "Framerate", "SlomoScalar", "Slow-Motion Speed",
-              "Sets the target speed when slow motion mode is activated.", SettingDef::Combo, "0.5", speedOptions, 0, 0, 0});
+    {
+        SettingDef d{"Emulation", "", "Speed Control", "Framerate", "NominalScalar", "Normal Speed",
+                  "Sets the target speed for normal gameplay.", SettingDef::Combo, "1", speedOptions, 0, 0, 0};
+        d.recommendedValue = "1";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "Speed Control", "Framerate", "TurboScalar", "Fast-Forward Speed",
+                  "Sets the target speed when turbo mode is activated.", SettingDef::Combo, "2", speedOptions, 0, 0, 0};
+        d.recommendedValue = "2";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "Speed Control", "Framerate", "SlomoScalar", "Slow-Motion Speed",
+                  "Sets the target speed when slow motion mode is activated.", SettingDef::Combo, "0.5", speedOptions, 0, 0, 0};
+        d.recommendedValue = "0.5";
+        s.append(d);
+    }
 
     // ── System Settings ─────────────────────────────────────────────────
-    s.append({"Emulation", "", "System Settings", "EmuCore/Speedhacks", "EECycleRate", "EE Cycle Rate",
-              "Underclocks or overclocks the emulated Emotion Engine CPU.",
-              SettingDef::Combo, "0", {
-                  {"50% (Underclock)", "-3"}, {"60% (Underclock)", "-2"}, {"75% (Underclock)", "-1"},
-                  {"100% (Normal Speed)", "0"},
-                  {"130% (Overclock)", "1"}, {"180% (Overclock)", "2"}, {"300% (Overclock)", "3"}
-              }, 0, 0, 0});
-    s.append({"Emulation", "", "System Settings", "EmuCore/Speedhacks", "EECycleSkip", "EE Cycle Skipping",
-              "Makes the emulated Emotion Engine skip cycles.",
-              SettingDef::Combo, "0", {
-                  {"Disabled", "0"}, {"Mild Underclock", "1"}, {"Moderate Underclock", "2"}, {"Maximum Underclock", "3"}
-              }, 0, 0, 0});
-    s.append({"Emulation", "", "System Settings", "EmuCore/Speedhacks", "vuThread", "Enable Multithreaded VU1 (MTVU)",
-              "Runs VU1 on a second thread. Substantial speed improvement in most games.", SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Emulation", "", "System Settings", "EmuCore", "EnableThreadPinning", "Enable Thread Pinning",
-              "Pins emulation threads to specific CPU cores for improved performance.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Emulation", "", "System Settings", "EmuCore", "CdvdPrecache", "Enable CDVD Precaching",
-              "Loads the disc image into RAM before starting. Can reduce stutter but uses more memory.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Emulation", "", "System Settings", "EmuCore", "HostFs", "Enable Host Filesystem",
-              "Enables access to the host filesystem from the emulated PS2.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Emulation", "", "System Settings", "EmuCore", "EnableCheats", "Enable Cheats",
-              "Enables loading cheats from pnach files.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Emulation", "", "System Settings", "EmuCore", "EnableFastBoot", "Fast Boot",
-              "Skips the PS2 BIOS splash screen when booting a game.", SettingDef::Bool, "true", {}, 0, 0, 0});
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore/Speedhacks", "EECycleRate", "EE Cycle Rate",
+                  "Underclocks or overclocks the emulated Emotion Engine CPU.",
+                  SettingDef::Combo, "0", {
+                      {"50% (Underclock)", "-3"}, {"60% (Underclock)", "-2"}, {"75% (Underclock)", "-1"},
+                      {"100% (Normal Speed)", "0"},
+                      {"130% (Overclock)", "1"}, {"180% (Overclock)", "2"}, {"300% (Overclock)", "3"}
+                  }, 0, 0, 0};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore/Speedhacks", "EECycleSkip", "EE Cycle Skipping",
+                  "Makes the emulated Emotion Engine skip cycles.",
+                  SettingDef::Combo, "0", {
+                      {"Disabled", "0"}, {"Mild Underclock", "1"}, {"Moderate Underclock", "2"}, {"Maximum Underclock", "3"}
+                  }, 0, 0, 0};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore/Speedhacks", "vuThread", "Enable Multithreaded VU1 (MTVU)",
+                  "Runs VU1 on a second thread. Substantial speed improvement in most games.", SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.recommendedValue = "true";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableThreadPinning", "Enable Thread Pinning",
+                  "Pins emulation threads to specific CPU cores for improved performance.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "CdvdPrecache", "Enable CDVD Precaching",
+                  "Loads the disc image into RAM before starting. Can reduce stutter but uses more memory.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "HostFs", "Enable Host Filesystem",
+                  "Enables access to the host filesystem from the emulated PS2.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableCheats", "Enable Cheats",
+                  "Enables loading cheats from pnach files.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableFastBoot", "Fast Boot",
+                  "Skips the PS2 BIOS splash screen when booting a game.", SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.recommendedValue = "true";
+        s.append(d);
+    }
 
     // ── Frame Pacing / Latency Control ─────────────────────────────────
-    s.append({"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "VsyncQueueSize", "Maximum Frame Latency",
-              "Sets the number of frames that can be queued up before the CPU waits. Set to 0 for optimal frame pacing.",
-              SettingDef::Combo, "2", {
-                  {"Optimal (Frame Pacing)", "0"}, {"1 frame", "1"}, {"2 frames", "2"}, {"3 frames", "3"}
-              }, 0, 0, 0});
-    s.append({"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "SyncToHostRefreshRate", "Sync to Host Refresh Rate",
-              "Adjusts emulation speed slightly to match your monitor's refresh rate.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "VsyncEnable", "Vertical Sync (VSync)",
-              "Synchronizes frame output with the monitor to prevent screen tearing.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "UseVSyncForTiming", "Use Host VSync Timing",
-              "Uses the host's VSync timing instead of the emulated console's timing.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "SkipDuplicateFrames", "Skip Presenting Duplicate Frames",
-              "Skips presenting frames that are identical to the previous frame.", SettingDef::Bool, "false", {}, 0, 0, 0});
+    {
+        SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "VsyncQueueSize", "Maximum Frame Latency",
+                  "Sets the number of frames that can be queued up before the CPU waits. Set to 0 for optimal frame pacing.",
+                  SettingDef::Combo, "2", {
+                      {"Optimal (Frame Pacing)", "0"}, {"1 frame", "1"}, {"2 frames", "2"}, {"3 frames", "3"}
+                  }, 0, 0, 0};
+        d.recommendedValue = "2";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "SyncToHostRefreshRate", "Sync to Host Refresh Rate",
+                  "Adjusts emulation speed slightly to match your monitor's refresh rate.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "VsyncEnable", "Vertical Sync (VSync)",
+                  "Synchronizes frame output with the monitor to prevent screen tearing.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "UseVSyncForTiming", "Use Host VSync Timing",
+                  "Uses the host's VSync timing instead of the emulated console's timing.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "SkipDuplicateFrames", "Skip Presenting Duplicate Frames",
+                  "Skips presenting frames that are identical to the previous frame.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Graphics > Display
@@ -250,52 +314,124 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // Audio enum combos use exact-case enum name strings, not integers — see
     // AudioStream::GetBackendName / GetExpansionModeName / GetSyncModeName in
     // references/pcsx2-master/pcsx2/Host/AudioStream.cpp:148-221. Audit 2026-04-06.
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "Backend", "Backend", "",
-              SettingDef::Combo, "Cubeb",
-              {{"Cubeb", "Cubeb"}, {"SDL", "SDL"}, {"Null (No Sound)", "Null"}}, 0, 0, 0});
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "Backend", "Backend", "",
+                     SettingDef::Combo, "Cubeb",
+                     {{"Cubeb", "Cubeb"}, {"SDL", "SDL"}, {"Null (No Sound)", "Null"}}, 0, 0, 0};
+        d.recommendedValue = "Cubeb";
+        s.append(d);
+    }
     // TODO(audit-tier-4): DriverName/DeviceName should be enumerated at runtime
     // from the selected backend (Cubeb driver list, host audio device list).
     // Hard-coded options here are macOS-specific and exclude most real devices.
     // Deferred until a shared mechanism is designed across all three adapters.
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "DriverName", "Driver", "",
-              SettingDef::Combo, "",
-              {{"Default", ""}, {"audiounit", "audiounit"}}, 0, 0, 0});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "DeviceName", "Output Device", "",
-              SettingDef::Combo, "",
-              {{"Default", ""}}, 0, 0, 0});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "ExpansionMode", "Expansion", "",
-              SettingDef::Combo, "Disabled",
-              {{"Disabled (Stereo)", "Disabled"}, {"Stereo with LFE", "StereoLFE"},
-               {"Quadraphonic", "Quadraphonic"}, {"Quadraphonic with LFE", "QuadraphonicLFE"},
-               {"5.1 Surround", "Surround51"}, {"7.1 Surround", "Surround71"}}, 0, 0, 0});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "SyncMode", "Synchronization", "",
-              SettingDef::Combo, "TimeStretch",
-              {{"Disabled (Noisy)", "Disabled"}, {"TimeStretch (Recommended)", "TimeStretch"}}, 0, 0, 0});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "BufferMS", "Buffer Size", "",
-              SettingDef::Int, "50", {}, 10, 500, 10, "slider", "ms"});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMS", "Output Latency", "",
-              SettingDef::Int, "20", {}, 0, 500, 5, "slider", "ms"});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMinimal", "Minimal Output Latency",
-              "Uses the smallest possible latency value. May cause crackling.", SettingDef::Bool, "false", {}, 0, 0, 0});
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "DriverName", "Driver", "",
+                     SettingDef::Combo, "",
+                     {{"Default", ""}, {"audiounit", "audiounit"}}, 0, 0, 0};
+        d.recommendedValue = "Default";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "DeviceName", "Output Device", "",
+                     SettingDef::Combo, "",
+                     {{"Default", ""}}, 0, 0, 0};
+        d.recommendedValue = "Default";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "ExpansionMode", "Expansion", "",
+                     SettingDef::Combo, "Disabled",
+                     {{"Disabled (Stereo)", "Disabled"}, {"Stereo with LFE", "StereoLFE"},
+                      {"Quadraphonic", "Quadraphonic"}, {"Quadraphonic with LFE", "QuadraphonicLFE"},
+                      {"5.1 Surround", "Surround51"}, {"7.1 Surround", "Surround71"}}, 0, 0, 0};
+        d.recommendedValue = "Disabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "SyncMode", "Synchronization", "",
+                     SettingDef::Combo, "TimeStretch",
+                     {{"Disabled (Noisy)", "Disabled"}, {"TimeStretch (Recommended)", "TimeStretch"}}, 0, 0, 0};
+        d.recommendedValue = "TimeStretch";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "BufferMS", "Buffer Size", "",
+                     SettingDef::Int, "50", {}, 10, 500, 10, "slider", "ms"};
+        d.recommendedValue = "50";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMS", "Output Latency", "",
+                     SettingDef::Int, "20", {}, 0, 500, 5, "slider", "ms"};
+        d.recommendedValue = "20";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMinimal", "Minimal Output Latency",
+                     "Uses the smallest possible latency value. May cause crackling.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
 
     // ── Controls ──────────────────────────────────────────────────────
-    s.append({"Audio", "", "Controls", "SPU2/Output", "StandardVolume", "Standard Volume", "",
-              SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"});
-    s.append({"Audio", "", "Controls", "SPU2/Output", "FastForwardVolume", "Fast Forward Volume", "",
-              SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"});
-    s.append({"Audio", "", "Controls", "SPU2/Output", "OutputMuted", "Mute All Sound",
-              "Mutes all audio output.", SettingDef::Bool, "false", {}, 0, 0, 0});
+    {
+        SettingDef d{"Audio", "", "Controls", "SPU2/Output", "StandardVolume", "Standard Volume", "",
+                     SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"};
+        d.recommendedValue = "100";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Controls", "SPU2/Output", "FastForwardVolume", "Fast Forward Volume", "",
+                     SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"};
+        d.recommendedValue = "100";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Controls", "SPU2/Output", "OutputMuted", "Mute All Sound",
+                     "Mutes all audio output.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Memory Cards
     // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Memory Cards", "", "", "MemoryCards", "Slot1_Enable", "Slot 1", "", SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Slot1_Filename", "Slot 1 Filename", "", SettingDef::String, "Mcd001.ps2", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Slot2_Enable", "Slot 2", "", SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Slot2_Filename", "Slot 2 Filename", "", SettingDef::String, "Mcd002.ps2", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot2_Enable", "Multitap 1 - Slot 2", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot3_Enable", "Multitap 1 - Slot 3", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot4_Enable", "Multitap 1 - Slot 4", "", SettingDef::Bool, "false", {}, 0, 0, 0});
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot1_Enable", "Slot 1", "", SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.recommendedValue = "true";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot1_Filename", "Slot 1 Filename", "", SettingDef::String, "Mcd001.ps2", {}, 0, 0, 0};
+        d.recommendedValue = "Mcd001.ps2";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot2_Enable", "Slot 2", "", SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.recommendedValue = "true";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot2_Filename", "Slot 2 Filename", "", SettingDef::String, "Mcd002.ps2", {}, 0, 0, 0};
+        d.recommendedValue = "Mcd002.ps2";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot2_Enable", "Multitap 1 - Slot 2", "", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot3_Enable", "Multitap 1 - Slot 3", "", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot4_Enable", "Multitap 1 - Slot 4", "", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
 
     return s;
 }

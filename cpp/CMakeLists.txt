@@ -77,6 +77,18 @@ set(SOURCES
     src/ui/settings/controller_settings_widget.cpp
     src/core/sdl_input_manager.cpp
     src/core/macos_fullscreen.mm
+    src/ui/settings/pcsx2/widgets/pcsx2_card.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_section_header.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle_row.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_combo_row.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_slider_row.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_description_bar.cpp
+    src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
+    src/ui/settings/pcsx2/pcsx2_category_hub.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_audio_page.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.cpp
 )
 
 set(HEADERS
@@ -139,6 +151,19 @@ set(HEADERS
     src/ui/settings/binding_widget_common.h
     src/core/controller_type_def.h
     src/core/macos_fullscreen.h
+    src/ui/settings/pcsx2/pcsx2_theme.h
+    src/ui/settings/pcsx2/widgets/pcsx2_card.h
+    src/ui/settings/pcsx2/widgets/pcsx2_section_header.h
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle.h
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle_row.h
+    src/ui/settings/pcsx2/widgets/pcsx2_combo_row.h
+    src/ui/settings/pcsx2/widgets/pcsx2_slider_row.h
+    src/ui/settings/pcsx2/widgets/pcsx2_description_bar.h
+    src/ui/settings/pcsx2/pcsx2_settings_dialog.h
+    src/ui/settings/pcsx2/pcsx2_category_hub.h
+    src/ui/settings/pcsx2/pages/pcsx2_emulation_page.h
+    src/ui/settings/pcsx2/pages/pcsx2_audio_page.h
+    src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
@@ -382,3 +407,53 @@ set_target_properties(test_ppsspp_schema PROPERTIES AUTOMOC ON)
 target_include_directories(test_ppsspp_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_ppsspp_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME PPSSPPSchema COMMAND test_ppsspp_schema)
+
+add_executable(test_pcsx2_recommended_values
+    tests/test_pcsx2_recommended_values.cpp
+    src/adapters/pcsx2_adapter.cpp
+    src/adapters/emulator_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_pcsx2_recommended_values PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_recommended_values PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_recommended_values PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_test(NAME Pcsx2RecommendedValues COMMAND test_pcsx2_recommended_values)
+
+add_executable(test_pcsx2_toggle
+    tests/test_pcsx2_toggle.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle.cpp
+)
+set_target_properties(test_pcsx2_toggle PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_toggle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_toggle PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME Pcsx2Toggle COMMAND test_pcsx2_toggle)
+
+add_executable(test_pcsx2_combo_row
+    tests/test_pcsx2_combo_row.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_combo_row.cpp
+)
+set_target_properties(test_pcsx2_combo_row PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_combo_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_combo_row PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME Pcsx2ComboRow COMMAND test_pcsx2_combo_row)
+
+add_executable(test_pcsx2_slider_row
+    tests/test_pcsx2_slider_row.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_slider_row.cpp
+)
+set_target_properties(test_pcsx2_slider_row PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_slider_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_slider_row PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME Pcsx2SliderRow COMMAND test_pcsx2_slider_row)
+
+add_executable(test_pcsx2_description_bar
+    tests/test_pcsx2_description_bar.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_description_bar.cpp
+)
+set_target_properties(test_pcsx2_description_bar PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_description_bar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_description_bar PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME Pcsx2DescriptionBar COMMAND test_pcsx2_description_bar)
