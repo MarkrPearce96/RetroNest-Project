@@ -152,7 +152,69 @@ void Pcsx2GraphicsOsdPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
 }
 
 void Pcsx2GraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
-    Q_UNUSED(topRow);
+    auto* card = new Pcsx2Card(this);
+    card->setFocusPolicy(Qt::NoFocus);
+    card->setMinimumHeight(460);
+    card->setPreviewStyle(true);
+    if (const SettingDef* d = findDef("OsdScale"))
+        card->setSettingDef(*d);
+    connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsOsdPage::settingFocused);
+
+    auto* v = new QVBoxLayout(card);
+    v->setContentsMargins(14, 12, 14, 12);
+    v->setSpacing(10);
+
+    auto* lbl = new QLabel(QStringLiteral("OSD PREVIEW"), card);
+    lbl->setStyleSheet("color:#9a9690;font-size:11px;font-weight:600;"
+                       "letter-spacing:0.8px;");
+    v->addWidget(lbl);
+
+    m_preview = new Pcsx2OsdPreview(card);
+    v->addWidget(m_preview);
+
+    if (const SettingDef* d = findDef("OsdScale")) {
+        m_scaleSlider = new Pcsx2SliderRow(card);
+        m_scaleSlider->setLabel(d->label);
+        m_scaleSlider->setRange(int(d->minVal), int(d->maxVal));
+        m_scaleSlider->setSuffix(d->suffix);
+        m_scaleSlider->setSettingDef(*d);
+        connect(m_scaleSlider, &Pcsx2SliderRow::focused, this, &Pcsx2GraphicsOsdPage::settingFocused);
+        connect(m_scaleSlider, &Pcsx2SliderRow::valueChanged, this, [this](int val) {
+            const SettingDef* dd = findDef("OsdScale");
+            if (dd) saveValue(dd->section, dd->key, QString::number(val));
+            if (m_preview) m_preview->setOsdScale(val);
+        });
+        v->addWidget(m_scaleSlider);
+    }
+
+    auto* comboRow = new QHBoxLayout();
+    comboRow->setSpacing(8);
+
+    auto addPosCombo = [&](const QString& key, bool drivePerfPreview) -> Pcsx2ComboRow* {
+        const SettingDef* d = findDef(key);
+        if (!d) return nullptr;
+        auto* row = new Pcsx2ComboRow(card, /*stacked=*/false);
+        row->setLabel(d->label);
+        row->setOptions(d->options);
+        row->setSettingDef(*d);
+        connect(row, &Pcsx2ComboRow::focused, this, &Pcsx2GraphicsOsdPage::settingFocused);
+        connect(row, &Pcsx2ComboRow::valueChanged, this,
+                [this, key, drivePerfPreview](const QString& val) {
+            const SettingDef* dd = findDef(key);
+            if (dd) saveValue(dd->section, dd->key, val);
+            if (drivePerfPreview && m_preview)
+                m_preview->setPerformancePos(Pcsx2OsdPreview::fromPosValue(val));
+        });
+        comboRow->addWidget(row, 1);
+        return row;
+    };
+
+    m_messagesPosCombo = addPosCombo("OsdMessagesPos",    /*drivePerfPreview=*/false);
+    m_perfPosCombo     = addPosCombo("OsdPerformancePos", /*drivePerfPreview=*/true);
+
+    v->addLayout(comboRow);
+    v->addStretch();
+    topRow->addWidget(card, 1);
 }
 
 void Pcsx2GraphicsOsdPage::buildBottomToggleGrid(QVBoxLayout* root) {
