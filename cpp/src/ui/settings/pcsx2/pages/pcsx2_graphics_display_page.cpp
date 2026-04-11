@@ -67,7 +67,7 @@ void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
     auto addCombo = [&](const QString& key) -> Pcsx2ComboRow* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* row = new Pcsx2ComboRow(card);
+        auto* row = new Pcsx2ComboRow(card, /*stacked=*/true);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
