@@ -77,6 +77,7 @@ set(SOURCES
     src/ui/settings/controller_settings_widget.cpp
     src/core/sdl_input_manager.cpp
     src/core/macos_fullscreen.mm
+    src/ui/settings/pcsx2/widgets/pcsx2_card.cpp
 )
 
 set(HEADERS
@@ -140,6 +141,7 @@ set(HEADERS
     src/core/controller_type_def.h
     src/core/macos_fullscreen.h
     src/ui/settings/pcsx2/pcsx2_theme.h
+    src/ui/settings/pcsx2/widgets/pcsx2_card.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
