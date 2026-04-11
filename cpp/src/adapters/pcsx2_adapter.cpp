@@ -272,29 +272,61 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // ═══════════════════════════════════════════════════════════════════════
     // Graphics > Post-Processing
     // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASMode", "Contrast Adaptive Sharpening", "",
-              SettingDef::Combo, "0",
-              {{"None (Default)", "0"}, {"Sharpen Only (Internal Resolution)", "1"},
-               {"Sharpen and Resize (Display Resolution)", "2"}}, 0, 0, 0});
-    s.append({"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASSharpness", "Sharpness", "",
-              SettingDef::Int, "50", {}, 0, 100, 1, "", "%"});
-    s.append({"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "fxaa", "FXAA",
-              "Enables Fast Approximate Anti-Aliasing.", SettingDef::Bool, "false", {}, 0, 0, 0});
+    {
+        SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASMode", "Contrast Adaptive Sharpening", "",
+                     SettingDef::Combo, "0",
+                     {{"None (Default)", "0"}, {"Sharpen Only (Internal Resolution)", "1"},
+                      {"Sharpen and Resize (Display Resolution)", "2"}}, 0, 0, 0};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASSharpness", "Sharpness", "",
+                     SettingDef::Int, "50", {}, 0, 100, 1, "", "%"};
+        d.recommendedValue = "50";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "fxaa", "FXAA",
+                     "Enables Fast Approximate Anti-Aliasing.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
 
-    s.append({"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "TVShader", "TV Shader", "",
-              SettingDef::Combo, "0",
-              {{"None (Default)", "0"}, {"Scanline Filter", "1"}, {"Diagonal Filter", "2"}, {"Triangular Filter", "3"},
-               {"Wave Filter", "4"}, {"Lottes CRT", "5"},
-               {"4xRGSS downsampling (4x Rotated Grid SuperSampling)", "6"},
-               {"NxAGSS downsampling (Nx Automatic Grid SuperSampling)", "7"}}, 0, 0, 0});
-    s.append({"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost", "Shade Boost",
-              "Enables manual adjustment of display brightness, contrast, and saturation.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Brightness", "Brightness", "",
-              SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"});
-    s.append({"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Contrast", "Contrast", "",
-              SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"});
-    s.append({"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Saturation", "Saturation", "",
-              SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"});
+    {
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "TVShader", "TV Shader", "",
+                     SettingDef::Combo, "0",
+                     {{"None (Default)", "0"}, {"Scanline Filter", "1"}, {"Diagonal Filter", "2"}, {"Triangular Filter", "3"},
+                      {"Wave Filter", "4"}, {"Lottes CRT", "5"},
+                      {"4xRGSS downsampling (4x Rotated Grid SuperSampling)", "6"},
+                      {"NxAGSS downsampling (Nx Automatic Grid SuperSampling)", "7"}}, 0, 0, 0};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost", "Shade Boost",
+                     "Enables manual adjustment of display brightness, contrast, and saturation.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Brightness", "Brightness", "",
+                     SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
+        d.recommendedValue = "50";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Contrast", "Contrast", "",
+                     SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
+        d.recommendedValue = "50";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Saturation", "Saturation", "",
+                     SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
+        d.recommendedValue = "50";
+        s.append(d);
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Graphics > OSD
