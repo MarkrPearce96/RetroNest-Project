@@ -65,6 +65,7 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
             return;
         }
         if (auto* c = findChild<QComboBox*>()) {
+            c->setFocus(Qt::OtherFocusReason);
             c->showPopup();
             return;
         }
