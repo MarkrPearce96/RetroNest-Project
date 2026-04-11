@@ -63,23 +63,30 @@ void Pcsx2AudioPage::buildUi() {
     connect(back, &QPushButton::clicked, m_dialog, &Pcsx2SettingsDialog::popPage);
     root->addWidget(back);
 
-    auto makeComboRow = [this](const QString& key) -> Pcsx2ComboRow* {
+    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* row = new Pcsx2ComboRow(this);
+        auto* card = new Pcsx2Card(this);
+        card->setSettingDef(*d);
+        auto* v = new QVBoxLayout(card);
+        v->setContentsMargins(14, 12, 14, 12);
+        auto* row = new Pcsx2ComboRow(card);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ComboRow::focused, this, &Pcsx2AudioPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
+        connect(card, &Pcsx2Card::focused, this, &Pcsx2AudioPage::settingFocused);
+        connect(row,  &Pcsx2ComboRow::focused, this, &Pcsx2AudioPage::settingFocused);
+        connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, v);
         });
-        return row;
+        v->addWidget(row);
+        return card;
     };
     auto makeSliderCard = [this](const QString& key) -> Pcsx2Card* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
         auto* card = new Pcsx2Card(this);
+        card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         auto* row = new Pcsx2SliderRow(card);
@@ -87,6 +94,7 @@ void Pcsx2AudioPage::buildUi() {
         row->setRange(int(d->minVal), int(d->maxVal));
         row->setSuffix(d->suffix);
         row->setSettingDef(*d);
+        connect(card, &Pcsx2Card::focused, this, &Pcsx2AudioPage::settingFocused);
         connect(row, &Pcsx2SliderRow::focused, this, &Pcsx2AudioPage::settingFocused);
         connect(row, &Pcsx2SliderRow::valueChanged, this, [this, key](int val){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, QString::number(val));
@@ -98,11 +106,13 @@ void Pcsx2AudioPage::buildUi() {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
         auto* card = new Pcsx2Card(this);
+        card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         auto* row = new Pcsx2ToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
+        connect(card, &Pcsx2Card::focused, this, &Pcsx2AudioPage::settingFocused);
         connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2AudioPage::settingFocused);
         connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
@@ -110,19 +120,13 @@ void Pcsx2AudioPage::buildUi() {
         v->addWidget(row);
         return card;
     };
-    auto addIfPresent = [](QBoxLayout* layout, QWidget* w){ if (w) layout->addWidget(w); };
 
     // Configuration
     root->addWidget(new Pcsx2SectionHeader("Configuration", this));
-
-    auto* cfgCard = new Pcsx2Card(this);
-    auto* cfgV = new QVBoxLayout(cfgCard);
-    cfgV->setContentsMargins(14, 12, 14, 12);
-    addIfPresent(cfgV, makeComboRow("Backend"));
-    addIfPresent(cfgV, makeComboRow("ExpansionMode"));
-    addIfPresent(cfgV, makeComboRow("SyncMode"));
-    addIfPresent(cfgV, makeComboRow("DriverName"));
-    root->addWidget(cfgCard);
+    if (auto* c = makeComboCard("Backend"))       root->addWidget(c);
+    if (auto* c = makeComboCard("ExpansionMode")) root->addWidget(c);
+    if (auto* c = makeComboCard("SyncMode"))      root->addWidget(c);
+    if (auto* c = makeComboCard("DriverName"))    root->addWidget(c);
 
     if (auto* bufCard = makeSliderCard("BufferMS")) root->addWidget(bufCard);
 

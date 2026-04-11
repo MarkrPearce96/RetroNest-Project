@@ -62,28 +62,36 @@ void Pcsx2EmulationPage::buildUi() {
     connect(back, &QPushButton::clicked, m_dialog, &Pcsx2SettingsDialog::popPage);
     root->addWidget(back);
 
-    auto makeComboRow = [this](const QString& key) -> Pcsx2ComboRow* {
+    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* row = new Pcsx2ComboRow(this);
+        auto* card = new Pcsx2Card(this);
+        card->setSettingDef(*d);
+        auto* v = new QVBoxLayout(card);
+        v->setContentsMargins(14, 12, 14, 12);
+        auto* row = new Pcsx2ComboRow(card);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ComboRow::focused, this, &Pcsx2EmulationPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
+        connect(card, &Pcsx2Card::focused, this, &Pcsx2EmulationPage::settingFocused);
+        connect(row,  &Pcsx2ComboRow::focused, this, &Pcsx2EmulationPage::settingFocused);
+        connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, v);
         });
-        return row;
+        v->addWidget(row);
+        return card;
     };
     auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
         auto* card = new Pcsx2Card(this);
+        card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         auto* row = new Pcsx2ToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
+        connect(card, &Pcsx2Card::focused, this, &Pcsx2EmulationPage::settingFocused);
         connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2EmulationPage::settingFocused);
         connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
@@ -92,25 +100,18 @@ void Pcsx2EmulationPage::buildUi() {
         return card;
     };
     auto addIfPresent = [](QBoxLayout* layout, QWidget* w){ if (w) layout->addWidget(w); };
+    (void)addIfPresent;
 
     // Speed Control
     root->addWidget(new Pcsx2SectionHeader("Speed Control", this));
-    auto* speedCard = new Pcsx2Card(this);
-    auto* speedV = new QVBoxLayout(speedCard);
-    speedV->setContentsMargins(14, 12, 14, 12);
-    addIfPresent(speedV, makeComboRow("NominalScalar"));
-    addIfPresent(speedV, makeComboRow("TurboScalar"));
-    addIfPresent(speedV, makeComboRow("SlomoScalar"));
-    root->addWidget(speedCard);
+    if (auto* c = makeComboCard("NominalScalar")) root->addWidget(c);
+    if (auto* c = makeComboCard("TurboScalar"))   root->addWidget(c);
+    if (auto* c = makeComboCard("SlomoScalar"))   root->addWidget(c);
 
     // System Settings
     root->addWidget(new Pcsx2SectionHeader("System Settings", this));
-    auto* sysCard = new Pcsx2Card(this);
-    auto* sysV = new QVBoxLayout(sysCard);
-    sysV->setContentsMargins(14, 12, 14, 12);
-    addIfPresent(sysV, makeComboRow("EECycleRate"));
-    addIfPresent(sysV, makeComboRow("EECycleSkip"));
-    root->addWidget(sysCard);
+    if (auto* c = makeComboCard("EECycleRate")) root->addWidget(c);
+    if (auto* c = makeComboCard("EECycleSkip")) root->addWidget(c);
 
     auto* sysGrid = new QGridLayout();
     sysGrid->setSpacing(10);
@@ -131,11 +132,7 @@ void Pcsx2EmulationPage::buildUi() {
 
     // Frame Pacing
     root->addWidget(new Pcsx2SectionHeader("Frame Pacing", this));
-    auto* fpCard = new Pcsx2Card(this);
-    auto* fpV = new QVBoxLayout(fpCard);
-    fpV->setContentsMargins(14, 12, 14, 12);
-    addIfPresent(fpV, makeComboRow("VsyncQueueSize"));
-    root->addWidget(fpCard);
+    if (auto* c = makeComboCard("VsyncQueueSize")) root->addWidget(c);
 
     auto* fpGrid = new QGridLayout();
     fpGrid->setSpacing(10);

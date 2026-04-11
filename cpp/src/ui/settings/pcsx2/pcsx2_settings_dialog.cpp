@@ -47,6 +47,9 @@ void Pcsx2SettingsDialog::pushPage(QWidget* page) {
     int idx = m_stack->addWidget(page);
     m_history.push(m_stack->currentIndex());
     m_stack->setCurrentIndex(idx);
+    if (size().width() < 1000 || size().height() < 700) {
+        resize(1000, 700);
+    }
     clearFocusedSetting();
 
     // Auto-focus the first Pcsx2Card so arrow keys work immediately.
@@ -62,6 +65,9 @@ void Pcsx2SettingsDialog::popPage() {
     QWidget* current = m_stack->currentWidget();
     int prev = m_history.pop();
     m_stack->setCurrentIndex(prev);
+    if (m_stack->currentWidget() == m_hub) {
+        resize(950, 550);
+    }
     if (current && current != m_hub) { m_stack->removeWidget(current); current->deleteLater(); }
     clearFocusedSetting();
 }

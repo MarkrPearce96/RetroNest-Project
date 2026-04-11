@@ -81,6 +81,8 @@ void Pcsx2MemoryCardsPage::buildUi() {
         auto* tr = makeToggleRow(key, labelOverride);
         if (!tr) return nullptr;
         auto* card = new Pcsx2Card(this);
+        if (const SettingDef* d = findDef(key)) card->setSettingDef(*d);
+        connect(card, &Pcsx2Card::focused, this, &Pcsx2MemoryCardsPage::settingFocused);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         tr->setParent(card);
@@ -93,6 +95,8 @@ void Pcsx2MemoryCardsPage::buildUi() {
         const SettingDef* fd = findDef(filenameKey);
         if (!fd) return nullptr;
         auto* card = new Pcsx2Card(this);
+        if (const SettingDef* ed = findDef(enableKey)) card->setSettingDef(*ed);
+        connect(card, &Pcsx2Card::focused, this, &Pcsx2MemoryCardsPage::settingFocused);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         v->setSpacing(8);
