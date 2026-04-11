@@ -86,6 +86,7 @@ set(SOURCES
     src/ui/settings/pcsx2/widgets/pcsx2_description_bar.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
     src/ui/settings/pcsx2/pcsx2_category_hub.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
 )
 
 set(HEADERS
@@ -158,6 +159,7 @@ set(HEADERS
     src/ui/settings/pcsx2/widgets/pcsx2_description_bar.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
+    src/ui/settings/pcsx2/pages/pcsx2_emulation_page.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.

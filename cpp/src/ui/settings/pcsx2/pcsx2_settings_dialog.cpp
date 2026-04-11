@@ -1,5 +1,6 @@
 #include "pcsx2_settings_dialog.h"
 #include "pcsx2_category_hub.h"
+#include "pages/pcsx2_emulation_page.h"
 #include "widgets/pcsx2_description_bar.h"
 #include "pcsx2_theme.h"
 #include "ui/settings/emulator_settings_page.h"
@@ -49,6 +50,12 @@ void Pcsx2SettingsDialog::setFocusedSetting(const SettingDef& def) { m_descBar->
 void Pcsx2SettingsDialog::clearFocusedSetting() { m_descBar->clear(); }
 
 void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
+    if (category == "Emulation") {
+        auto* page = new Pcsx2EmulationPage(this);
+        connect(page, &Pcsx2EmulationPage::settingFocused, this, &Pcsx2SettingsDialog::setFocusedSetting);
+        pushPage(page);
+        return;
+    }
     if (category == "Graphics") {
         // Plan 1 fallback; replaced by Pcsx2GraphicsPage in a later plan.
         auto* legacy = new EmulatorSettingsPage(m_app, m_emuId);
