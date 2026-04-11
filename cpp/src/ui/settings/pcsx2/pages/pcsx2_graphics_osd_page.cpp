@@ -90,7 +90,65 @@ void Pcsx2GraphicsOsdPage::buildUi() {
 }
 
 void Pcsx2GraphicsOsdPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
-    Q_UNUSED(topRow);
+    auto* card = new Pcsx2Card(this);
+    card->setFocusPolicy(Qt::NoFocus);
+    card->setMinimumHeight(460);
+
+    if (const SettingDef* perfDef = findDef("OsdPerformancePos"))
+        card->setSettingDef(*perfDef);
+    connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsOsdPage::settingFocused);
+
+    auto* v = new QVBoxLayout(card);
+    v->setContentsMargins(14, 12, 14, 12);
+    v->setSpacing(8);
+
+    auto addMiniHeader = [&](const QString& text) {
+        auto* hdr = new QLabel(text, card);
+        hdr->setStyleSheet(
+            "color:#f59e0b; font-size:11px; font-weight:700;"
+            "letter-spacing:1.0px; padding:6px 0 2px 0;");
+        v->addWidget(hdr);
+    };
+
+    auto addToggle = [&](const QString& key) {
+        const SettingDef* d = findDef(key);
+        if (!d) return;
+        auto* row = new Pcsx2ToggleRow(card);
+        row->setLabel(d->label);
+        row->setSettingDef(*d);
+        connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2GraphicsOsdPage::settingFocused);
+        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on) {
+            const SettingDef* dd = findDef(key);
+            if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
+            if (!m_preview) return;
+            if      (key == "OsdShowFPS")        m_preview->setShowFps(on);
+            else if (key == "OsdShowSpeed")      m_preview->setShowSpeed(on);
+            else if (key == "OsdShowVPS")        m_preview->setShowVps(on);
+            else if (key == "OsdShowResolution") m_preview->setShowResolution(on);
+            else if (key == "OsdShowCPU")        m_preview->setShowCpu(on);
+            else if (key == "OsdShowGPU")        m_preview->setShowGpu(on);
+            else if (key == "OsdShowSettings")   m_preview->setShowSettings(on);
+            else if (key == "OsdshowPatches")    m_preview->setShowPatches(on);
+            else if (key == "OsdShowInputs")     m_preview->setShowInputs(on);
+        });
+        v->addWidget(row);
+    };
+
+    addMiniHeader(QStringLiteral("PERFORMANCE STATS"));
+    addToggle("OsdShowFPS");
+    addToggle("OsdShowSpeed");
+    addToggle("OsdShowGPU");
+    addToggle("OsdShowCPU");
+    addToggle("OsdShowResolution");
+    addToggle("OsdShowVPS");
+
+    addMiniHeader(QStringLiteral("SETTINGS & INPUTS"));
+    addToggle("OsdshowPatches");
+    addToggle("OsdShowSettings");
+    addToggle("OsdShowInputs");
+
+    v->addStretch();
+    topRow->addWidget(card, 1);
 }
 
 void Pcsx2GraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
