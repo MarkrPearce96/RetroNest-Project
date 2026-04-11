@@ -81,6 +81,7 @@ set(SOURCES
     src/ui/settings/pcsx2/widgets/pcsx2_section_header.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_toggle.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_toggle_row.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_combo_row.cpp
 )
 
 set(HEADERS
@@ -148,6 +149,7 @@ set(HEADERS
     src/ui/settings/pcsx2/widgets/pcsx2_section_header.h
     src/ui/settings/pcsx2/widgets/pcsx2_toggle.h
     src/ui/settings/pcsx2/widgets/pcsx2_toggle_row.h
+    src/ui/settings/pcsx2/widgets/pcsx2_combo_row.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
@@ -414,3 +416,12 @@ set_target_properties(test_pcsx2_toggle PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_toggle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_pcsx2_toggle PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 add_test(NAME Pcsx2Toggle COMMAND test_pcsx2_toggle)
+
+add_executable(test_pcsx2_combo_row
+    tests/test_pcsx2_combo_row.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_combo_row.cpp
+)
+set_target_properties(test_pcsx2_combo_row PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_combo_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_combo_row PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME Pcsx2ComboRow COMMAND test_pcsx2_combo_row)
