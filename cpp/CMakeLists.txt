@@ -139,6 +139,7 @@ set(HEADERS
     src/ui/settings/binding_widget_common.h
     src/core/controller_type_def.h
     src/core/macos_fullscreen.h
+    src/ui/settings/pcsx2/pcsx2_theme.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
