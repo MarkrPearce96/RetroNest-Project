@@ -86,9 +86,13 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
         view->setAttribute(Qt::WA_MacShowFocusRect, false);
         view->setContentsMargins(0, 0, 0, 0);
     }
-    // Watch for the popup hiding so we can return focus to the parent
-    // Pcsx2Card (otherwise arrow keys get trapped on the combo itself).
+    // Watch for popup lifecycle + keypresses. The Enter key may be
+    // delivered to the view or to its viewport depending on focus, so
+    // install the filter on both.
     m_combo->view()->installEventFilter(this);
+    if (auto* vp = m_combo->view()->viewport()) {
+        vp->installEventFilter(this);
+    }
     lay->addWidget(m_label, 0);
     lay->addWidget(m_combo, 1);
     connect(m_combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -123,36 +127,36 @@ bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
     if (obj == m_combo && e->type() == QEvent::FocusIn) {
         emit focused(m_def);
     }
-    if (obj == m_combo->view()) {
-        if (e->type() == QEvent::KeyPress) {
+
+    // Popup open? Check keypresses for Enter/Return on the view or its viewport.
+    if (e->type() == QEvent::KeyPress && m_combo->view()->isVisible()) {
+        const bool fromView = (obj == m_combo->view()) ||
+                              (obj == m_combo->view()->viewport());
+        if (fromView) {
             auto* ke = static_cast<QKeyEvent*>(e);
             if (ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter) {
-                // Commit the current selection and close the popup.
-                // Consuming the event (returning true) prevents it from
-                // bubbling back up to Pcsx2Card::keyPressEvent which
-                // would re-open the popup.
                 const QModelIndex current = m_combo->view()->currentIndex();
                 if (current.isValid()) {
                     m_combo->setCurrentIndex(current.row());
                 }
                 m_combo->hidePopup();
-                return true;
-            }
-        }
-        if (e->type() == QEvent::Hide) {
-            // Popup dismissed — walk up the parent chain to find the
-            // Pcsx2Card ancestor and return focus so arrow keys resume
-            // card nav instead of getting trapped cycling the combo in place.
-            QWidget* w = parentWidget();
-            while (w) {
-                if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("Pcsx2Card")) {
-                    w->setFocus(Qt::OtherFocusReason);
-                    break;
-                }
-                w = w->parentWidget();
+                return true;  // consume to prevent re-open
             }
         }
     }
+
+    if (obj == m_combo->view() && e->type() == QEvent::Hide) {
+        // Popup dismissed — return focus to the parent Pcsx2Card.
+        QWidget* w = parentWidget();
+        while (w) {
+            if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("Pcsx2Card")) {
+                w->setFocus(Qt::OtherFocusReason);
+                break;
+            }
+            w = w->parentWidget();
+        }
+    }
+
     return QWidget::eventFilter(obj, e);
 }
 
