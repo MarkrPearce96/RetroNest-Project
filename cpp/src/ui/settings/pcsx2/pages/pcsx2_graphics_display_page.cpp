@@ -6,6 +6,7 @@
 #include "../widgets/pcsx2_toggle_row.h"
 #include "../widgets/pcsx2_slider_row.h"
 #include "../widgets/pcsx2_aspect_ratio_preview.h"
+#include "../widgets/pcsx2_toggle.h"
 #include "ui/app_controller.h"
 #include "adapters/pcsx2_adapter.h"
 #include <QVBoxLayout>
@@ -16,6 +17,13 @@
 #include <QVariantMap>
 #include <QScrollArea>
 #include <QFrame>
+#include <QApplication>
+#include <QEvent>
+#include <QKeyEvent>
+#include <QComboBox>
+#include <QSlider>
+#include <QAbstractItemView>
+#include <limits>
 
 Pcsx2GraphicsDisplayPage::Pcsx2GraphicsDisplayPage(Pcsx2SettingsDialog* dialog)
     : QWidget(dialog), m_dialog(dialog) {
@@ -27,6 +35,11 @@ Pcsx2GraphicsDisplayPage::Pcsx2GraphicsDisplayPage(Pcsx2SettingsDialog* dialog)
     buildUi();
     loadValues();
     syncPreview();
+    qApp->installEventFilter(this);
+}
+
+Pcsx2GraphicsDisplayPage::~Pcsx2GraphicsDisplayPage() {
+    qApp->removeEventFilter(this);
 }
 
 const SettingDef* Pcsx2GraphicsDisplayPage::findDef(const QString& key) const {
@@ -327,4 +340,91 @@ void Pcsx2GraphicsDisplayPage::syncPreview() {
     if (m_integerScalingToggle) {
         m_preview->setIntegerScaling(m_integerScalingToggle->isChecked());
     }
+}
+
+bool Pcsx2GraphicsDisplayPage::eventFilter(QObject* obj, QEvent* e) {
+    Q_UNUSED(obj);
+    if (e->type() == QEvent::KeyPress) {
+        auto* ke = static_cast<QKeyEvent*>(e);
+        const int k = ke->key();
+        if (k == Qt::Key_Left || k == Qt::Key_Right || k == Qt::Key_Up || k == Qt::Key_Down) {
+            QWidget* current = QApplication::focusWidget();
+            if (current && isAncestorOf(current)) {
+                // Don't steal arrow keys from an open combo popup — the user
+                // is navigating options inside it.
+                if (auto* combo = qobject_cast<QComboBox*>(current)) {
+                    if (combo->view() && combo->view()->isVisible()) {
+                        return QWidget::eventFilter(obj, e);
+                    }
+                }
+                if (QWidget* next = findNextFocusSpatial(current, k)) {
+                    next->setFocus(Qt::TabFocusReason);
+                    return true;
+                }
+            }
+        }
+    }
+    return QWidget::eventFilter(obj, e);
+}
+
+QList<QWidget*> Pcsx2GraphicsDisplayPage::collectFocusables() const {
+    QList<QWidget*> result;
+    const auto all = this->findChildren<QWidget*>();
+    for (QWidget* w : all) {
+        if (!w->isVisible()) continue;
+        if (w->focusPolicy() == Qt::NoFocus) continue;
+        // Accept specific interactive widget types as focus stops.
+        if (qobject_cast<QComboBox*>(w)   ||
+            qobject_cast<QSlider*>(w)     ||
+            qobject_cast<QSpinBox*>(w)    ||
+            qobject_cast<Pcsx2Toggle*>(w) ||
+            qobject_cast<Pcsx2Card*>(w)) {
+            result.append(w);
+        }
+    }
+    return result;
+}
+
+QWidget* Pcsx2GraphicsDisplayPage::findNextFocusSpatial(QWidget* current, int key) const {
+    const auto focusables = collectFocusables();
+    if (focusables.size() < 2) return nullptr;
+
+    auto pagePoint = [this](QWidget* w) -> QPoint {
+        return w->mapTo(const_cast<Pcsx2GraphicsDisplayPage*>(this), QPoint(0, 0));
+    };
+    const QRect myRect(pagePoint(current), current->size());
+    const QPoint myCenter = myRect.center();
+
+    QWidget* best = nullptr;
+    long long bestScore = std::numeric_limits<long long>::max();
+
+    for (QWidget* w : focusables) {
+        if (w == current) continue;
+        const QRect r(pagePoint(w), w->size());
+        const QPoint c = r.center();
+        const int dx = c.x() - myCenter.x();
+        const int dy = c.y() - myCenter.y();
+
+        bool inDir = false;
+        switch (key) {
+            case Qt::Key_Left:  inDir = dx < 0; break;
+            case Qt::Key_Right: inDir = dx > 0; break;
+            case Qt::Key_Up:    inDir = dy < 0; break;
+            case Qt::Key_Down:  inDir = dy > 0; break;
+        }
+        if (!inDir) continue;
+
+        const bool vertical = (key == Qt::Key_Up || key == Qt::Key_Down);
+        const long long adx = qAbs(dx);
+        const long long ady = qAbs(dy);
+        const long long score = vertical
+            ? (ady * 10000LL + adx)
+            : (adx * 10000LL + ady);
+
+        if (score < bestScore) {
+            bestScore = score;
+            best = w;
+        }
+    }
+    return best;
 }
