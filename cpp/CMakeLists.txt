@@ -84,11 +84,16 @@ set(SOURCES
     src/ui/settings/pcsx2/widgets/pcsx2_combo_row.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_slider_row.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_description_bar.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_graphics_sub_tab_bar.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
     src/ui/settings/pcsx2/pcsx2_category_hub.cpp
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_audio_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_stub_sub_page.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_page.cpp
 )
 
 set(HEADERS
@@ -159,11 +164,16 @@ set(HEADERS
     src/ui/settings/pcsx2/widgets/pcsx2_combo_row.h
     src/ui/settings/pcsx2/widgets/pcsx2_slider_row.h
     src/ui/settings/pcsx2/widgets/pcsx2_description_bar.h
+    src/ui/settings/pcsx2/widgets/pcsx2_graphics_sub_tab_bar.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.h
     src/ui/settings/pcsx2/pages/pcsx2_audio_page.h
     src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.h
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_stub_sub_page.h
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.h
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.h
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_page.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
