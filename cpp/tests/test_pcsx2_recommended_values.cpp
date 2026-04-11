@@ -32,6 +32,16 @@ private slots:
         }
         QCOMPARE(count, 11);
     }
+    void testMemoryCardsAllHaveRecommended() {
+        int count = 0;
+        for (const auto& d : schema_) {
+            if (d.category != "Memory Cards") continue;
+            ++count;
+            QVERIFY2(!d.recommendedValue.isEmpty(),
+                     qPrintable(QString("missing recommendedValue for Memory Cards/%1").arg(d.key)));
+        }
+        QCOMPARE(count, 7);
+    }
 };
 QTEST_GUILESS_MAIN(TestPcsx2RecommendedValues)
 #include "test_pcsx2_recommended_values.moc"

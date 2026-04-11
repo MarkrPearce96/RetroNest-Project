@@ -397,13 +397,41 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // ═══════════════════════════════════════════════════════════════════════
     // Memory Cards
     // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Memory Cards", "", "", "MemoryCards", "Slot1_Enable", "Slot 1", "", SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Slot1_Filename", "Slot 1 Filename", "", SettingDef::String, "Mcd001.ps2", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Slot2_Enable", "Slot 2", "", SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Slot2_Filename", "Slot 2 Filename", "", SettingDef::String, "Mcd002.ps2", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot2_Enable", "Multitap 1 - Slot 2", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot3_Enable", "Multitap 1 - Slot 3", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot4_Enable", "Multitap 1 - Slot 4", "", SettingDef::Bool, "false", {}, 0, 0, 0});
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot1_Enable", "Slot 1", "", SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.recommendedValue = "true";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot1_Filename", "Slot 1 Filename", "", SettingDef::String, "Mcd001.ps2", {}, 0, 0, 0};
+        d.recommendedValue = "Mcd001.ps2";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot2_Enable", "Slot 2", "", SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.recommendedValue = "true";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot2_Filename", "Slot 2 Filename", "", SettingDef::String, "Mcd002.ps2", {}, 0, 0, 0};
+        d.recommendedValue = "Mcd002.ps2";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot2_Enable", "Multitap 1 - Slot 2", "", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot3_Enable", "Multitap 1 - Slot 3", "", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot4_Enable", "Multitap 1 - Slot 4", "", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
 
     return s;
 }
