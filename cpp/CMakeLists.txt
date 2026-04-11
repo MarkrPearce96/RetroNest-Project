@@ -482,3 +482,12 @@ set_target_properties(test_pcsx2_aspect_ratio_preview PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_aspect_ratio_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_pcsx2_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 add_test(NAME Pcsx2AspectRatioPreview COMMAND test_pcsx2_aspect_ratio_preview)
+
+add_executable(test_pcsx2_osd_preview
+    tests/test_pcsx2_osd_preview.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_osd_preview.cpp
+)
+set_target_properties(test_pcsx2_osd_preview PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_osd_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_osd_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME Pcsx2OsdPreview COMMAND test_pcsx2_osd_preview)
