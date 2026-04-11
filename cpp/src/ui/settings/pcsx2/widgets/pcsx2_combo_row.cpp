@@ -1,5 +1,6 @@
 #include "pcsx2_combo_row.h"
 #include "../pcsx2_theme.h"
+#include <QAbstractItemView>
 #include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -15,6 +16,20 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
     m_combo = new QComboBox(this);
     m_combo->setStyleSheet(Pcsx2Theme::comboQss());
     m_combo->setMinimumWidth(200);
+    // Style the popup container (QComboBoxPrivateContainer) directly so
+    // Qt's default frame background doesn't show as black bars top/bottom.
+    // Accessing view() forces lazy creation of the view + its parent container.
+    if (QWidget* container = m_combo->view()->parentWidget()) {
+        container->setStyleSheet(
+            "QComboBoxPrivateContainer, QFrame {"
+            "  background-color: #585450;"
+            "  border: 1px solid #706c66;"
+            "  border-radius: 8px;"
+            "}");
+    }
+    // Watch for the popup hiding so we can return focus to the parent
+    // Pcsx2Card (otherwise arrow keys get trapped on the combo itself).
+    m_combo->view()->installEventFilter(this);
     lay->addWidget(m_label, 0);
     lay->addWidget(m_combo, 1);
     connect(m_combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -47,6 +62,20 @@ QString Pcsx2ComboRow::value() const {
 
 bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
     if (obj == m_combo && e->type() == QEvent::FocusIn) emit focused(m_def);
+    if (obj == m_combo->view() && e->type() == QEvent::Hide) {
+        // Popup dismissed — walk up the parent chain to find the Pcsx2Card
+        // ancestor and return focus to it so arrow keys resume card nav.
+        QWidget* w = parentWidget();
+        while (w) {
+            // Use the className check (not the type) to avoid importing
+            // the Pcsx2Card header into this row's implementation.
+            if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("Pcsx2Card")) {
+                w->setFocus(Qt::OtherFocusReason);
+                break;
+            }
+            w = w->parentWidget();
+        }
+    }
     return QWidget::eventFilter(obj, e);
 }
 

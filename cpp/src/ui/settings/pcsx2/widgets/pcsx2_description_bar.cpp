@@ -24,7 +24,17 @@ void Pcsx2DescriptionBar::setSetting(const SettingDef& def) {
     m_text->setText(def.tooltip.isEmpty()
                     ? QStringLiteral("No description available.")
                     : def.tooltip);
-    const QString rec = def.recommendedValue.isEmpty() ? def.defaultValue : def.recommendedValue;
+    QString rec = def.recommendedValue.isEmpty() ? def.defaultValue : def.recommendedValue;
+    // For combo settings, translate the raw INI value to its display label
+    // so the pill reads "Recommended: 100% [60 FPS…]" not "Recommended: 1".
+    if (def.type == SettingDef::Combo) {
+        for (const auto& opt : def.options) {
+            if (opt.second == rec) {
+                rec = opt.first;
+                break;
+            }
+        }
+    }
     m_rec->setText(QStringLiteral("Recommended: %1").arg(rec));
     m_rec->setVisible(!rec.isEmpty());
 }

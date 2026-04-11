@@ -28,6 +28,16 @@ private slots:
         bar.clear();
         QVERIFY(bar.descText().contains("Focus"));
     }
+    void comboRecommendedTranslatesToLabel() {
+        Pcsx2DescriptionBar bar;
+        SettingDef d;
+        d.tooltip = "t";
+        d.type = SettingDef::Combo;
+        d.recommendedValue = "1";
+        d.options = {{"100% [60 FPS]", "1"}, {"200%", "2"}};
+        bar.setSetting(d);
+        QCOMPARE(bar.recommendedText(), QString("Recommended: 100% [60 FPS]"));
+    }
 };
 QTEST_MAIN(TestPcsx2DescriptionBar)
 #include "test_pcsx2_description_bar.moc"
