@@ -85,6 +85,7 @@ set(SOURCES
     src/ui/settings/pcsx2/widgets/pcsx2_slider_row.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_description_bar.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_graphics_sub_tab_bar.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
     src/ui/settings/pcsx2/pcsx2_category_hub.cpp
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
@@ -165,6 +166,7 @@ set(HEADERS
     src/ui/settings/pcsx2/widgets/pcsx2_slider_row.h
     src/ui/settings/pcsx2/widgets/pcsx2_description_bar.h
     src/ui/settings/pcsx2/widgets/pcsx2_graphics_sub_tab_bar.h
+    src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.h
