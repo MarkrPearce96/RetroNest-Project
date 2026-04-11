@@ -96,6 +96,7 @@ set(SOURCES
     src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_osd_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.cpp
 )
 
@@ -179,6 +180,7 @@ set(HEADERS
     src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.h
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_osd_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.h
 )
 
