@@ -54,7 +54,59 @@ void Pcsx2GraphicsDisplayPage::buildUi() {
 }
 
 void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
-    Q_UNUSED(topRow);
+    auto* card = new Pcsx2Card(this);
+
+    if (const SettingDef* arDef = findDef("AspectRatio"))
+        card->setSettingDef(*arDef);
+    connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+
+    auto* v = new QVBoxLayout(card);
+    v->setContentsMargins(14, 12, 14, 12);
+    v->setSpacing(8);
+
+    auto addCombo = [&](const QString& key) -> Pcsx2ComboRow* {
+        const SettingDef* d = findDef(key);
+        if (!d) return nullptr;
+        auto* row = new Pcsx2ComboRow(card);
+        row->setLabel(d->label);
+        row->setOptions(d->options);
+        row->setSettingDef(*d);
+        connect(row, &Pcsx2ComboRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val) {
+            const SettingDef* dd = findDef(key);
+            if (dd) saveValue(dd->section, dd->key, val);
+        });
+        v->addWidget(row);
+        return row;
+    };
+
+    addCombo("Renderer");
+    m_aspectCombo = addCombo("AspectRatio");
+    addCombo("FMVAspectRatioSwitch");
+    addCombo("deinterlace_mode");
+    addCombo("linear_present_mode");
+
+    if (const SettingDef* d = findDef("EnableWideScreenPatches")) {
+        auto* row = new Pcsx2ToggleRow(card);
+        row->setLabel(d->label);
+        row->setSettingDef(*d);
+        connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(row, &Pcsx2ToggleRow::toggled, this, [this](bool on) {
+            const SettingDef* dd = findDef("EnableWideScreenPatches");
+            if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
+        });
+        v->addWidget(row);
+    }
+
+    if (m_aspectCombo) {
+        connect(m_aspectCombo, &Pcsx2ComboRow::valueChanged, this, [this](const QString& val) {
+            if (m_preview) {
+                m_preview->setAspectRatio(Pcsx2AspectRatioPreview::fromSchemaValue(val));
+            }
+        });
+    }
+
+    topRow->addWidget(card, 1);
 }
 
 void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
