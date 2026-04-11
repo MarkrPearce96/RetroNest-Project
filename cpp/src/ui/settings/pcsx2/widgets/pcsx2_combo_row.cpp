@@ -29,6 +29,18 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
         listView->setStyle(fusion);
     }
     m_combo->setView(listView);
+
+    // Make Enter on the current item close the popup and apply the
+    // selection. QListView's default QAbstractItemView::activated fires
+    // on Enter (and Double-click); we route it to setCurrentIndex +
+    // hidePopup so the user can confirm a choice with the keyboard.
+    connect(listView, &QAbstractItemView::activated, m_combo,
+            [this](const QModelIndex& idx) {
+                if (!idx.isValid()) return;
+                m_combo->setCurrentIndex(idx.row());
+                m_combo->hidePopup();
+            });
+
     m_combo->setStyleSheet(Pcsx2Theme::comboQss());
     m_combo->setMinimumWidth(200);
     // Style the popup container (QComboBoxPrivateContainer) directly so
