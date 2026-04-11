@@ -164,51 +164,140 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // ═══════════════════════════════════════════════════════════════════════
     // Graphics > Display
     // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "Renderer", "Renderer", "",
-              SettingDef::Combo, "-1",
-              {{"Auto", "-1"}, {"OpenGL", "12"}, {"Vulkan", "14"},
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "Renderer", "Renderer",
+                     "Selects which backend PCSX2 uses to render frames. Auto picks the best option for your GPU; Vulkan and Metal are fastest on modern hardware, OpenGL is the most compatible, Software emulates the GS on CPU for perfect accuracy.",
+                     SettingDef::Combo, "-1",
+                     {{"Auto", "-1"}, {"OpenGL", "12"}, {"Vulkan", "14"},
 #if defined(Q_OS_MACOS)
-               {"Metal", "17"},
+                      {"Metal", "17"},
 #endif
-               {"Software", "13"}}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "AspectRatio", "Aspect Ratio", "",
-              SettingDef::Combo, "4:3",
-              {{"Auto 4:3/3:2", "Auto 4:3/3:2"}, {"4:3", "4:3"}, {"16:9", "16:9"},
-               {"10:7", "10:7"}, {"Stretch", "Stretch"}}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "FMVAspectRatioSwitch", "FMV Aspect Ratio Override", "",
-              SettingDef::Combo, "Off",
-              {{"Off (Default)", "Off"}, {"Auto Standard (4:3 Interlaced / 3:2 Progressive)", "Auto 4:3/3:2"},
-               {"Standard (4:3)", "4:3"}, {"Widescreen (16:9)", "16:9"}, {"Native/Full (10:7)", "10:7"}}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "deinterlace_mode", "Deinterlacing", "",
-              SettingDef::Combo, "0",
-              {{"Automatic", "0"}, {"Off", "1"}, {"Weave (Top)", "2"}, {"Weave (Bottom)", "3"},
-               {"Bob (Top)", "4"}, {"Bob (Bottom)", "5"}, {"Blend (Top)", "6"}, {"Blend (Bottom)", "7"},
-               {"Adaptive (Top)", "8"}, {"Adaptive (Bottom)", "9"}}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "linear_present_mode", "Bilinear Filtering", "",
-              SettingDef::Combo, "1",
-              {{"None", "0"}, {"Bilinear (Smooth)", "1"}, {"Bilinear (Sharp)", "2"}}, 0, 0, 0});
+                      {"Software", "13"}}, 0, 0, 0};
+        d.recommendedValue = "-1";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "AspectRatio", "Aspect Ratio",
+                     "Controls the aspect ratio of the emulated display. Auto selects 4:3 for interlaced games and 3:2 for progressive games. 16:9 stretches the image for widescreen TVs; Stretch fills the whole window.",
+                     SettingDef::Combo, "4:3",
+                     {{"Auto 4:3/3:2", "Auto 4:3/3:2"}, {"4:3", "4:3"}, {"16:9", "16:9"},
+                      {"10:7", "10:7"}, {"Stretch", "Stretch"}}, 0, 0, 0};
+        d.recommendedValue = "4:3";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "FMVAspectRatioSwitch", "FMV Aspect Ratio Override",
+                     "Overrides the aspect ratio only while full-motion video (FMV) is playing. Useful for games with widescreen cutscenes inside a 4:3 main game.",
+                     SettingDef::Combo, "Off",
+                     {{"Off (Default)", "Off"}, {"Auto Standard (4:3 Interlaced / 3:2 Progressive)", "Auto 4:3/3:2"},
+                      {"Standard (4:3)", "4:3"}, {"Widescreen (16:9)", "16:9"}, {"Native/Full (10:7)", "10:7"}}, 0, 0, 0};
+        d.recommendedValue = "Off";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "deinterlace_mode", "Deinterlacing",
+                     "Selects how interlaced frames are combined for progressive display. Automatic picks the best option per game; Weave preserves detail at the cost of combing; Bob and Blend smooth motion at the cost of vertical resolution.",
+                     SettingDef::Combo, "0",
+                     {{"Automatic", "0"}, {"Off", "1"}, {"Weave (Top)", "2"}, {"Weave (Bottom)", "3"},
+                      {"Bob (Top)", "4"}, {"Bob (Bottom)", "5"}, {"Blend (Top)", "6"}, {"Blend (Bottom)", "7"},
+                      {"Adaptive (Top)", "8"}, {"Adaptive (Bottom)", "9"}}, 0, 0, 0};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "linear_present_mode", "Bilinear Filtering",
+                     "Applies a bilinear filter when scaling the final image to the window. Smooth is the standard option; Sharp uses a pixel-art-friendly variant that keeps edges crisp.",
+                     SettingDef::Combo, "1",
+                     {{"None", "0"}, {"Bilinear (Smooth)", "1"}, {"Bilinear (Sharp)", "2"}}, 0, 0, 0};
+        d.recommendedValue = "1";
+        s.append(d);
+    }
 
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "StretchY", "Vertical Stretch", "",
-              SettingDef::Int, "100", {}, 10, 300, 1, "", "%"});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "CropLeft", "Left", "Crop", SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "CropTop", "Top", "", SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "CropRight", "Right", "", SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "CropBottom", "Bottom", "", SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"});
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "StretchY", "Vertical Stretch",
+                     "Multiplies the display height after aspect-ratio fitting. Values above 100% make the image taller than its letterbox; values below leave extra vertical space. Default is 100%.",
+                     SettingDef::Int, "100", {}, 10, 300, 1, "", "%"};
+        d.recommendedValue = "100";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "CropLeft", "Left",
+                     "Trims pixels from the left edge of the source image before it's fit to the display window. Useful for games with garbage pixels at the border.",
+                     SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "CropTop", "Top",
+                     "Trims pixels from the top edge of the source image before it's fit to the display window. Useful for games with garbage pixels at the border.",
+                     SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "CropRight", "Right",
+                     "Trims pixels from the right edge of the source image before it's fit to the display window. Useful for games with garbage pixels at the border.",
+                     SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "CropBottom", "Bottom",
+                     "Trims pixels from the bottom edge of the source image before it's fit to the display window. Useful for games with garbage pixels at the border.",
+                     SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
     // Display checkboxes
-    s.append({"Graphics", "Display", "", "EmuCore", "EnableWideScreenPatches", "Apply Widescreen Patches",
-              "Automatically applies widescreen patches to supported games.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore", "EnableNoInterlacingPatches", "Apply No-Interlacing Patches",
-              "Automatically applies no-interlacing patches to supported games.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "pcrtc_antiblur", "Anti-Blur",
-              "Enables internal anti-blur hacks.", SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "IntegerScaling", "Integer Scaling",
-              "Adds padding to ensure the image is only scaled by whole numbers.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "pcrtc_offsets", "Screen Offsets",
-              "Enables PCRTc offsets which position the screen as the game requests.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "disable_interlace_offset", "Disable Interlace Offset",
-              "Disables interlacing offset which may reduce jitter in some games.", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Display", "", "EmuCore/GS", "pcrtc_overscan", "Show Overscan",
-              "Shows the overscan area of the display.", SettingDef::Bool, "false", {}, 0, 0, 0});
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore", "EnableWideScreenPatches", "Apply Widescreen Patches",
+                     "Automatically applies community widescreen patches to supported games. Reshapes the rendering to true 16:9 instead of stretching the 4:3 picture.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore", "EnableNoInterlacingPatches", "Apply No-Interlacing Patches",
+                     "Automatically applies community no-interlacing patches to supported games. Removes flicker in games that render in interlaced mode.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "pcrtc_antiblur", "Anti-Blur",
+                     "Enables internal anti-blur hacks that remove the PS2's GS smear on commonly-affected games. Safe to leave on.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.recommendedValue = "true";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "IntegerScaling", "Integer Scaling",
+                     "Snaps the rendered image to an integer multiple of the source pixel size. Produces crisp pixel-art scaling at the cost of leaving letterbox bars.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "pcrtc_offsets", "Screen Offsets",
+                     "Enables PCRTC offsets so the screen is positioned exactly where the game requests. Fixes games that deliberately offset the viewport.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "disable_interlace_offset", "Disable Interlace Offset",
+                     "Disables the half-pixel interlace offset which can reduce jitter on some games that render at half vertical resolution.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "pcrtc_overscan", "Show Overscan",
+                     "Shows the overscan area of the display that would normally be hidden by a CRT bezel. Exposes any garbage the game draws outside the safe area.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
 
 
     // ═══════════════════════════════════════════════════════════════════════

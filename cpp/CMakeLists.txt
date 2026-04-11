@@ -85,6 +85,7 @@ set(SOURCES
     src/ui/settings/pcsx2/widgets/pcsx2_slider_row.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_description_bar.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_graphics_sub_tab_bar.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
     src/ui/settings/pcsx2/pcsx2_category_hub.cpp
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
@@ -93,6 +94,7 @@ set(SOURCES
     src/ui/settings/pcsx2/pages/pcsx2_graphics_stub_sub_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.cpp
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.cpp
 )
 
@@ -165,6 +167,7 @@ set(HEADERS
     src/ui/settings/pcsx2/widgets/pcsx2_slider_row.h
     src/ui/settings/pcsx2/widgets/pcsx2_description_bar.h
     src/ui/settings/pcsx2/widgets/pcsx2_graphics_sub_tab_bar.h
+    src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.h
@@ -173,6 +176,7 @@ set(HEADERS
     src/ui/settings/pcsx2/pages/pcsx2_graphics_stub_sub_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.h
+    src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.h
 )
 
@@ -467,3 +471,12 @@ set_target_properties(test_pcsx2_description_bar PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_description_bar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_pcsx2_description_bar PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 add_test(NAME Pcsx2DescriptionBar COMMAND test_pcsx2_description_bar)
+
+add_executable(test_pcsx2_aspect_ratio_preview
+    tests/test_pcsx2_aspect_ratio_preview.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.cpp
+)
+set_target_properties(test_pcsx2_aspect_ratio_preview PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_aspect_ratio_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME Pcsx2AspectRatioPreview COMMAND test_pcsx2_aspect_ratio_preview)

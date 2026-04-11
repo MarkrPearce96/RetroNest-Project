@@ -20,6 +20,25 @@ Pcsx2Card::Pcsx2Card(QWidget* parent) : QFrame(parent) {
     setProperty("focused", false);
 }
 
+void Pcsx2Card::setPreviewStyle(bool preview) {
+    if (preview) {
+        setStyleSheet(QStringLiteral(
+            "QFrame#Pcsx2Card {"
+            "  background-color: #504c48;"
+            "  border: 1px solid #706c66;"
+            "  border-radius: 8px;"
+            "}"
+            "QFrame#Pcsx2Card[focused=\"true\"] {"
+            "  border: 1px solid #f59e0b;"
+            "}"));
+    } else {
+        setStyleSheet(Pcsx2Theme::cardQss());
+    }
+    style()->unpolish(this);
+    style()->polish(this);
+    update();
+}
+
 void Pcsx2Card::focusInEvent(QFocusEvent* e) {
     QFrame::focusInEvent(e);
     setProperty("focused", true);

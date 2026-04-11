@@ -18,6 +18,7 @@ inline QColor textSecondary()  { return QColor("#d0ccc4"); }
 inline QColor textMuted()      { return QColor("#9a9690"); }
 inline QColor accent()         { return QColor("#f59e0b"); }
 inline QColor letterbox()      { return QColor("#3a3632"); }
+inline QColor previewCardBg()  { return QColor("#504c48"); }
 
 // Ready-to-use stylesheet fragments
 inline QString cardQss() {

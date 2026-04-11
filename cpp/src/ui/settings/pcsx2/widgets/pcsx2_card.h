@@ -11,6 +11,7 @@ class Pcsx2Card : public QFrame {
 public:
     explicit Pcsx2Card(QWidget* parent = nullptr);
     void setSettingDef(const SettingDef& def) { m_settingDef = def; }
+    void setPreviewStyle(bool preview);
     const SettingDef& settingDef() const { return m_settingDef; }
 
 signals:
