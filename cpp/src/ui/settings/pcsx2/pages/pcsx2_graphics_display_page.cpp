@@ -78,6 +78,7 @@ void Pcsx2GraphicsDisplayPage::buildUi() {
 
 void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
     auto* card = new Pcsx2Card(this);
+    card->setFocusPolicy(Qt::NoFocus);
     card->setMinimumHeight(460);
 
     if (const SettingDef* arDef = findDef("AspectRatio"))
@@ -135,6 +136,7 @@ void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
 
 void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
     auto* card = new Pcsx2Card(this);
+    card->setFocusPolicy(Qt::NoFocus);
     card->setMinimumHeight(460);
     card->setPreviewStyle(true);
     if (const SettingDef* d = findDef("StretchY"))
