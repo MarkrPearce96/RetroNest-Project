@@ -6,6 +6,8 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QEvent>
+#include <QStyleFactory>
+#include <QListView>
 
 Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
     auto* lay = new QHBoxLayout(this);
@@ -15,6 +17,18 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
     m_label->setMinimumWidth(180);
     m_label->setMinimumHeight(24);
     m_combo = new QComboBox(this);
+    // Force Fusion style on the combo so QSS rules like ::item:selected
+    // actually apply — macOS's native style path ignores most pseudo-states.
+    if (auto* fusion = QStyleFactory::create("Fusion")) {
+        m_combo->setStyle(fusion);
+    }
+    // Replace the native view with a plain QListView we control directly,
+    // ensuring our item stylesheet isn't filtered by the native style.
+    auto* listView = new QListView(m_combo);
+    if (auto* fusion = QStyleFactory::create("Fusion")) {
+        listView->setStyle(fusion);
+    }
+    m_combo->setView(listView);
     m_combo->setStyleSheet(Pcsx2Theme::comboQss());
     m_combo->setMinimumWidth(200);
     // Style the popup container (QComboBoxPrivateContainer) directly so
