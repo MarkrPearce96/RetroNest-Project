@@ -50,7 +50,9 @@ Pcsx2AspectRatioPreview::Pcsx2AspectRatioPreview(QWidget* parent)
     : QWidget(parent) {
     setAttribute(Qt::WA_StyledBackground, false);
     setMinimumSize(minimumSizeHint());
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy sp(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    sp.setHeightForWidth(true);
+    setSizePolicy(sp);
 }
 
 void Pcsx2AspectRatioPreview::setAspectRatio(AspectRatio ratio) {

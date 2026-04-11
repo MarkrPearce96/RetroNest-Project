@@ -151,9 +151,10 @@ void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
     v->addWidget(lbl);
 
     m_preview = new Pcsx2AspectRatioPreview(card);
-    m_preview->setMinimumHeight(180);
-    m_preview->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    v->addWidget(m_preview, 1);
+    // No explicit sizePolicy — the widget's own constructor sets a 16:9
+    // heightForWidth policy so the layout automatically sizes it to
+    // width * 9/16.
+    v->addWidget(m_preview);
 
     if (const SettingDef* d = findDef("StretchY")) {
         m_stretchSlider = new Pcsx2SliderRow(card);

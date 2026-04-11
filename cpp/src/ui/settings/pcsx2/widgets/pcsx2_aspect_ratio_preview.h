@@ -38,6 +38,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* e) override;
+    bool hasHeightForWidth() const override { return true; }
+    int heightForWidth(int w) const override { return w * 9 / 16; }
 
 private:
     // Pure-function draw-rect computation. Returns a QRectF in widget
