@@ -10,6 +10,8 @@
 Pcsx2Card::Pcsx2Card(QWidget* parent) : QFrame(parent) {
     setObjectName("Pcsx2Card");
     setFocusPolicy(Qt::StrongFocus);
+    setAttribute(Qt::WA_StyledBackground, true);   // make QSS background paint
+    setFrameStyle(QFrame::NoFrame);                // disable QFrame's default frame
     setStyleSheet(Pcsx2Theme::cardQss());
     setProperty("focused", false);
 }
