@@ -215,7 +215,8 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // Graphics > Rendering
     // ═══════════════════════════════════════════════════════════════════════
     {
-        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "upscale_multiplier", "Internal Resolution", "",
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "upscale_multiplier", "Internal Resolution",
+                     "Sets the internal rendering resolution. Higher values produce sharper visuals at the cost of GPU performance.",
                      SettingDef::Combo, "1",
                      {{"Native (PS2) (Default)", "1"}, {"2x Native (~720px/HD)", "2"}, {"3x Native (~1080px/FHD)", "3"},
                       {"4x Native (~1440px/QHD)", "4"}, {"5x Native (~1800px/QHD+)", "5"}, {"6x Native (~2160px/4K UHD)", "6"},
@@ -225,35 +226,40 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "filter", "Texture Filtering", "",
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "filter", "Texture Filtering",
+                     "Controls how textures are sampled when rendered. Bilinear (PS2) matches the original hardware behavior; Forced options ignore the game's preference.",
                      SettingDef::Combo, "2",
                      {{"Nearest", "0"}, {"Bilinear (Forced)", "1"}, {"Bilinear (PS2)", "2"}, {"Bilinear (Forced excluding sprite)", "3"}}, 0, 0, 0};
         d.recommendedValue = "2";
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "TriFilter", "Trilinear Filtering", "",
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "TriFilter", "Trilinear Filtering",
+                     "Enables trilinear filtering for smoother transitions between mipmap levels. Auto leaves this decision to each game.",
                      SettingDef::Combo, "-1",
                      {{"Auto (Default)", "-1"}, {"Off", "0"}, {"Trilinear (PS2)", "1"}, {"Trilinear (Forced)", "2"}}, 0, 0, 0};
         d.recommendedValue = "-1";
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "MaxAnisotropy", "Anisotropic Filtering", "",
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "MaxAnisotropy", "Anisotropic Filtering",
+                     "Improves texture clarity at oblique viewing angles. Low cost on modern GPUs and generally safe to raise.",
                      SettingDef::Combo, "0",
                      {{"Off", "0"}, {"2x", "2"}, {"4x", "4"}, {"8x", "8"}, {"16x", "16"}}, 0, 0, 0};
         d.recommendedValue = "0";
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "dithering_ps2", "Dithering", "",
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "dithering_ps2", "Dithering",
+                     "Controls how PS2 dithering patterns are applied to upscaled rendering. Unscaled matches the original appearance.",
                      SettingDef::Combo, "2",
                      {{"Off", "0"}, {"Scaled", "1"}, {"Unscaled (Default)", "2"}, {"Force 32bit", "3"}}, 0, 0, 0};
         d.recommendedValue = "2";
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "accurate_blending_unit", "Blending Accuracy", "",
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "accurate_blending_unit", "Blending Accuracy",
+                     "Controls how accurately PS2 blending operations are emulated. Higher levels improve compatibility with heavy effects at a performance cost.",
                      SettingDef::Combo, "1",
                      {{"Minimum", "0"}, {"Basic (Default)", "1"}, {"Medium", "2"}, {"High", "3"}, {"Full", "4"}, {"Maximum", "5"}}, 0, 0, 0};
         d.recommendedValue = "1";
@@ -273,7 +279,8 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // Graphics > Post-Processing
     // ═══════════════════════════════════════════════════════════════════════
     {
-        SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASMode", "Contrast Adaptive Sharpening", "",
+        SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASMode", "Contrast Adaptive Sharpening",
+                     "Contrast Adaptive Sharpening uses AMD's CAS algorithm to sharpen the final image. Sharpen Only applies at internal resolution; Sharpen and Resize applies at display resolution.",
                      SettingDef::Combo, "0",
                      {{"None (Default)", "0"}, {"Sharpen Only (Internal Resolution)", "1"},
                       {"Sharpen and Resize (Display Resolution)", "2"}}, 0, 0, 0};
@@ -281,7 +288,8 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASSharpness", "Sharpness", "",
+        SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASSharpness", "Sharpness",
+                     "Strength of the CAS sharpening effect. Higher values produce sharper but potentially noisier images.",
                      SettingDef::Int, "50", {}, 0, 100, 1, "", "%"};
         d.recommendedValue = "50";
         s.append(d);
@@ -294,7 +302,8 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     }
 
     {
-        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "TVShader", "TV Shader", "",
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "TVShader", "TV Shader",
+                     "Applies a CRT-style filter to the final output for an authentic retro look. None disables the filter.",
                      SettingDef::Combo, "0",
                      {{"None (Default)", "0"}, {"Scanline Filter", "1"}, {"Diagonal Filter", "2"}, {"Triangular Filter", "3"},
                       {"Wave Filter", "4"}, {"Lottes CRT", "5"},
@@ -310,25 +319,29 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Brightness", "Brightness", "",
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Brightness", "Brightness",
+                     "Adjusts the overall brightness of the display when Shade Boost is enabled.",
                      SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
         d.recommendedValue = "50";
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Contrast", "Contrast", "",
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Contrast", "Contrast",
+                     "Adjusts the contrast between dark and light areas when Shade Boost is enabled.",
                      SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
         d.recommendedValue = "50";
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Saturation", "Saturation", "",
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Saturation", "Saturation",
+                     "Adjusts color saturation when Shade Boost is enabled.",
                      SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
         d.recommendedValue = "50";
         s.append(d);
     }
     {
-        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Gamma", "Gamma", "",
+        SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Gamma", "Gamma",
+                     "Adjusts gamma correction when Shade Boost is enabled.",
                      SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
         d.recommendedValue = "50";
         s.append(d);
