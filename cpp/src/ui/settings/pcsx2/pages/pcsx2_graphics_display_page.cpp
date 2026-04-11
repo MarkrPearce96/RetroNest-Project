@@ -200,8 +200,103 @@ void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
 }
 
 void Pcsx2GraphicsDisplayPage::buildBottomToggleGrid(QVBoxLayout* root) {
-    Q_UNUSED(root);
+    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
+        const SettingDef* d = findDef(key);
+        auto* card = new Pcsx2Card(this);
+        auto* v = new QVBoxLayout(card);
+        v->setContentsMargins(14, 12, 14, 12);
+        if (!d) return card;
+        card->setSettingDef(*d);
+
+        auto* row = new Pcsx2ToggleRow(card);
+        row->setLabel(d->label);
+        row->setSettingDef(*d);
+        connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on) {
+            const SettingDef* dd = findDef(key);
+            if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
+            if (key == "IntegerScaling" && m_preview)
+                m_preview->setIntegerScaling(on);
+        });
+        if (key == "IntegerScaling")
+            m_integerScalingToggle = row;
+        v->addWidget(row);
+        return card;
+    };
+
+    auto* grid = new QGridLayout();
+    grid->setSpacing(12);
+
+    grid->addWidget(makeToggleCard("pcrtc_antiblur"),             0, 0);
+    grid->addWidget(makeToggleCard("IntegerScaling"),             0, 1);
+    grid->addWidget(makeToggleCard("EnableNoInterlacingPatches"), 0, 2);
+    grid->addWidget(makeToggleCard("pcrtc_offsets"),              1, 0);
+    grid->addWidget(makeToggleCard("disable_interlace_offset"),   1, 1);
+    grid->addWidget(makeToggleCard("pcrtc_overscan"),             1, 2);
+
+    grid->setColumnStretch(0, 1);
+    grid->setColumnStretch(1, 1);
+    grid->setColumnStretch(2, 1);
+
+    root->addLayout(grid);
 }
 
-void Pcsx2GraphicsDisplayPage::loadValues() {}
-void Pcsx2GraphicsDisplayPage::syncPreview() {}
+void Pcsx2GraphicsDisplayPage::loadValues() {
+    auto* app = m_dialog->appController();
+    const QString emuId = m_dialog->emuId();
+
+    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+        const SettingDef& d = combo->settingDef();
+        QString cur = app->settingValue(emuId, d.section, d.key);
+        combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
+    }
+    for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+        const SettingDef& d = tog->settingDef();
+        QString cur = app->settingValue(emuId, d.section, d.key);
+        const QString v = cur.isEmpty() ? d.defaultValue : cur;
+        tog->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
+    }
+    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+        const SettingDef& d = slider->settingDef();
+        QString cur = app->settingValue(emuId, d.section, d.key);
+        bool ok = false;
+        int v = cur.toInt(&ok);
+        if (!ok) v = d.defaultValue.toInt();
+        slider->setValue(v);
+    }
+
+    auto loadCrop = [&](QSpinBox* spin, const QString& key) {
+        if (!spin) return;
+        const SettingDef* d = findDef(key);
+        if (!d) return;
+        QString cur = app->settingValue(emuId, d->section, d->key);
+        bool ok = false;
+        int v = cur.toInt(&ok);
+        if (!ok) v = d->defaultValue.toInt();
+        spin->setValue(v);
+    };
+    loadCrop(m_cropL, "CropLeft");
+    loadCrop(m_cropT, "CropTop");
+    loadCrop(m_cropR, "CropRight");
+    loadCrop(m_cropB, "CropBottom");
+}
+
+void Pcsx2GraphicsDisplayPage::syncPreview() {
+    if (!m_preview) return;
+
+    if (m_aspectCombo) {
+        m_preview->setAspectRatio(
+            Pcsx2AspectRatioPreview::fromSchemaValue(m_aspectCombo->value()));
+    }
+    if (m_stretchSlider) {
+        m_preview->setStretchY(m_stretchSlider->value());
+    }
+    if (m_cropL && m_cropT && m_cropR && m_cropB) {
+        m_preview->setCrop(m_cropL->value(), m_cropT->value(),
+                           m_cropR->value(), m_cropB->value());
+    }
+    if (m_integerScalingToggle) {
+        m_preview->setIntegerScaling(m_integerScalingToggle->isChecked());
+    }
+}
