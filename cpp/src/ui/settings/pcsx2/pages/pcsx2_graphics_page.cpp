@@ -2,6 +2,7 @@
 #include "pcsx2_graphics_stub_sub_page.h"
 #include "pcsx2_graphics_rendering_page.h"
 #include "pcsx2_graphics_post_processing_page.h"
+#include "pcsx2_graphics_display_page.h"
 #include "../pcsx2_settings_dialog.h"
 #include "../pcsx2_theme.h"
 #include "../widgets/pcsx2_graphics_sub_tab_bar.h"
@@ -45,9 +46,11 @@ Pcsx2GraphicsPage::Pcsx2GraphicsPage(Pcsx2SettingsDialog* dialog)
     AppController* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    // 0: Display (stub — Plan 3 replaces)
-    auto* displayStub = new Pcsx2GraphicsStubSubPage(app, emuId, "Display", this);
-    m_stack->addWidget(displayStub);
+    // 0: Display (real — Plan 3)
+    auto* display = new Pcsx2GraphicsDisplayPage(m_dialog);
+    connect(display, &Pcsx2GraphicsDisplayPage::settingFocused,
+            this, &Pcsx2GraphicsPage::settingFocused);
+    m_stack->addWidget(display);
 
     // 1: Rendering (real — Plan 2)
     auto* rendering = new Pcsx2GraphicsRenderingPage(m_dialog);
@@ -67,10 +70,9 @@ Pcsx2GraphicsPage::Pcsx2GraphicsPage(Pcsx2SettingsDialog* dialog)
 
     root->addWidget(m_stack, 1);
 
-    // Start on Rendering (index 1) — Display and OSD are stubs in Plan 2,
-    // no point landing the user on a "coming later" screen.
-    m_tabBar->setCurrentIndex(1);
-    m_stack->setCurrentIndex(1);
+    // Plan 3: Display is now a real page, so land on it by default.
+    m_tabBar->setCurrentIndex(0);
+    m_stack->setCurrentIndex(0);
 }
 
 void Pcsx2GraphicsPage::onSubTabActivated(int index) {
