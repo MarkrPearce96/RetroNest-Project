@@ -14,6 +14,8 @@
 #include <QLabel>
 #include <QSpinBox>
 #include <QVariantMap>
+#include <QScrollArea>
+#include <QFrame>
 
 Pcsx2GraphicsDisplayPage::Pcsx2GraphicsDisplayPage(Pcsx2SettingsDialog* dialog)
     : QWidget(dialog), m_dialog(dialog) {
@@ -39,7 +41,28 @@ void Pcsx2GraphicsDisplayPage::saveValue(const QString& section, const QString& 
 }
 
 void Pcsx2GraphicsDisplayPage::buildUi() {
-    auto* root = new QVBoxLayout(this);
+    auto* outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setStyleSheet(
+        "QScrollArea { background: transparent; border: none; }"
+        "QScrollArea > QWidget > QWidget { background: transparent; }"
+        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
+        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical { background: transparent; }");
+    outer->addWidget(scroll);
+
+    auto* content = new QWidget(scroll);
+    scroll->setWidget(content);
+
+    auto* root = new QVBoxLayout(content);
     root->setContentsMargins(24, 12, 24, 16);
     root->setSpacing(12);
 
@@ -55,6 +78,7 @@ void Pcsx2GraphicsDisplayPage::buildUi() {
 
 void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
     auto* card = new Pcsx2Card(this);
+    card->setMinimumHeight(460);
 
     if (const SettingDef* arDef = findDef("AspectRatio"))
         card->setSettingDef(*arDef);
@@ -111,6 +135,7 @@ void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
 
 void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
     auto* card = new Pcsx2Card(this);
+    card->setMinimumHeight(460);
     card->setPreviewStyle(true);
     if (const SettingDef* d = findDef("StretchY"))
         card->setSettingDef(*d);
