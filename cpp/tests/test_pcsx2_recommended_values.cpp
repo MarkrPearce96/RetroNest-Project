@@ -22,6 +22,16 @@ private slots:
         }
         QVERIFY(emuCount >= 13);
     }
+    void testAudioSettingsAllHaveRecommended() {
+        int count = 0;
+        for (const auto& d : schema_) {
+            if (d.category != "Audio") continue;
+            ++count;
+            QVERIFY2(!d.recommendedValue.isEmpty(),
+                     qPrintable(QString("missing recommendedValue for Audio/%1").arg(d.key)));
+        }
+        QCOMPARE(count, 11);
+    }
 };
 QTEST_GUILESS_MAIN(TestPcsx2RecommendedValues)
 #include "test_pcsx2_recommended_values.moc"

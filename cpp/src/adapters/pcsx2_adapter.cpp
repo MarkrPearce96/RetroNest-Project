@@ -314,41 +314,85 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // Audio enum combos use exact-case enum name strings, not integers — see
     // AudioStream::GetBackendName / GetExpansionModeName / GetSyncModeName in
     // references/pcsx2-master/pcsx2/Host/AudioStream.cpp:148-221. Audit 2026-04-06.
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "Backend", "Backend", "",
-              SettingDef::Combo, "Cubeb",
-              {{"Cubeb", "Cubeb"}, {"SDL", "SDL"}, {"Null (No Sound)", "Null"}}, 0, 0, 0});
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "Backend", "Backend", "",
+                     SettingDef::Combo, "Cubeb",
+                     {{"Cubeb", "Cubeb"}, {"SDL", "SDL"}, {"Null (No Sound)", "Null"}}, 0, 0, 0};
+        d.recommendedValue = "Cubeb";
+        s.append(d);
+    }
     // TODO(audit-tier-4): DriverName/DeviceName should be enumerated at runtime
     // from the selected backend (Cubeb driver list, host audio device list).
     // Hard-coded options here are macOS-specific and exclude most real devices.
     // Deferred until a shared mechanism is designed across all three adapters.
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "DriverName", "Driver", "",
-              SettingDef::Combo, "",
-              {{"Default", ""}, {"audiounit", "audiounit"}}, 0, 0, 0});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "DeviceName", "Output Device", "",
-              SettingDef::Combo, "",
-              {{"Default", ""}}, 0, 0, 0});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "ExpansionMode", "Expansion", "",
-              SettingDef::Combo, "Disabled",
-              {{"Disabled (Stereo)", "Disabled"}, {"Stereo with LFE", "StereoLFE"},
-               {"Quadraphonic", "Quadraphonic"}, {"Quadraphonic with LFE", "QuadraphonicLFE"},
-               {"5.1 Surround", "Surround51"}, {"7.1 Surround", "Surround71"}}, 0, 0, 0});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "SyncMode", "Synchronization", "",
-              SettingDef::Combo, "TimeStretch",
-              {{"Disabled (Noisy)", "Disabled"}, {"TimeStretch (Recommended)", "TimeStretch"}}, 0, 0, 0});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "BufferMS", "Buffer Size", "",
-              SettingDef::Int, "50", {}, 10, 500, 10, "slider", "ms"});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMS", "Output Latency", "",
-              SettingDef::Int, "20", {}, 0, 500, 5, "slider", "ms"});
-    s.append({"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMinimal", "Minimal Output Latency",
-              "Uses the smallest possible latency value. May cause crackling.", SettingDef::Bool, "false", {}, 0, 0, 0});
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "DriverName", "Driver", "",
+                     SettingDef::Combo, "",
+                     {{"Default", ""}, {"audiounit", "audiounit"}}, 0, 0, 0};
+        d.recommendedValue = "Default";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "DeviceName", "Output Device", "",
+                     SettingDef::Combo, "",
+                     {{"Default", ""}}, 0, 0, 0};
+        d.recommendedValue = "Default";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "ExpansionMode", "Expansion", "",
+                     SettingDef::Combo, "Disabled",
+                     {{"Disabled (Stereo)", "Disabled"}, {"Stereo with LFE", "StereoLFE"},
+                      {"Quadraphonic", "Quadraphonic"}, {"Quadraphonic with LFE", "QuadraphonicLFE"},
+                      {"5.1 Surround", "Surround51"}, {"7.1 Surround", "Surround71"}}, 0, 0, 0};
+        d.recommendedValue = "Disabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "SyncMode", "Synchronization", "",
+                     SettingDef::Combo, "TimeStretch",
+                     {{"Disabled (Noisy)", "Disabled"}, {"TimeStretch (Recommended)", "TimeStretch"}}, 0, 0, 0};
+        d.recommendedValue = "TimeStretch";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "BufferMS", "Buffer Size", "",
+                     SettingDef::Int, "50", {}, 10, 500, 10, "slider", "ms"};
+        d.recommendedValue = "50";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMS", "Output Latency", "",
+                     SettingDef::Int, "20", {}, 0, 500, 5, "slider", "ms"};
+        d.recommendedValue = "20";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMinimal", "Minimal Output Latency",
+                     "Uses the smallest possible latency value. May cause crackling.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
 
     // ── Controls ──────────────────────────────────────────────────────
-    s.append({"Audio", "", "Controls", "SPU2/Output", "StandardVolume", "Standard Volume", "",
-              SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"});
-    s.append({"Audio", "", "Controls", "SPU2/Output", "FastForwardVolume", "Fast Forward Volume", "",
-              SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"});
-    s.append({"Audio", "", "Controls", "SPU2/Output", "OutputMuted", "Mute All Sound",
-              "Mutes all audio output.", SettingDef::Bool, "false", {}, 0, 0, 0});
+    {
+        SettingDef d{"Audio", "", "Controls", "SPU2/Output", "StandardVolume", "Standard Volume", "",
+                     SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"};
+        d.recommendedValue = "100";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Controls", "SPU2/Output", "FastForwardVolume", "Fast Forward Volume", "",
+                     SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"};
+        d.recommendedValue = "100";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Audio", "", "Controls", "SPU2/Output", "OutputMuted", "Mute All Sound",
+                     "Mutes all audio output.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.recommendedValue = "false";
+        s.append(d);
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Memory Cards
