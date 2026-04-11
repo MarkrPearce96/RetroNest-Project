@@ -1,11 +1,13 @@
 #include "pcsx2_card.h"
 #include "../pcsx2_theme.h"
+#include "pcsx2_toggle.h"
 #include <QScrollArea>
 #include <QPainter>
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QStyle>
 #include <QWidget>
+#include <QComboBox>
 #include <limits>
 
 Pcsx2Card::Pcsx2Card(QWidget* parent) : QFrame(parent) {
@@ -57,6 +59,16 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
     const int k = e->key();
 
     if (k == Qt::Key_Return || k == Qt::Key_Enter) {
+        // Try to activate the inner interactive widget first (toggle or combo).
+        if (auto* t = findChild<Pcsx2Toggle*>()) {
+            t->toggle();
+            return;
+        }
+        if (auto* c = findChild<QComboBox*>()) {
+            c->showPopup();
+            return;
+        }
+        // No inner interactive widget — fall back to activated() (hub cards).
         emit activated();
         return;
     }
@@ -70,13 +82,15 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
                 const QPoint myCenter = mine.center();
 
                 Pcsx2Card* bestOverlap = nullptr;
-                int bestOverlapDist = std::numeric_limits<int>::max();
+                long long bestOverlapScore = std::numeric_limits<long long>::max();
                 Pcsx2Card* bestAny = nullptr;
-                int bestAnyDist = std::numeric_limits<int>::max();
+                long long bestAnyScore = std::numeric_limits<long long>::max();
 
                 auto rangesOverlap = [](int a0, int a1, int b0, int b1) {
                     return a0 < b1 && b0 < a1;
                 };
+
+                const bool vertical = (k == Qt::Key_Up || k == Qt::Key_Down);
 
                 for (Pcsx2Card* s : siblings) {
                     if (s == this || !s->isVisible()) continue;
@@ -108,13 +122,21 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
                     }
                     if (!inDir) continue;
 
-                    const int dist = dx * dx + dy * dy;
-                    if (perpOverlap && dist < bestOverlapDist) {
-                        bestOverlapDist = dist;
+                    // Weight the primary axis 10000x so the vertically (or
+                    // horizontally) closest candidate wins even if it's
+                    // horizontally (or vertically) offset from center.
+                    const long long adx = qAbs(dx);
+                    const long long ady = qAbs(dy);
+                    const long long score = vertical
+                        ? (ady * 10000LL + adx)
+                        : (adx * 10000LL + ady);
+
+                    if (perpOverlap && score < bestOverlapScore) {
+                        bestOverlapScore = score;
                         bestOverlap = s;
                     }
-                    if (dist < bestAnyDist) {
-                        bestAnyDist = dist;
+                    if (score < bestAnyScore) {
+                        bestAnyScore = score;
                         bestAny = s;
                     }
                 }
