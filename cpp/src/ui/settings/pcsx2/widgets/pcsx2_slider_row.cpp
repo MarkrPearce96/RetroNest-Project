@@ -43,3 +43,8 @@ bool Pcsx2SliderRow::eventFilter(QObject* o, QEvent* e) {
     if (o == m_slider && e->type() == QEvent::FocusIn) emit focused(m_def);
     return QWidget::eventFilter(o, e);
 }
+
+void Pcsx2SliderRow::enterEvent(QEnterEvent* e) {
+    QWidget::enterEvent(e);
+    emit focused(m_def);
+}

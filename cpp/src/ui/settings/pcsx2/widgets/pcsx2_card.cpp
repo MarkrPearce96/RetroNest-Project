@@ -1,5 +1,6 @@
 #include "pcsx2_card.h"
 #include "../pcsx2_theme.h"
+#include <QScrollArea>
 #include <QPainter>
 #include <QFocusEvent>
 #include <QKeyEvent>
@@ -87,6 +88,15 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
 
                 if (best) {
                     best->setFocus(Qt::TabFocusReason);
+                    // If we're inside a scroll area, scroll the new focus into view.
+                    QWidget* p = best->parentWidget();
+                    while (p) {
+                        if (auto* sa = qobject_cast<QScrollArea*>(p)) {
+                            sa->ensureWidgetVisible(best, 20, 20);
+                            break;
+                        }
+                        p = p->parentWidget();
+                    }
                     return;
                 }
             }

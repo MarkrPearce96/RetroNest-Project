@@ -49,3 +49,8 @@ bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
     if (obj == m_combo && e->type() == QEvent::FocusIn) emit focused(m_def);
     return QWidget::eventFilter(obj, e);
 }
+
+void Pcsx2ComboRow::enterEvent(QEnterEvent* e) {
+    QWidget::enterEvent(e);
+    emit focused(m_def);
+}

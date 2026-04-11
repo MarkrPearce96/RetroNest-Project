@@ -29,3 +29,8 @@ bool Pcsx2ToggleRow::eventFilter(QObject* obj, QEvent* e) {
     }
     return QWidget::eventFilter(obj, e);
 }
+
+void Pcsx2ToggleRow::enterEvent(QEnterEvent* e) {
+    QWidget::enterEvent(e);
+    emit focused(m_def);
+}

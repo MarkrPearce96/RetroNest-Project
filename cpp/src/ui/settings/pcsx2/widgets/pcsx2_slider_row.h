@@ -1,5 +1,6 @@
 #pragma once
 #include <QWidget>
+#include <QEnterEvent>
 #include "core/setting_def.h"
 
 class QLabel;
@@ -23,6 +24,7 @@ signals:
 
 protected:
     bool eventFilter(QObject* obj, QEvent* e) override;
+    void enterEvent(QEnterEvent* e) override;
 
 private:
     void refreshValueLabel();

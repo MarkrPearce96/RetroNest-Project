@@ -3,6 +3,7 @@
 #include "pages/pcsx2_emulation_page.h"
 #include "pages/pcsx2_audio_page.h"
 #include "pages/pcsx2_memory_cards_page.h"
+#include "widgets/pcsx2_card.h"
 #include "widgets/pcsx2_description_bar.h"
 #include "pcsx2_theme.h"
 #include "ui/app_controller.h"
@@ -14,7 +15,7 @@
 Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuId, QWidget* parent)
     : QDialog(parent), m_app(app), m_emuId(emuId) {
     setWindowTitle("PCSX2 Settings");
-    setMinimumSize(1000, 700);
+    setMinimumSize(950, 550);
     setStyleSheet(QString("QDialog { background-color: %1; }").arg(Pcsx2Theme::windowBg().name()));
 
     auto* root = new QVBoxLayout(this);
@@ -47,6 +48,13 @@ void Pcsx2SettingsDialog::pushPage(QWidget* page) {
     m_history.push(m_stack->currentIndex());
     m_stack->setCurrentIndex(idx);
     clearFocusedSetting();
+
+    // Auto-focus the first Pcsx2Card so arrow keys work immediately.
+    // Without this, focus stays on the QScrollArea and Down arrow just
+    // scrolls the viewport.
+    if (auto* firstCard = page->findChild<Pcsx2Card*>()) {
+        firstCard->setFocus(Qt::OtherFocusReason);
+    }
 }
 
 void Pcsx2SettingsDialog::popPage() {

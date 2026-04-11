@@ -2,6 +2,7 @@
 #include <QWidget>
 #include <QVector>
 #include <QPair>
+#include <QEnterEvent>
 #include "core/setting_def.h"
 
 class QLabel;
@@ -24,6 +25,7 @@ signals:
 
 protected:
     bool eventFilter(QObject* obj, QEvent* e) override;
+    void enterEvent(QEnterEvent* e) override;
 
 private:
     QLabel* m_label = nullptr;
