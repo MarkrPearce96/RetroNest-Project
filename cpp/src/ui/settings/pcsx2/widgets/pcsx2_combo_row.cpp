@@ -4,6 +4,7 @@
 #include <QComboBox>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QEvent>
 #include <QStyleFactory>
@@ -29,17 +30,6 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
         listView->setStyle(fusion);
     }
     m_combo->setView(listView);
-
-    // Make Enter on the current item close the popup and apply the
-    // selection. QListView's default QAbstractItemView::activated fires
-    // on Enter (and Double-click); we route it to setCurrentIndex +
-    // hidePopup so the user can confirm a choice with the keyboard.
-    connect(listView, &QAbstractItemView::activated, m_combo,
-            [this](const QModelIndex& idx) {
-                if (!idx.isValid()) return;
-                m_combo->setCurrentIndex(idx.row());
-                m_combo->hidePopup();
-            });
 
     m_combo->setStyleSheet(Pcsx2Theme::comboQss());
     m_combo->setMinimumWidth(200);
@@ -130,19 +120,37 @@ QString Pcsx2ComboRow::value() const {
 }
 
 bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
-    if (obj == m_combo && e->type() == QEvent::FocusIn) emit focused(m_def);
-    if (obj == m_combo->view() && e->type() == QEvent::Hide) {
-        // Popup dismissed — walk up the parent chain to find the Pcsx2Card
-        // ancestor and return focus to it so arrow keys resume card nav.
-        QWidget* w = parentWidget();
-        while (w) {
-            // Use the className check (not the type) to avoid importing
-            // the Pcsx2Card header into this row's implementation.
-            if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("Pcsx2Card")) {
-                w->setFocus(Qt::OtherFocusReason);
-                break;
+    if (obj == m_combo && e->type() == QEvent::FocusIn) {
+        emit focused(m_def);
+    }
+    if (obj == m_combo->view()) {
+        if (e->type() == QEvent::KeyPress) {
+            auto* ke = static_cast<QKeyEvent*>(e);
+            if (ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter) {
+                // Commit the current selection and close the popup.
+                // Consuming the event (returning true) prevents it from
+                // bubbling back up to Pcsx2Card::keyPressEvent which
+                // would re-open the popup.
+                const QModelIndex current = m_combo->view()->currentIndex();
+                if (current.isValid()) {
+                    m_combo->setCurrentIndex(current.row());
+                }
+                m_combo->hidePopup();
+                return true;
             }
-            w = w->parentWidget();
+        }
+        if (e->type() == QEvent::Hide) {
+            // Popup dismissed — walk up the parent chain to find the
+            // Pcsx2Card ancestor and return focus so arrow keys resume
+            // card nav instead of getting trapped cycling the combo in place.
+            QWidget* w = parentWidget();
+            while (w) {
+                if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("Pcsx2Card")) {
+                    w->setFocus(Qt::OtherFocusReason);
+                    break;
+                }
+                w = w->parentWidget();
+            }
         }
     }
     return QWidget::eventFilter(obj, e);
