@@ -13,6 +13,7 @@
 #include <QLabel>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QScrollArea>
 #include <QVariantMap>
 
 Pcsx2MemoryCardsPage::Pcsx2MemoryCardsPage(Pcsx2SettingsDialog* dialog)
@@ -30,11 +31,33 @@ const SettingDef* Pcsx2MemoryCardsPage::findDef(const QString& key) const {
 }
 
 void Pcsx2MemoryCardsPage::buildUi() {
-    auto* root = new QVBoxLayout(this);
+    // Outer layout — just hosts the scroll area
+    auto* outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setStyleSheet(
+        "QScrollArea { background: transparent; border: none; }"
+        "QScrollArea > QWidget > QWidget { background: transparent; }"
+        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
+        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    outer->addWidget(scroll);
+
+    auto* content = new QWidget(scroll);
+    scroll->setWidget(content);
+
+    auto* root = new QVBoxLayout(content);
     root->setContentsMargins(24, 16, 24, 16);
     root->setSpacing(10);
 
-    auto* back = new QPushButton("\u2190 Back", this);
+    auto* back = new QPushButton("\u2190 Back", content);
     back->setStyleSheet("QPushButton { background:transparent; color:#f2efe8; border:none;"
                         " font-size:14px; padding:4px 0; text-align:left; }"
                         "QPushButton:focus { color:#f59e0b; }");

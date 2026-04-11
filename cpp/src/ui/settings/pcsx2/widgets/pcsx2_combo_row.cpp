@@ -11,6 +11,7 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
     m_label = new QLabel(this);
     m_label->setStyleSheet("color:#d0ccc4;font-size:13px;");
     m_label->setMinimumWidth(180);
+    m_label->setMinimumHeight(24);
     m_combo = new QComboBox(this);
     m_combo->setStyleSheet(Pcsx2Theme::comboQss());
     m_combo->setMinimumWidth(200);
@@ -19,6 +20,7 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
     connect(m_combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, [this](int){ emit valueChanged(value()); });
     m_combo->installEventFilter(this);
+    setMinimumHeight(42);
 }
 
 void Pcsx2ComboRow::setLabel(const QString& text) { m_label->setText(text); }

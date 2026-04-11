@@ -14,7 +14,7 @@
 Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuId, QWidget* parent)
     : QDialog(parent), m_app(app), m_emuId(emuId) {
     setWindowTitle("PCSX2 Settings");
-    setMinimumSize(950, 550);
+    setMinimumSize(1000, 700);
     setStyleSheet(QString("QDialog { background-color: %1; }").arg(Pcsx2Theme::windowBg().name()));
 
     auto* root = new QVBoxLayout(this);

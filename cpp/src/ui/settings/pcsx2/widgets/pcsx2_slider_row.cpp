@@ -11,6 +11,7 @@ Pcsx2SliderRow::Pcsx2SliderRow(QWidget* parent) : QWidget(parent) {
     m_label = new QLabel(this);
     m_label->setStyleSheet("color:#d0ccc4;font-size:13px;");
     m_label->setMinimumWidth(180);
+    m_label->setMinimumHeight(24);
     m_slider = new QSlider(Qt::Horizontal, this);
     m_slider->setStyleSheet(Pcsx2Theme::sliderQss());
     m_value = new QLabel(this);
@@ -25,6 +26,7 @@ Pcsx2SliderRow::Pcsx2SliderRow(QWidget* parent) : QWidget(parent) {
         emit valueChanged(v);
     });
     m_slider->installEventFilter(this);
+    setMinimumHeight(42);
 }
 
 void Pcsx2SliderRow::setLabel(const QString& t) { m_label->setText(t); }

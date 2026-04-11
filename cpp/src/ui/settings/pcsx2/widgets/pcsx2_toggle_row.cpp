@@ -10,11 +10,13 @@ Pcsx2ToggleRow::Pcsx2ToggleRow(QWidget* parent) : QWidget(parent) {
     lay->setContentsMargins(0, 4, 0, 4);
     m_label = new QLabel(this);
     m_label->setStyleSheet("color:#d0ccc4;font-size:13px;");
+    m_label->setMinimumHeight(24);
     m_toggle = new Pcsx2Toggle(this);
     lay->addWidget(m_label, 1);
     lay->addWidget(m_toggle, 0, Qt::AlignRight);
     connect(m_toggle, &QAbstractButton::toggled, this, &Pcsx2ToggleRow::toggled);
     m_toggle->installEventFilter(this);
+    setMinimumHeight(34);
 }
 
 void Pcsx2ToggleRow::setLabel(const QString& text) { m_label->setText(text); }
