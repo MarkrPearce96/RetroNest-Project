@@ -79,6 +79,8 @@ set(SOURCES
     src/core/macos_fullscreen.mm
     src/ui/settings/pcsx2/widgets/pcsx2_card.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_section_header.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle_row.cpp
 )
 
 set(HEADERS
@@ -144,6 +146,8 @@ set(HEADERS
     src/ui/settings/pcsx2/pcsx2_theme.h
     src/ui/settings/pcsx2/widgets/pcsx2_card.h
     src/ui/settings/pcsx2/widgets/pcsx2_section_header.h
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle.h
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle_row.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
@@ -401,3 +405,12 @@ set_target_properties(test_pcsx2_recommended_values PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_recommended_values PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_pcsx2_recommended_values PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME Pcsx2RecommendedValues COMMAND test_pcsx2_recommended_values)
+
+add_executable(test_pcsx2_toggle
+    tests/test_pcsx2_toggle.cpp
+    src/ui/settings/pcsx2/widgets/pcsx2_toggle.cpp
+)
+set_target_properties(test_pcsx2_toggle PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_toggle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_toggle PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME Pcsx2Toggle COMMAND test_pcsx2_toggle)
