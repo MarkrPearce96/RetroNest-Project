@@ -1,0 +1,47 @@
+#pragma once
+#include <QWidget>
+#include <QVector>
+#include "core/setting_def.h"
+
+class Pcsx2SettingsDialog;
+class Pcsx2Card;
+class Pcsx2AspectRatioPreview;
+class Pcsx2ComboRow;
+class Pcsx2ToggleRow;
+class Pcsx2SliderRow;
+class QSpinBox;
+class QHBoxLayout;
+class QVBoxLayout;
+
+class Pcsx2GraphicsDisplayPage : public QWidget {
+    Q_OBJECT
+public:
+    explicit Pcsx2GraphicsDisplayPage(Pcsx2SettingsDialog* dialog);
+
+signals:
+    void settingFocused(SettingDef def);
+
+private:
+    void buildUi();
+    void buildLeftCompoundCard(QHBoxLayout* topRow);
+    void buildRightPreviewCard(QHBoxLayout* topRow);
+    void buildBottomToggleGrid(QVBoxLayout* root);
+
+    void loadValues();
+    void saveValue(const QString& section, const QString& key, const QString& value);
+    const SettingDef* findDef(const QString& key) const;
+
+    void syncPreview();
+
+    Pcsx2SettingsDialog* m_dialog;
+    QVector<SettingDef>  m_schema;
+
+    Pcsx2AspectRatioPreview* m_preview = nullptr;
+    Pcsx2ComboRow*  m_aspectCombo = nullptr;
+    Pcsx2SliderRow* m_stretchSlider = nullptr;
+    QSpinBox* m_cropL = nullptr;
+    QSpinBox* m_cropT = nullptr;
+    QSpinBox* m_cropR = nullptr;
+    QSpinBox* m_cropB = nullptr;
+    Pcsx2ToggleRow* m_integerScalingToggle = nullptr;
+};
