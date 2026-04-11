@@ -41,11 +41,9 @@ void Pcsx2GraphicsPostProcessingPage::refreshDependencies() {
         const SettingDef& d = slider->settingDef();
         if (d.dependsOn.isEmpty()) continue;
         const bool enabled = masterToggleState(d.dependsOn);
-        QWidget* card = slider->parentWidget();
-        while (card && qobject_cast<Pcsx2Card*>(card) == nullptr) {
-            card = card->parentWidget();
-        }
-        if (card) card->setEnabled(enabled);
+        // Disable the slider row widget itself — Qt's default disabled-state
+        // rendering greys out its internal QLabel + QSlider + value label.
+        slider->setEnabled(enabled);
     }
 }
 
@@ -85,26 +83,20 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
         return row;
     };
 
-    auto makeSliderCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeSliderRow = [this](const QString& key) -> Pcsx2SliderRow* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2SliderRow(card);
+        auto* row = new Pcsx2SliderRow(this);
         row->setLabel(d->label);
         row->setRange(int(d->minVal), int(d->maxVal));
         row->setSuffix(d->suffix);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
         connect(row, &Pcsx2SliderRow::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
         connect(row, &Pcsx2SliderRow::valueChanged, this, [this, key](int val){
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, QString::number(val));
         });
-        v->addWidget(row);
-        return card;
+        return row;
     };
 
     // Section 1: Sharpening / Anti-Aliasing
@@ -155,10 +147,11 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
 
     auto* sliderGrid = new QGridLayout();
     sliderGrid->setSpacing(10);
-    if (auto* c = makeSliderCard("ShadeBoost_Brightness")) sliderGrid->addWidget(c, 0, 0);
-    if (auto* c = makeSliderCard("ShadeBoost_Contrast"))   sliderGrid->addWidget(c, 0, 1);
-    if (auto* c = makeSliderCard("ShadeBoost_Saturation")) sliderGrid->addWidget(c, 1, 0);
-    if (auto* c = makeSliderCard("ShadeBoost_Gamma"))      sliderGrid->addWidget(c, 1, 1);
+    sliderGrid->setContentsMargins(0, 6, 0, 0);
+    if (auto* r = makeSliderRow("ShadeBoost_Brightness")) sliderGrid->addWidget(r, 0, 0);
+    if (auto* r = makeSliderRow("ShadeBoost_Contrast"))   sliderGrid->addWidget(r, 0, 1);
+    if (auto* r = makeSliderRow("ShadeBoost_Saturation")) sliderGrid->addWidget(r, 1, 0);
+    if (auto* r = makeSliderRow("ShadeBoost_Gamma"))      sliderGrid->addWidget(r, 1, 1);
     sliderGrid->setColumnStretch(0, 1);
     sliderGrid->setColumnStretch(1, 1);
     filterV->addLayout(sliderGrid);
