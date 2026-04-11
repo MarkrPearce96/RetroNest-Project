@@ -21,11 +21,44 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent) : QWidget(parent) {
     // Qt's default frame background doesn't show as black bars top/bottom.
     // Accessing view() forces lazy creation of the view + its parent container.
     if (QWidget* container = m_combo->view()->parentWidget()) {
+        // Target the container class only — do NOT use a generic QFrame
+        // selector because the inner QListView is also a QFrame and
+        // would inherit these rules, clobbering its own selection colors.
         container->setStyleSheet(
-            "QComboBoxPrivateContainer, QFrame {"
+            "QComboBoxPrivateContainer {"
             "  background-color: #585450;"
             "  border: 1px solid #706c66;"
             "  border-radius: 8px;"
+            "}");
+    }
+
+    // Apply item styling directly on the view so it's not overridden by
+    // any parent cascade. This gives us a visible amber highlight on the
+    // current/selected item during keyboard navigation.
+    if (auto* view = m_combo->view()) {
+        view->setStyleSheet(
+            "QAbstractItemView {"
+            "  background-color: #585450;"
+            "  color: #f2efe8;"
+            "  border: none;"
+            "  outline: none;"
+            "  padding: 4px;"
+            "  selection-background-color: #f59e0b;"
+            "  selection-color: #1a1816;"
+            "}"
+            "QAbstractItemView::item {"
+            "  padding: 6px 12px;"
+            "  min-height: 28px;"
+            "  border-radius: 4px;"
+            "  color: #f2efe8;"
+            "}"
+            "QAbstractItemView::item:selected {"
+            "  background-color: #f59e0b;"
+            "  color: #1a1816;"
+            "}"
+            "QAbstractItemView::item:hover {"
+            "  background-color: #6c6860;"
+            "  color: #f2efe8;"
             "}");
     }
     // Strip the QListView frame + macOS focus rect so no thin lines
