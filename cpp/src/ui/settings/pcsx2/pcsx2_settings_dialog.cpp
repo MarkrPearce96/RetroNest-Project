@@ -3,6 +3,7 @@
 #include "pages/pcsx2_emulation_page.h"
 #include "pages/pcsx2_audio_page.h"
 #include "pages/pcsx2_memory_cards_page.h"
+#include "pages/pcsx2_graphics_page.h"
 #include "widgets/pcsx2_card.h"
 #include "widgets/pcsx2_description_bar.h"
 #include "pcsx2_theme.h"
@@ -95,12 +96,10 @@ void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
         return;
     }
     if (category == "Graphics") {
-        // Plan 1 fallback: opens the legacy schema-driven page as a modal.
-        // Plans 2-4 replace this with the real Pcsx2GraphicsPage + sub-tabs.
-        auto* legacy = new EmulatorSettingsPage(m_app, m_emuId);
-        legacy->setAttribute(Qt::WA_DeleteOnClose);
-        legacy->setWindowModality(Qt::ApplicationModal);
-        legacy->show();
+        auto* page = new Pcsx2GraphicsPage(this);
+        connect(page, &Pcsx2GraphicsPage::settingFocused,
+                this, &Pcsx2SettingsDialog::setFocusedSetting);
+        pushPage(page);
         return;
     }
     // Emulation / Audio / Memory Cards branches wired in Tasks 14-16.
