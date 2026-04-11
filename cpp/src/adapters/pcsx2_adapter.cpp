@@ -214,30 +214,58 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // ═══════════════════════════════════════════════════════════════════════
     // Graphics > Rendering
     // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Graphics", "Rendering", "", "EmuCore/GS", "upscale_multiplier", "Internal Resolution", "",
-              SettingDef::Combo, "1",
-              {{"Native (PS2) (Default)", "1"}, {"2x Native (~720px/HD)", "2"}, {"3x Native (~1080px/FHD)", "3"},
-               {"4x Native (~1440px/QHD)", "4"}, {"5x Native (~1800px/QHD+)", "5"}, {"6x Native (~2160px/4K UHD)", "6"},
-               {"7x Native (~2520px)", "7"}, {"8x Native (~2880px/5K UHD)", "8"}, {"9x Native (~3240px)", "9"},
-               {"10x Native (~3600px/6K UHD)", "10"}, {"11x Native (~3960px)", "11"}, {"12x Native (~4320px/8K UHD)", "12"}}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "EmuCore/GS", "filter", "Texture Filtering", "",
-              SettingDef::Combo, "2",
-              {{"Nearest", "0"}, {"Bilinear (Forced)", "1"}, {"Bilinear (PS2)", "2"}, {"Bilinear (Forced excluding sprite)", "3"}}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "EmuCore/GS", "TriFilter", "Trilinear Filtering", "",
-              SettingDef::Combo, "-1",
-              {{"Auto (Default)", "-1"}, {"Off", "0"}, {"Trilinear (PS2)", "1"}, {"Trilinear (Forced)", "2"}}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "EmuCore/GS", "MaxAnisotropy", "Anisotropic Filtering", "",
-              SettingDef::Combo, "0",
-              {{"Off", "0"}, {"2x", "2"}, {"4x", "4"}, {"8x", "8"}, {"16x", "16"}}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "EmuCore/GS", "dithering_ps2", "Dithering", "",
-              SettingDef::Combo, "2",
-              {{"Off", "0"}, {"Scaled", "1"}, {"Unscaled (Default)", "2"}, {"Force 32bit", "3"}}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "EmuCore/GS", "accurate_blending_unit", "Blending Accuracy", "",
-              SettingDef::Combo, "1",
-              {{"Minimum", "0"}, {"Basic (Default)", "1"}, {"Medium", "2"}, {"High", "3"}, {"Full", "4"}, {"Maximum", "5"}}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "EmuCore/GS", "hw_mipmap", "Mipmapping",
-              "Enables mipmapping which improves texture quality at the cost of performance.",
-              SettingDef::Bool, "true", {}, 0, 0, 0});
+    {
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "upscale_multiplier", "Internal Resolution", "",
+                     SettingDef::Combo, "1",
+                     {{"Native (PS2) (Default)", "1"}, {"2x Native (~720px/HD)", "2"}, {"3x Native (~1080px/FHD)", "3"},
+                      {"4x Native (~1440px/QHD)", "4"}, {"5x Native (~1800px/QHD+)", "5"}, {"6x Native (~2160px/4K UHD)", "6"},
+                      {"7x Native (~2520px)", "7"}, {"8x Native (~2880px/5K UHD)", "8"}, {"9x Native (~3240px)", "9"},
+                      {"10x Native (~3600px/6K UHD)", "10"}, {"11x Native (~3960px)", "11"}, {"12x Native (~4320px/8K UHD)", "12"}}, 0, 0, 0};
+        d.recommendedValue = "1";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "filter", "Texture Filtering", "",
+                     SettingDef::Combo, "2",
+                     {{"Nearest", "0"}, {"Bilinear (Forced)", "1"}, {"Bilinear (PS2)", "2"}, {"Bilinear (Forced excluding sprite)", "3"}}, 0, 0, 0};
+        d.recommendedValue = "2";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "TriFilter", "Trilinear Filtering", "",
+                     SettingDef::Combo, "-1",
+                     {{"Auto (Default)", "-1"}, {"Off", "0"}, {"Trilinear (PS2)", "1"}, {"Trilinear (Forced)", "2"}}, 0, 0, 0};
+        d.recommendedValue = "-1";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "MaxAnisotropy", "Anisotropic Filtering", "",
+                     SettingDef::Combo, "0",
+                     {{"Off", "0"}, {"2x", "2"}, {"4x", "4"}, {"8x", "8"}, {"16x", "16"}}, 0, 0, 0};
+        d.recommendedValue = "0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "dithering_ps2", "Dithering", "",
+                     SettingDef::Combo, "2",
+                     {{"Off", "0"}, {"Scaled", "1"}, {"Unscaled (Default)", "2"}, {"Force 32bit", "3"}}, 0, 0, 0};
+        d.recommendedValue = "2";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "accurate_blending_unit", "Blending Accuracy", "",
+                     SettingDef::Combo, "1",
+                     {{"Minimum", "0"}, {"Basic (Default)", "1"}, {"Medium", "2"}, {"High", "3"}, {"Full", "4"}, {"Maximum", "5"}}, 0, 0, 0};
+        d.recommendedValue = "1";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "hw_mipmap", "Mipmapping",
+                     "Enables mipmapping which improves texture quality at the cost of performance.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.recommendedValue = "true";
+        s.append(d);
+    }
 
 
 

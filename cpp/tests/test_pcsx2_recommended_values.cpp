@@ -42,6 +42,18 @@ private slots:
         }
         QCOMPARE(count, 7);
     }
+    void testGraphicsRenderingSettingsAllHaveRecommended() {
+        int count = 0;
+        for (const auto& d : schema_) {
+            if (d.category != "Graphics") continue;
+            if (d.subcategory != "Rendering") continue;
+            ++count;
+            QVERIFY2(!d.recommendedValue.isEmpty(),
+                     qPrintable(QString("missing recommendedValue for Graphics/Rendering/%1").arg(d.key)));
+        }
+        QVERIFY2(count >= 7,
+                 qPrintable(QString("expected >= 7 Graphics/Rendering settings, got %1").arg(count)));
+    }
 };
 QTEST_GUILESS_MAIN(TestPcsx2RecommendedValues)
 #include "test_pcsx2_recommended_values.moc"
