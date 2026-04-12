@@ -92,7 +92,6 @@ void Pcsx2GraphicsOsdPage::buildUi() {
 void Pcsx2GraphicsOsdPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
     auto* card = new Pcsx2Card(this);
     card->setFocusPolicy(Qt::NoFocus);
-    card->setMinimumHeight(460);
 
     if (const SettingDef* perfDef = findDef("OsdPerformancePos"))
         card->setSettingDef(*perfDef);
@@ -154,7 +153,6 @@ void Pcsx2GraphicsOsdPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
 void Pcsx2GraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
     auto* card = new Pcsx2Card(this);
     card->setFocusPolicy(Qt::NoFocus);
-    card->setMinimumHeight(460);
     card->setPreviewStyle(true);
     if (const SettingDef* d = findDef("OsdScale"))
         card->setSettingDef(*d);
@@ -187,9 +185,6 @@ void Pcsx2GraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
         v->addWidget(m_scaleSlider);
     }
 
-    auto* comboRow = new QHBoxLayout();
-    comboRow->setSpacing(8);
-
     auto addPosCombo = [&](const QString& key, bool drivePerfPreview) -> Pcsx2ComboRow* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
@@ -205,14 +200,14 @@ void Pcsx2GraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
             if (drivePerfPreview && m_preview)
                 m_preview->setPerformancePos(Pcsx2OsdPreview::fromPosValue(val));
         });
-        comboRow->addWidget(row, 1);
         return row;
     };
 
     m_messagesPosCombo = addPosCombo("OsdMessagesPos",    /*drivePerfPreview=*/false);
     m_perfPosCombo     = addPosCombo("OsdPerformancePos", /*drivePerfPreview=*/true);
 
-    v->addLayout(comboRow);
+    if (m_messagesPosCombo) v->addWidget(m_messagesPosCombo);
+    if (m_perfPosCombo)     v->addWidget(m_perfPosCombo);
     v->addStretch();
     topRow->addWidget(card, 1);
 }
