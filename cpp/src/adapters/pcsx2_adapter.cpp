@@ -439,40 +439,100 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // ═══════════════════════════════════════════════════════════════════════
     // Graphics > OSD
     // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdScale", "OSD Scale", "",
-              SettingDef::Int, "100", {}, 25, 500, 25, "", "%"});
-    s.append({"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdMessagesPos", "OSD Messages Position", "",
-              SettingDef::Combo, "1",
-              {{"None", "0"}, {"Top Left (Default)", "1"}, {"Top Center", "2"}, {"Top Right", "3"},
-               {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
-               {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdPerformancePos", "OSD Performance Position", "",
-              SettingDef::Combo, "3",
-              {{"None", "0"}, {"Top Left", "1"}, {"Top Center", "2"}, {"Top Right (Default)", "3"},
-               {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
-               {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0});
+    { SettingDef d{"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdScale", "OSD Scale",
+                   "Global multiplier applied to every OSD overlay. 100% matches PCSX2 upstream's default size.",
+                   SettingDef::Int, "100", {}, 25, 500, 25, "", "%"};
+      d.recommendedValue = "100"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdMessagesPos", "OSD Messages Position",
+                   "Corner where transient messages (save-state loaded, shader reload, etc.) are drawn.",
+                   SettingDef::Combo, "1",
+                   {{"None", "0"}, {"Top Left (Default)", "1"}, {"Top Center", "2"}, {"Top Right", "3"},
+                    {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
+                    {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0};
+      d.recommendedValue = "1"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdPerformancePos", "OSD Performance Position",
+                   "Corner where the performance stats column (FPS/Speed/CPU/GPU/etc.) is drawn.",
+                   SettingDef::Combo, "3",
+                   {{"None", "0"}, {"Top Left", "1"}, {"Top Center", "2"}, {"Top Right (Default)", "3"},
+                    {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
+                    {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0};
+      d.recommendedValue = "3"; s.append(d); }
     // ── Performance Stats ─────────────────────────────────────────────
-    s.append({"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowSpeed", "Show Speed Percentages", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowFPS", "Show FPS", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowVPS", "Show VPS", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowResolution", "Show Resolution", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowGSStats", "Show GS Statistics", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowCPU", "Show CPU Usage", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowGPU", "Show GPU Usage", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowIndicators", "Show Status Indicators", "", SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowFrameTimes", "Show Frame Times", "", SettingDef::Bool, "false", {}, 0, 0, 0});
+    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowSpeed", "Show Speed Percentages",
+                   "Displays the emulation speed as a percentage. Red below 95%, green above 105%.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowFPS", "Show FPS",
+                   "Displays the current frame rate reported by the GS. Useful for spotting performance issues.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowVPS", "Show VPS",
+                   "Displays vertical syncs per second — the PS2 display refresh reported by the GS.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowResolution", "Show Resolution",
+                   "Displays the PS2 internal render resolution and interlacing mode.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowGSStats", "Show GS Statistics",
+                   "Displays per-frame GS statistics: draw-call count, VRAM use, and a frame-time summary.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowCPU", "Show CPU Usage",
+                   "Displays per-component CPU usage (EE, GS, VU).",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowGPU", "Show GPU Usage",
+                   "Displays GPU usage percentage and frame time in milliseconds.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowIndicators", "Show Status Indicators",
+                   "Displays icons for pause, fast-forward, slow-motion, and turbo modes in the top-right corner.",
+                   SettingDef::Bool, "true", {}, 0, 0, 0};
+      d.recommendedValue = "true"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowFrameTimes", "Show Frame Times",
+                   "Displays a rolling graph of recent frame times to visualise stutter.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
     // ── System Information ───────────────────────────────────────────
-    s.append({"Graphics", "OSD", "System Information", "EmuCore/GS", "OsdShowHardwareInfo", "Show Hardware Info", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "System Information", "EmuCore/GS", "OsdShowVersion", "Show PCSX2 Version", "", SettingDef::Bool, "false", {}, 0, 0, 0});
+    { SettingDef d{"Graphics", "OSD", "System Information", "EmuCore/GS", "OsdShowHardwareInfo", "Show Hardware Info",
+                   "Displays the CPU and GPU model names as two lines in the performance column.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "System Information", "EmuCore/GS", "OsdShowVersion", "Show PCSX2 Version",
+                   "Displays the PCSX2 version string in the performance column.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
     // ── Settings & Inputs ────────────────────────────────────────────
-    s.append({"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowSettings", "Show Settings", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdshowPatches", "Show Patches", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowInputs", "Show Inputs", "", SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowVideoCapture", "Show Video Capture Status", "", SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowInputRec", "Show Input Recording Status", "", SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowTextureReplacements", "Show Texture Replacement Status", "", SettingDef::Bool, "false", {}, 0, 0, 0});
+    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowSettings", "Show Settings",
+                   "Displays a compact summary of active emulation settings in the bottom-right corner.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdshowPatches", "Show Patches",
+                   "Appends active patches (widescreen, no-interlacing, etc.) to the settings line.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowInputs", "Show Inputs",
+                   "Displays the current controller input state at the bottom-left corner.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowVideoCapture", "Show Video Capture Status",
+                   "Displays a recording indicator while video capture is active.",
+                   SettingDef::Bool, "true", {}, 0, 0, 0};
+      d.recommendedValue = "true"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowInputRec", "Show Input Recording Status",
+                   "Displays an indicator while input recording is active.",
+                   SettingDef::Bool, "true", {}, 0, 0, 0};
+      d.recommendedValue = "true"; s.append(d); }
+    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowTextureReplacements", "Show Texture Replacement Status",
+                   "Displays an indicator when replacement textures are loaded for the current game.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.recommendedValue = "false"; s.append(d); }
     // ── Messages ─────────────────────────────────────────────────────
-    s.append({"Graphics", "OSD", "Messages", "EmuCore", "WarnAboutUnsafeSettings", "Warn About Unsafe Settings", "", SettingDef::Bool, "true", {}, 0, 0, 0});
+    { SettingDef d{"Graphics", "OSD", "Messages", "EmuCore", "WarnAboutUnsafeSettings", "Warn About Unsafe Settings",
+                   "Shows a startup warning if any unsafe settings are enabled.",
+                   SettingDef::Bool, "true", {}, 0, 0, 0};
+      d.recommendedValue = "true"; s.append(d); }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Audio

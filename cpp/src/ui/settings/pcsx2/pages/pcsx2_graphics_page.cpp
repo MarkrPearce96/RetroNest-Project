@@ -3,6 +3,7 @@
 #include "pcsx2_graphics_rendering_page.h"
 #include "pcsx2_graphics_post_processing_page.h"
 #include "pcsx2_graphics_display_page.h"
+#include "pcsx2_graphics_osd_page.h"
 #include "../pcsx2_settings_dialog.h"
 #include "../pcsx2_theme.h"
 #include "../widgets/pcsx2_graphics_sub_tab_bar.h"
@@ -64,9 +65,11 @@ Pcsx2GraphicsPage::Pcsx2GraphicsPage(Pcsx2SettingsDialog* dialog)
             this, &Pcsx2GraphicsPage::settingFocused);
     m_stack->addWidget(postProc);
 
-    // 3: OSD (stub — Plan 4 replaces)
-    auto* osdStub = new Pcsx2GraphicsStubSubPage(app, emuId, "OSD", this);
-    m_stack->addWidget(osdStub);
+    // 3: OSD (real — Plan 4)
+    auto* osd = new Pcsx2GraphicsOsdPage(m_dialog);
+    connect(osd, &Pcsx2GraphicsOsdPage::settingFocused,
+            this, &Pcsx2GraphicsPage::settingFocused);
+    m_stack->addWidget(osd);
 
     root->addWidget(m_stack, 1);
 

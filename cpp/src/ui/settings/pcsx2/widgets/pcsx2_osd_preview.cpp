@@ -1,0 +1,307 @@
+#include "pcsx2_osd_preview.h"
+#include <QPainter>
+#include <QPaintEvent>
+#include <QLinearGradient>
+#include <QRadialGradient>
+#include <QFont>
+#include <QFontMetricsF>
+#include <QFontDatabase>
+#include <QFontInfo>
+#include <QStringList>
+#include <QtMath>
+#include <algorithm>
+
+namespace {
+constexpr qreal kMargin = 8.0;
+
+QColor kShadow(0, 0, 0, 217);
+QColor kWhite(0xff, 0xff, 0xff);
+QColor kSpeedGreen(0x60, 0xff, 0x60);
+QColor kDimRed  (0xff, 0x60, 0x60);
+QColor kMuted   (0xd9, 0xd4, 0xcc);
+
+QFont monospaceFont(int px) {
+    for (const char* name : {"Menlo", "Monaco", "Courier New"}) {
+        QFont f(QString::fromLatin1(name));
+        if (QFontInfo(f).fixedPitch()) {
+            f.setPixelSize(px);
+            return f;
+        }
+    }
+    QFont f = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    f.setPixelSize(px);
+    return f;
+}
+
+void drawShadowedText(QPainter& p, const QPointF& baseline,
+                      const QString& text, const QColor& color) {
+    p.setPen(kShadow);
+    p.drawText(baseline + QPointF(1, 1), text);
+    p.setPen(color);
+    p.drawText(baseline, text);
+}
+} // namespace
+
+Pcsx2OsdPreview::Pcsx2OsdPreview(QWidget* parent) : QWidget(parent) {
+    setAttribute(Qt::WA_OpaquePaintEvent, false);
+    QSizePolicy sp(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    sp.setHeightForWidth(true);
+    setSizePolicy(sp);
+}
+
+void Pcsx2OsdPreview::setPerformancePos(OverlayPos pos) { m_s.perfPos = pos; update(); }
+
+void Pcsx2OsdPreview::setShowFps(bool on)             { m_s.fps = on;             update(); }
+void Pcsx2OsdPreview::setShowVps(bool on)             { m_s.vps = on;             update(); }
+void Pcsx2OsdPreview::setShowSpeed(bool on)           { m_s.speed = on;           update(); }
+void Pcsx2OsdPreview::setShowVersion(bool on)         { m_s.version = on;         update(); }
+void Pcsx2OsdPreview::setShowResolution(bool on)      { m_s.resolution = on;      update(); }
+void Pcsx2OsdPreview::setShowHardwareInfo(bool on)    { m_s.hardwareInfo = on;    update(); }
+void Pcsx2OsdPreview::setShowCpu(bool on)             { m_s.cpu = on;             update(); }
+void Pcsx2OsdPreview::setShowGpu(bool on)             { m_s.gpu = on;             update(); }
+void Pcsx2OsdPreview::setShowFrameTimes(bool on)      { m_s.frameTimes = on;      update(); }
+void Pcsx2OsdPreview::setShowGsStats(bool on)         { m_s.gsStats = on;         update(); }
+
+void Pcsx2OsdPreview::setShowIndicators(bool on)         { m_s.indicators = on;           update(); }
+void Pcsx2OsdPreview::setShowVideoCapture(bool on)       { m_s.videoCapture = on;         update(); }
+void Pcsx2OsdPreview::setShowInputRec(bool on)           { m_s.inputRec = on;             update(); }
+void Pcsx2OsdPreview::setShowTextureReplacements(bool on){ m_s.textureReplacements = on;  update(); }
+void Pcsx2OsdPreview::setShowSettings(bool on)           { m_s.settings = on;             update(); }
+void Pcsx2OsdPreview::setShowPatches(bool on)            { m_s.patches = on;              update(); }
+void Pcsx2OsdPreview::setShowInputs(bool on)             { m_s.inputs = on;               update(); }
+
+void Pcsx2OsdPreview::setOsdScale(int percent) {
+    m_s.osdScale = std::clamp(percent, 10, 300);
+    update();
+}
+
+Pcsx2OsdPreview::OverlayPos Pcsx2OsdPreview::fromPosValue(const QString& v) {
+    const QString s = v.trimmed();
+    if (s.compare("None", Qt::CaseInsensitive) == 0) return OverlayPos::None;
+    const QString stem = s.section('(', 0, 0).trimmed();
+    if (stem.compare("Top Left",      Qt::CaseInsensitive) == 0) return OverlayPos::TopLeft;
+    if (stem.compare("Top Center",    Qt::CaseInsensitive) == 0) return OverlayPos::TopCenter;
+    if (stem.compare("Top Right",     Qt::CaseInsensitive) == 0) return OverlayPos::TopRight;
+    if (stem.compare("Center Left",   Qt::CaseInsensitive) == 0) return OverlayPos::CenterLeft;
+    if (stem.compare("Center",        Qt::CaseInsensitive) == 0) return OverlayPos::Center;
+    if (stem.compare("Center Right",  Qt::CaseInsensitive) == 0) return OverlayPos::CenterRight;
+    if (stem.compare("Bottom Left",   Qt::CaseInsensitive) == 0) return OverlayPos::BottomLeft;
+    if (stem.compare("Bottom Center", Qt::CaseInsensitive) == 0) return OverlayPos::BottomCenter;
+    if (stem.compare("Bottom Right",  Qt::CaseInsensitive) == 0) return OverlayPos::BottomRight;
+    return OverlayPos::TopLeft;
+}
+
+int Pcsx2OsdPreview::scaledFontPx() const {
+    const int px = int(qRound(10.0 * double(m_s.osdScale) / 100.0));
+    return std::clamp(px, 6, 24);
+}
+
+void Pcsx2OsdPreview::paintGameScene(QPainter& p, const QRectF& r) const {
+    QLinearGradient g(r.topLeft(), r.bottomLeft());
+    g.setColorAt(0.0,  QColor(0x5e, 0x7e, 0xa6));
+    g.setColorAt(0.55, QColor(0x8a, 0x70, 0x58));
+    g.setColorAt(1.0,  QColor(0x3a, 0x2c, 0x22));
+    p.fillRect(r, g);
+
+    const qreal sunR = qMin(r.width(), r.height()) * 0.08;
+    QPointF sunC(r.left() + r.width() * 0.72, r.top() + r.height() * 0.32);
+    QRadialGradient sg(sunC, sunR * 2.2);
+    sg.setColorAt(0.0, QColor(255, 235, 180, 230));
+    sg.setColorAt(1.0, QColor(255, 200, 120, 0));
+    p.setBrush(sg);
+    p.setPen(Qt::NoPen);
+    p.drawEllipse(sunC, sunR * 2.2, sunR * 2.2);
+}
+
+QStringList Pcsx2OsdPreview::buildPerfColumnLines() const {
+    QStringList out;
+
+    QStringList line1;
+    if (m_s.speed)   line1 << QStringLiteral("Speed: 100%");
+    if (m_s.vps)     line1 << QStringLiteral("VPS: 59.94");
+    if (m_s.fps)     line1 << QStringLiteral("FPS: 59.94");
+    if (m_s.version) line1 << QStringLiteral("PCSX2 2.3.0");
+    if (!line1.isEmpty())
+        out << line1.join(QStringLiteral(" | "));
+
+    if (m_s.gsStats) {
+        out << QStringLiteral("GS: 4328 draws")
+            << QStringLiteral("VRAM: 384 MB / 512 MB")
+            << QStringLiteral("6 QF | Min 14.2ms | Avg 21.4ms | Max 32.8ms");
+    }
+    if (m_s.resolution)
+        out << QStringLiteral("640x448 NTSC Interlaced");
+    if (m_s.hardwareInfo) {
+        out << QStringLiteral("CPU: Apple M1 Max (10C/10T)")
+            << QStringLiteral("GPU: Apple M1 Max");
+    }
+    if (m_s.cpu)
+        out << QStringLiteral("EE: 32.5% (5.42ms)  GS: 14.2% (2.36ms)");
+    if (m_s.gpu)
+        out << QStringLiteral("GPU: 42.3% (4.21ms)");
+    if (m_s.frameTimes)
+        out << QStringLiteral("[\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588"
+                              "\u2587\u2586\u2585\u2584\u2583\u2582\u2581]");
+    return out;
+}
+
+void Pcsx2OsdPreview::drawPerfColumn(QPainter& p, const QRectF& screen) const {
+    if (m_s.perfPos == OverlayPos::None) return;
+    const QStringList lines = buildPerfColumnLines();
+    if (lines.isEmpty()) return;
+
+    QFont f = monospaceFont(scaledFontPx());
+    p.setFont(f);
+    const QFontMetricsF fm(f);
+
+    qreal maxW = 0.0;
+    for (const QString& l : lines)
+        maxW = std::max(maxW, fm.horizontalAdvance(l));
+    const qreal lineH = fm.height();
+    const qreal blockH = lineH * lines.size();
+    const qreal blockW = maxW;
+
+    qreal x = screen.left() + kMargin;
+    qreal y = screen.top()  + kMargin + fm.ascent();
+
+    switch (m_s.perfPos) {
+        case OverlayPos::TopLeft:
+        case OverlayPos::CenterLeft:
+        case OverlayPos::BottomLeft:
+            x = screen.left() + kMargin; break;
+        case OverlayPos::TopCenter:
+        case OverlayPos::Center:
+        case OverlayPos::BottomCenter:
+            x = screen.left() + (screen.width() - blockW) * 0.5; break;
+        case OverlayPos::TopRight:
+        case OverlayPos::CenterRight:
+        case OverlayPos::BottomRight:
+            x = screen.right() - kMargin - blockW; break;
+        default: break;
+    }
+    switch (m_s.perfPos) {
+        case OverlayPos::TopLeft:
+        case OverlayPos::TopCenter:
+        case OverlayPos::TopRight:
+            y = screen.top() + kMargin + fm.ascent(); break;
+        case OverlayPos::CenterLeft:
+        case OverlayPos::Center:
+        case OverlayPos::CenterRight:
+            y = screen.top() + (screen.height() - blockH) * 0.5 + fm.ascent(); break;
+        case OverlayPos::BottomLeft:
+        case OverlayPos::BottomCenter:
+        case OverlayPos::BottomRight:
+            y = screen.bottom() - kMargin - blockH + fm.ascent(); break;
+        default: break;
+    }
+
+    const QString& first = lines.first();
+    qreal cursorX = x;
+
+    if (m_s.speed && first.startsWith("Speed")) {
+        const QStringList fragments = first.split(QStringLiteral(" | "));
+        for (int i = 0; i < fragments.size(); ++i) {
+            const QString& frag = fragments[i];
+            const QColor color = (i == 0) ? kSpeedGreen : kWhite;
+            drawShadowedText(p, QPointF(cursorX, y), frag, color);
+            cursorX += fm.horizontalAdvance(frag);
+            if (i != fragments.size() - 1) {
+                const QString sep = QStringLiteral(" | ");
+                drawShadowedText(p, QPointF(cursorX, y), sep, kWhite);
+                cursorX += fm.horizontalAdvance(sep);
+            }
+        }
+    } else {
+        drawShadowedText(p, QPointF(x, y), first, kWhite);
+    }
+
+    for (int i = 1; i < lines.size(); ++i) {
+        const qreal yy = y + lineH * i;
+        drawShadowedText(p, QPointF(x, yy), lines[i], kWhite);
+    }
+    Q_UNUSED(kDimRed);
+    Q_UNUSED(kMuted);
+}
+
+void Pcsx2OsdPreview::drawTopRightIndicators(QPainter& p, const QRectF& screen) const {
+    QStringList items;
+    if (m_s.indicators)          items << QStringLiteral("\u23E9 FF");
+    if (m_s.videoCapture)        items << QStringLiteral("\u23FA REC");
+    if (m_s.inputRec)            items << QStringLiteral("\u25CF INPUT");
+    if (m_s.textureReplacements) items << QStringLiteral("\U0001F3A8 TEX");
+    if (items.isEmpty()) return;
+
+    QFont f = monospaceFont(scaledFontPx());
+    p.setFont(f);
+    const QFontMetricsF fm(f);
+
+    const qreal lineH = fm.height();
+    qreal y = screen.top() + kMargin + fm.ascent();
+    for (const QString& t : items) {
+        const qreal w = fm.horizontalAdvance(t);
+        const qreal x = screen.right() - kMargin - w;
+        drawShadowedText(p, QPointF(x, y), t, kWhite);
+        y += lineH;
+    }
+}
+
+void Pcsx2OsdPreview::drawBottomRightSettings(QPainter& p, const QRectF& screen) const {
+    if (!m_s.settings && !m_s.patches) return;
+
+    QStringList parts;
+    if (m_s.settings)
+        parts << QStringLiteral("DB=2 P=5 C=0 | CR=1 FCDVD VSYNC EER=0 EEC=1");
+    if (m_s.patches)
+        parts << QStringLiteral("Patches: Widescreen, NoInterlace");
+    const QString text = parts.join(QStringLiteral("  "));
+
+    QFont f = monospaceFont(scaledFontPx());
+    p.setFont(f);
+    const QFontMetricsF fm(f);
+    const qreal w = fm.horizontalAdvance(text);
+    const qreal x = screen.right()  - kMargin - w;
+    const qreal y = screen.bottom() - kMargin;
+    drawShadowedText(p, QPointF(x, y), text, kWhite);
+}
+
+void Pcsx2OsdPreview::drawBottomLeftInputs(QPainter& p, const QRectF& screen) const {
+    if (!m_s.inputs) return;
+    const QString text =
+        QStringLiteral("\U0001F3AE 1 \u2022 DualShock | A X \u2191 LT:0.42");
+
+    QFont f = monospaceFont(scaledFontPx());
+    p.setFont(f);
+    const QFontMetricsF fm(f);
+    const qreal x = screen.left()   + kMargin;
+    const qreal y = screen.bottom() - kMargin;
+    drawShadowedText(p, QPointF(x, y), text, kWhite);
+}
+
+void Pcsx2OsdPreview::paintEvent(QPaintEvent*) {
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setRenderHint(QPainter::TextAntialiasing);
+
+    QRectF client = rect().adjusted(1, 1, -1, -1);
+    const qreal targetH = client.width() * 9.0 / 16.0;
+    QRectF screen = client;
+    if (targetH <= client.height()) {
+        screen.setTop(client.top() + (client.height() - targetH) * 0.5);
+        screen.setHeight(targetH);
+    } else {
+        const qreal targetW = client.height() * 16.0 / 9.0;
+        screen.setLeft(client.left() + (client.width() - targetW) * 0.5);
+        screen.setWidth(targetW);
+    }
+
+    paintGameScene(p, screen);
+
+    p.setPen(QPen(QColor(0, 0, 0, 160), 1.0));
+    p.setBrush(Qt::NoBrush);
+    p.drawRect(screen);
+
+    drawPerfColumn(p, screen);
+    drawTopRightIndicators(p, screen);
+    drawBottomRightSettings(p, screen);
+    drawBottomLeftInputs(p, screen);
+}
