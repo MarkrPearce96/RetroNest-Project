@@ -35,10 +35,10 @@ Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuI
             [this]{ m_app->openNativeEmulatorSettings(m_emuId); });
     m_stack->addWidget(m_hub);
 
-    // Always show description bar — it shows hints even on the hub.
+    // On the hub: show hints only (no description text). On sub-pages: show both.
     connect(m_stack, &QStackedWidget::currentChanged, this, [this](int index) {
         bool onHub = (m_stack->widget(index) == m_hub);
-        m_descBar->setVisible(true);
+        m_descBar->setDescriptionVisible(!onHub);
         if (onHub) {
             m_descBar->clear();
         }
@@ -48,7 +48,8 @@ Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuI
     root->addWidget(m_stack, 1);
     root->addWidget(m_descBar, 0);
 
-    // Initial state: hub is active, show hub hints
+    // Initial state: hub is active, hints only
+    m_descBar->setDescriptionVisible(false);
     applyHintsForCurrentPage();
 }
 

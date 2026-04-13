@@ -19,6 +19,7 @@ public:
 
     void setSetting(const SettingDef& def);
     void clear();
+    void setDescriptionVisible(bool visible);
 
     void setHints(const QVector<ButtonHint>& hints);
     void clearHints();
@@ -43,6 +44,7 @@ private:
     };
     GlyphStyle glyphFor(const QString& action, int inputType) const;
 
+    QHBoxLayout* m_layout = nullptr;
     QLabel* m_text = nullptr;
     QLabel* m_rec = nullptr;
     QVector<ButtonHint> m_hints;

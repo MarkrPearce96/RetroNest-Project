@@ -161,8 +161,9 @@ int SdlInputManager::controllerType() const {
 
 void SdlInputManager::setWindow(QWindow* window) {
     m_window = window;
-    if (m_window)
-        m_window->installEventFilter(this);
+    // Install event filter on qApp so keyboard-mode detection works
+    // across all windows (main window, settings dialogs, etc.).
+    QGuiApplication::instance()->installEventFilter(this);
 }
 
 bool SdlInputManager::eventFilter(QObject* obj, QEvent* event) {
@@ -212,7 +213,11 @@ void SdlInputManager::injectKey(int qtKey, QEvent::Type type) {
         emit lastInputWasControllerChanged();
     }
     QKeyEvent event(type, qtKey, Qt::NoModifier);
-    QGuiApplication::sendEvent(m_window, &event);
+    // Send to the focused window (e.g. a QDialog) if one exists,
+    // otherwise fall back to the main window.
+    QWindow* target = QGuiApplication::focusWindow();
+    if (!target) target = m_window;
+    QGuiApplication::sendEvent(target, &event);
     m_injectingKey = false;
 }
 

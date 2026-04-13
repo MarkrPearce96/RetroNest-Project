@@ -11,16 +11,16 @@ Pcsx2DescriptionBar::Pcsx2DescriptionBar(QWidget* parent) : QFrame(parent) {
     setObjectName("Pcsx2DescriptionBar");
     setStyleSheet(Pcsx2Theme::descriptionBarQss());
     setMinimumHeight(100);
-    auto* lay = new QHBoxLayout(this);
-    lay->setContentsMargins(16, 12, 16, 12);
+    m_layout = new QHBoxLayout(this);
+    m_layout->setContentsMargins(16, 12, 16, 12);
     m_text = new QLabel(this);
     m_text->setObjectName("Pcsx2DescText");
     m_text->setWordWrap(true);
     m_rec = new QLabel(this);
     m_rec->setObjectName("Pcsx2DescRecommended");
     m_rec->setAlignment(Qt::AlignTop | Qt::AlignRight);
-    lay->addWidget(m_text, 1);
-    lay->addWidget(m_rec, 0, Qt::AlignTop);
+    m_layout->addWidget(m_text, 1);
+    m_layout->addWidget(m_rec, 0, Qt::AlignTop);
     clear();
 }
 
@@ -46,9 +46,25 @@ void Pcsx2DescriptionBar::clear() {
     m_rec->setVisible(false);
 }
 
+void Pcsx2DescriptionBar::setDescriptionVisible(bool visible) {
+    m_text->setVisible(visible);
+    m_rec->setVisible(visible && !m_rec->text().isEmpty());
+    // When description is hidden (hub mode), shrink to just fit the hints row.
+    auto m = m_layout->contentsMargins();
+    m.setTop(visible ? 12 : 8);
+    m.setBottom(visible ? 46 : 8);
+    m_layout->setContentsMargins(m);
+    setMinimumHeight(visible ? 100 : 48);
+    setMaximumHeight(visible ? QWIDGETSIZE_MAX : 48);
+}
+
 void Pcsx2DescriptionBar::setHints(const QVector<ButtonHint>& hints) {
     m_hints = hints;
-    setMinimumHeight(m_hints.isEmpty() ? 100 : 100);
+    // Reserve space at bottom for the painted hints row so text doesn't overlap.
+    // Hints row: 28px pill + 10px bottom padding + 8px gap above = 46px.
+    auto m = m_layout->contentsMargins();
+    m.setBottom(m_hints.isEmpty() ? 12 : 46);
+    m_layout->setContentsMargins(m);
     update();
 }
 
