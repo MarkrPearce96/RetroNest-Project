@@ -206,6 +206,9 @@ void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
         auto* spin = new QSpinBox(w);
         spin->setRange(0, 100);
         spin->setSuffix(QStringLiteral(" px"));
+        spin->setReadOnly(true);
+        spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
+        spin->setProperty("editing", false);
         spin->setStyleSheet(
             "QSpinBox {"
             "  background:#585450; color:#f2efe8;"
@@ -217,6 +220,7 @@ void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
 
         cropRow->addWidget(w, 1);
 
+        spin->installEventFilter(this);
         connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
                 [this, key](int val) {
             const SettingDef* dd = findDef(key);
@@ -342,25 +346,78 @@ void Pcsx2GraphicsDisplayPage::syncPreview() {
     }
 }
 
+static void setSpinEditing(QSpinBox* spin, bool on) {
+    spin->setProperty("editing", on);
+    spin->setReadOnly(!on);
+    spin->setButtonSymbols(on ? QAbstractSpinBox::UpDownArrows : QAbstractSpinBox::NoButtons);
+    if (on) {
+        spin->setStyleSheet(
+            "QSpinBox {"
+            "  background:#585450; color:#f2efe8;"
+            "  border:1px solid #f59e0b; border-radius:4px;"
+            "  padding:2px 4px; min-width:58px;"
+            "}"
+            "QSpinBox::up-button, QSpinBox::down-button {"
+            "  background:#585450; border:none; width:16px;"
+            "}"
+            "QSpinBox::up-arrow { image: none; border-left:4px solid transparent;"
+            "  border-right:4px solid transparent; border-bottom:5px solid #f2efe8; }"
+            "QSpinBox::down-arrow { image: none; border-left:4px solid transparent;"
+            "  border-right:4px solid transparent; border-top:5px solid #f2efe8; }");
+    } else {
+        spin->setStyleSheet(
+            "QSpinBox {"
+            "  background:#585450; color:#f2efe8;"
+            "  border:1px solid #706c66; border-radius:4px;"
+            "  padding:2px 4px; min-width:58px;"
+            "}"
+            "QSpinBox:focus { border-color:#f59e0b; }");
+    }
+}
+
 bool Pcsx2GraphicsDisplayPage::eventFilter(QObject* obj, QEvent* e) {
-    Q_UNUSED(obj);
+    // SpinBox: Enter toggles edit mode, FocusOut exits it.
+    if (auto* spin = qobject_cast<QSpinBox*>(obj)) {
+        if (isAncestorOf(spin)) {
+            if (e->type() == QEvent::KeyPress) {
+                auto* ke = static_cast<QKeyEvent*>(e);
+                if (ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter) {
+                    setSpinEditing(spin, !spin->property("editing").toBool());
+                    return true;
+                }
+            }
+            if (e->type() == QEvent::FocusOut) {
+                if (spin->property("editing").toBool())
+                    setSpinEditing(spin, false);
+            }
+        }
+    }
+
     if (e->type() == QEvent::KeyPress) {
         auto* ke = static_cast<QKeyEvent*>(e);
         const int k = ke->key();
         if (k == Qt::Key_Left || k == Qt::Key_Right || k == Qt::Key_Up || k == Qt::Key_Down) {
             QWidget* current = QApplication::focusWidget();
             if (current && isAncestorOf(current)) {
-                // Don't steal arrow keys from an open combo popup — the user
-                // is navigating options inside it.
                 if (auto* combo = qobject_cast<QComboBox*>(current)) {
                     if (combo->view() && combo->view()->isVisible()) {
                         return QWidget::eventFilter(obj, e);
                     }
                 }
+                // Sliders and spin boxes in edit mode handle their own arrows.
+                if (current->property("editing").toBool()) {
+                    return QWidget::eventFilter(obj, e);
+                }
                 if (QWidget* next = findNextFocusSpatial(current, k)) {
                     next->setFocus(Qt::TabFocusReason);
-                    return true;
+                    for (QWidget* p = next->parentWidget(); p; p = p->parentWidget()) {
+                        if (auto* sa = qobject_cast<QScrollArea*>(p)) {
+                            sa->ensureWidgetVisible(next, 20, 40);
+                            break;
+                        }
+                    }
                 }
+                return true;
             }
         }
     }
@@ -379,6 +436,20 @@ QList<QWidget*> Pcsx2GraphicsDisplayPage::collectFocusables() const {
             qobject_cast<QSpinBox*>(w)    ||
             qobject_cast<Pcsx2Toggle*>(w) ||
             qobject_cast<Pcsx2Card*>(w)) {
+            // If this control lives inside a focusable Pcsx2Card, skip it —
+            // the card itself is the focus stop and Enter activates the control.
+            if (!qobject_cast<Pcsx2Card*>(w)) {
+                bool insideFocusableCard = false;
+                for (QWidget* p = w->parentWidget(); p && p != this; p = p->parentWidget()) {
+                    if (auto* card = qobject_cast<Pcsx2Card*>(p)) {
+                        if (card->focusPolicy() != Qt::NoFocus) {
+                            insideFocusableCard = true;
+                            break;
+                        }
+                    }
+                }
+                if (insideFocusableCard) continue;
+            }
             result.append(w);
         }
     }
@@ -392,11 +463,15 @@ QWidget* Pcsx2GraphicsDisplayPage::findNextFocusSpatial(QWidget* current, int ke
     auto pagePoint = [this](QWidget* w) -> QPoint {
         return w->mapTo(const_cast<Pcsx2GraphicsDisplayPage*>(this), QPoint(0, 0));
     };
-    const QRect myRect(pagePoint(current), current->size());
-    const QPoint myCenter = myRect.center();
+    const QRect mine(pagePoint(current), current->size());
+    const QPoint myCenter = mine.center();
+    const bool vertical = (key == Qt::Key_Up || key == Qt::Key_Down);
 
-    QWidget* best = nullptr;
-    long long bestScore = std::numeric_limits<long long>::max();
+    auto rangesOverlap = [](int a0, int a1, int b0, int b1) {
+        return a0 < b1 && b0 < a1;
+    };
+
+    QWidget* bestOverlap = nullptr;  long long bestOverlapScore = std::numeric_limits<long long>::max();
 
     for (QWidget* w : focusables) {
         if (w == current) continue;
@@ -406,25 +481,37 @@ QWidget* Pcsx2GraphicsDisplayPage::findNextFocusSpatial(QWidget* current, int ke
         const int dy = c.y() - myCenter.y();
 
         bool inDir = false;
+        bool perpOverlap = false;
         switch (key) {
-            case Qt::Key_Left:  inDir = dx < 0; break;
-            case Qt::Key_Right: inDir = dx > 0; break;
-            case Qt::Key_Up:    inDir = dy < 0; break;
-            case Qt::Key_Down:  inDir = dy > 0; break;
+            case Qt::Key_Left:
+                inDir = dx < 0;
+                perpOverlap = rangesOverlap(mine.top(), mine.bottom(), r.top(), r.bottom());
+                break;
+            case Qt::Key_Right:
+                inDir = dx > 0;
+                perpOverlap = rangesOverlap(mine.top(), mine.bottom(), r.top(), r.bottom());
+                break;
+            case Qt::Key_Up:
+                inDir = dy < 0;
+                perpOverlap = rangesOverlap(mine.left(), mine.right(), r.left(), r.right());
+                break;
+            case Qt::Key_Down:
+                inDir = dy > 0;
+                perpOverlap = rangesOverlap(mine.left(), mine.right(), r.left(), r.right());
+                break;
         }
         if (!inDir) continue;
 
-        const bool vertical = (key == Qt::Key_Up || key == Qt::Key_Down);
         const long long adx = qAbs(dx);
         const long long ady = qAbs(dy);
         const long long score = vertical
-            ? (ady * 10000LL + adx)
-            : (adx * 10000LL + ady);
+            ? (ady * 2LL + adx)
+            : (adx * 2LL + ady);
 
-        if (score < bestScore) {
-            bestScore = score;
-            best = w;
+        if (perpOverlap && score < bestOverlapScore) {
+            bestOverlapScore = score;
+            bestOverlap = w;
         }
     }
-    return best;
+    return bestOverlap;
 }

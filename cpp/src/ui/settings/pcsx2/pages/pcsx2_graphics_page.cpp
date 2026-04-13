@@ -7,11 +7,18 @@
 #include "../pcsx2_settings_dialog.h"
 #include "../pcsx2_theme.h"
 #include "../widgets/pcsx2_graphics_sub_tab_bar.h"
+#include "../widgets/pcsx2_card.h"
+#include "../widgets/pcsx2_toggle.h"
 #include "ui/app_controller.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QStackedWidget>
 #include <QPushButton>
+#include <QApplication>
+#include <QKeyEvent>
+#include <QComboBox>
+#include <QSlider>
+#include <QTimer>
 
 Pcsx2GraphicsPage::Pcsx2GraphicsPage(Pcsx2SettingsDialog* dialog)
     : QWidget(dialog), m_dialog(dialog) {
@@ -21,6 +28,7 @@ Pcsx2GraphicsPage::Pcsx2GraphicsPage(Pcsx2SettingsDialog* dialog)
 
     auto* back = new QPushButton("\u2190 Back", this);
     back->setCursor(Qt::PointingHandCursor);
+    back->setFocusPolicy(Qt::NoFocus);
     back->setStyleSheet(
         "QPushButton { background:transparent; color:#f2efe8; border:none;"
         " font-size:14px; padding:4px 0; }"
@@ -34,6 +42,7 @@ Pcsx2GraphicsPage::Pcsx2GraphicsPage(Pcsx2SettingsDialog* dialog)
     root->addLayout(topRow);
 
     m_tabBar = new Pcsx2GraphicsSubTabBar(this);
+    m_tabBar->setFocusPolicy(Qt::NoFocus);
     m_tabBar->addTab(QStringLiteral("\U0001F5A5"), "Display");
     m_tabBar->addTab(QStringLiteral("\U0001F3A8"), "Rendering");
     m_tabBar->addTab(QStringLiteral("\u2728"),     "Post-Proc");
@@ -76,9 +85,62 @@ Pcsx2GraphicsPage::Pcsx2GraphicsPage(Pcsx2SettingsDialog* dialog)
     // Plan 3: Display is now a real page, so land on it by default.
     m_tabBar->setCurrentIndex(0);
     m_stack->setCurrentIndex(0);
+
+    // Focus the first setting after the page is shown (deferred so
+    // pushPage / layout has finished).
+    QTimer::singleShot(0, this, [this]{ focusFirstSettingOnCurrentTab(); });
+
+    qApp->installEventFilter(this);
+}
+
+Pcsx2GraphicsPage::~Pcsx2GraphicsPage() {
+    qApp->removeEventFilter(this);
 }
 
 void Pcsx2GraphicsPage::onSubTabActivated(int index) {
     m_stack->setCurrentIndex(index);
     m_dialog->clearFocusedSetting();
+    focusFirstSettingOnCurrentTab();
+}
+
+bool Pcsx2GraphicsPage::eventFilter(QObject* obj, QEvent* e) {
+    if (e->type() == QEvent::KeyPress) {
+        auto* ke = static_cast<QKeyEvent*>(e);
+        QWidget* current = QApplication::focusWidget();
+        if (!current || !isAncestorOf(current))
+            return QWidget::eventFilter(obj, e);
+
+        // Tab / Shift+Tab cycles through sub-tabs.
+        if (ke->key() == Qt::Key_Tab || ke->key() == Qt::Key_Backtab) {
+            const int count = m_tabBar->tabCount();
+            if (count < 2) return QWidget::eventFilter(obj, e);
+            int next = m_tabBar->currentIndex();
+            if (ke->key() == Qt::Key_Backtab || (ke->modifiers() & Qt::ShiftModifier)) {
+                next = (next - 1 + count) % count;
+            } else {
+                next = (next + 1) % count;
+            }
+            m_tabBar->setCurrentIndex(next);
+            return true;
+        }
+    }
+    return QWidget::eventFilter(obj, e);
+}
+
+void Pcsx2GraphicsPage::focusFirstSettingOnCurrentTab() {
+    QWidget* page = m_stack->currentWidget();
+    if (!page) return;
+
+    // Try to find the first focusable setting control on the current tab.
+    for (QWidget* w : page->findChildren<QWidget*>()) {
+        if (!w->isVisible()) continue;
+        if (w->focusPolicy() == Qt::NoFocus) continue;
+        if (qobject_cast<QComboBox*>(w)    ||
+            qobject_cast<QSlider*>(w)      ||
+            qobject_cast<Pcsx2Toggle*>(w)  ||
+            (qobject_cast<Pcsx2Card*>(w) && w->focusPolicy() != Qt::NoFocus)) {
+            w->setFocus(Qt::TabFocusReason);
+            return;
+        }
+    }
 }

@@ -6,12 +6,22 @@
 #include "../widgets/pcsx2_combo_row.h"
 #include "../widgets/pcsx2_toggle_row.h"
 #include "../widgets/pcsx2_slider_row.h"
+#include "../widgets/pcsx2_toggle.h"
 #include "ui/app_controller.h"
 #include "adapters/pcsx2_adapter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QVariantMap>
+#include <QScrollArea>
+#include <QGraphicsOpacityEffect>
+#include <QApplication>
+#include <QEvent>
+#include <QKeyEvent>
+#include <QComboBox>
+#include <QSlider>
+#include <QAbstractItemView>
+#include <limits>
 
 Pcsx2GraphicsPostProcessingPage::Pcsx2GraphicsPostProcessingPage(Pcsx2SettingsDialog* dialog)
     : QWidget(dialog), m_dialog(dialog) {
@@ -23,6 +33,11 @@ Pcsx2GraphicsPostProcessingPage::Pcsx2GraphicsPostProcessingPage(Pcsx2SettingsDi
     buildUi();
     loadValues();
     refreshDependencies();
+    qApp->installEventFilter(this);
+}
+
+Pcsx2GraphicsPostProcessingPage::~Pcsx2GraphicsPostProcessingPage() {
+    qApp->removeEventFilter(this);
 }
 
 const SettingDef* Pcsx2GraphicsPostProcessingPage::findDef(const QString& key) const {
@@ -40,10 +55,22 @@ void Pcsx2GraphicsPostProcessingPage::refreshDependencies() {
     for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         if (d.dependsOn.isEmpty()) continue;
-        const bool enabled = masterToggleState(d.dependsOn);
-        // Disable the slider row widget itself — Qt's default disabled-state
-        // rendering greys out its internal QLabel + QSlider + value label.
-        slider->setEnabled(enabled);
+        const bool active = masterToggleState(d.dependsOn);
+        // Dim inactive sliders via opacity instead of disabling, so they
+        // remain focusable for keyboard navigation.
+        slider->setProperty("dependencyActive", active);
+        slider->setWindowOpacity(active ? 1.0 : 0.4);
+        // QWidget::setWindowOpacity only works on top-level windows.
+        // For child widgets, use a QGraphicsOpacityEffect instead.
+        if (!active) {
+            if (!slider->graphicsEffect()) {
+                auto* eff = new QGraphicsOpacityEffect(slider);
+                eff->setOpacity(0.4);
+                slider->setGraphicsEffect(eff);
+            }
+        } else {
+            slider->setGraphicsEffect(nullptr);
+        }
     }
 }
 
@@ -103,6 +130,7 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
     root->addWidget(new Pcsx2SectionHeader("Sharpening / Anti-Aliasing", this));
 
     auto* sharpCard = new Pcsx2Card(this);
+    sharpCard->setFocusPolicy(Qt::NoFocus);
     auto* sharpV = new QVBoxLayout(sharpCard);
     sharpV->setContentsMargins(14, 12, 14, 12);
     sharpV->setSpacing(8);
@@ -135,6 +163,7 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
     root->addWidget(new Pcsx2SectionHeader("Filters", this));
 
     auto* filterCard = new Pcsx2Card(this);
+    filterCard->setFocusPolicy(Qt::NoFocus);
     auto* filterV = new QVBoxLayout(filterCard);
     filterV->setContentsMargins(14, 12, 14, 12);
     filterV->setSpacing(10);
@@ -191,4 +220,132 @@ void Pcsx2GraphicsPostProcessingPage::saveValue(const QString& section, const QS
     QVariantMap m;
     m[section + "/" + key] = value;
     m_dialog->appController()->saveSettings(m_dialog->emuId(), m);
+}
+
+bool Pcsx2GraphicsPostProcessingPage::eventFilter(QObject* obj, QEvent* e) {
+    Q_UNUSED(obj);
+    if (e->type() == QEvent::KeyPress) {
+        auto* ke = static_cast<QKeyEvent*>(e);
+        const int k = ke->key();
+        if (k == Qt::Key_Left || k == Qt::Key_Right || k == Qt::Key_Up || k == Qt::Key_Down) {
+            QWidget* current = QApplication::focusWidget();
+            if (current && isAncestorOf(current)) {
+                // Combo popup open — let the popup handle arrows.
+                if (auto* combo = qobject_cast<QComboBox*>(current)) {
+                    if (combo->view() && combo->view()->isVisible()) {
+                        return QWidget::eventFilter(obj, e);
+                    }
+                }
+                // Sliders and spin boxes in edit mode handle their own arrows.
+                if (current->property("editing").toBool()) {
+                    return QWidget::eventFilter(obj, e);
+                }
+                if (QWidget* next = findNextFocusSpatial(current, k)) {
+                    next->setFocus(Qt::TabFocusReason);
+                    QWidget* p = next->parentWidget();
+                    while (p) {
+                        if (auto* sa = qobject_cast<QScrollArea*>(p)) {
+                            sa->ensureWidgetVisible(next, 20, 40);
+                            break;
+                        }
+                        p = p->parentWidget();
+                    }
+                }
+                // Always consume arrow keys — prevents combos from
+                // changing value and sliders from moving on arrow press.
+                return true;
+            }
+        }
+    }
+    return QWidget::eventFilter(obj, e);
+}
+
+QList<QWidget*> Pcsx2GraphicsPostProcessingPage::collectFocusables() const {
+    QList<QWidget*> result;
+    const auto all = this->findChildren<QWidget*>();
+    for (QWidget* w : all) {
+        if (!w->isVisible()) continue;
+        if (w->focusPolicy() == Qt::NoFocus) continue;
+        if (qobject_cast<QComboBox*>(w)   ||
+            qobject_cast<QSlider*>(w)     ||
+            qobject_cast<Pcsx2Toggle*>(w) ||
+            qobject_cast<Pcsx2Card*>(w)) {
+            // If this control lives inside a focusable Pcsx2Card, skip it.
+            if (!qobject_cast<Pcsx2Card*>(w)) {
+                bool insideFocusableCard = false;
+                for (QWidget* p = w->parentWidget(); p && p != this; p = p->parentWidget()) {
+                    if (auto* card = qobject_cast<Pcsx2Card*>(p)) {
+                        if (card->focusPolicy() != Qt::NoFocus) {
+                            insideFocusableCard = true;
+                            break;
+                        }
+                    }
+                }
+                if (insideFocusableCard) continue;
+            }
+            result.append(w);
+        }
+    }
+    return result;
+}
+
+QWidget* Pcsx2GraphicsPostProcessingPage::findNextFocusSpatial(QWidget* current, int key) const {
+    const auto focusables = collectFocusables();
+    if (focusables.size() < 2) return nullptr;
+
+    auto pagePoint = [this](QWidget* w) -> QPoint {
+        return w->mapTo(const_cast<Pcsx2GraphicsPostProcessingPage*>(this), QPoint(0, 0));
+    };
+    const QRect mine(pagePoint(current), current->size());
+    const QPoint myCenter = mine.center();
+    const bool vertical = (key == Qt::Key_Up || key == Qt::Key_Down);
+
+    auto rangesOverlap = [](int a0, int a1, int b0, int b1) {
+        return a0 < b1 && b0 < a1;
+    };
+
+    QWidget* bestOverlap = nullptr;  long long bestOverlapScore = std::numeric_limits<long long>::max();
+
+    for (QWidget* w : focusables) {
+        if (w == current) continue;
+        const QRect r(pagePoint(w), w->size());
+        const QPoint c = r.center();
+        const int dx = c.x() - myCenter.x();
+        const int dy = c.y() - myCenter.y();
+
+        bool inDir = false;
+        bool perpOverlap = false;
+        switch (key) {
+            case Qt::Key_Left:
+                inDir = dx < 0;
+                perpOverlap = rangesOverlap(mine.top(), mine.bottom(), r.top(), r.bottom());
+                break;
+            case Qt::Key_Right:
+                inDir = dx > 0;
+                perpOverlap = rangesOverlap(mine.top(), mine.bottom(), r.top(), r.bottom());
+                break;
+            case Qt::Key_Up:
+                inDir = dy < 0;
+                perpOverlap = rangesOverlap(mine.left(), mine.right(), r.left(), r.right());
+                break;
+            case Qt::Key_Down:
+                inDir = dy > 0;
+                perpOverlap = rangesOverlap(mine.left(), mine.right(), r.left(), r.right());
+                break;
+        }
+
+        if (!inDir) continue;
+
+        const long long adx = qAbs(dx);
+        const long long ady = qAbs(dy);
+        const long long score = vertical
+            ? (ady * 2LL + adx)
+            : (adx * 2LL + ady);
+
+        if (perpOverlap && score < bestOverlapScore) {
+            bestOverlapScore = score;
+            bestOverlap = w;
+        }
+    }
+    return bestOverlap;
 }

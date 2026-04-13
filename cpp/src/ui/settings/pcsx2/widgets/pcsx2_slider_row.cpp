@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QSlider>
 #include <QEvent>
+#include <QKeyEvent>
 
 Pcsx2SliderRow::Pcsx2SliderRow(QWidget* parent) : QWidget(parent) {
     auto* lay = new QHBoxLayout(this);
@@ -39,8 +40,45 @@ void Pcsx2SliderRow::refreshValueLabel() {
     m_value->setText(QString::number(m_slider->value()) + m_suffix);
 }
 
+void Pcsx2SliderRow::setEditing(bool on) {
+    m_editing = on;
+    m_slider->setProperty("editing", on);
+    // Visual feedback: amber border when editing.
+    if (on) {
+        m_slider->setStyleSheet(
+            Pcsx2Theme::sliderQss() +
+            QStringLiteral("QSlider { border: 1px solid #f59e0b; border-radius: 4px; }"));
+    } else {
+        m_slider->setStyleSheet(Pcsx2Theme::sliderQss());
+    }
+}
+
 bool Pcsx2SliderRow::eventFilter(QObject* o, QEvent* e) {
-    if (o == m_slider && e->type() == QEvent::FocusIn) emit focused(m_def);
+    if (o == m_slider && e->type() == QEvent::FocusIn) {
+        emit focused(m_def);
+    }
+    if (o == m_slider && e->type() == QEvent::FocusOut) {
+        setEditing(false);
+    }
+    if (o == m_slider && e->type() == QEvent::KeyPress) {
+        auto* ke = static_cast<QKeyEvent*>(e);
+        if (ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter) {
+            // Don't allow editing if the slider's dependency is inactive.
+            if (!m_editing && property("dependencyActive").isValid()
+                && !property("dependencyActive").toBool()) {
+                return true;
+            }
+            setEditing(!m_editing);
+            return true;
+        }
+        // When not editing, block arrow keys so spatial nav handles them.
+        if (!m_editing) {
+            if (ke->key() == Qt::Key_Up || ke->key() == Qt::Key_Down ||
+                ke->key() == Qt::Key_Left || ke->key() == Qt::Key_Right) {
+                return false; // let page-level event filter handle spatial nav
+            }
+        }
+    }
     return QWidget::eventFilter(o, e);
 }
 

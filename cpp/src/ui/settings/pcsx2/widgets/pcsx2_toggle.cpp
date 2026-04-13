@@ -1,6 +1,7 @@
 #include "pcsx2_toggle.h"
 #include "../pcsx2_theme.h"
 #include <QPainter>
+#include <QKeyEvent>
 
 Pcsx2Toggle::Pcsx2Toggle(QWidget* parent) : QAbstractButton(parent) {
     setCheckable(true);
@@ -22,9 +23,19 @@ void Pcsx2Toggle::paintEvent(QPaintEvent*) {
     p.setBrush(Pcsx2Theme::textPrimary());
     p.drawEllipse(x, 2, knobD, knobD);
     if (hasFocus()) {
-        QPen pen(Pcsx2Theme::accent(), 1);
+        // Use white when checked (amber track would hide an amber ring).
+        QColor ring = on ? Pcsx2Theme::textPrimary() : Pcsx2Theme::accent();
+        QPen pen(ring, 2);
         p.setPen(pen);
         p.setBrush(Qt::NoBrush);
-        p.drawRoundedRect(rect().adjusted(0,0,-1,-1), height()/2.0, height()/2.0);
+        p.drawRoundedRect(rect().adjusted(1,1,-2,-2), height()/2.0, height()/2.0);
     }
+}
+
+void Pcsx2Toggle::keyPressEvent(QKeyEvent* e) {
+    if (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter) {
+        toggle();
+        return;
+    }
+    QAbstractButton::keyPressEvent(e);
 }

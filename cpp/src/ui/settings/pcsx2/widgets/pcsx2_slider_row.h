@@ -17,6 +17,7 @@ public:
     int value() const;
     void setSettingDef(const SettingDef& def) { m_def = def; }
     const SettingDef& settingDef() const { return m_def; }
+    bool isEditing() const { return m_editing; }
 
 signals:
     void valueChanged(int v);
@@ -28,9 +29,11 @@ protected:
 
 private:
     void refreshValueLabel();
+    void setEditing(bool on);
     QLabel* m_label = nullptr;
     QSlider* m_slider = nullptr;
     QLabel* m_value = nullptr;
     QString m_suffix;
     SettingDef m_def;
+    bool m_editing = false;
 };

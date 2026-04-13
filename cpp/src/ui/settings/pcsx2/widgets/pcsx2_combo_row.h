@@ -31,4 +31,5 @@ private:
     QLabel* m_label = nullptr;
     QComboBox* m_combo = nullptr;
     SettingDef m_def;
+    bool m_justClosed = false;
 };

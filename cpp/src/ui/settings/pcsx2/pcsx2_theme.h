@@ -71,6 +71,8 @@ inline QString comboQss() {
 
 inline QString sliderQss() {
     return QStringLiteral(
+        "QSlider { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+        "QSlider:focus { border: 1px solid #f59e0b; }"
         "QSlider::groove:horizontal {"
         "  height: 4px; background: #4a4642; border-radius: 2px;"
         "}"

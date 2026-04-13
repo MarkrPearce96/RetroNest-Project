@@ -4,6 +4,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QEvent>
+#include <QMouseEvent>
 
 Pcsx2ToggleRow::Pcsx2ToggleRow(QWidget* parent) : QWidget(parent) {
     auto* lay = new QHBoxLayout(this);
@@ -16,6 +17,7 @@ Pcsx2ToggleRow::Pcsx2ToggleRow(QWidget* parent) : QWidget(parent) {
     lay->addWidget(m_toggle, 0, Qt::AlignRight);
     connect(m_toggle, &QAbstractButton::toggled, this, &Pcsx2ToggleRow::toggled);
     m_toggle->installEventFilter(this);
+    setCursor(Qt::PointingHandCursor);
     setMinimumHeight(34);
 }
 
@@ -33,4 +35,9 @@ bool Pcsx2ToggleRow::eventFilter(QObject* obj, QEvent* e) {
 void Pcsx2ToggleRow::enterEvent(QEnterEvent* e) {
     QWidget::enterEvent(e);
     emit focused(m_def);
+}
+
+void Pcsx2ToggleRow::mousePressEvent(QMouseEvent* e) {
+    Q_UNUSED(e);
+    m_toggle->toggle();
 }

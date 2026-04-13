@@ -78,6 +78,13 @@ void Pcsx2Card::paintEvent(QPaintEvent* e) {
 void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
     const int k = e->key();
 
+    // Only handle Enter/arrow if the card itself has focus — not when a
+    // child control propagated the event up the parent chain.
+    if (!hasFocus()) {
+        QFrame::keyPressEvent(e);
+        return;
+    }
+
     if (k == Qt::Key_Return || k == Qt::Key_Enter) {
         // Try to activate the inner interactive widget first (toggle or combo).
         if (auto* t = findChild<Pcsx2Toggle*>()) {
@@ -106,8 +113,6 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
 
                 Pcsx2Card* bestOverlap = nullptr;
                 long long bestOverlapScore = std::numeric_limits<long long>::max();
-                Pcsx2Card* bestAny = nullptr;
-                long long bestAnyScore = std::numeric_limits<long long>::max();
 
                 auto rangesOverlap = [](int a0, int a1, int b0, int b1) {
                     return a0 < b1 && b0 < a1;
@@ -151,27 +156,23 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
                     const long long adx = qAbs(dx);
                     const long long ady = qAbs(dy);
                     const long long score = vertical
-                        ? (ady * 10000LL + adx)
-                        : (adx * 10000LL + ady);
+                        ? (ady * 2LL + adx)
+                        : (adx * 2LL + ady);
 
                     if (perpOverlap && score < bestOverlapScore) {
                         bestOverlapScore = score;
                         bestOverlap = s;
                     }
-                    if (score < bestAnyScore) {
-                        bestAnyScore = score;
-                        bestAny = s;
-                    }
                 }
 
-                Pcsx2Card* best = bestOverlap ? bestOverlap : bestAny;
+                Pcsx2Card* best = bestOverlap;
                 if (best) {
                     best->setFocus(Qt::TabFocusReason);
                     // If we're inside a scroll area, scroll the new focus into view.
                     QWidget* p = best->parentWidget();
                     while (p) {
                         if (auto* sa = qobject_cast<QScrollArea*>(p)) {
-                            sa->ensureWidgetVisible(best, 20, 20);
+                            sa->ensureWidgetVisible(best, 20, 40);
                             break;
                         }
                         p = p->parentWidget();

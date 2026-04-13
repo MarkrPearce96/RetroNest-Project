@@ -23,6 +23,7 @@ signals:
 protected:
     bool eventFilter(QObject* obj, QEvent* e) override;
     void enterEvent(QEnterEvent* e) override;
+    void mousePressEvent(QMouseEvent* e) override;
 
 private:
     QLabel* m_label = nullptr;

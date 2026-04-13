@@ -53,11 +53,13 @@ void Pcsx2SettingsDialog::pushPage(QWidget* page) {
     }
     clearFocusedSetting();
 
-    // Auto-focus the first Pcsx2Card so arrow keys work immediately.
-    // Without this, focus stays on the QScrollArea and Down arrow just
-    // scrolls the viewport.
-    if (auto* firstCard = page->findChild<Pcsx2Card*>()) {
-        firstCard->setFocus(Qt::OtherFocusReason);
+    // Auto-focus the first focusable Pcsx2Card so arrow keys work
+    // immediately.  Skip NoFocus cards (compound containers).
+    for (auto* card : page->findChildren<Pcsx2Card*>()) {
+        if (card->focusPolicy() != Qt::NoFocus) {
+            card->setFocus(Qt::OtherFocusReason);
+            break;
+        }
     }
 }
 

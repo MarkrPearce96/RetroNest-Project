@@ -11,6 +11,7 @@
 #include <QEvent>
 #include <QStyleFactory>
 #include <QListView>
+#include <QTimer>
 
 Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent, bool stacked) : QWidget(parent) {
     QBoxLayout* lay = nullptr;
@@ -146,29 +147,40 @@ bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
         emit focused(m_def);
     }
 
-    // Popup open? Check keypresses for Enter/Return on the view or its viewport.
-    if (e->type() == QEvent::KeyPress && m_combo->view()->isVisible()) {
-        const bool fromView = (obj == m_combo->view()) ||
-                              (obj == m_combo->view()->viewport());
-        if (fromView) {
-            auto* ke = static_cast<QKeyEvent*>(e);
-            if (ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter) {
-                const QModelIndex current = m_combo->view()->currentIndex();
-                if (current.isValid()) {
-                    m_combo->setCurrentIndex(current.row());
-                }
-                m_combo->hidePopup();
-                return true;  // consume to prevent re-open
+    // Enter on the combo (popup closed) → open the popup.
+    if (obj == m_combo && e->type() == QEvent::KeyPress) {
+        auto* ke = static_cast<QKeyEvent*>(e);
+        if (ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter) {
+            if (m_justClosed) {
+                // The popup was just closed by Qt's internal Enter handling.
+                // Don't re-open it.
+                m_justClosed = false;
+                return true;
+            }
+            if (!m_combo->view()->isVisible()) {
+                m_combo->showPopup();
+                return true;
             }
         }
     }
 
     if (obj == m_combo->view() && e->type() == QEvent::Hide) {
-        // Popup dismissed — return focus to the parent Pcsx2Card.
+        // The popup just closed — block the next Enter from re-opening it.
+        // Qt's internal handling closes the popup and then re-dispatches
+        // the Enter key to the combo, which would trigger our "open" handler.
+        m_justClosed = true;
+        QTimer::singleShot(0, this, [this]{ m_justClosed = false; });
+
+        // Return focus to the parent Pcsx2Card if it accepts focus;
+        // otherwise keep focus on the combo itself.
         QWidget* w = parentWidget();
         while (w) {
             if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("Pcsx2Card")) {
-                w->setFocus(Qt::OtherFocusReason);
+                if (w->focusPolicy() != Qt::NoFocus) {
+                    w->setFocus(Qt::OtherFocusReason);
+                } else {
+                    m_combo->setFocus(Qt::OtherFocusReason);
+                }
                 break;
             }
             w = w->parentWidget();

@@ -335,10 +335,20 @@ bool Pcsx2GraphicsOsdPage::eventFilter(QObject* obj, QEvent* e) {
                         return QWidget::eventFilter(obj, e);
                     }
                 }
+                // Sliders and spin boxes in edit mode handle their own arrows.
+                if (current->property("editing").toBool()) {
+                    return QWidget::eventFilter(obj, e);
+                }
                 if (QWidget* next = findNextFocusSpatial(current, k)) {
                     next->setFocus(Qt::TabFocusReason);
-                    return true;
+                    for (QWidget* p = next->parentWidget(); p; p = p->parentWidget()) {
+                        if (auto* sa = qobject_cast<QScrollArea*>(p)) {
+                            sa->ensureWidgetVisible(next, 20, 40);
+                            break;
+                        }
+                    }
                 }
+                return true;
             }
         }
     }
@@ -356,6 +366,20 @@ QList<QWidget*> Pcsx2GraphicsOsdPage::collectFocusables() const {
             qobject_cast<QSpinBox*>(w)    ||
             qobject_cast<Pcsx2Toggle*>(w) ||
             qobject_cast<Pcsx2Card*>(w)) {
+            // If this control lives inside a focusable Pcsx2Card, skip it —
+            // the card itself is the focus stop and Enter activates the control.
+            if (!qobject_cast<Pcsx2Card*>(w)) {
+                bool insideFocusableCard = false;
+                for (QWidget* p = w->parentWidget(); p && p != this; p = p->parentWidget()) {
+                    if (auto* card = qobject_cast<Pcsx2Card*>(p)) {
+                        if (card->focusPolicy() != Qt::NoFocus) {
+                            insideFocusableCard = true;
+                            break;
+                        }
+                    }
+                }
+                if (insideFocusableCard) continue;
+            }
             result.append(w);
         }
     }
@@ -369,11 +393,15 @@ QWidget* Pcsx2GraphicsOsdPage::findNextFocusSpatial(QWidget* current, int key) c
     auto pagePoint = [this](QWidget* w) -> QPoint {
         return w->mapTo(const_cast<Pcsx2GraphicsOsdPage*>(this), QPoint(0, 0));
     };
-    const QRect myRect(pagePoint(current), current->size());
-    const QPoint myCenter = myRect.center();
+    const QRect mine(pagePoint(current), current->size());
+    const QPoint myCenter = mine.center();
+    const bool vertical = (key == Qt::Key_Up || key == Qt::Key_Down);
 
-    QWidget* best = nullptr;
-    long long bestScore = std::numeric_limits<long long>::max();
+    auto rangesOverlap = [](int a0, int a1, int b0, int b1) {
+        return a0 < b1 && b0 < a1;
+    };
+
+    QWidget* bestOverlap = nullptr;  long long bestOverlapScore = std::numeric_limits<long long>::max();
 
     for (QWidget* w : focusables) {
         if (w == current) continue;
@@ -383,25 +411,37 @@ QWidget* Pcsx2GraphicsOsdPage::findNextFocusSpatial(QWidget* current, int key) c
         const int dy = c.y() - myCenter.y();
 
         bool inDir = false;
+        bool perpOverlap = false;
         switch (key) {
-            case Qt::Key_Left:  inDir = dx < 0; break;
-            case Qt::Key_Right: inDir = dx > 0; break;
-            case Qt::Key_Up:    inDir = dy < 0; break;
-            case Qt::Key_Down:  inDir = dy > 0; break;
+            case Qt::Key_Left:
+                inDir = dx < 0;
+                perpOverlap = rangesOverlap(mine.top(), mine.bottom(), r.top(), r.bottom());
+                break;
+            case Qt::Key_Right:
+                inDir = dx > 0;
+                perpOverlap = rangesOverlap(mine.top(), mine.bottom(), r.top(), r.bottom());
+                break;
+            case Qt::Key_Up:
+                inDir = dy < 0;
+                perpOverlap = rangesOverlap(mine.left(), mine.right(), r.left(), r.right());
+                break;
+            case Qt::Key_Down:
+                inDir = dy > 0;
+                perpOverlap = rangesOverlap(mine.left(), mine.right(), r.left(), r.right());
+                break;
         }
         if (!inDir) continue;
 
-        const bool vertical = (key == Qt::Key_Up || key == Qt::Key_Down);
         const long long adx = qAbs(dx);
         const long long ady = qAbs(dy);
         const long long score = vertical
-            ? (ady * 10000LL + adx)
-            : (adx * 10000LL + ady);
+            ? (ady * 2LL + adx)
+            : (adx * 2LL + ady);
 
-        if (score < bestScore) {
-            bestScore = score;
-            best = w;
+        if (perpOverlap && score < bestOverlapScore) {
+            bestOverlapScore = score;
+            bestOverlap = w;
         }
     }
-    return best;
+    return bestOverlap;
 }

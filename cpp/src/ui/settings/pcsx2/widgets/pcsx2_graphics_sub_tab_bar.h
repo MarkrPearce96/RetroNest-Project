@@ -15,6 +15,7 @@ public:
     void addTab(const QString& icon, const QString& label);
 
     int currentIndex() const { return m_current; }
+    int tabCount() const { return m_tabs.size(); }
     void setCurrentIndex(int idx);
 
     QSize sizeHint() const override;
