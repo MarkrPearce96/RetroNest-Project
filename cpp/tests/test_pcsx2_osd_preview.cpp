@@ -54,6 +54,7 @@ private slots:
 
     void testFromPosValue() {
         using Pos = Pcsx2OsdPreview::OverlayPos;
+        // Text labels
         QCOMPARE(Pcsx2OsdPreview::fromPosValue("None"),                  Pos::None);
         QCOMPARE(Pcsx2OsdPreview::fromPosValue("Top Left"),              Pos::TopLeft);
         QCOMPARE(Pcsx2OsdPreview::fromPosValue("Top Left (Default)"),    Pos::TopLeft);
@@ -67,6 +68,18 @@ private slots:
         QCOMPARE(Pcsx2OsdPreview::fromPosValue("Bottom Center"),         Pos::BottomCenter);
         QCOMPARE(Pcsx2OsdPreview::fromPosValue("Bottom Right"),          Pos::BottomRight);
         QCOMPARE(Pcsx2OsdPreview::fromPosValue("garbage"),               Pos::TopLeft);
+
+        // Numeric INI values (what the combo row actually emits)
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("0"), Pos::None);
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("1"), Pos::TopLeft);
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("2"), Pos::TopCenter);
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("3"), Pos::TopRight);
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("4"), Pos::CenterLeft);
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("5"), Pos::Center);
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("6"), Pos::CenterRight);
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("7"), Pos::BottomLeft);
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("8"), Pos::BottomCenter);
+        QCOMPARE(Pcsx2OsdPreview::fromPosValue("9"), Pos::BottomRight);
     }
 
     void testAllTogglesOnAtOnce() {

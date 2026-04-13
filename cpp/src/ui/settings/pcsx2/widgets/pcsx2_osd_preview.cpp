@@ -77,6 +77,27 @@ void Pcsx2OsdPreview::setOsdScale(int percent) {
 
 Pcsx2OsdPreview::OverlayPos Pcsx2OsdPreview::fromPosValue(const QString& v) {
     const QString s = v.trimmed();
+
+    // Handle numeric INI values (0-9) used by PCSX2's OsdPerformancePos / OsdMessagesPos
+    bool ok = false;
+    const int num = s.toInt(&ok);
+    if (ok) {
+        switch (num) {
+            case 0: return OverlayPos::None;
+            case 1: return OverlayPos::TopLeft;
+            case 2: return OverlayPos::TopCenter;
+            case 3: return OverlayPos::TopRight;
+            case 4: return OverlayPos::CenterLeft;
+            case 5: return OverlayPos::Center;
+            case 6: return OverlayPos::CenterRight;
+            case 7: return OverlayPos::BottomLeft;
+            case 8: return OverlayPos::BottomCenter;
+            case 9: return OverlayPos::BottomRight;
+            default: return OverlayPos::TopLeft;
+        }
+    }
+
+    // Handle text labels (e.g. from combo display text or "(Default)" suffixed labels)
     if (s.compare("None", Qt::CaseInsensitive) == 0) return OverlayPos::None;
     const QString stem = s.section('(', 0, 0).trimmed();
     if (stem.compare("Top Left",      Qt::CaseInsensitive) == 0) return OverlayPos::TopLeft;
