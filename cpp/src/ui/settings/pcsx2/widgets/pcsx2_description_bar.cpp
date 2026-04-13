@@ -62,10 +62,8 @@ QVector<Pcsx2DescriptionBar::ButtonHint> Pcsx2DescriptionBar::hints() const {
 }
 
 void Pcsx2DescriptionBar::setInputManager(SdlInputManager* mgr) {
-    m_inputManager = mgr;  // implicit upcast SdlInputManager* → QObject* (full type visible here)
+    m_inputManager = mgr;
     if (mgr) {
-        // String-based connect so test targets (which don't link sdl_input_manager.cpp)
-        // still compile without unresolved symbol errors.
         connect(mgr, SIGNAL(controllerTypeChanged()), this, SLOT(update()));
     }
 }

@@ -46,5 +46,5 @@ private:
     QLabel* m_text = nullptr;
     QLabel* m_rec = nullptr;
     QVector<ButtonHint> m_hints;
-    QObject* m_inputManager = nullptr;  // SdlInputManager*, stored as QObject* to avoid SDL headers in test targets
+    QObject* m_inputManager = nullptr;
 };
