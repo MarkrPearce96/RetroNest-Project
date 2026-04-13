@@ -61,6 +61,8 @@ static int mapButtonToKey(SDL_GameControllerButton btn) {
     case SDL_CONTROLLER_BUTTON_B:          return Qt::Key_Back;
     case SDL_CONTROLLER_BUTTON_X:          return Qt::Key_Backspace;
     case SDL_CONTROLLER_BUTTON_Y:          return Qt::Key_M;
+    case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:  return Qt::Key_Backtab;
+    case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return Qt::Key_Tab;
     // Start handled as signal, not key injection (conflicts with Shortcuts)
     default: return 0;
     }
