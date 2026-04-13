@@ -472,7 +472,7 @@ add_executable(test_pcsx2_description_bar
     src/ui/settings/pcsx2/widgets/pcsx2_description_bar.cpp
 )
 set_target_properties(test_pcsx2_description_bar PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_description_bar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(test_pcsx2_description_bar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${SDL2_INCLUDE_DIRS})
 target_link_libraries(test_pcsx2_description_bar PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 add_test(NAME Pcsx2DescriptionBar COMMAND test_pcsx2_description_bar)
 

@@ -38,6 +38,28 @@ private slots:
         bar.setSetting(d);
         QCOMPARE(bar.recommendedText(), QString("Recommended: 100% [60 FPS]"));
     }
+
+    void setHintsStoresHints() {
+        Pcsx2DescriptionBar bar;
+        QVector<Pcsx2DescriptionBar::ButtonHint> hints = {
+            {"navigate_ud", "Navigate"},
+            {"confirm", "Select"},
+            {"back", "Close"},
+        };
+        bar.setHints(hints);
+        QCOMPARE(bar.hints().size(), 3);
+        QCOMPARE(bar.hints()[0].action, QString("navigate_ud"));
+        QCOMPARE(bar.hints()[0].label, QString("Navigate"));
+        QCOMPARE(bar.hints()[2].action, QString("back"));
+    }
+
+    void clearHintsRemovesAll() {
+        Pcsx2DescriptionBar bar;
+        bar.setHints({{"confirm", "Select"}});
+        QCOMPARE(bar.hints().size(), 1);
+        bar.clearHints();
+        QCOMPARE(bar.hints().size(), 0);
+    }
 };
 QTEST_MAIN(TestPcsx2DescriptionBar)
 #include "test_pcsx2_description_bar.moc"
