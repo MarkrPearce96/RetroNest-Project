@@ -26,6 +26,7 @@ class AppController : public QObject {
 public:
     AppController(ManifestLoader* loader, Database* db, QObject* parent = nullptr);
     void setSdlInputManager(SdlInputManager* mgr) { m_inputManager = mgr; }
+    SdlInputManager* sdlInputManager() const { return m_inputManager; }
 
     // App state
     QString statusMessage() const;
