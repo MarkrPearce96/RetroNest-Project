@@ -1,18 +1,14 @@
 #include "pcsx2_memory_cards_page.h"
 #include "../pcsx2_settings_dialog.h"
 #include "../widgets/pcsx2_card.h"
-#include "../widgets/pcsx2_section_header.h"
 #include "../widgets/pcsx2_toggle_row.h"
 #include "../pcsx2_theme.h"
 #include "ui/app_controller.h"
 #include "adapters/pcsx2_adapter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QGridLayout>
 #include <QPushButton>
 #include <QLabel>
-#include <QFileDialog>
-#include <QFileInfo>
 #include <QScrollArea>
 #include <QVariantMap>
 
@@ -77,19 +73,6 @@ void Pcsx2MemoryCardsPage::buildUi() {
         return row;
     };
 
-    auto makeToggleCard = [this, &makeToggleRow](const QString& key, const QString& labelOverride = QString()) -> Pcsx2Card* {
-        auto* tr = makeToggleRow(key, labelOverride);
-        if (!tr) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        if (const SettingDef* d = findDef(key)) card->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &Pcsx2MemoryCardsPage::settingFocused);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        tr->setParent(card);
-        v->addWidget(tr);
-        return card;
-    };
-
     auto makeSlotCard = [this, &makeToggleRow](const QString& enableKey, const QString& filenameKey,
                                                const QString& label, QLabel** outFilenameLabel) -> Pcsx2Card* {
         const SettingDef* fd = findDef(filenameKey);
@@ -104,29 +87,11 @@ void Pcsx2MemoryCardsPage::buildUi() {
         auto* tr = makeToggleRow(enableKey, label);
         if (tr) { tr->setParent(card); v->addWidget(tr); }
 
-        auto* fileRow = new QHBoxLayout();
         auto* nameLabel = new QLabel(card);
         nameLabel->setStyleSheet("color:#c4c0b8;font-size:13px;");
         *outFilenameLabel = nameLabel;
-        fileRow->addWidget(nameLabel, 1);
+        v->addWidget(nameLabel);
 
-        auto* browse = new QPushButton("Browse\u2026", card);
-        browse->setStyleSheet(
-            "QPushButton { background:#4a4642; color:#f2efe8; border:1px solid #706c66;"
-            " border-radius:4px; padding:4px 12px; }"
-            "QPushButton:focus { border-color:#f59e0b; }");
-        connect(browse, &QPushButton::clicked, this, [this, filenameKey, nameLabel]{
-            const SettingDef* d = findDef(filenameKey);
-            if (!d) return;
-            QString path = QFileDialog::getOpenFileName(this, "Select Memory Card",
-                                                         QString(), "PS2 Memory Cards (*.ps2)");
-            if (path.isEmpty()) return;
-            QString base = QFileInfo(path).fileName();
-            saveValue(d->section, d->key, base);
-            nameLabel->setText(base);
-        });
-        fileRow->addWidget(browse, 0);
-        v->addLayout(fileRow);
         return card;
     };
 
@@ -134,19 +99,6 @@ void Pcsx2MemoryCardsPage::buildUi() {
         root->addWidget(c);
     if (auto* c = makeSlotCard("Slot2_Enable", "Slot2_Filename", "Slot 2 Enabled", &m_slot2FilenameLabel))
         root->addWidget(c);
-
-    auto* mtGrid = new QGridLayout();
-    mtGrid->setSpacing(10);
-    int col = 0;
-    auto addMt = [&](const QString& key){
-        auto* c = makeToggleCard(key);
-        if (!c) return;
-        mtGrid->addWidget(c, 0, col++);
-    };
-    addMt("Multitap1_Slot2_Enable");
-    addMt("Multitap1_Slot3_Enable");
-    addMt("Multitap1_Slot4_Enable");
-    root->addLayout(mtGrid);
 
     root->addStretch();
 }

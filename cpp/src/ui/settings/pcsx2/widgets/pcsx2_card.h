@@ -24,6 +24,7 @@ protected:
     void focusOutEvent(QFocusEvent* e) override;
     void paintEvent(QPaintEvent* e) override;
     void keyPressEvent(QKeyEvent* e) override;
+    void mousePressEvent(QMouseEvent* e) override;
     void enterEvent(QEnterEvent* e) override;
 
 private:

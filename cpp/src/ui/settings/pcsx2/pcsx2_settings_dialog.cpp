@@ -12,6 +12,7 @@
 #include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QLabel>
+#include <QKeyEvent>
 
 Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuId, QWidget* parent)
     : QDialog(parent), m_app(app), m_emuId(emuId) {
@@ -77,6 +78,14 @@ void Pcsx2SettingsDialog::popPage() {
 
 void Pcsx2SettingsDialog::setFocusedSetting(const SettingDef& def) { m_descBar->setSetting(def); }
 void Pcsx2SettingsDialog::clearFocusedSetting() { m_descBar->clear(); }
+
+void Pcsx2SettingsDialog::keyPressEvent(QKeyEvent* e) {
+    if (e->key() == Qt::Key_Backspace && m_stack->currentWidget() != m_hub) {
+        popPage();
+        return;
+    }
+    QDialog::keyPressEvent(e);
+}
 
 void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
     if (category == "Emulation") {

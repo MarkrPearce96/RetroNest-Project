@@ -1,10 +1,13 @@
 #include "pcsx2_card.h"
 #include "../pcsx2_theme.h"
 #include "pcsx2_toggle.h"
+#include "pcsx2_slider_row.h"
 #include <QScrollArea>
+#include <QSlider>
 #include <QPainter>
 #include <QFocusEvent>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QStyle>
 #include <QWidget>
 #include <QComboBox>
@@ -48,6 +51,12 @@ void Pcsx2Card::focusInEvent(QFocusEvent* e) {
     update();
 }
 
+void Pcsx2Card::mousePressEvent(QMouseEvent* e) {
+    QFrame::mousePressEvent(e);
+    setFocus(Qt::MouseFocusReason);
+    emit activated();
+}
+
 void Pcsx2Card::enterEvent(QEnterEvent* e) {
     QFrame::enterEvent(e);
     emit focused(m_settingDef);
@@ -86,7 +95,7 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
     }
 
     if (k == Qt::Key_Return || k == Qt::Key_Enter) {
-        // Try to activate the inner interactive widget first (toggle or combo).
+        // Try to activate the inner interactive widget first (toggle, combo, or slider).
         if (auto* t = findChild<Pcsx2Toggle*>()) {
             t->toggle();
             return;
@@ -96,6 +105,13 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
                 c->setFocus(Qt::PopupFocusReason);
                 c->showPopup();
             });
+            return;
+        }
+        if (auto* sliderRow = findChild<Pcsx2SliderRow*>()) {
+            if (auto* slider = sliderRow->findChild<QSlider*>()) {
+                slider->setFocus(Qt::TabFocusReason);
+                sliderRow->setEditing(true);
+            }
             return;
         }
         // No inner interactive widget — fall back to activated() (hub cards).
@@ -150,11 +166,21 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
                     }
                     if (!inDir) continue;
 
-                    // Weight the primary axis 10000x so the vertically (or
-                    // horizontally) closest candidate wins even if it's
-                    // horizontally (or vertically) offset from center.
-                    const long long adx = qAbs(dx);
-                    const long long ady = qAbs(dy);
+                    // Use overlap-center distance instead of widget-center
+                    // distance so full-width cards don't get penalised.
+                    long long adx = qAbs(dx);
+                    long long ady = qAbs(dy);
+                    if (perpOverlap) {
+                        if (vertical) {
+                            int oL = qMax(mine.left(), r.left());
+                            int oR = qMin(mine.right(), r.right());
+                            adx = qAbs((oL + oR) / 2 - myCenter.x());
+                        } else {
+                            int oT = qMax(mine.top(), r.top());
+                            int oB = qMin(mine.bottom(), r.bottom());
+                            ady = qAbs((oT + oB) / 2 - myCenter.y());
+                        }
+                    }
                     const long long score = vertical
                         ? (ady * 2LL + adx)
                         : (adx * 2LL + ady);

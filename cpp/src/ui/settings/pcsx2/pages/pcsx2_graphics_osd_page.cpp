@@ -21,7 +21,6 @@
 #include <QKeyEvent>
 #include <QComboBox>
 #include <QSlider>
-#include <QSpinBox>
 #include <QAbstractItemView>
 #include <limits>
 
@@ -363,7 +362,6 @@ QList<QWidget*> Pcsx2GraphicsOsdPage::collectFocusables() const {
         if (w->focusPolicy() == Qt::NoFocus) continue;
         if (qobject_cast<QComboBox*>(w)   ||
             qobject_cast<QSlider*>(w)     ||
-            qobject_cast<QSpinBox*>(w)    ||
             qobject_cast<Pcsx2Toggle*>(w) ||
             qobject_cast<Pcsx2Card*>(w)) {
             // If this control lives inside a focusable Pcsx2Card, skip it —
@@ -432,8 +430,19 @@ QWidget* Pcsx2GraphicsOsdPage::findNextFocusSpatial(QWidget* current, int key) c
         }
         if (!inDir) continue;
 
-        const long long adx = qAbs(dx);
-        const long long ady = qAbs(dy);
+        long long adx = qAbs(dx);
+        long long ady = qAbs(dy);
+        if (perpOverlap) {
+            if (vertical) {
+                int oL = qMax(mine.left(), r.left());
+                int oR = qMin(mine.right(), r.right());
+                adx = qAbs((oL + oR) / 2 - myCenter.x());
+            } else {
+                int oT = qMax(mine.top(), r.top());
+                int oB = qMin(mine.bottom(), r.bottom());
+                ady = qAbs((oT + oB) / 2 - myCenter.y());
+            }
+        }
         const long long score = vertical
             ? (ady * 2LL + adx)
             : (adx * 2LL + ady);

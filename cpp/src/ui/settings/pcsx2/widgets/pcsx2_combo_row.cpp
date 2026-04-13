@@ -100,13 +100,8 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent, bool stacked) : QWidget(parent) {
         view->setAttribute(Qt::WA_MacShowFocusRect, false);
         view->setContentsMargins(0, 0, 0, 0);
     }
-    // Watch for popup lifecycle + keypresses. The Enter key may be
-    // delivered to the view or to its viewport depending on focus, so
-    // install the filter on both.
+    // Watch for popup Hide event so we can return focus after dismiss.
     m_combo->view()->installEventFilter(this);
-    if (auto* vp = m_combo->view()->viewport()) {
-        vp->installEventFilter(this);
-    }
     if (stacked) {
         lay->addWidget(m_label);
         lay->addWidget(m_combo);
@@ -167,24 +162,24 @@ bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
     if (obj == m_combo->view() && e->type() == QEvent::Hide) {
         // The popup just closed — block the next Enter from re-opening it.
         // Qt's internal handling closes the popup and then re-dispatches
-        // the Enter key to the combo, which would trigger our "open" handler.
+        // the Enter key to the focused widget, which would re-open.
+        // Always return focus to the combo so our m_justClosed guard works.
         m_justClosed = true;
-        QTimer::singleShot(0, this, [this]{ m_justClosed = false; });
-
-        // Return focus to the parent Pcsx2Card if it accepts focus;
-        // otherwise keep focus on the combo itself.
-        QWidget* w = parentWidget();
-        while (w) {
-            if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("Pcsx2Card")) {
-                if (w->focusPolicy() != Qt::NoFocus) {
-                    w->setFocus(Qt::OtherFocusReason);
-                } else {
-                    m_combo->setFocus(Qt::OtherFocusReason);
+        m_combo->setFocus(Qt::OtherFocusReason);
+        QTimer::singleShot(0, this, [this]{
+            m_justClosed = false;
+            // Now that the re-open window has passed, move focus to the
+            // parent card if it's focusable (for card-based arrow nav).
+            QWidget* w = parentWidget();
+            while (w) {
+                if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("Pcsx2Card")) {
+                    if (w->focusPolicy() != Qt::NoFocus)
+                        w->setFocus(Qt::OtherFocusReason);
+                    break;
                 }
-                break;
+                w = w->parentWidget();
             }
-            w = w->parentWidget();
-        }
+        });
     }
 
     return QWidget::eventFilter(obj, e);

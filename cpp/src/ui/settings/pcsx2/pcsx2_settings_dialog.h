@@ -23,6 +23,9 @@ public slots:
     void setFocusedSetting(const SettingDef& def);
     void clearFocusedSetting();
 
+protected:
+    void keyPressEvent(QKeyEvent* e) override;
+
 private slots:
     void onCategoryActivated(const QString& category);
 

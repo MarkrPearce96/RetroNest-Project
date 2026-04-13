@@ -68,7 +68,20 @@ bool Pcsx2SliderRow::eventFilter(QObject* o, QEvent* e) {
                 && !property("dependencyActive").toBool()) {
                 return true;
             }
-            setEditing(!m_editing);
+            if (m_editing) {
+                // Exiting edit mode — return focus to the parent card.
+                setEditing(false);
+                QWidget* w = parentWidget();
+                while (w) {
+                    if (w->inherits("Pcsx2Card") && w->focusPolicy() != Qt::NoFocus) {
+                        w->setFocus(Qt::OtherFocusReason);
+                        break;
+                    }
+                    w = w->parentWidget();
+                }
+            } else {
+                setEditing(true);
+            }
             return true;
         }
         // When not editing, block arrow keys so spatial nav handles them.

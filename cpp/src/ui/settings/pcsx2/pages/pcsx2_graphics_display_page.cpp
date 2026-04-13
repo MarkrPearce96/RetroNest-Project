@@ -502,8 +502,19 @@ QWidget* Pcsx2GraphicsDisplayPage::findNextFocusSpatial(QWidget* current, int ke
         }
         if (!inDir) continue;
 
-        const long long adx = qAbs(dx);
-        const long long ady = qAbs(dy);
+        long long adx = qAbs(dx);
+        long long ady = qAbs(dy);
+        if (perpOverlap) {
+            if (vertical) {
+                int oL = qMax(mine.left(), r.left());
+                int oR = qMin(mine.right(), r.right());
+                adx = qAbs((oL + oR) / 2 - myCenter.x());
+            } else {
+                int oT = qMax(mine.top(), r.top());
+                int oB = qMin(mine.bottom(), r.bottom());
+                ady = qAbs((oT + oB) / 2 - myCenter.y());
+            }
+        }
         const long long score = vertical
             ? (ady * 2LL + adx)
             : (adx * 2LL + ady);

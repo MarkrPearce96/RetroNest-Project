@@ -6,6 +6,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QKeyEvent>
 
 Pcsx2CategoryHub::Pcsx2CategoryHub(QWidget* parent) : QWidget(parent) {
     auto* root = new QVBoxLayout(this);
@@ -20,26 +21,65 @@ Pcsx2CategoryHub::Pcsx2CategoryHub(QWidget* parent) : QWidget(parent) {
     grid->setSpacing(14);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3AE"), "Emulation",    "Speed control, system settings, frame pacing", 16, "Emulation"),    0, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F5BC"),  "Graphics",     "Renderer, display, post-processing, OSD",       35, "Graphics"),     0, 1);
-    grid->addWidget(makeCard(QStringLiteral("\U0001F50A"), "Audio",        "Backend, latency, volume",                      11, "Audio"),        1, 0);
-    grid->addWidget(makeCard(QStringLiteral("\U0001F4BE"), "Memory Cards", "Memory cards and multitap slots",                7, "Memory Cards"), 1, 1);
+    auto* audioCard = makeCard(QStringLiteral("\U0001F50A"), "Audio",        "Backend, latency, volume",                      11, "Audio");
+    auto* memCard   = makeCard(QStringLiteral("\U0001F4BE"), "Memory Cards", "Memory cards and multitap slots",                7, "Memory Cards");
+    audioCard->installEventFilter(this);
+    memCard->installEventFilter(this);
+    grid->addWidget(audioCard, 1, 0);
+    grid->addWidget(memCard,   1, 1);
     root->addLayout(grid, 1);
 
-    auto* nativeBtn = new QPushButton("Open Native Settings", this);
-    nativeBtn->setStyleSheet(
+    m_nativeBtn = new QPushButton("Open Native Settings", this);
+    m_nativeBtn->setCursor(Qt::PointingHandCursor);
+    m_nativeBtn->setStyleSheet(
         "QPushButton { background:#4a4642; color:#f2efe8; border:1px solid #706c66;"
         " border-radius:4px; padding:6px 14px; }"
         "QPushButton:focus { border-color:#f59e0b; }");
     auto* bottom = new QHBoxLayout();
     bottom->addStretch();
-    bottom->addWidget(nativeBtn);
+    bottom->addWidget(m_nativeBtn);
     root->addLayout(bottom);
-    connect(nativeBtn, &QPushButton::clicked, this, &Pcsx2CategoryHub::openNativeRequested);
+    connect(m_nativeBtn, &QPushButton::clicked, this, &Pcsx2CategoryHub::openNativeRequested);
+    m_nativeBtn->installEventFilter(this);
+}
+
+bool Pcsx2CategoryHub::eventFilter(QObject* obj, QEvent* e) {
+    if (e->type() != QEvent::KeyPress)
+        return QWidget::eventFilter(obj, e);
+
+    auto* ke = static_cast<QKeyEvent*>(e);
+
+    // Up from the native button → focus the nearest bottom-row card.
+    if (obj == m_nativeBtn) {
+        if (ke->key() == Qt::Key_Up) {
+            const auto cards = findChildren<Pcsx2Card*>(QString(), Qt::FindDirectChildrenOnly);
+            if (!cards.isEmpty()) {
+                cards.last()->setFocus(Qt::TabFocusReason);
+                return true;
+            }
+        }
+        if (ke->key() == Qt::Key_Return || ke->key() == Qt::Key_Enter) {
+            emit openNativeRequested();
+            return true;
+        }
+    }
+
+    // Down from a bottom-row card → focus the native button.
+    if (auto* card = qobject_cast<Pcsx2Card*>(obj)) {
+        if (ke->key() == Qt::Key_Down) {
+            m_nativeBtn->setFocus(Qt::TabFocusReason);
+            return true;
+        }
+    }
+
+    return QWidget::eventFilter(obj, e);
 }
 
 Pcsx2Card* Pcsx2CategoryHub::makeCard(const QString& icon, const QString& title,
                                       const QString& descriptor, int settingCount,
                                       const QString& categoryKey) {
     auto* card = new Pcsx2Card(this);
+    card->setCursor(Qt::PointingHandCursor);
     card->setMinimumHeight(180);
 
     auto* v = new QVBoxLayout(card);
