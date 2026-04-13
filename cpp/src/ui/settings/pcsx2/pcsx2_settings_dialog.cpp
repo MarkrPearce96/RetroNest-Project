@@ -8,7 +8,7 @@
 #include "widgets/pcsx2_description_bar.h"
 #include "pcsx2_theme.h"
 #include "ui/app_controller.h"
-#include "ui/settings/emulator_settings_page.h"
+#include "core/sdl_input_manager.h"
 #include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -26,6 +26,7 @@ Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuI
 
     m_stack = new QStackedWidget(this);
     m_descBar = new Pcsx2DescriptionBar(this);
+    m_descBar->setInputManager(app->sdlInputManager());
 
     m_hub = new Pcsx2CategoryHub(this);
     connect(m_hub, &Pcsx2CategoryHub::categoryActivated,
@@ -34,18 +35,25 @@ Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuI
             [this]{ m_app->openNativeEmulatorSettings(m_emuId); });
     m_stack->addWidget(m_hub);
 
-    // Description bar is only meaningful on settings pages — hide it on the hub.
+    // Always show description bar — it shows hints even on the hub.
     connect(m_stack, &QStackedWidget::currentChanged, this, [this](int index) {
-        m_descBar->setVisible(m_stack->widget(index) != m_hub);
+        bool onHub = (m_stack->widget(index) == m_hub);
+        m_descBar->setVisible(true);
+        if (onHub) {
+            m_descBar->clear();
+        }
+        applyHintsForCurrentPage();
     });
-    // Initial state: hub is active, bar hidden
-    m_descBar->setVisible(false);
 
     root->addWidget(m_stack, 1);
     root->addWidget(m_descBar, 0);
+
+    // Initial state: hub is active, show hub hints
+    applyHintsForCurrentPage();
 }
 
-void Pcsx2SettingsDialog::pushPage(QWidget* page) {
+void Pcsx2SettingsDialog::pushPage(QWidget* page, bool hasSubTabs) {
+    m_currentPageHasSubTabs = hasSubTabs;
     int idx = m_stack->addWidget(page);
     m_history.push(m_stack->currentIndex());
     m_stack->setCurrentIndex(idx);
@@ -69,6 +77,7 @@ void Pcsx2SettingsDialog::popPage() {
     QWidget* current = m_stack->currentWidget();
     int prev = m_history.pop();
     m_stack->setCurrentIndex(prev);
+    m_currentPageHasSubTabs = false;
     if (m_stack->currentWidget() == m_hub) {
         resize(950, 550);
     }
@@ -80,11 +89,45 @@ void Pcsx2SettingsDialog::setFocusedSetting(const SettingDef& def) { m_descBar->
 void Pcsx2SettingsDialog::clearFocusedSetting() { m_descBar->clear(); }
 
 void Pcsx2SettingsDialog::keyPressEvent(QKeyEvent* e) {
-    if (e->key() == Qt::Key_Backspace && m_stack->currentWidget() != m_hub) {
+    // Escape and B-button (Key_Back) both act as hierarchical back.
+    // On the hub, popPage() calls accept() which closes the dialog.
+    if (e->key() == Qt::Key_Escape || e->key() == Qt::Key_Back) {
         popPage();
         return;
     }
+    // Suppress Tab/Backtab on pages without sub-tabs so L1/R1 don't
+    // accidentally move widget focus.
+    if ((e->key() == Qt::Key_Tab || e->key() == Qt::Key_Backtab) &&
+        !m_currentPageHasSubTabs && m_stack->currentWidget() != m_hub) {
+        e->accept();
+        return;
+    }
     QDialog::keyPressEvent(e);
+}
+
+void Pcsx2SettingsDialog::applyHintsForCurrentPage() {
+    using BH = Pcsx2DescriptionBar::ButtonHint;
+
+    if (m_stack->currentWidget() == m_hub) {
+        m_descBar->setHints({
+            BH{"navigate_ud", "Navigate"},
+            BH{"confirm",     "Select"},
+            BH{"back",        "Close"},
+        });
+    } else if (m_currentPageHasSubTabs) {
+        m_descBar->setHints({
+            BH{"navigate",    "Navigate"},
+            BH{"confirm",     "Select"},
+            BH{"switch_tab",  "Switch Tab"},
+            BH{"back",        "Back"},
+        });
+    } else {
+        m_descBar->setHints({
+            BH{"navigate",    "Navigate"},
+            BH{"confirm",     "Select"},
+            BH{"back",        "Back"},
+        });
+    }
 }
 
 void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
@@ -110,7 +153,7 @@ void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
         auto* page = new Pcsx2GraphicsPage(this);
         connect(page, &Pcsx2GraphicsPage::settingFocused,
                 this, &Pcsx2SettingsDialog::setFocusedSetting);
-        pushPage(page);
+        pushPage(page, true);  // hasSubTabs = true
         return;
     }
     // Emulation / Audio / Memory Cards branches wired in Tasks 14-16.

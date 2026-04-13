@@ -14,7 +14,7 @@ public:
     Pcsx2SettingsDialog(AppController* app, const QString& emuId, QWidget* parent = nullptr);
 
     // Navigation API used by child pages
-    void pushPage(QWidget* page);
+    void pushPage(QWidget* page, bool hasSubTabs = false);
     void popPage();
     AppController* appController() const { return m_app; }
     QString emuId() const { return m_emuId; }
@@ -30,10 +30,13 @@ private slots:
     void onCategoryActivated(const QString& category);
 
 private:
+    void applyHintsForCurrentPage();
+
     AppController* m_app;
     QString m_emuId;
     QStackedWidget* m_stack = nullptr;
     Pcsx2DescriptionBar* m_descBar = nullptr;
     Pcsx2CategoryHub* m_hub = nullptr;
     QStack<int> m_history;
+    bool m_currentPageHasSubTabs = false;
 };
