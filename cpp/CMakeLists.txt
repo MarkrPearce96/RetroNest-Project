@@ -161,6 +161,8 @@ set(HEADERS
     src/core/controller_type_def.h
     src/core/macos_fullscreen.h
     src/ui/settings/pcsx2/pcsx2_theme.h
+    # DuckStation settings
+    src/ui/settings/duckstation/duckstation_theme.h
     src/ui/settings/pcsx2/widgets/pcsx2_card.h
     src/ui/settings/pcsx2/widgets/pcsx2_section_header.h
     src/ui/settings/pcsx2/widgets/pcsx2_toggle.h
