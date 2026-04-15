@@ -10,6 +10,7 @@
 #include "settings/controller_mapping_page.h"
 #include "settings/emulator_settings_page.h"
 #include "settings/pcsx2/pcsx2_settings_dialog.h"
+#include "settings/duckstation/duckstation_settings_dialog.h"
 #include "settings/hotkey_settings_page.h"
 #include "core/sdl_input_manager.h"
 
@@ -861,6 +862,12 @@ void AppController::showControllerMapping(const QString& emuId) {
 void AppController::showEmulatorSettings(const QString& emuId) {
     if (emuId == QLatin1String("pcsx2")) {
         auto* dialog = new Pcsx2SettingsDialog(this, emuId);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->show();
+        return;
+    }
+    if (emuId == QLatin1String("duckstation")) {
+        auto* dialog = new DuckStationSettingsDialog(this, emuId);
         dialog->setAttribute(Qt::WA_DeleteOnClose);
         dialog->show();
         return;
