@@ -94,6 +94,7 @@ set(SOURCES
     src/ui/settings/duckstation/pages/duckstation_console_page.cpp
     src/ui/settings/duckstation/pages/duckstation_emulation_page.cpp
     src/ui/settings/duckstation/pages/duckstation_graphics_page.cpp
+    src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.cpp
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_audio_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.cpp
@@ -173,6 +174,7 @@ set(HEADERS
     src/ui/settings/duckstation/pages/duckstation_console_page.h
     src/ui/settings/duckstation/pages/duckstation_emulation_page.h
     src/ui/settings/duckstation/pages/duckstation_graphics_page.h
+    src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.h
     src/ui/settings/pcsx2/widgets/pcsx2_card.h
     src/ui/settings/pcsx2/widgets/pcsx2_section_header.h
     src/ui/settings/pcsx2/widgets/pcsx2_toggle.h
@@ -496,6 +498,15 @@ set_target_properties(test_pcsx2_aspect_ratio_preview PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_aspect_ratio_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_pcsx2_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 add_test(NAME Pcsx2AspectRatioPreview COMMAND test_pcsx2_aspect_ratio_preview)
+
+add_executable(test_duckstation_aspect_ratio_preview
+    tests/test_duckstation_aspect_ratio_preview.cpp
+    src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.cpp
+)
+set_target_properties(test_duckstation_aspect_ratio_preview PROPERTIES AUTOMOC ON)
+target_include_directories(test_duckstation_aspect_ratio_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_duckstation_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME DuckStationAspectRatioPreview COMMAND test_duckstation_aspect_ratio_preview)
 
 add_executable(test_pcsx2_osd_preview
     tests/test_pcsx2_osd_preview.cpp
