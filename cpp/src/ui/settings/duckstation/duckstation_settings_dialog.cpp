@@ -1,5 +1,6 @@
 #include "duckstation_settings_dialog.h"
 #include "pages/duckstation_console_page.h"
+#include "pages/duckstation_emulation_page.h"
 #include "duckstation_category_hub.h"
 #include "duckstation_theme.h"
 #include "../pcsx2/widgets/pcsx2_card.h"
@@ -132,6 +133,13 @@ void DuckStationSettingsDialog::onCategoryActivated(const QString& category) {
     if (category == "Console") {
         auto* page = new DuckStationConsolePage(this);
         connect(page, &DuckStationConsolePage::settingFocused,
+                this, &DuckStationSettingsDialog::setFocusedSetting);
+        pushPage(page);
+        return;
+    }
+    if (category == "Emulation") {
+        auto* page = new DuckStationEmulationPage(this);
+        connect(page, &DuckStationEmulationPage::settingFocused,
                 this, &DuckStationSettingsDialog::setFocusedSetting);
         pushPage(page);
         return;

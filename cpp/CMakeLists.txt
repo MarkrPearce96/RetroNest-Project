@@ -92,6 +92,7 @@ set(SOURCES
     src/ui/settings/duckstation/duckstation_settings_dialog.cpp
     src/ui/settings/duckstation/duckstation_category_hub.cpp
     src/ui/settings/duckstation/pages/duckstation_console_page.cpp
+    src/ui/settings/duckstation/pages/duckstation_emulation_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_audio_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.cpp
@@ -169,6 +170,7 @@ set(HEADERS
     src/ui/settings/duckstation/duckstation_settings_dialog.h
     src/ui/settings/duckstation/duckstation_category_hub.h
     src/ui/settings/duckstation/pages/duckstation_console_page.h
+    src/ui/settings/duckstation/pages/duckstation_emulation_page.h
     src/ui/settings/pcsx2/widgets/pcsx2_card.h
     src/ui/settings/pcsx2/widgets/pcsx2_section_header.h
     src/ui/settings/pcsx2/widgets/pcsx2_toggle.h
