@@ -95,6 +95,7 @@ set(SOURCES
     src/ui/settings/duckstation/pages/duckstation_emulation_page.cpp
     src/ui/settings/duckstation/pages/duckstation_graphics_page.cpp
     src/ui/settings/duckstation/pages/duckstation_graphics_rendering_page.cpp
+    src/ui/settings/duckstation/pages/duckstation_graphics_advanced_page.cpp
     src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.cpp
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_audio_page.cpp
@@ -176,6 +177,7 @@ set(HEADERS
     src/ui/settings/duckstation/pages/duckstation_emulation_page.h
     src/ui/settings/duckstation/pages/duckstation_graphics_page.h
     src/ui/settings/duckstation/pages/duckstation_graphics_rendering_page.h
+    src/ui/settings/duckstation/pages/duckstation_graphics_advanced_page.h
     src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.h
     src/ui/settings/pcsx2/widgets/pcsx2_card.h
     src/ui/settings/pcsx2/widgets/pcsx2_section_header.h
