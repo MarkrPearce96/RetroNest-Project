@@ -96,7 +96,9 @@ set(SOURCES
     src/ui/settings/duckstation/pages/duckstation_graphics_page.cpp
     src/ui/settings/duckstation/pages/duckstation_graphics_rendering_page.cpp
     src/ui/settings/duckstation/pages/duckstation_graphics_advanced_page.cpp
+    src/ui/settings/duckstation/pages/duckstation_graphics_osd_page.cpp
     src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.cpp
+    src/ui/settings/duckstation/widgets/duckstation_osd_preview.cpp
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_audio_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.cpp
@@ -178,7 +180,9 @@ set(HEADERS
     src/ui/settings/duckstation/pages/duckstation_graphics_page.h
     src/ui/settings/duckstation/pages/duckstation_graphics_rendering_page.h
     src/ui/settings/duckstation/pages/duckstation_graphics_advanced_page.h
+    src/ui/settings/duckstation/pages/duckstation_graphics_osd_page.h
     src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.h
+    src/ui/settings/duckstation/widgets/duckstation_osd_preview.h
     src/ui/settings/pcsx2/widgets/pcsx2_card.h
     src/ui/settings/pcsx2/widgets/pcsx2_section_header.h
     src/ui/settings/pcsx2/widgets/pcsx2_toggle.h
