@@ -1,5 +1,6 @@
 #include "duckstation_settings_dialog.h"
 #include "pages/duckstation_audio_page.h"
+#include "pages/duckstation_memory_cards_page.h"
 #include "pages/duckstation_console_page.h"
 #include "pages/duckstation_emulation_page.h"
 #include "pages/duckstation_graphics_page.h"
@@ -158,6 +159,13 @@ void DuckStationSettingsDialog::onCategoryActivated(const QString& category) {
         connect(page, &DuckStationGraphicsPage::settingFocused,
                 this, &DuckStationSettingsDialog::setFocusedSetting);
         pushPage(page, true);  // hasSubTabs = true
+        return;
+    }
+    if (category == "Memory Cards") {
+        auto* page = new DuckStationMemoryCardsPage(this);
+        connect(page, &DuckStationMemoryCardsPage::settingFocused,
+                this, &DuckStationSettingsDialog::setFocusedSetting);
+        pushPage(page);
         return;
     }
     (void)category;
