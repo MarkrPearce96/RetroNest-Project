@@ -1,4 +1,5 @@
 #include "duckstation_graphics_page.h"
+#include "duckstation_graphics_rendering_page.h"
 #include "../duckstation_settings_dialog.h"
 #include "../../pcsx2/widgets/pcsx2_graphics_sub_tab_bar.h"
 #include "../../pcsx2/widgets/pcsx2_card.h"
@@ -45,8 +46,11 @@ DuckStationGraphicsPage::DuckStationGraphicsPage(DuckStationSettingsDialog* dial
 
     m_stack = new QStackedWidget(this);
 
-    // 0: Rendering (stub — replaced in Task 10)
-    m_stack->addWidget(new QWidget(this));
+    // 0: Rendering
+    auto* rendering = new DuckStationGraphicsRenderingPage(m_dialog);
+    connect(rendering, &DuckStationGraphicsRenderingPage::settingFocused,
+            this, &DuckStationGraphicsPage::settingFocused);
+    m_stack->addWidget(rendering);
     // 1: Advanced (stub — replaced in Task 11)
     m_stack->addWidget(new QWidget(this));
     // 2: OSD (stub — replaced in Task 13)
