@@ -1,6 +1,7 @@
 #include "duckstation_settings_dialog.h"
 #include "pages/duckstation_console_page.h"
 #include "pages/duckstation_emulation_page.h"
+#include "pages/duckstation_graphics_page.h"
 #include "duckstation_category_hub.h"
 #include "duckstation_theme.h"
 #include "../pcsx2/widgets/pcsx2_card.h"
@@ -142,6 +143,13 @@ void DuckStationSettingsDialog::onCategoryActivated(const QString& category) {
         connect(page, &DuckStationEmulationPage::settingFocused,
                 this, &DuckStationSettingsDialog::setFocusedSetting);
         pushPage(page);
+        return;
+    }
+    if (category == "Graphics") {
+        auto* page = new DuckStationGraphicsPage(this);
+        connect(page, &DuckStationGraphicsPage::settingFocused,
+                this, &DuckStationSettingsDialog::setFocusedSetting);
+        pushPage(page, true);  // hasSubTabs = true
         return;
     }
     (void)category;
