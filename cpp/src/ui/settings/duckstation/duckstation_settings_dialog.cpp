@@ -1,4 +1,5 @@
 #include "duckstation_settings_dialog.h"
+#include "pages/duckstation_console_page.h"
 #include "duckstation_category_hub.h"
 #include "duckstation_theme.h"
 #include "../pcsx2/widgets/pcsx2_card.h"
@@ -128,5 +129,12 @@ void DuckStationSettingsDialog::applyHintsForCurrentPage() {
 }
 
 void DuckStationSettingsDialog::onCategoryActivated(const QString& category) {
+    if (category == "Console") {
+        auto* page = new DuckStationConsolePage(this);
+        connect(page, &DuckStationConsolePage::settingFocused,
+                this, &DuckStationSettingsDialog::setFocusedSetting);
+        pushPage(page);
+        return;
+    }
     (void)category;
 }
