@@ -1,4 +1,5 @@
 #include "duckstation_settings_dialog.h"
+#include "pages/duckstation_audio_page.h"
 #include "pages/duckstation_console_page.h"
 #include "pages/duckstation_emulation_page.h"
 #include "pages/duckstation_graphics_page.h"
@@ -131,6 +132,13 @@ void DuckStationSettingsDialog::applyHintsForCurrentPage() {
 }
 
 void DuckStationSettingsDialog::onCategoryActivated(const QString& category) {
+    if (category == "Audio") {
+        auto* page = new DuckStationAudioPage(this);
+        connect(page, &DuckStationAudioPage::settingFocused,
+                this, &DuckStationSettingsDialog::setFocusedSetting);
+        pushPage(page);
+        return;
+    }
     if (category == "Console") {
         auto* page = new DuckStationConsolePage(this);
         connect(page, &DuckStationConsolePage::settingFocused,
