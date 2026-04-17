@@ -37,6 +37,7 @@ DuckStationCategoryHub::DuckStationCategoryHub(QWidget* parent) : QWidget(parent
     m_stretchCard = makeCard(QStringLiteral("\U0001F4BE"), "Memory Cards",
                              "Slots and card types",
                              countSettings("Memory Cards"), "Memory Cards");
+    m_stretchCard->setMinimumHeight(120);  // shorter than the 2×2 cards — full-width doesn't need 180
     grid->addWidget(m_stretchCard, 2, 0, 1, 2);  // span 2 columns
     m_stretchCard->installEventFilter(this);
 

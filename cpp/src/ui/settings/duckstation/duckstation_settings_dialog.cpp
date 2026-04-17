@@ -18,7 +18,7 @@
 DuckStationSettingsDialog::DuckStationSettingsDialog(AppController* app, const QString& emuId, QWidget* parent)
     : QDialog(parent), m_app(app), m_emuId(emuId) {
     setWindowTitle("DuckStation Settings");
-    setMinimumSize(950, 550);
+    setMinimumSize(950, 900);
     setStyleSheet(QString("QDialog { background-color: %1; }").arg(DuckStationTheme::windowBg().name()));
 
     auto* root = new QVBoxLayout(this);
@@ -81,7 +81,7 @@ void DuckStationSettingsDialog::popPage() {
     m_stack->setCurrentIndex(prev);
     m_currentPageHasSubTabs = false;
     if (m_stack->currentWidget() == m_hub) {
-        resize(950, 550);
+        resize(950, 900);
     }
     if (current && current != m_hub) { m_stack->removeWidget(current); current->deleteLater(); }
     clearFocusedSetting();
