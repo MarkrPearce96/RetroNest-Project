@@ -20,6 +20,8 @@ Rectangle {
     property string latestVersion: ""
     property var updateQueue: []
 
+    signal updateRequested(string emuId, string emuName, string latestVersion)
+
     function showUpdate(emuId, currentVersion, latestVersion) {
         var emulators = app.allEmulatorStatus()
         var name = emuId
@@ -99,7 +101,7 @@ Rectangle {
 
             Text {
                 anchors.centerIn: parent
-                text: "View"
+                text: "Update"
                 color: Theme.textPrimary
                 font.pixelSize: 12
                 font.weight: Font.DemiBold
@@ -111,8 +113,10 @@ Rectangle {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
+                    notification.updateRequested(notification.emuId,
+                                                 notification.emuName,
+                                                 notification.latestVersion)
                     notification.dismiss()
-                    settingsOverlay.navigateToEmulator(notification.emuId)
                 }
             }
         }

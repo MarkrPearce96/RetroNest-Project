@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "EmulatorLogos.js" as EmulatorLogos
 
 ApplicationWindow {
     id: window
@@ -297,12 +298,195 @@ ApplicationWindow {
         anchors.top: parent.top
         anchors.topMargin: 16
         anchors.horizontalCenter: parent.horizontalCenter
+
+        // Show the cursor while the notification is up so the user can click
+        // Update/Close. Skip toggling if another overlay still needs it.
+        onVisibleChanged: {
+            if (visible) {
+                app.setCursorVisible(true)
+            } else if (!settingsOverlay.visible && !raLoginPrompt.visible
+                    && !updateConfirm.visible && !updateProgressPopup.visible) {
+                app.setCursorVisible(false)
+            }
+        }
     }
 
     Connections {
         target: app
         function onUpdateAvailable(emuId, currentVersion, latestVersion) {
             updateNotification.showUpdate(emuId, currentVersion, latestVersion)
+        }
+    }
+
+    // "Update now?" confirmation shown when the user clicks the notification.
+    Connections {
+        target: updateNotification
+        function onUpdateRequested(emuId, emuName, latestVersion) {
+            updateConfirm.emuId = emuId
+            updateConfirm.emuName = emuName
+            updateConfirm.latestVersion = latestVersion
+            updateConfirm.visible = true
+            app.setCursorVisible(true)
+            updateConfirm.forceActiveFocus()
+        }
+    }
+
+    Item {
+        id: updateConfirm
+        anchors.fill: parent
+        visible: false
+        z: 260
+
+        property string emuId: ""
+        property string emuName: ""
+        property string latestVersion: ""
+
+        function cancel() {
+            visible = false
+            if (!settingsOverlay.visible && !updateNotification.visible) {
+                app.setCursorVisible(false)
+            }
+        }
+
+        function confirm() {
+            visible = false
+            updateProgressPopup.title = "Updating " + emuName
+            updateProgressPopup.subtitle = "Downloading latest release..."
+            updateProgressPopup.progressValue = -1
+            updateProgressPopup.progressText = "Please wait..."
+            updateProgressPopup.accentColor = Theme.accent
+            updateProgressPopup.logoSource = EmulatorLogos.logoForEmu(emuId)
+            updateProgressPopup.showCloseButton = false
+            updateProgressPopup.emuId = emuId
+            updateProgressPopup.open()
+            app.installEmulator(emuId)
+        }
+
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
+                updateConfirm.cancel()
+                event.accepted = true
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                updateConfirm.confirm()
+                event.accepted = true
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: Qt.rgba(0, 0, 0, 0.7)
+            MouseArea { anchors.fill: parent }
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: 420
+            height: confirmCol.height + 48
+            radius: 12
+            color: Qt.rgba(0.12, 0.12, 0.14, 0.95)
+            border.color: Qt.rgba(1, 1, 1, 0.1)
+            border.width: 1
+
+            Column {
+                id: confirmCol
+                anchors {
+                    left: parent.left; right: parent.right
+                    top: parent.top; margins: 24
+                }
+                spacing: 14
+
+                Text {
+                    text: "Update " + updateConfirm.emuName + "?"
+                    font.pixelSize: 18
+                    font.bold: true
+                    color: "#ffffff"
+                }
+
+                Text {
+                    text: "Version " + updateConfirm.latestVersion + " is available. This will download and replace the current install."
+                    color: Qt.rgba(1, 1, 1, 0.65)
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                    width: parent.width
+                    lineHeight: 1.3
+                }
+
+                Item { width: 1; height: 4 }
+
+                Row {
+                    anchors.right: parent.right
+                    spacing: 10
+
+                    Rectangle {
+                        width: 96; height: 36; radius: 6
+                        color: cancelMa.containsMouse ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(1, 1, 1, 0.1)
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Cancel"
+                            color: "#ffffff"
+                            font.pixelSize: 13
+                        }
+                        MouseArea {
+                            id: cancelMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: updateConfirm.cancel()
+                        }
+                    }
+
+                    Rectangle {
+                        width: 96; height: 36; radius: 6
+                        color: updateMa.containsMouse ? Theme.accentLight : Theme.accent
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Update"
+                            color: Theme.textPrimary
+                            font.pixelSize: 13
+                            font.weight: Font.DemiBold
+                        }
+                        MouseArea {
+                            id: updateMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: updateConfirm.confirm()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Window-level progress popup for the update flow. EmulatorDetailPage has
+    // its own instance for installs initiated there; they don't overlap because
+    // the detail page's filters by matching emuId.
+    ProgressPopup {
+        id: updateProgressPopup
+        property string emuId: ""
+    }
+
+    Connections {
+        target: app
+        function onInstallProgress(emuId, progress, phase, detail) {
+            if (!updateProgressPopup.visible || emuId !== updateProgressPopup.emuId) return
+            updateProgressPopup.progressValue = progress
+            updateProgressPopup.subtitle = phase === "Downloading"
+                ? "Downloading latest release..." : "Extracting files..."
+            updateProgressPopup.progressText = progress >= 0 ? detail : "Please wait..."
+        }
+        function onInstallFinished(emuId, success, message) {
+            if (!updateProgressPopup.visible || emuId !== updateProgressPopup.emuId) return
+            if (success) {
+                updateProgressPopup.close()
+                if (!settingsOverlay.visible) app.setCursorVisible(false)
+            } else {
+                updateProgressPopup.title = "Update Failed"
+                updateProgressPopup.subtitle = message
+                updateProgressPopup.progressValue = 0
+                updateProgressPopup.progressText = ""
+                updateProgressPopup.showCloseButton = true
+            }
         }
     }
 

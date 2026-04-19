@@ -7,16 +7,6 @@ Item {
 
     property string selectedEmuId: ""
 
-    Connections {
-        target: settingsOverlay
-        function onTargetEmuIdChanged() {
-            if (settingsOverlay.targetEmuId !== "") {
-                root.selectedEmuId = settingsOverlay.targetEmuId
-                settingsOverlay.targetEmuId = ""
-            }
-        }
-    }
-
     StackLayout {
         anchors.fill: parent
         currentIndex: selectedEmuId === "" ? 0 : 1

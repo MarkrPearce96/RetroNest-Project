@@ -9,7 +9,6 @@ FocusScope {
     z: 100
 
     property int selectedCategory: -1   // -1 = category list, 0+ = category page
-    property string targetEmuId: ""
     property int _savedFocusIndex: 0
     readonly property int categoryCount: 8
     property bool exitDialogVisible: false
@@ -120,16 +119,6 @@ FocusScope {
         }
         selectedCategory = 6
         scraperFocusTimer.start()
-    }
-
-    function navigateToEmulator(emuId) {
-        targetEmuId = emuId
-        if (!visible) {
-            open()
-        }
-        // Push emulators page
-        selectedCategory = 0
-        panelStack.push(emuPageComponent)
     }
 
     // --- private ---
