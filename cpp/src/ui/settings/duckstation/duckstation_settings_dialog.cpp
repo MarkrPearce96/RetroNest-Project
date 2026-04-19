@@ -18,7 +18,7 @@
 DuckStationSettingsDialog::DuckStationSettingsDialog(AppController* app, const QString& emuId, QWidget* parent)
     : QDialog(parent), m_app(app), m_emuId(emuId) {
     setWindowTitle("DuckStation Settings");
-    setMinimumSize(950, 900);
+    setMinimumSize(1000, 720);
     setStyleSheet(QString("QDialog { background-color: %1; }").arg(DuckStationTheme::windowBg().name()));
 
     auto* root = new QVBoxLayout(this);
@@ -59,9 +59,6 @@ void DuckStationSettingsDialog::pushPage(QWidget* page, bool hasSubTabs) {
     int idx = m_stack->addWidget(page);
     m_history.push(m_stack->currentIndex());
     m_stack->setCurrentIndex(idx);
-    if (size().width() < 1000 || size().height() < 700) {
-        resize(1000, 700);
-    }
     clearFocusedSetting();
 
     // Auto-focus the first focusable Pcsx2Card so arrow keys work
@@ -80,9 +77,6 @@ void DuckStationSettingsDialog::popPage() {
     int prev = m_history.pop();
     m_stack->setCurrentIndex(prev);
     m_currentPageHasSubTabs = false;
-    if (m_stack->currentWidget() == m_hub) {
-        resize(950, 900);
-    }
     if (current && current != m_hub) { m_stack->removeWidget(current); current->deleteLater(); }
     clearFocusedSetting();
 }
