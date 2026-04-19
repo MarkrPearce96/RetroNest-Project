@@ -104,6 +104,21 @@ void EmulatorService::saveVersion(const QString& emuId, const QString& version,
     } else {
         qWarning() << "[EmulatorService] Failed to save version file:" << file.fileName();
     }
+
+    // Remove any stale "update available" entry from the cache so the next
+    // app launch doesn't replay the toast for an emulator we just updated.
+    const QString cacheFile = Paths::root() + "/update_check.json";
+    QFile cache(cacheFile);
+    if (!cache.open(QIODevice::ReadOnly)) return;
+    QJsonObject cacheObj = QJsonDocument::fromJson(cache.readAll()).object();
+    cache.close();
+    QJsonObject updates = cacheObj["updates"].toObject();
+    if (!updates.contains(emuId)) return;
+    updates.remove(emuId);
+    cacheObj["updates"] = updates;
+    if (cache.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        cache.write(QJsonDocument(cacheObj).toJson(QJsonDocument::Compact));
+    }
 }
 
 // ── Synchronous Install (CLI) ─────────────────────────────
