@@ -897,6 +897,14 @@ void AppController::openNativeEmulatorSettings(const QString& emuId) {
     adapter->ensureConfig(*manifest, Paths::biosDir(),
                           Paths::emulatorDataDir(emuId, systemId));
 
+#if defined(Q_OS_MACOS)
+    // Defensive: re-strip the quarantine attribute. If it's re-applied (user
+    // replaced the bundle, zip was re-extracted, etc.), macOS would translocate
+    // the app to a read-only path, and atomic-save rename() would fail with
+    // EPERM — crashing the emulator. Idempotent if already clean.
+    QProcess::execute("xattr", {"-rd", "com.apple.quarantine", installPath});
+#endif
+
     // Direct exec — bypassing Launch Services on macOS. Using `open` would
     // route through Launch Services which applies app translocation/sandbox
     // rules to downloaded .app bundles, causing emulators like DuckStation to
