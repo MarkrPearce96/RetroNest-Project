@@ -2,6 +2,7 @@
 #include "../pcsx2_theme.h"
 #include <QAbstractItemView>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QFrame>
 #include <QBoxLayout>
 #include <QHBoxLayout>
@@ -12,6 +13,7 @@
 #include <QStyleFactory>
 #include <QListView>
 #include <QTimer>
+#include <QWheelEvent>
 
 Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent, bool stacked) : QWidget(parent) {
     QBoxLayout* lay = nullptr;
@@ -140,6 +142,15 @@ QString Pcsx2ComboRow::value() const {
 bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
     if (obj == m_combo && e->type() == QEvent::FocusIn) {
         emit focused(m_def);
+    }
+
+    // Scrolling over a combo should not change its value — forward the
+    // wheel event to the parent so the page's scroll area still scrolls.
+    if (obj == m_combo && e->type() == QEvent::Wheel) {
+        if (QWidget* p = m_combo->parentWidget()) {
+            QCoreApplication::sendEvent(p, e);
+        }
+        return true;
     }
 
     // Enter on the combo (popup closed) → open the popup.
