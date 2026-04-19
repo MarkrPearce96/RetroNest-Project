@@ -227,6 +227,7 @@ EmulatorInstaller::ReleaseInfo EmulatorInstaller::fetchReleaseInfo(const Emulato
 
     QJsonObject release = doc.object();
     info.tagName = release["tag_name"].toString();
+    info.publishedAt = release["published_at"].toString();
     QJsonArray assets = release["assets"].toArray();
 
     qInfo() << "[Installer] Latest release:" << info.tagName << "with" << assets.size() << "assets";
@@ -258,10 +259,12 @@ EmulatorInstaller::ReleaseInfo EmulatorInstaller::fetchReleaseInfo(const Emulato
 // ============================================================================
 
 EmulatorInstaller::InstallResult EmulatorInstaller::postDownload(
-    const QString& tempFile, const QString& installPath, const QString& tagName)
+    const QString& tempFile, const QString& installPath, const QString& tagName,
+    const QString& publishedAt)
 {
     InstallResult result;
     result.version = tagName;
+    result.publishedAt = publishedAt;
 
     if (!extract(tempFile, installPath)) {
         QFile::remove(tempFile);
@@ -318,7 +321,7 @@ EmulatorInstaller::InstallResult EmulatorInstaller::installSync(
     }
 
     // 3. Extract, cleanup, quarantine
-    result = postDownload(tempFile, installPath, release.tagName);
+    result = postDownload(tempFile, installPath, release.tagName, release.publishedAt);
 
     if (result.success) {
         qInfo() << "[Installer] Successfully installed" << manifest.name
@@ -369,6 +372,7 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
 
                 QJsonObject release = doc.object();
                 QString tagName = release["tag_name"].toString();
+                QString publishedAt = release["published_at"].toString();
                 QJsonArray assets = release["assets"].toArray();
 
                 qInfo() << "[Installer] Latest release:" << tagName << "with" << assets.size() << "assets";
@@ -388,7 +392,7 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
                     nam->deleteLater();
                     QString msg = "No matching asset for platform. Available: " + assetNames.join(", ");
                     qWarning() << "[Installer]" << msg;
-                    emit finished(InstallResult{false, msg, tagName});
+                    emit finished(InstallResult{false, msg, tagName, publishedAt});
                     return;
                 }
 
@@ -404,7 +408,7 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
                     qWarning() << "[Installer] Cannot write to" << tempFile;
                     nam->deleteLater();
                     file->deleteLater();
-                    emit finished(InstallResult{false, "Cannot write temp file", tagName});
+                    emit finished(InstallResult{false, "Cannot write temp file", tagName, publishedAt});
                     return;
                 }
 
@@ -437,7 +441,7 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
                         });
 
                 connect(dlReply, &QNetworkReply::finished, this,
-                        [this, dlReply, nam, file, tempFile, installPath, tagName]() {
+                        [this, dlReply, nam, file, tempFile, installPath, tagName, publishedAt]() {
                             dlReply->deleteLater();
                             nam->deleteLater();
                             file->close();
@@ -446,7 +450,7 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
                             if (dlReply->error() != QNetworkReply::NoError) {
                                 qWarning() << "[Installer] Download failed:" << dlReply->errorString();
                                 QFile::remove(tempFile);
-                                emit finished(InstallResult{false, "Download failed: " + dlReply->errorString(), tagName});
+                                emit finished(InstallResult{false, "Download failed: " + dlReply->errorString(), tagName, publishedAt});
                                 return;
                             }
 
@@ -470,8 +474,8 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
                                     });
 
                             QFuture<InstallResult> future = QtConcurrent::run(
-                                [tempFile, installPath, tagName]() -> InstallResult {
-                                    return postDownload(tempFile, installPath, tagName);
+                                [tempFile, installPath, tagName, publishedAt]() -> InstallResult {
+                                    return postDownload(tempFile, installPath, tagName, publishedAt);
                                 });
 
                             watcher->setFuture(future);

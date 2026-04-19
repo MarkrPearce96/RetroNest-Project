@@ -61,7 +61,32 @@ QString EmulatorService::installedVersion(const QString& emuId) const {
     return doc.object().value("version").toString();
 }
 
-void EmulatorService::saveVersion(const QString& emuId, const QString& version) {
+QString EmulatorService::installedPublishedAt(const QString& emuId) const {
+    const EmulatorManifest* manifest = m_loader->emulatorById(emuId);
+    if (!manifest) return {};
+
+    const QString versionPath = Paths::emulatorsDir(manifest->install_folder) + "/.version.json";
+    QFile file(versionPath);
+    if (!file.open(QIODevice::ReadOnly)) return {};
+
+    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    return doc.object().value("published_at").toString();
+}
+
+QString EmulatorService::installedAt(const QString& emuId) const {
+    const EmulatorManifest* manifest = m_loader->emulatorById(emuId);
+    if (!manifest) return {};
+
+    const QString versionPath = Paths::emulatorsDir(manifest->install_folder) + "/.version.json";
+    QFile file(versionPath);
+    if (!file.open(QIODevice::ReadOnly)) return {};
+
+    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    return doc.object().value("installed_at").toString();
+}
+
+void EmulatorService::saveVersion(const QString& emuId, const QString& version,
+                                  const QString& publishedAt) {
     const EmulatorManifest* manifest = m_loader->emulatorById(emuId);
     if (!manifest) return;
 
@@ -70,6 +95,7 @@ void EmulatorService::saveVersion(const QString& emuId, const QString& version) 
 
     QJsonObject obj;
     obj["version"] = version;
+    obj["published_at"] = publishedAt;
     obj["installed_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
 
     QFile file(installDir + "/.version.json");
@@ -98,7 +124,7 @@ EmulatorService::InstallResult EmulatorService::installEmulatorSync(const QStrin
 
     if (result.success) {
         ensureConfig(emuId, *manifest);
-        saveVersion(emuId, result.version);
+        saveVersion(emuId, result.version, result.publishedAt);
     }
 
     return result;
@@ -137,7 +163,7 @@ void EmulatorService::installEmulatorAsync(const QString& emuId) {
                 const EmulatorManifest* m = m_loader->emulatorById(emuId);
                 if (m) {
                     ensureConfig(emuId, *m);
-                    saveVersion(emuId, result.version);
+                    saveVersion(emuId, result.version, result.publishedAt);
                 }
             }
             emit installFinished(emuId, result.success, result.message);
@@ -183,6 +209,11 @@ void EmulatorService::uninstallEmulator(const QString& emuId) {
 // ── Update Check ─────────────────────────────────────────
 
 void EmulatorService::checkForUpdates() {
+    // Bump when the update-check logic changes in a way that invalidates
+    // existing caches (e.g., we switch comparison keys). Caches missing or
+    // mismatching this value are ignored.
+    constexpr int kCacheSchemaVersion = 2;
+
     // Rate limit: only check once per day
     const QString cacheFile = Paths::root() + "/update_check.json";
     QFile cache(cacheFile);
@@ -191,7 +222,9 @@ void EmulatorService::checkForUpdates() {
         cache.close();
         const QDateTime lastTime = QDateTime::fromString(
             cacheObj["last_check"].toString(), Qt::ISODate);
-        if (lastTime.isValid() && lastTime.secsTo(QDateTime::currentDateTimeUtc()) < 86400) {
+        const int schema = cacheObj.value("schema_version").toInt(0);
+        if (schema == kCacheSchemaVersion && lastTime.isValid() &&
+            lastTime.secsTo(QDateTime::currentDateTimeUtc()) < 86400) {
             // Use cached results
             const QJsonObject updates = cacheObj["updates"].toObject();
             for (auto it = updates.begin(); it != updates.end(); ++it) {
@@ -206,7 +239,9 @@ void EmulatorService::checkForUpdates() {
     struct CheckItem {
         QString emuId;
         QString githubRepo;
-        QString currentVersion;
+        QString currentVersion;       // display tag
+        QString currentPublishedAt;   // may be empty for legacy installs
+        QString currentInstalledAt;   // legacy-install fallback: compare against latest.publishedAt
     };
 
     QVector<CheckItem> items;
@@ -217,7 +252,8 @@ void EmulatorService::checkForUpdates() {
         QString version = installedVersion(emu.id);
         if (version.isEmpty()) continue;
 
-        items.append({emu.id, emu.github_repo, version});
+        items.append({emu.id, emu.github_repo, version,
+                      installedPublishedAt(emu.id), installedAt(emu.id)});
     }
 
     if (items.isEmpty()) return;
@@ -228,23 +264,40 @@ void EmulatorService::checkForUpdates() {
         QJsonObject updates;
 
         for (const auto& item : items) {
-            QString latestTag = GitHubClient::fetchLatestTag(item.githubRepo);
-            if (latestTag.isEmpty() || latestTag == item.currentVersion) continue;
+            GitHubClient::LatestRelease latest = GitHubClient::fetchLatestRelease(item.githubRepo);
+            if (latest.tag.isEmpty()) continue;
+
+            // Prefer publishedAt comparison — handles rolling tags like DuckStation's
+            // "latest" where the tag never changes between releases.
+            // For legacy installs without publishedAt, compare the release's publishedAt
+            // against when we installed. Falls back to tag comparison if nothing else.
+            bool isUpdate = false;
+            if (!item.currentPublishedAt.isEmpty() && !latest.publishedAt.isEmpty()) {
+                isUpdate = latest.publishedAt != item.currentPublishedAt;
+            } else if (!latest.publishedAt.isEmpty() && !item.currentInstalledAt.isEmpty()) {
+                const QDateTime released = QDateTime::fromString(latest.publishedAt, Qt::ISODate);
+                const QDateTime installed = QDateTime::fromString(item.currentInstalledAt, Qt::ISODate);
+                isUpdate = released.isValid() && installed.isValid() && released > installed;
+            } else {
+                isUpdate = latest.tag != item.currentVersion;
+            }
+            if (!isUpdate) continue;
 
             QJsonObject u;
             u["current"] = item.currentVersion;
-            u["latest"] = latestTag;
+            u["latest"] = latest.tag;
             updates[item.emuId] = u;
 
             if (!guard) return;  // Service was destroyed
             QMetaObject::invokeMethod(guard.data(), [guard, emuId = item.emuId,
-                                              current = item.currentVersion, latestTag]() {
+                                              current = item.currentVersion, latestTag = latest.tag]() {
                 if (guard) emit guard->updateAvailable(emuId, current, latestTag);
             }, Qt::QueuedConnection);
         }
 
         // Save cache
         QJsonObject cacheObj;
+        cacheObj["schema_version"] = kCacheSchemaVersion;
         cacheObj["last_check"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
         cacheObj["updates"] = updates;
 

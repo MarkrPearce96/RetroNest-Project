@@ -31,11 +31,17 @@ public:
     /** Check GitHub for updates to installed emulators (async, rate-limited to once/day). */
     void checkForUpdates();
 
-    /** Read installed version from .version.json. Returns empty string if not found. */
+    /** Read installed version tag from .version.json. Returns empty string if not found. */
     QString installedVersion(const QString& emuId) const;
 
-    /** Write version info to .version.json. */
-    void saveVersion(const QString& emuId, const QString& version);
+    /** Read installed release's GitHub published_at from .version.json. Empty for legacy installs. */
+    QString installedPublishedAt(const QString& emuId) const;
+
+    /** Read when the current install was performed. ISO 8601, or empty if not recorded. */
+    QString installedAt(const QString& emuId) const;
+
+    /** Write version info to .version.json. publishedAt is the GitHub release's published_at (unique per release). */
+    void saveVersion(const QString& emuId, const QString& version, const QString& publishedAt);
 
 signals:
     void statusMessage(const QString& msg);

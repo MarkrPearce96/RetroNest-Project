@@ -15,11 +15,16 @@
  */
 namespace GitHubClient {
 
+struct LatestRelease {
+    QString tag;          // e.g. "v2.6.3", or "latest" for rolling releases
+    QString publishedAt;  // ISO 8601 — unique per release, even when tag is rolling
+};
+
 /**
- * Fetch the latest release tag for a GitHub repo.
- * Returns empty string on error or timeout.
+ * Fetch the latest release info for a GitHub repo.
+ * Returns an empty struct on error or timeout.
  */
-inline QString fetchLatestTag(const QString& githubRepo, int timeoutMs = 30000) {
+inline LatestRelease fetchLatestRelease(const QString& githubRepo, int timeoutMs = 30000) {
     QString apiUrl = "https://api.github.com/repos/" + githubRepo + "/releases/latest";
 
     QNetworkAccessManager nam;
@@ -36,7 +41,7 @@ inline QString fetchLatestTag(const QString& githubRepo, int timeoutMs = 30000) 
     timeout.start(timeoutMs);
     loop.exec();
 
-    QString tag;
+    LatestRelease info;
     if (reply->error() != QNetworkReply::NoError) {
         qWarning() << "[GitHubClient] Request failed for" << githubRepo
                     << ":" << reply->errorString();
@@ -47,12 +52,14 @@ inline QString fetchLatestTag(const QString& githubRepo, int timeoutMs = 30000) 
             qWarning() << "[GitHubClient] JSON parse error for" << githubRepo
                         << ":" << parseError.errorString();
         } else {
-            tag = doc.object()["tag_name"].toString();
+            const QJsonObject obj = doc.object();
+            info.tag = obj["tag_name"].toString();
+            info.publishedAt = obj["published_at"].toString();
         }
     }
 
     reply->deleteLater();
-    return tag;
+    return info;
 }
 
 } // namespace GitHubClient

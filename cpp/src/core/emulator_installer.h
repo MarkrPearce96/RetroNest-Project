@@ -18,7 +18,8 @@ public:
     struct InstallResult {
         bool success = false;
         QString message;
-        QString version;  // GitHub tag_name
+        QString version;      // GitHub tag_name (display)
+        QString publishedAt;  // GitHub published_at — unique per release, used for update checks
     };
 
     explicit EmulatorInstaller(QObject* parent = nullptr);
@@ -52,6 +53,7 @@ private:
         bool ok = false;
         QString errorMessage;
         QString tagName;
+        QString publishedAt;
         QString assetName;
         QString downloadUrl;
     };
@@ -59,5 +61,6 @@ private:
     static ReleaseInfo fetchReleaseInfo(const EmulatorManifest& manifest);
     static InstallResult postDownload(const QString& tempFile,
                                        const QString& installPath,
-                                       const QString& tagName);
+                                       const QString& tagName,
+                                       const QString& publishedAt);
 };
