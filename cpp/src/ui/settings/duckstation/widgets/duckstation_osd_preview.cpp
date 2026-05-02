@@ -62,6 +62,11 @@ void DuckStationOsdPreview::setShowEnhancements(bool on)     { m_s.enhancements 
 void DuckStationOsdPreview::setShowOSDMessages(bool on)      { m_s.osdMessages = on;    update(); }
 void DuckStationOsdPreview::setShowStatusIndicators(bool on) { m_s.statusIndicators = on; update(); }
 
+void DuckStationOsdPreview::setMessageLocation(const QString& loc) {
+    m_s.messageLocation = loc;
+    update();
+}
+
 void DuckStationOsdPreview::setScale(int percent) {
     m_s.scale = std::clamp(percent, 50, 500);
     update();
@@ -78,14 +83,12 @@ int DuckStationOsdPreview::scaledFontPx() const {
 }
 
 void DuckStationOsdPreview::paintGameScene(QPainter& p, const QRectF& r) const {
-    // PS1-era colour palette: dark teal-purple sky, murky ground
     QLinearGradient g(r.topLeft(), r.bottomLeft());
     g.setColorAt(0.0,  QColor(0x28, 0x32, 0x5a));
     g.setColorAt(0.5,  QColor(0x4a, 0x38, 0x5c));
     g.setColorAt(1.0,  QColor(0x22, 0x1a, 0x28));
     p.fillRect(r, g);
 
-    // Moon
     const qreal moonR = qMin(r.width(), r.height()) * 0.07;
     QPointF moonC(r.left() + r.width() * 0.78, r.top() + r.height() * 0.24);
     QRadialGradient mg(moonC, moonR * 1.8);
@@ -96,11 +99,25 @@ void DuckStationOsdPreview::paintGameScene(QPainter& p, const QRectF& r) const {
     p.drawEllipse(moonC, moonR * 1.8, moonR * 1.8);
 }
 
-// Top-left: FPS + Speed
-void DuckStationOsdPreview::drawTopLeft(QPainter& p, const QRectF& screen) const {
-    QStringList lines;
-    if (m_s.fps)   lines << QStringLiteral("FPS: 59.94");
-    if (m_s.speed) lines << QStringLiteral("Speed: 100%");
+// Top-right stack: every performance stat plus the status indicators, in the
+// same order DuckStation's DrawPerformanceOverlay emits them. All lines are
+// right-anchored against `screen.right() - margin`.
+void DuckStationOsdPreview::drawTopRightStack(QPainter& p, const QRectF& screen) const {
+    struct Line { QString text; QColor color; };
+    QList<Line> lines;
+    if (m_s.fps || m_s.speed) {
+        QStringList parts;
+        if (m_s.fps)   parts << QStringLiteral("59.94 FPS");
+        if (m_s.speed) parts << QStringLiteral("100% Speed");
+        lines.push_back({parts.join(QStringLiteral(" | ")), kGreen});
+    }
+    if (m_s.cpu)          lines.push_back({QStringLiteral("CPU: 35.2% (5.87ms)"),       kYellow});
+    if (m_s.gpu)          lines.push_back({QStringLiteral("GPU: 48.7% (8.13ms)"),       kYellow});
+    if (m_s.resolution)   lines.push_back({QStringLiteral("640x480 NTSC"),              kCyan});
+    if (m_s.gpuStats)     lines.push_back({QStringLiteral("3812 draws  VRAM 12/512"),   kCyan});
+    if (m_s.frameTimes)   lines.push_back({QStringLiteral("[▁▂▄▅▇▆▄▂▁]"), kCyan});
+    if (m_s.latencyStats) lines.push_back({QStringLiteral("Input 3.2ms  Audio 46ms"),   kCyan});
+    if (m_s.statusIndicators) lines.push_back({QStringLiteral("⏩ FF  ⏺ REC"), kWhite});
     if (lines.isEmpty()) return;
 
     QFont f = monospaceFont(scaledFontPx());
@@ -111,75 +128,67 @@ void DuckStationOsdPreview::drawTopLeft(QPainter& p, const QRectF& screen) const
     qreal y = screen.top() + effMargin + fm.ascent();
 
     for (int i = 0; i < lines.size(); ++i) {
-        const QColor color = (i == 0 && m_s.fps) ? kGreen : kWhite;
-        drawShadowedText(p, QPointF(screen.left() + effMargin, y + lineH * i), lines[i], color);
-    }
-}
-
-// Top-right: CPU / GPU usage
-void DuckStationOsdPreview::drawTopRight(QPainter& p, const QRectF& screen) const {
-    QStringList lines;
-    if (m_s.cpu) lines << QStringLiteral("CPU: 35.2%");
-    if (m_s.gpu) lines << QStringLiteral("GPU: 48.7%");
-    if (lines.isEmpty()) return;
-
-    QFont f = monospaceFont(scaledFontPx());
-    p.setFont(f);
-    const QFontMetricsF fm(f);
-    const qreal lineH = fm.height();
-    const qreal effMargin = kDefaultMargin + m_s.margin * 0.3;
-    qreal y = screen.top() + effMargin + fm.ascent();
-
-    for (int i = 0; i < lines.size(); ++i) {
-        const qreal w = fm.horizontalAdvance(lines[i]);
+        const Line& ln = lines[i];
+        const qreal w = fm.horizontalAdvance(ln.text);
         const qreal x = screen.right() - effMargin - w;
-        drawShadowedText(p, QPointF(x, y + lineH * i), lines[i], kYellow);
+        drawShadowedText(p, QPointF(x, y + lineH * i), ln.text, ln.color);
     }
 }
 
-// Bottom-left: controller inputs + status indicators
-void DuckStationOsdPreview::drawBottomLeft(QPainter& p, const QRectF& screen) const {
-    QStringList lines;
-    if (m_s.inputs)          lines << QStringLiteral("\U0001F3AE 1 \u2022 DualShock | X O \u2191");
-    if (m_s.statusIndicators) lines << QStringLiteral("\u23E9 FF  \u23FA REC");
-    if (m_s.osdMessages)     lines << QStringLiteral("Loaded save state.");
-    if (lines.isEmpty()) return;
+// Bottom-left: controller inputs only (matches DrawInputsOverlay).
+void DuckStationOsdPreview::drawBottomLeftInputs(QPainter& p, const QRectF& screen) const {
+    if (!m_s.inputs) return;
+    const QString text = QStringLiteral("\U0001F3AE 1 • DualShock | X O ↑");
 
     QFont f = monospaceFont(scaledFontPx());
     p.setFont(f);
     const QFontMetricsF fm(f);
-    const qreal lineH = fm.height();
     const qreal effMargin = kDefaultMargin + m_s.margin * 0.3;
-    const qreal blockH = lineH * lines.size();
-    qreal y = screen.bottom() - effMargin - blockH + fm.ascent();
-
-    for (int i = 0; i < lines.size(); ++i)
-        drawShadowedText(p, QPointF(screen.left() + effMargin, y + lineH * i), lines[i], kWhite);
+    const qreal y = screen.bottom() - effMargin;
+    drawShadowedText(p, QPointF(screen.left() + effMargin, y), text, kWhite);
 }
 
-// Bottom-right: resolution / GPU stats / enhancements / frame times / latency
-void DuckStationOsdPreview::drawBottomRight(QPainter& p, const QRectF& screen) const {
-    QStringList lines;
-    if (m_s.resolution)   lines << QStringLiteral("640x480 NTSC");
-    if (m_s.gpuStats)     lines << QStringLiteral("GS: 3812 draws  VRAM: 384/512 MB");
-    if (m_s.frameTimes)   lines << QStringLiteral("[\u2581\u2582\u2584\u2585\u2587\u2586\u2584\u2582\u2581]");
-    if (m_s.latencyStats) lines << QStringLiteral("Input lat: 3.2ms  Audio lat: 46ms");
-    if (m_s.enhancements) lines << QStringLiteral("Enhancements: 4x, PGXP");
-    if (lines.isEmpty()) return;
+// Bottom-right: enhancements summary (matches DrawEnhancementsOverlay).
+void DuckStationOsdPreview::drawBottomRightEnhancements(QPainter& p, const QRectF& screen) const {
+    if (!m_s.enhancements) return;
+    const QString text = QStringLiteral("NTSC HW DI=Weave IR=4x PGXP");
 
     QFont f = monospaceFont(scaledFontPx());
     p.setFont(f);
     const QFontMetricsF fm(f);
-    const qreal lineH = fm.height();
     const qreal effMargin = kDefaultMargin + m_s.margin * 0.3;
-    const qreal blockH = lineH * lines.size();
-    qreal y = screen.bottom() - effMargin - blockH + fm.ascent();
+    const qreal w = fm.horizontalAdvance(text);
+    const qreal x = screen.right() - effMargin - w;
+    const qreal y = screen.bottom() - effMargin;
+    drawShadowedText(p, QPointF(x, y), text, kCyan);
+}
 
-    for (int i = 0; i < lines.size(); ++i) {
-        const qreal w = fm.horizontalAdvance(lines[i]);
-        const qreal x = screen.right() - effMargin - w;
-        drawShadowedText(p, QPointF(x, y + lineH * i), lines[i], kCyan);
-    }
+// OSD messages — anchor depends on the OSDMessageLocation combo. Default Top
+// Left. Drawn last so it overlays the corner stacks if positions overlap.
+void DuckStationOsdPreview::drawOsdMessage(QPainter& p, const QRectF& screen) const {
+    if (!m_s.osdMessages) return;
+    const QString text = QStringLiteral("Loaded save state.");
+
+    QFont f = monospaceFont(scaledFontPx());
+    p.setFont(f);
+    const QFontMetricsF fm(f);
+    const qreal effMargin = kDefaultMargin + m_s.margin * 0.3;
+    const qreal w = fm.horizontalAdvance(text);
+
+    const bool isTop    = m_s.messageLocation.startsWith(QStringLiteral("Top"),    Qt::CaseInsensitive);
+    const bool isCenter = m_s.messageLocation.contains  (QStringLiteral("Center"), Qt::CaseInsensitive);
+    const bool isRight  = m_s.messageLocation.contains  (QStringLiteral("Right"),  Qt::CaseInsensitive);
+
+    qreal x;
+    if (isCenter)     x = screen.left() + (screen.width() - w) * 0.5;
+    else if (isRight) x = screen.right() - effMargin - w;
+    else              x = screen.left() + effMargin;
+
+    qreal y;
+    if (isTop) y = screen.top() + effMargin + fm.ascent();
+    else       y = screen.bottom() - effMargin;
+
+    drawShadowedText(p, QPointF(x, y), text, kWhite);
 }
 
 void DuckStationOsdPreview::paintEvent(QPaintEvent*) {
@@ -205,8 +214,8 @@ void DuckStationOsdPreview::paintEvent(QPaintEvent*) {
     p.setBrush(Qt::NoBrush);
     p.drawRect(screen);
 
-    drawTopLeft(p, screen);
-    drawTopRight(p, screen);
-    drawBottomLeft(p, screen);
-    drawBottomRight(p, screen);
+    drawTopRightStack(p, screen);
+    drawBottomLeftInputs(p, screen);
+    drawBottomRightEnhancements(p, screen);
+    drawOsdMessage(p, screen);
 }

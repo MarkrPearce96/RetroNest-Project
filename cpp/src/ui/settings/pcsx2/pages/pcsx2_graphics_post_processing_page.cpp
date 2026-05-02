@@ -21,6 +21,7 @@
 #include <QComboBox>
 #include <QSlider>
 #include <QAbstractItemView>
+#include <QSignalBlocker>
 #include <limits>
 
 Pcsx2GraphicsPostProcessingPage::Pcsx2GraphicsPostProcessingPage(Pcsx2SettingsDialog* dialog)
@@ -51,14 +52,40 @@ bool Pcsx2GraphicsPostProcessingPage::masterToggleState(const QString& masterKey
     return it.value()->isChecked();
 }
 
+void Pcsx2GraphicsPostProcessingPage::resetDependentsOf(const QString& masterKey) {
+    // When a master setting transitions to inactive, reset every dependent
+    // back to its schema default — both on disk and in the visible widget —
+    // so a "showing on" but greyed-out child can never linger.
+    for (const SettingDef& d : m_schema) {
+        if (d.dependsOn != masterKey) continue;
+        saveValue(d.section, d.key, d.defaultValue);
+        for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+            if (tog->settingDef().key != d.key) continue;
+            QSignalBlocker sb(tog);
+            tog->setChecked(d.defaultValue.compare("true", Qt::CaseInsensitive) == 0);
+        }
+        for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+            if (slider->settingDef().key != d.key) continue;
+            QSignalBlocker sb(slider);
+            slider->setValue(static_cast<int>(d.defaultValue.toDouble()));
+        }
+        for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+            if (combo->settingDef().key != d.key) continue;
+            QSignalBlocker sb(combo);
+            combo->setValue(d.defaultValue);
+        }
+    }
+}
+
 void Pcsx2GraphicsPostProcessingPage::refreshDependencies() {
     for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         if (d.dependsOn.isEmpty()) continue;
         const bool active = masterToggleState(d.dependsOn);
-        // Dim inactive sliders via opacity instead of disabling, so they
-        // remain focusable for keyboard navigation.
         slider->setProperty("dependencyActive", active);
+        // Disable the inner QSlider so the user can't drag the track when
+        // the master is off — the row stays focusable for keyboard nav.
+        if (auto* inner = slider->findChild<QSlider*>()) inner->setEnabled(active);
         if (!active) {
             if (!slider->graphicsEffect()) {
                 auto* eff = new QGraphicsOpacityEffect(slider);
@@ -87,6 +114,12 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
         connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val){
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, val);
+            const bool nowInactive = val.isEmpty() || val == "0"
+                || val.compare("false",    Qt::CaseInsensitive) == 0
+                || val.compare("Disabled", Qt::CaseInsensitive) == 0
+                || val.compare("None",     Qt::CaseInsensitive) == 0;
+            if (nowInactive) resetDependentsOf(key);
+            refreshDependencies();
         });
         return row;
     };
@@ -101,6 +134,7 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
         connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
+            if (!on) resetDependentsOf(key);
             refreshDependencies();
         });
         m_masterToggles.insert(key, row);

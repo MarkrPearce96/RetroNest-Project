@@ -39,5 +39,8 @@ void Pcsx2ToggleRow::enterEvent(QEnterEvent* e) {
 
 void Pcsx2ToggleRow::mousePressEvent(QMouseEvent* e) {
     Q_UNUSED(e);
-    m_toggle->toggle();
+    // Mirror the inner toggle's enabled state — when a dependent toggle has
+    // been disabled because its master is off, clicking anywhere on the row
+    // (including the label) must not flip the value.
+    if (m_toggle->isEnabled()) m_toggle->toggle();
 }

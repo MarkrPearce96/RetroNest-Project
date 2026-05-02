@@ -119,6 +119,13 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent, bool stacked) : QWidget(parent) {
 
 void Pcsx2ComboRow::setLabel(const QString& text) { m_label->setText(text); }
 
+void Pcsx2ComboRow::setLabelVisible(bool visible) {
+    m_label->setVisible(visible);
+    // Also drop the 180px reservation when hidden so two combos can fit in
+    // a paired card without leaving a phantom label gutter.
+    m_label->setMinimumWidth(visible ? 180 : 0);
+}
+
 void Pcsx2ComboRow::setOptions(const QVector<QPair<QString, QString>>& opts) {
     m_combo->blockSignals(true);
     m_combo->clear();

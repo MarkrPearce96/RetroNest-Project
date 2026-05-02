@@ -34,8 +34,11 @@ struct SettingDef {
     // Unit suffix displayed next to value (e.g. "ms", "%")
     QString suffix;
 
-    // If non-empty, this setting is enabled only when the named key's bool is true.
-    // The key is matched within the same settings group/section context.
+    // If non-empty, names another setting on the same page that gates this one.
+    // The master may be a Bool (active = true) or a Combo (active when its
+    // value is not in {"", "0", "false", "Disabled", "None"}, case-insensitive).
+    // When the master transitions to inactive, dependent rows dim, their inner
+    // controls are disabled, and their values reset to schema defaults.
     QString dependsOn;
 
     // If non-zero, this Bool setting reads/writes a single bit of an

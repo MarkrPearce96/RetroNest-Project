@@ -13,6 +13,10 @@ class Pcsx2ComboRow : public QWidget {
 public:
     explicit Pcsx2ComboRow(QWidget* parent = nullptr, bool stacked = false);
     void setLabel(const QString& text);
+    // Hide the label entirely when packing multiple compact combos into one
+    // row (e.g. Screen Position pair: alignment + rotation share a single
+    // label slot to the left).
+    void setLabelVisible(bool visible);
     void setOptions(const QVector<QPair<QString, QString>>& opts);
     void setValue(const QString& iniValue);
     QString value() const;

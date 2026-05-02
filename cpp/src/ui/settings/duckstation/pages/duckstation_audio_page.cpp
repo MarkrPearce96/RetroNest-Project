@@ -13,6 +13,10 @@
 #include <QScrollArea>
 #include <QSizePolicy>
 #include <QVariantMap>
+#include <QLabel>
+#include <QFrame>
+#include <QSlider>
+#include <QGraphicsOpacityEffect>
 
 DuckStationAudioPage::DuckStationAudioPage(DuckStationSettingsDialog* dialog)
     : QWidget(dialog), m_dialog(dialog) {
@@ -77,6 +81,9 @@ void DuckStationAudioPage::buildUi() {
         connect(row,  &Pcsx2ComboRow::focused, this, &DuckStationAudioPage::settingFocused);
         connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, v);
+            // Stretch mode contributes the SoundTouch sequence length term to
+            // the Maximum Latency formula, so refresh on change.
+            if (key == "StretchMode") refreshLatencyLabel();
         });
         v->addWidget(row);
         return card;
@@ -97,6 +104,9 @@ void DuckStationAudioPage::buildUi() {
         connect(row, &Pcsx2SliderRow::focused, this, &DuckStationAudioPage::settingFocused);
         connect(row, &Pcsx2SliderRow::valueChanged, this, [this, key](int val){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, QString::number(val));
+            if (key == "BufferMS" || key == "OutputLatencyMS"
+             || key == "StretchSequenceLengthMS")
+                refreshLatencyLabel();
         });
         v->addWidget(row);
         return card;
@@ -115,19 +125,50 @@ void DuckStationAudioPage::buildUi() {
         connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationAudioPage::settingFocused);
         connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
+            // Buffer/latency configuration affects the Maximum Latency label.
+            if (key == "OutputLatencyMinimal") refreshLatencyLabel();
         });
         v->addWidget(row);
         return card;
     };
 
-    // Configuration
+    // Configuration — mirrors DuckStation's audio settings widget:
+    //   • Backend + Driver paired in one row
+    //   • Output Device on its own row
+    //   • Stretch Mode on its own row
+    //   • Buffer Size slider on its own row
+    //   • Output Latency slider + Minimal toggle paired in one row
+    //   • Maximum Latency info label below
     root->addWidget(new Pcsx2SectionHeader("Configuration", this));
-    if (auto* c = makeComboCard("Backend"))     root->addWidget(c);
-    if (auto* c = makeComboCard("Driver"))      root->addWidget(c);
-    if (auto* c = makeComboCard("OutputDevice")) root->addWidget(c);
-    if (auto* c = makeComboCard("StretchMode")) root->addWidget(c);
-    if (auto* c = makeSliderCard("BufferMS"))   root->addWidget(c);
-    if (auto* c = makeSliderCard("OutputLatencyMS")) root->addWidget(c);
+
+    auto* backendRow = new QHBoxLayout();
+    backendRow->setSpacing(10);
+    if (auto* c = makeComboCard("Backend")) backendRow->addWidget(c, 1);
+    if (auto* c = makeComboCard("Driver"))  backendRow->addWidget(c, 1);
+    root->addLayout(backendRow);
+
+    if (auto* c = makeComboCard("OutputDevice"))      root->addWidget(c);
+    if (auto* c = makeComboCard("StretchMode"))       root->addWidget(c);
+    if (auto* c = makeSliderCard("BufferMS"))         root->addWidget(c);
+
+    auto* latencyRow = new QHBoxLayout();
+    latencyRow->setSpacing(10);
+    if (auto* slCard = makeSliderCard("OutputLatencyMS")) {
+        slCard->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        latencyRow->addWidget(slCard, 1);
+    }
+    if (auto* minCard = makeToggleCard("OutputLatencyMinimal")) {
+        minCard->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        latencyRow->addWidget(minCard, 0);
+    }
+    root->addLayout(latencyRow);
+
+    // Maximum Latency info label — recomputed whenever buffer / output latency /
+    // stretch mode / minimal-latency toggle changes.
+    m_latencyLabel = new QLabel(content);
+    m_latencyLabel->setStyleSheet("color:#9a9690;font-size:12px;padding:4px 4px 4px 14px;");
+    m_latencyLabel->setWordWrap(true);
+    root->addWidget(m_latencyLabel);
 
     // Volume Controls
     root->addWidget(new Pcsx2SectionHeader("Volume Controls", this));
@@ -189,10 +230,64 @@ void DuckStationAudioPage::loadValues() {
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
         slider->setValue(v.toInt());
     }
+    refreshLatencyLabel();
 }
 
 void DuckStationAudioPage::saveValue(const QString& section, const QString& key, const QString& value) {
     QVariantMap m;
     m[section + "/" + key] = value;
     m_dialog->appController()->saveSettings(m_dialog->emuId(), m);
+}
+
+void DuckStationAudioPage::refreshLatencyLabel() {
+    if (!m_latencyLabel) return;
+    int bufferMs = 50, outputLatencyMs = 20, stretchSeqMs = 30;
+    bool minimal = false;
+    QString stretchMode = QStringLiteral("TimeStretch");
+
+    Pcsx2SliderRow* outputSlider = nullptr;
+    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+        const QString& k = slider->settingDef().key;
+        if      (k == "BufferMS")                bufferMs        = slider->value();
+        else if (k == "OutputLatencyMS")       { outputLatencyMs = slider->value(); outputSlider = slider; }
+        else if (k == "StretchSequenceLengthMS") stretchSeqMs    = slider->value();
+    }
+    for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+        if (tog->settingDef().key == "OutputLatencyMinimal") minimal = tog->isChecked();
+    }
+    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+        if (combo->settingDef().key == "StretchMode") stretchMode = combo->value();
+    }
+
+    // Output Latency slider: when Minimal is on, swap the value label for
+    // "N/A" and disable the inner QSlider — same behaviour as DuckStation
+    // upstream, which sets the label to N/A and disables the slider.
+    if (outputSlider) {
+        if (minimal) {
+            outputSlider->setValueFormatter([](int){ return QStringLiteral("N/A"); });
+        } else {
+            outputSlider->setValueFormatter({});  // revert to default "<n><suffix>"
+        }
+        if (auto* inner = outputSlider->findChild<QSlider*>())
+            inner->setEnabled(!minimal);
+        if (minimal) {
+            if (!outputSlider->graphicsEffect()) {
+                auto* eff = new QGraphicsOpacityEffect(outputSlider);
+                eff->setOpacity(0.4);
+                outputSlider->setGraphicsEffect(eff);
+            }
+        } else {
+            outputSlider->setGraphicsEffect(nullptr);
+        }
+    }
+
+    // Match upstream: stretch term only contributes when TimeStretch is active;
+    // output term is dropped when "Minimal" is on (we don't have access to the
+    // device's true minimum latency, so we report 0 there).
+    const int stretchTerm = (stretchMode == "TimeStretch") ? stretchSeqMs : 0;
+    const int outputTerm  = minimal ? 0 : outputLatencyMs;
+    const int total       = stretchTerm + bufferMs + outputTerm;
+    m_latencyLabel->setText(QStringLiteral(
+        "Maximum Latency: %1 ms (%2 ms stretch + %3 ms buffer + %4 ms output)")
+        .arg(total).arg(stretchTerm).arg(bufferMs).arg(outputTerm));
 }

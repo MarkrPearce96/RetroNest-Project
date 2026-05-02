@@ -154,12 +154,10 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
                {"Recompiler (Fastest)",         "Recompiler"}},
               0, 0, 0, "", ""});
     s.append({"Console", "", "CPU Emulation", "CPU", "OverclockEnable", "Enable Clock Speed Control (Overclocking/Underclocking)", "", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Console", "", "CPU Emulation", "CPU", "OverclockNumerator", "Clock Speed Multiplier", "Sets the CPU clock multiplier (denominator stays at 1).",
-              SettingDef::Combo, "1",
-              {{"1x (100%)", "1"}, {"2x (200%)", "2"}, {"3x (300%)", "3"}, {"4x (400%)", "4"},
-               {"5x (500%)", "5"}, {"6x (600%)", "6"}, {"7x (700%)", "7"}, {"8x (800%)", "8"},
-               {"9x (900%)", "9"}, {"10x (1000%)", "10"}},
-              0, 0, 0, "", ""});
+    { SettingDef d = {"Console", "", "CPU Emulation", "CPU", "OverclockNumerator", "Clock Speed Multiplier",
+                      "Sets the CPU clock speed. 100% matches the original PSX CPU (33.87 MHz). Stored as a numerator/denominator fraction.",
+                      SettingDef::Int, "100", {}, 10, 1000, 5, "slider", "%"};
+      d.dependsOn = "OverclockEnable"; s.append(d); }
     s.append({"Console", "", "CPU Emulation", "CPU", "RecompilerICache", "Enable Recompiler ICache", "Simulates the instruction cache in the recompiler. Slower but more accurate.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
 
     // CD-ROM Emulation group
@@ -293,7 +291,7 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
     // ── Graphics / Advanced subcategory ──────────────────────────────────
 
     // Display Options group
-    s.append({"Graphics", "Advanced", "Display Options", "Display", "Alignment", "Screen Alignment", "",
+    s.append({"Graphics", "Advanced", "Display Options", "Display", "Alignment", "Screen Position", "",
               SettingDef::Combo, "Center",
               {{"Left/Top", "LeftOrTop"}, {"Center", "Center"}, {"Right/Bottom", "RightOrBottom"}},
               0, 0, 0, "paired", ""});
@@ -413,6 +411,8 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               SettingDef::Int, "50", {}, 10, 500, 5, "slider", "ms"});
     s.append({"Audio", "", "Configuration", "Audio", "OutputLatencyMS", "Output Latency", "Additional output latency.",
               SettingDef::Int, "20", {}, 1, 500, 1, "slider", "ms"});
+    s.append({"Audio", "", "Configuration", "Audio", "OutputLatencyMinimal", "Minimal", "Use the smallest output latency the audio device supports.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
 
     // Time Stretching group — sliders then paired checkboxes
     s.append({"Audio", "", "Time Stretching", "Audio", "StretchSequenceLengthMS", "Sequence Length", "SoundTouch sequence length.",

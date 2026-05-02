@@ -1,6 +1,7 @@
 #pragma once
 #include <QWidget>
 #include <QEnterEvent>
+#include <functional>
 #include "core/setting_def.h"
 
 class QLabel;
@@ -19,6 +20,10 @@ public:
     const SettingDef& settingDef() const { return m_def; }
     bool isEditing() const { return m_editing; }
     void setEditing(bool on);
+    // Optional override for the right-hand value label. Receives the raw int
+    // value; returns the full display string (replaces "<n><suffix>"). Pass
+    // an empty function to revert to the default "<value><suffix>" format.
+    void setValueFormatter(std::function<QString(int)> fmt);
 
 signals:
     void valueChanged(int v);
@@ -34,6 +39,7 @@ private:
     QSlider* m_slider = nullptr;
     QLabel* m_value = nullptr;
     QString m_suffix;
+    std::function<QString(int)> m_formatter;
     SettingDef m_def;
     bool m_editing = false;
 };

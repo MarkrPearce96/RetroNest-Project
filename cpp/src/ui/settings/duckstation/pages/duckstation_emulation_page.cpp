@@ -4,6 +4,7 @@
 #include "../../pcsx2/widgets/pcsx2_section_header.h"
 #include "../../pcsx2/widgets/pcsx2_combo_row.h"
 #include "../../pcsx2/widgets/pcsx2_toggle_row.h"
+#include "../../pcsx2/widgets/pcsx2_toggle.h"
 #include "../../pcsx2/widgets/pcsx2_slider_row.h"
 #include "ui/app_controller.h"
 #include "adapters/duckstation_adapter.h"
@@ -13,6 +14,11 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QVariantMap>
+#include <QGraphicsOpacityEffect>
+#include <QHash>
+#include <QSlider>
+#include <QComboBox>
+#include <QSignalBlocker>
 
 DuckStationEmulationPage::DuckStationEmulationPage(DuckStationSettingsDialog* dialog)
     : QWidget(dialog), m_dialog(dialog) {
@@ -21,6 +27,7 @@ DuckStationEmulationPage::DuckStationEmulationPage(DuckStationSettingsDialog* di
         if (d.category == "Emulation") m_schema.append(d);
     buildUi();
     loadValues();
+    refreshDependencies();
 }
 
 const SettingDef* DuckStationEmulationPage::findDef(const QString& key) const {
@@ -77,6 +84,14 @@ void DuckStationEmulationPage::buildUi() {
         connect(row,  &Pcsx2ComboRow::focused, this, &DuckStationEmulationPage::settingFocused);
         connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, v);
+            // If this combo just transitioned to an inactive sentinel value,
+            // reset every dependent setting back to its schema default.
+            const bool nowInactive = v.isEmpty() || v == "0"
+                || v.compare("false",    Qt::CaseInsensitive) == 0
+                || v.compare("Disabled", Qt::CaseInsensitive) == 0
+                || v.compare("None",     Qt::CaseInsensitive) == 0;
+            if (nowInactive) resetDependentsOf(key);
+            refreshDependencies();
         });
         v->addWidget(row);
         return card;
@@ -95,6 +110,9 @@ void DuckStationEmulationPage::buildUi() {
         connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationEmulationPage::settingFocused);
         connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
+            // Master toggle just turned off — reset its dependents to defaults.
+            if (!on) resetDependentsOf(key);
+            refreshDependencies();
         });
         v->addWidget(row);
         return card;
@@ -186,4 +204,85 @@ void DuckStationEmulationPage::saveValue(const QString& section, const QString& 
     QVariantMap m;
     m[section + "/" + key] = value;
     m_dialog->appController()->saveSettings(m_dialog->emuId(), m);
+}
+
+void DuckStationEmulationPage::resetDependentsOf(const QString& masterKey) {
+    // Walk the schema for every setting that depends on `masterKey`. For each
+    // one, write its schema default to disk and update the on-screen widget so
+    // a "stale value while master is off" can never exist. Signal-blocking the
+    // row prevents this from re-triggering the page's own save handler.
+    for (const SettingDef& d : m_schema) {
+        if (d.dependsOn != masterKey) continue;
+        saveValue(d.section, d.key, d.defaultValue);
+        for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+            if (tog->settingDef().key != d.key) continue;
+            QSignalBlocker sb(tog);
+            tog->setChecked(d.defaultValue.compare("true", Qt::CaseInsensitive) == 0);
+        }
+        for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+            if (slider->settingDef().key != d.key) continue;
+            QSignalBlocker sb(slider);
+            slider->setValue(static_cast<int>(d.defaultValue.toDouble()));
+        }
+        for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+            if (combo->settingDef().key != d.key) continue;
+            QSignalBlocker sb(combo);
+            combo->setValue(d.defaultValue);
+        }
+    }
+}
+
+void DuckStationEmulationPage::refreshDependencies() {
+    // Snapshot the active state of every potential master. Toggles are active
+    // when checked. Combos are treated as active when their value isn't the
+    // sentinel "0" / "false" / empty — matching how DuckStation's Runahead
+    // combo uses "0" for "Disabled".
+    QHash<QString, bool> masterStates;
+    for (auto* tog : findChildren<Pcsx2ToggleRow*>())
+        masterStates.insert(tog->settingDef().key, tog->isChecked());
+    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+        const QString v = combo->value();
+        const bool active = !v.isEmpty()
+            && v != "0"
+            && v.compare("false",    Qt::CaseInsensitive) != 0
+            && v.compare("Disabled", Qt::CaseInsensitive) != 0
+            && v.compare("None",     Qt::CaseInsensitive) != 0;
+        masterStates.insert(combo->settingDef().key, active);
+    }
+
+    // Walk every card on the page; if the card's setting depends on a master
+    // that's currently inactive, dim the row and disable its inner control so
+    // the user can't click or drag it. The card itself stays focusable so
+    // arrow-key spatial nav still passes through.
+    for (auto* card : findChildren<Pcsx2Card*>()) {
+        const QString& dep = card->settingDef().dependsOn;
+        if (dep.isEmpty()) continue;
+        const bool active = masterStates.value(dep, true);
+
+        QWidget* dimTarget = nullptr;
+        if (auto* sliderRow = card->findChild<Pcsx2SliderRow*>()) {
+            sliderRow->setProperty("dependencyActive", active);
+            if (auto* inner = sliderRow->findChild<QSlider*>()) inner->setEnabled(active);
+            dimTarget = sliderRow;
+        } else if (auto* toggleRow = card->findChild<Pcsx2ToggleRow*>()) {
+            toggleRow->setProperty("dependencyActive", active);
+            if (auto* inner = toggleRow->findChild<Pcsx2Toggle*>()) inner->setEnabled(active);
+            dimTarget = toggleRow;
+        } else if (auto* comboRow = card->findChild<Pcsx2ComboRow*>()) {
+            comboRow->setProperty("dependencyActive", active);
+            if (auto* inner = comboRow->findChild<QComboBox*>()) inner->setEnabled(active);
+            dimTarget = comboRow;
+        }
+        if (!dimTarget) continue;
+
+        if (!active) {
+            if (!dimTarget->graphicsEffect()) {
+                auto* eff = new QGraphicsOpacityEffect(dimTarget);
+                eff->setOpacity(0.4);
+                dimTarget->setGraphicsEffect(eff);
+            }
+        } else {
+            dimTarget->setGraphicsEffect(nullptr);
+        }
+    }
 }

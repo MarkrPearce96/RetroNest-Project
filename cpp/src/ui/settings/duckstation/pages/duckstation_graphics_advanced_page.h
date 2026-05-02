@@ -13,10 +13,15 @@ public:
 signals:
     void settingFocused(const SettingDef& def);
 
+protected:
+    bool eventFilter(QObject* obj, QEvent* e) override;
+
 private:
     void buildUi();
     void loadValues();
     void saveValue(const QString& section, const QString& key, const QString& value);
+    void refreshDependencies();
+    void resetDependentsOf(const QString& masterKey);
     const SettingDef* findDef(const QString& key) const;
 
     DuckStationSettingsDialog* m_dialog;

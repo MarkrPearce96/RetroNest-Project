@@ -1,14 +1,20 @@
 #pragma once
 #include <QWidget>
 #include <QRectF>
-#include <QStringList>
+#include <QString>
 
 // Live OSD preview used inside DuckStationGraphicsOsdPage. Paints a dummy 16:9
-// PS1 frame and overlays a miniature of DuckStation's OSD layout:
-//   top-left    — FPS / Speed
-//   top-right   — CPU / GPU usage
-//   bottom-left — inputs / status indicators
-//   bottom-right— resolution / enhancements
+// PS1 frame and overlays a miniature of DuckStation's actual OSD layout, as
+// implemented in upstream src/core/imgui_overlays.cpp:
+//
+//   top-right   — performance stats (FPS/VPS, Speed, CPU, GPU, Resolution,
+//                 GPU Stats, Frame Times, Latency Stats) and status
+//                 indicators (FF / REC), stacked vertically downward
+//   bottom-left — controller inputs
+//   bottom-right— enhancements summary
+//   configurable — OSD messages (TopLeft / TopCenter / TopRight /
+//                  BottomLeft / BottomCenter / BottomRight) via
+//                  OSDMessageLocation
 //
 // Toggle bools mirror the "On-Screen Display" / "Overlays" schema keys.
 class DuckStationOsdPreview : public QWidget {
@@ -29,6 +35,10 @@ public:
     void setShowEnhancements(bool on);
     void setShowOSDMessages(bool on);
     void setShowStatusIndicators(bool on);
+
+    // OSD message anchor — accepts the OSDMessageLocation INI value
+    // (TopLeft / TopCenter / TopRight / BottomLeft / BottomCenter / BottomRight).
+    void setMessageLocation(const QString& loc);
 
     // Scale / margin (OSDScale / OSDMargin schema keys)
     void setScale(int percent);
@@ -52,12 +62,13 @@ private:
         bool osdMessages = true, statusIndicators = true;
         int  scale  = 100;
         int  margin = 10;
+        QString messageLocation = QStringLiteral("TopLeft");
     } m_s;
 
     int  scaledFontPx() const;
     void paintGameScene(QPainter& p, const QRectF& r) const;
-    void drawTopLeft(QPainter& p, const QRectF& screen) const;
-    void drawTopRight(QPainter& p, const QRectF& screen) const;
-    void drawBottomLeft(QPainter& p, const QRectF& screen) const;
-    void drawBottomRight(QPainter& p, const QRectF& screen) const;
+    void drawTopRightStack(QPainter& p, const QRectF& screen) const;
+    void drawBottomLeftInputs(QPainter& p, const QRectF& screen) const;
+    void drawBottomRightEnhancements(QPainter& p, const QRectF& screen) const;
+    void drawOsdMessage(QPainter& p, const QRectF& screen) const;
 };

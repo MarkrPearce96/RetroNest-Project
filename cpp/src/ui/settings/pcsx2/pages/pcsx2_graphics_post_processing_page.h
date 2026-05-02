@@ -26,6 +26,7 @@ private:
     const SettingDef* findDef(const QString& key) const;
     bool masterToggleState(const QString& masterKey) const;
     void refreshDependencies();
+    void resetDependentsOf(const QString& masterKey);
     QList<QWidget*> collectFocusables() const;
     QWidget* findNextFocusSpatial(QWidget* current, int key) const;
 

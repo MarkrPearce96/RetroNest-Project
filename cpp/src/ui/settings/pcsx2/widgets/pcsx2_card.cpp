@@ -4,6 +4,7 @@
 #include "pcsx2_slider_row.h"
 #include <QScrollArea>
 #include <QSlider>
+#include <QSpinBox>
 #include <QPainter>
 #include <QFocusEvent>
 #include <QKeyEvent>
@@ -96,21 +97,35 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
 
     if (k == Qt::Key_Return || k == Qt::Key_Enter) {
         // Try to activate the inner interactive widget first (toggle, combo, or slider).
+        // Each branch honors the inner widget's isEnabled() so a card whose
+        // dependency master is off (we disable the inner control there) can't
+        // be activated via keyboard either.
         if (auto* t = findChild<Pcsx2Toggle*>()) {
-            t->toggle();
+            if (t->isEnabled()) t->toggle();
             return;
         }
         if (auto* c = findChild<QComboBox*>()) {
-            QTimer::singleShot(0, c, [c]() {
-                c->setFocus(Qt::PopupFocusReason);
-                c->showPopup();
-            });
+            if (c->isEnabled()) {
+                QTimer::singleShot(0, c, [c]() {
+                    c->setFocus(Qt::PopupFocusReason);
+                    c->showPopup();
+                });
+            }
             return;
         }
         if (auto* sliderRow = findChild<Pcsx2SliderRow*>()) {
             if (auto* slider = sliderRow->findChild<QSlider*>()) {
-                slider->setFocus(Qt::TabFocusReason);
-                sliderRow->setEditing(true);
+                if (slider->isEnabled()) {
+                    slider->setFocus(Qt::TabFocusReason);
+                    sliderRow->setEditing(true);
+                }
+            }
+            return;
+        }
+        if (auto* sp = findChild<QSpinBox*>()) {
+            if (sp->isEnabled()) {
+                sp->setFocus(Qt::TabFocusReason);
+                sp->selectAll();
             }
             return;
         }

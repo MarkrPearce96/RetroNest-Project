@@ -36,8 +36,16 @@ void Pcsx2SliderRow::setSuffix(const QString& s) { m_suffix = s; refreshValueLab
 void Pcsx2SliderRow::setValue(int v) { m_slider->setValue(v); }
 int Pcsx2SliderRow::value() const { return m_slider->value(); }
 
+void Pcsx2SliderRow::setValueFormatter(std::function<QString(int)> fmt) {
+    m_formatter = std::move(fmt);
+    refreshValueLabel();
+}
+
 void Pcsx2SliderRow::refreshValueLabel() {
-    m_value->setText(QString::number(m_slider->value()) + m_suffix);
+    if (m_formatter)
+        m_value->setText(m_formatter(m_slider->value()));
+    else
+        m_value->setText(QString::number(m_slider->value()) + m_suffix);
 }
 
 void Pcsx2SliderRow::setEditing(bool on) {
