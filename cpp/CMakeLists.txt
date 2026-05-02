@@ -119,6 +119,7 @@ set(SOURCES
     src/ui/settings/ppsspp/pages/ppsspp_graphics_rendering_page.cpp
     src/ui/settings/ppsspp/pages/ppsspp_graphics_performance_page.cpp
     src/ui/settings/ppsspp/pages/ppsspp_graphics_textures_page.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_pacing_fx_page.cpp
 )
 
 set(HEADERS
@@ -227,6 +228,7 @@ set(HEADERS
     src/ui/settings/ppsspp/pages/ppsspp_graphics_rendering_page.h
     src/ui/settings/ppsspp/pages/ppsspp_graphics_performance_page.h
     src/ui/settings/ppsspp/pages/ppsspp_graphics_textures_page.h
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_pacing_fx_page.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
