@@ -110,6 +110,17 @@ set(SOURCES
     src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_osd_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.cpp
+    # PPSSPP settings
+    src/ui/settings/ppsspp/ppsspp_category_hub.cpp
+    src/ui/settings/ppsspp/ppsspp_settings_dialog.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_emulation_page.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_audio_page.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_overlay_page.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_rendering_page.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_performance_page.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_textures_page.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_pacing_fx_page.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_page.cpp
 )
 
 set(HEADERS
@@ -208,6 +219,18 @@ set(HEADERS
     src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_osd_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.h
+    # PPSSPP settings
+    src/ui/settings/ppsspp/ppsspp_theme.h
+    src/ui/settings/ppsspp/ppsspp_category_hub.h
+    src/ui/settings/ppsspp/ppsspp_settings_dialog.h
+    src/ui/settings/ppsspp/pages/ppsspp_emulation_page.h
+    src/ui/settings/ppsspp/pages/ppsspp_audio_page.h
+    src/ui/settings/ppsspp/pages/ppsspp_overlay_page.h
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_rendering_page.h
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_performance_page.h
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_textures_page.h
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_pacing_fx_page.h
+    src/ui/settings/ppsspp/pages/ppsspp_graphics_page.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.

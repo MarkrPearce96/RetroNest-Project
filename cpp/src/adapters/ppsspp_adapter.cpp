@@ -58,23 +58,23 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     QVector<SettingDef> s;
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Graphics → Emulation  (moved from top-level Emulation category)
+    // Emulation (top-level — moved out of Graphics for parity with PCSX2/DS)
     // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Graphics", "Emulation", "", "CPU", "FastMemoryAccess", "Fast Memory (Unstable)",
+    s.append({"Emulation", "", "", "CPU", "FastMemoryAccess", "Fast Memory (Unstable)",
               "Uses faster but less accurate memory access. May cause crashes in some games.",
               SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "Emulation", "", "General", "IgnoreBadMemAccess", "Ignore Bad Memory Accesses",
+    s.append({"Emulation", "", "", "General", "IgnoreBadMemAccess", "Ignore Bad Memory Accesses",
               "Silently ignores invalid memory reads/writes instead of crashing.",
               SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "Emulation", "", "CPU", "IOTimingMethod", "I/O Timing Method",
+    s.append({"Emulation", "", "", "CPU", "IOTimingMethod", "I/O Timing Method",
               "Controls how UMD (disc) I/O timing is handled.",
               SettingDef::Combo, "0",
               {{"Fast (lag on slow storage)", "0"}, {"Host", "1"},
                {"Simulate UMD Delays", "2"}, {"Simulate UMD Slow", "3"}}, 0, 0, 0});
-    s.append({"Graphics", "Emulation", "", "General", "ForceLagSync2", "Force Real Clock Sync",
+    s.append({"Emulation", "", "", "General", "ForceLagSync2", "Force Real Clock Sync",
               "Slower but less lag. Forces the emulator to run at real clock speed.",
               SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Emulation", "", "CPU", "CPUSpeed", "CPU Clock (MHz)",
+    s.append({"Emulation", "", "", "CPU", "CPUSpeed", "CPU Clock (MHz)",
               "Overclock the emulated PSP's CPU. 0 = default (222 MHz). Unstable on high values.",
               SettingDef::Int, "0", {}, 0, 1000, 1, "slider", "MHz"});
 

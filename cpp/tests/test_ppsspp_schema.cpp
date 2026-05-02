@@ -16,10 +16,10 @@ private slots:
         QVERIFY(!schema_.isEmpty());
     }
 
-    void testCategoriesAreGraphicsAudioOverlay() {
+    void testTopLevelCategories() {
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
-        QCOMPARE(categories, QSet<QString>({"Graphics", "Audio", "Overlay"}));
+        QCOMPARE(categories, QSet<QString>({"Emulation", "Graphics", "Audio", "Overlay"}));
     }
 
     void testGraphicsSubcategories() {
@@ -27,19 +27,19 @@ private slots:
         for (const auto& d : schema_)
             if (d.category == "Graphics") subs.insert(d.subcategory);
         QCOMPARE(subs, QSet<QString>({
-            "Emulation", "Rendering", "Frame Pacing",
+            "Rendering", "Frame Pacing",
             "Performance", "Textures", "Post-Processing"
         }));
     }
 
-    void testEmulationSettingsLiveUnderGraphics() {
-        // FastMemoryAccess used to live under category="Emulation".
-        // It must now be under Graphics → Emulation sub-tab.
+    void testEmulationSettingsAtTopLevel() {
+        // FastMemoryAccess used to live under Graphics → Emulation.
+        // It now lives under top-level Emulation category.
         bool found = false;
         for (const auto& d : schema_) {
             if (d.key == "FastMemoryAccess") {
-                QCOMPARE(d.category, QString("Graphics"));
-                QCOMPARE(d.subcategory, QString("Emulation"));
+                QCOMPARE(d.category, QString("Emulation"));
+                QCOMPARE(d.subcategory, QString(""));
                 found = true;
             }
         }
