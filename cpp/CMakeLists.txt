@@ -112,6 +112,7 @@ set(SOURCES
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.cpp
     # PPSSPP settings
     src/ui/settings/ppsspp/ppsspp_category_hub.cpp
+    src/ui/settings/ppsspp/ppsspp_settings_dialog.cpp
 )
 
 set(HEADERS
@@ -213,6 +214,7 @@ set(HEADERS
     # PPSSPP settings
     src/ui/settings/ppsspp/ppsspp_theme.h
     src/ui/settings/ppsspp/ppsspp_category_hub.h
+    src/ui/settings/ppsspp/ppsspp_settings_dialog.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
