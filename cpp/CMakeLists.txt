@@ -110,6 +110,8 @@ set(SOURCES
     src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_osd_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.cpp
+    # PPSSPP settings
+    src/ui/settings/ppsspp/ppsspp_category_hub.cpp
 )
 
 set(HEADERS
@@ -199,7 +201,6 @@ set(HEADERS
     src/ui/settings/pcsx2/widgets/pcsx2_osd_preview.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
-    src/ui/settings/ppsspp/ppsspp_theme.h
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.h
     src/ui/settings/pcsx2/pages/pcsx2_audio_page.h
     src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.h
@@ -209,6 +210,9 @@ set(HEADERS
     src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_osd_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.h
+    # PPSSPP settings
+    src/ui/settings/ppsspp/ppsspp_theme.h
+    src/ui/settings/ppsspp/ppsspp_category_hub.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
