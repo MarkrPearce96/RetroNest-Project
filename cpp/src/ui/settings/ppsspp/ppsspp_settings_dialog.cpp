@@ -6,6 +6,7 @@
 #include "pages/ppsspp_emulation_page.h"
 #include "pages/ppsspp_audio_page.h"
 #include "pages/ppsspp_overlay_page.h"
+#include "pages/ppsspp_graphics_page.h"
 #include "ui/app_controller.h"
 #include "core/sdl_input_manager.h"
 #include <QStackedWidget>
@@ -124,5 +125,10 @@ void PpssppSettingsDialog::onCategoryActivated(const QString& category) {
         pushPage(page);
         return;
     }
-    // Graphics branch wired in Task 13.
+    if (category == "Graphics") {
+        auto* page = new PpssppGraphicsPage(this);
+        connect(page, &PpssppGraphicsPage::settingFocused, this, &PpssppSettingsDialog::setFocusedSetting);
+        pushPage(page, /*hasSubTabs=*/true);
+        return;
+    }
 }
