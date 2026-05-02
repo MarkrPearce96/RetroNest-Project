@@ -8,7 +8,6 @@
 #include "ui/app_controller.h"
 #include "adapters/ppsspp_adapter.h"
 #include <QVBoxLayout>
-#include <QGridLayout>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QVariantMap>

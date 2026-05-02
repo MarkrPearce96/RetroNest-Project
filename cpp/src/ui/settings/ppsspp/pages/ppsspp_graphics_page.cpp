@@ -7,7 +7,6 @@
 #include "../../pcsx2/widgets/pcsx2_graphics_sub_tab_bar.h"
 #include "../../pcsx2/widgets/pcsx2_card.h"
 #include "../../pcsx2/widgets/pcsx2_toggle.h"
-#include "ui/app_controller.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QStackedWidget>
