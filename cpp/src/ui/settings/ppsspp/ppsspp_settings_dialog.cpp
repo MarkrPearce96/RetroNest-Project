@@ -5,6 +5,7 @@
 #include "ppsspp_theme.h"
 #include "pages/ppsspp_emulation_page.h"
 #include "pages/ppsspp_audio_page.h"
+#include "pages/ppsspp_overlay_page.h"
 #include "ui/app_controller.h"
 #include "core/sdl_input_manager.h"
 #include <QStackedWidget>
@@ -117,5 +118,11 @@ void PpssppSettingsDialog::onCategoryActivated(const QString& category) {
         pushPage(page);
         return;
     }
-    // Overlay / Graphics branches wired in later tasks.
+    if (category == "Overlay") {
+        auto* page = new PpssppOverlayPage(this);
+        connect(page, &PpssppOverlayPage::settingFocused, this, &PpssppSettingsDialog::setFocusedSetting);
+        pushPage(page);
+        return;
+    }
+    // Graphics branch wired in Task 13.
 }
