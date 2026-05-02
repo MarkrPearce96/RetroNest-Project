@@ -4,6 +4,7 @@
 #include "../pcsx2/widgets/pcsx2_description_bar.h"
 #include "ppsspp_theme.h"
 #include "pages/ppsspp_emulation_page.h"
+#include "pages/ppsspp_audio_page.h"
 #include "ui/app_controller.h"
 #include "core/sdl_input_manager.h"
 #include <QStackedWidget>
@@ -110,5 +111,11 @@ void PpssppSettingsDialog::onCategoryActivated(const QString& category) {
         pushPage(page);
         return;
     }
-    // Audio / Overlay / Graphics branches wired in later tasks.
+    if (category == "Audio") {
+        auto* page = new PpssppAudioPage(this);
+        connect(page, &PpssppAudioPage::settingFocused, this, &PpssppSettingsDialog::setFocusedSetting);
+        pushPage(page);
+        return;
+    }
+    // Overlay / Graphics branches wired in later tasks.
 }
