@@ -113,6 +113,7 @@ set(SOURCES
     # PPSSPP settings
     src/ui/settings/ppsspp/ppsspp_category_hub.cpp
     src/ui/settings/ppsspp/ppsspp_settings_dialog.cpp
+    src/ui/settings/ppsspp/pages/ppsspp_emulation_page.cpp
 )
 
 set(HEADERS
@@ -215,6 +216,7 @@ set(HEADERS
     src/ui/settings/ppsspp/ppsspp_theme.h
     src/ui/settings/ppsspp/ppsspp_category_hub.h
     src/ui/settings/ppsspp/ppsspp_settings_dialog.h
+    src/ui/settings/ppsspp/pages/ppsspp_emulation_page.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.

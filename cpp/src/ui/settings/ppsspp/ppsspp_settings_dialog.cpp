@@ -3,6 +3,7 @@
 #include "../pcsx2/widgets/pcsx2_card.h"
 #include "../pcsx2/widgets/pcsx2_description_bar.h"
 #include "ppsspp_theme.h"
+#include "pages/ppsspp_emulation_page.h"
 #include "ui/app_controller.h"
 #include "core/sdl_input_manager.h"
 #include <QStackedWidget>
@@ -103,6 +104,11 @@ void PpssppSettingsDialog::applyHintsForCurrentPage() {
 }
 
 void PpssppSettingsDialog::onCategoryActivated(const QString& category) {
-    // Page branches wired in Tasks 6, 7, 8, 13.
-    Q_UNUSED(category);
+    if (category == "Emulation") {
+        auto* page = new PpssppEmulationPage(this);
+        connect(page, &PpssppEmulationPage::settingFocused, this, &PpssppSettingsDialog::setFocusedSetting);
+        pushPage(page);
+        return;
+    }
+    // Audio / Overlay / Graphics branches wired in later tasks.
 }
