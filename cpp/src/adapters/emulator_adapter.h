@@ -24,31 +24,32 @@ struct ResolutionOption {
 /**
  * ResolutionOptions — describes how to set resolution for an emulator.
  *
- * If `file` is non-empty, it overrides configFilePath() as the INI file
- * read/written by the quick-settings UI for resolution. Adapters whose
- * resolution lives in a separate file (e.g. Dolphin's GFX.ini) set it
- * to the absolute path of that file; others leave it empty.
+ * If `iniFilePath` is non-empty, it overrides configFilePath() as the
+ * caller-supplied absolute path read/written by the quick-settings UI
+ * for resolution. Adapters whose resolution lives in a separate file
+ * (e.g. Dolphin's GFX.ini) set it to that absolute path; others leave
+ * it empty.
  */
 struct ResolutionOptions {
     QString section;       // INI section
     QString key;           // INI key
     QVector<ResolutionOption> options;
     QString defaultValue;  // which value is default
-    QString file;          // optional override; empty = use configFilePath()
+    QString iniFilePath;   // optional caller-supplied absolute path; empty = use configFilePath()
 };
 
 /**
  * IniPatch — a single section/key/value to write to an INI file.
  *
- * If `file` is non-empty, it overrides configFilePath() as the destination
- * file. Used by adapters whose aspect-ratio patches target a non-main file
- * (e.g. Dolphin's GFX.ini).
+ * If `iniFilePath` is non-empty, it overrides configFilePath() as the
+ * destination (caller-supplied absolute path). Used by adapters whose
+ * aspect-ratio patches target a non-main file (e.g. Dolphin's GFX.ini).
  */
 struct IniPatch {
     QString section;
     QString key;
     QString value;
-    QString file;          // optional override; empty = use configFilePath()
+    QString iniFilePath;   // optional caller-supplied absolute path; empty = use configFilePath()
 };
 
 /**
@@ -63,9 +64,9 @@ struct AspectRatioOption {
 /**
  * AspectRatioOptions — describes aspect ratio choices for an emulator.
  *
- * Per-patch `IniPatch::file` overrides the destination file on a per-patch
- * basis. The top-level `file` here is unused; per-patch granularity is what
- * Dolphin needs (a single aspect choice may touch GFX.ini only).
+ * Routing to a non-main config file is per-patch (via IniPatch::iniFilePath),
+ * which is what Dolphin needs since a single aspect choice may touch
+ * GFX.ini only.
  */
 struct AspectRatioOptions {
     QVector<AspectRatioOption> options;
