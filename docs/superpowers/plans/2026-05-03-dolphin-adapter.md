@@ -105,7 +105,7 @@ struct AspectRatioOptions {
 
 - [ ] **Step 2: Verify the header still compiles cleanly**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -20`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -20`
 Expected: build proceeds (the new fields are optional with defaults, so existing call sites are untouched). If it fails, fix any unrelated compile errors before continuing.
 
 - [ ] **Step 3: Commit**
@@ -192,7 +192,7 @@ void ConfigService::applyQuickResolution(const QVariantMap& choices) {
 
 - [ ] **Step 4: Build to verify**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -10`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -10`
 Expected: clean compile.
 
 - [ ] **Step 5: Commit**
@@ -290,7 +290,7 @@ At the top of `config_service.cpp`, ensure `#include <QMap>` is present. Add it 
 
 - [ ] **Step 4: Build**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -10`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -10`
 Expected: clean compile.
 
 - [ ] **Step 5: Commit**
@@ -608,7 +608,7 @@ private:
 
 - [ ] **Step 2: Verify the header compiles**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -5`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -5`
 Expected: still builds (the header is not yet referenced by anything, so this is just a syntax check).
 
 - [ ] **Step 3: Commit**
@@ -889,7 +889,7 @@ Add: `{"gc", 16}` and `{"wii", 19}` (canonical RetroAchievements console IDs for
 
 - [ ] **Step 4: Build to verify**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -5`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -5`
 Expected: clean build.
 
 - [ ] **Step 5: Commit**
@@ -994,7 +994,7 @@ bool DolphinAdapter::patchDolphinIni(const QString& dataRootGc, const QString& d
 
 - [ ] **Step 3: Build**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -5`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -5`
 Expected: clean build.
 
 - [ ] **Step 4: Commit**
@@ -1099,7 +1099,7 @@ bool DolphinAdapter::patchHotkeysIni() {
 
 - [ ] **Step 3: Build**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -5`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -5`
 Expected: clean build.
 
 - [ ] **Step 4: Commit**
@@ -1220,7 +1220,7 @@ Rumble/Motor = `Motor`
 
 - [ ] **Step 3: Build**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -5`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -5`
 Expected: clean build.
 
 - [ ] **Step 4: Commit**
@@ -1332,7 +1332,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 
 - [ ] **Step 2: Build**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -5`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -5`
 Expected: clean build.
 
 - [ ] **Step 3: Commit**
@@ -1388,7 +1388,7 @@ Note: the `ProgressEnabled` and `SoundEnabled` key names are inferred from Dolph
 
 - [ ] **Step 2: Build**
 
-Run: `cd cpp && cmake --build build --target retronest 2>&1 | tail -5`
+Run: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -5`
 Expected: clean build.
 
 - [ ] **Step 3: Commit**
@@ -1451,7 +1451,7 @@ If the SetupWizard logo path differs (some projects use a separate `qml/SetupWiz
 - [ ] **Step 5: Reconfigure + build**
 
 Run: `cd cpp && cmake -B build -DCMAKE_PREFIX_PATH="$(brew --prefix qt@6);$(brew --prefix sdl2)" 2>&1 | tail -5`
-Then: `cd cpp && cmake --build build --target retronest 2>&1 | tail -5`
+Then: `cd cpp && cmake --build build --target RetroNest 2>&1 | tail -5`
 Expected: clean build.
 
 - [ ] **Step 6: Commit**
