@@ -11,12 +11,11 @@
 #include <QFileInfo>
 #include <QRegularExpression>
 
-// Returns options.iniFilePath if non-empty, else adapter->configFilePath().
+// Returns iniFilePath if non-empty, else adapter->configFilePath().
 // Used by quick-settings paths so adapters can target a non-main INI file
 // (e.g. Dolphin's GFX.ini for resolution/aspect).
-template <typename Opts>
-static QString resolveQuickSettingsPath(const Opts& opts, EmulatorAdapter* adapter) {
-    return opts.iniFilePath.isEmpty() ? adapter->configFilePath() : opts.iniFilePath;
+static QString resolveConfigPath(const QString& iniFilePath, EmulatorAdapter* adapter) {
+    return iniFilePath.isEmpty() ? adapter->configFilePath() : iniFilePath;
 }
 
 ConfigService::ConfigService(ManifestLoader* loader, QObject* parent)
@@ -179,7 +178,7 @@ QString ConfigService::currentResolution(const QString& emuId) const {
     auto opts = adapter->resolutionOptions();
     if (opts.options.isEmpty()) return {};
 
-    QString configPath = resolveQuickSettingsPath(opts, adapter);
+    QString configPath = resolveConfigPath(opts.iniFilePath, adapter);
     if (configPath.isEmpty()) return opts.defaultValue;
 
     IniFile ini;
@@ -199,7 +198,7 @@ void ConfigService::applyQuickResolution(const QVariantMap& choices) {
         auto opts = adapter->resolutionOptions();
         if (opts.options.isEmpty()) continue;
 
-        QString configPath = resolveQuickSettingsPath(opts, adapter);
+        QString configPath = resolveConfigPath(opts.iniFilePath, adapter);
         if (configPath.isEmpty()) continue;
 
         IniFile ini;
