@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QMap>
 #include <QRegularExpression>
 
 // Returns iniFilePath if non-empty, else adapter->configFilePath().
@@ -230,17 +231,16 @@ QString ConfigService::currentAspectRatio(const QString& emuId) const {
     auto opts = adapter->aspectRatioOptions();
     if (opts.options.isEmpty()) return {};
 
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return opts.defaultLabel;
-
-    IniFile ini;
-    ini.load(configPath);
-
-    // Match by comparing the first patch key — whichever option's first patch
-    // value matches what's on disk is the current selection.
+    // Match by comparing the first patch — whichever option's first patch
+    // value matches what's on disk (in its own file) is the current selection.
     for (const auto& opt : opts.options) {
         if (opt.patches.isEmpty()) continue;
         const auto& firstPatch = opt.patches.first();
+        const QString path = resolveConfigPath(firstPatch.iniFilePath, adapter);
+        if (path.isEmpty()) continue;
+
+        IniFile ini;
+        ini.load(path);
         QString val = ini.value(firstPatch.section, firstPatch.key);
         if (val == firstPatch.value)
             return opt.label;
@@ -261,16 +261,21 @@ void ConfigService::applyQuickAspectRatio(const QVariantMap& choices) {
         for (const auto& opt : opts.options) {
             if (opt.label != label) continue;
 
-            QString configPath = adapter->configFilePath();
-            if (configPath.isEmpty()) break;
+            // Group patches by file so we load each file once.
+            QMap<QString, QVector<IniPatch>> byFile;
+            for (const auto& patch : opt.patches) {
+                const QString path = resolveConfigPath(patch.iniFilePath, adapter);
+                if (path.isEmpty()) continue;
+                byFile[path].append(patch);
+            }
 
-            IniFile ini;
-            ini.load(configPath);
-
-            for (const auto& patch : opt.patches)
-                ini.setValue(patch.section, patch.key, patch.value);
-
-            ini.save(configPath);
+            for (auto fit = byFile.constBegin(); fit != byFile.constEnd(); ++fit) {
+                IniFile ini;
+                ini.load(fit.key());
+                for (const auto& patch : fit.value())
+                    ini.setValue(patch.section, patch.key, patch.value);
+                ini.save(fit.key());
+            }
             break;
         }
     }
