@@ -471,7 +471,32 @@ bool DolphinAdapter::patchHotkeysIni() {
 // RetroAchievements
 // ============================================================================
 
-void DolphinAdapter::patchRetroAchievements(const QString&, const QString&,
-                                             bool, bool, bool, bool) {
-    // Filled in by Task 13.
+void DolphinAdapter::patchRetroAchievements(const QString& /*username*/, const QString& /*token*/,
+                                             bool enabled, bool hardcore,
+                                             bool notifications, bool sounds) {
+    const QString path = retroAchievementsIniPath();
+    QString content;
+
+    if (QFile::exists(path)) {
+        if (!readConfigFile(path, content, "Dolphin"))
+            return;
+    } else {
+        content = "[Achievements]\n";
+    }
+
+    const QString trueVal  = "True";
+    const QString falseVal = "False";
+
+    QVector<IniKeyPatch> patches = {
+        {"Achievements", "Enabled",         enabled   ? trueVal : falseVal},
+        {"Achievements", "HardcoreEnabled", hardcore  ? trueVal : falseVal},
+        // ProgressEnabled maps to our "notifications" toggle (progress/challenge pop-ups).
+        // Dolphin has no dedicated sound-effects key in AchievementSettings.cpp, so
+        // the `sounds` parameter is left unused.
+        {"Achievements", "ProgressEnabled", notifications ? trueVal : falseVal},
+    };
+    Q_UNUSED(sounds); // No SoundEnabled key exists in Dolphin's AchievementSettings.cpp.
+
+    if (patchIniKeys(content, patches))
+        writeConfigFile(path, content, "Dolphin");
 }
