@@ -158,15 +158,79 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 // ensureConfig — multi-file
 // ============================================================================
 
-bool DolphinAdapter::ensureConfig(const EmulatorManifest& manifest,
-                                   const QString& biosPath,
-                                   const QString& savesPath) {
-    Q_UNUSED(manifest); Q_UNUSED(biosPath); Q_UNUSED(savesPath);
-    // Filled in by Tasks 9-11.
-    return true;
+bool DolphinAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
+                                   const QString& /*biosPath*/,
+                                   const QString& /*savesPath*/) {
+    // 1) Portable marker so Dolphin reads from User/ next to the binary.
+    if (!ensurePortableMarker(portableDir(), "Dolphin"))
+        return false;
+
+    // 2) Ensure User/Config exists.
+    if (!QDir().mkpath(userConfigDir())) {
+        qWarning() << "[Dolphin] Failed to create" << userConfigDir();
+        return false;
+    }
+
+    // 3) Compute per-system data roots used in Dolphin.ini ISOPath* keys.
+    const QString dataRootGc  = Paths::emulatorDataDir(DOLPHIN_INSTALL_FOLDER, "gc");
+    const QString dataRootWii = Paths::emulatorDataDir(DOLPHIN_INSTALL_FOLDER, "wii");
+    QDir().mkpath(dataRootGc);
+    QDir().mkpath(dataRootWii);
+
+    // 4) Patch each config file. Each helper is independently idempotent
+    //    and logs its own failures — keep going so a single bad file
+    //    doesn't block a launch entirely.
+    bool ok = true;
+    ok &= patchDolphinIni(dataRootGc, dataRootWii);
+    ok &= patchGfxIni();
+    ok &= writeGcPadDefaultsIfMissing();
+    ok &= writeWiimoteDefaultsIfMissing();
+    ok &= patchHotkeysIni();
+    return ok;
 }
 
-bool DolphinAdapter::patchDolphinIni(const QString&, const QString&) { return true; }
+bool DolphinAdapter::patchDolphinIni(const QString& dataRootGc, const QString& dataRootWii) {
+    const QString path = dolphinIniPath();
+    QString content;
+
+    if (QFile::exists(path)) {
+        if (!readConfigFile(path, content, "Dolphin"))
+            return false;
+    } else {
+        content = "";  // patchIniKeys will append all sections + keys
+    }
+
+    const QVector<IniKeyPatch> patches = {
+        // Interface — pause-on-focus, no exit confirmation, no system-cursor flicker.
+        {"Interface", "PauseOnFocusLost",  "True"},
+        {"Interface", "ConfirmStop",        "False"},
+        {"Interface", "HideCursor",         "True"},
+
+        // Display — fullscreen render, render to main window (avoid second window).
+        {"Display", "Fullscreen",   "True"},
+        {"Display", "RenderToMain", "True"},
+
+        // Core — boot directly without IPL bootrom requirement.
+        {"Core", "SkipIPL",      "True"},
+        {"Core", "EnableCheats", "False"},
+
+        // General — point ISO scanning at our per-system data dirs so any
+        // saves/states Dolphin writes via its own UI go to the right place.
+        // Note: these are write-targets, not ROM-scan paths (RetroNest scans
+        // ROMs directly — we just give Dolphin a sensible default).
+        {"General", "ISOPath0",          dataRootGc},
+        {"General", "ISOPath1",          dataRootWii},
+        {"General", "ISOPaths",          "2"},
+        {"General", "RecursiveISOPaths", "True"},
+    };
+
+    if (patchIniKeys(content, patches))
+        return writeConfigFile(path, content, "Dolphin");
+    // Even if no patches changed, ensure the file exists on disk.
+    if (!QFile::exists(path))
+        return writeConfigFile(path, content, "Dolphin");
+    return true;
+}
 bool DolphinAdapter::patchGfxIni() { return true; }
 bool DolphinAdapter::writeGcPadDefaultsIfMissing() { return true; }
 bool DolphinAdapter::writeWiimoteDefaultsIfMissing() { return true; }
