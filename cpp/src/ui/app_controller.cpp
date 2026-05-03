@@ -427,7 +427,10 @@ void AppController::openNativeEmulatorSettings(const QString& emuId) {
     // route through Launch Services which applies app translocation/sandbox
     // rules to downloaded .app bundles, causing emulators like DuckStation to
     // fail when trying to save settings inside their own bundle.
-    QProcess::startDetached(exec, {});
+    //
+    // additionalLaunchArgs() lets adapters inject CLI flags that must be
+    // present on every launch (e.g. Dolphin's `-u <user-dir>`). Default empty.
+    QProcess::startDetached(exec, adapter->additionalLaunchArgs());
 }
 
 void AppController::showHotkeySettings(const QString& emuId) {

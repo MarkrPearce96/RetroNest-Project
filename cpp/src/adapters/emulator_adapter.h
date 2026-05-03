@@ -521,13 +521,25 @@ public:
     }
 
     /**
+     * Adapter-specific launch arguments to prepend to every spawn of the
+     * emulator binary, regardless of whether a game is being launched or
+     * the user is opening the native settings UI. Default empty.
+     *
+     * Used by emulators that need a CLI flag to point at a custom config
+     * location — e.g. Dolphin on macOS uses `-u <user-dir>` because
+     * portable.txt-inside-the-bundle would invalidate the code signature.
+     */
+    virtual QStringList additionalLaunchArgs() const { return {}; }
+
+    /**
      * Build the final command-line arguments for launching a game.
-     * Default implementation substitutes {rom_path} in manifest launch_args.
+     * Default implementation prepends additionalLaunchArgs(), then
+     * substitutes {rom_path} in manifest launch_args.
      * Adapters can override for special logic.
      */
     virtual QStringList buildLaunchArgs(const EmulatorManifest& manifest,
                                         const QString& romPath) {
-        QStringList args;
+        QStringList args = additionalLaunchArgs();
         for (const auto& arg : manifest.launch_args) {
             QString resolved = arg;
             resolved.replace("{rom_path}", romPath);

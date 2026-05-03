@@ -18,24 +18,25 @@ constexpr const char* DOLPHIN_INSTALL_FOLDER = "dolphin";
 // Path helpers
 // ============================================================================
 
-QString DolphinAdapter::portableDir() {
-    const QString installPath = Paths::emulatorsDir(DOLPHIN_INSTALL_FOLDER);
-#if defined(Q_OS_MACOS)
-    QDir dir(installPath);
-    const auto entries = dir.entryList({"*.app"}, QDir::Dirs);
-    for (const auto& entry : entries) {
-        QString candidate = installPath + "/" + entry + "/Contents/MacOS";
-        if (QFileInfo::exists(candidate))
-            return candidate;
-    }
-    return installPath;
-#else
-    return installPath;
-#endif
+QString DolphinAdapter::installDir() {
+    return Paths::emulatorsDir(DOLPHIN_INSTALL_FOLDER);
+}
+
+QString DolphinAdapter::userBaseDir() {
+    // Sibling of Dolphin.app, NOT inside the bundle. Modifying anything
+    // under Dolphin.app/Contents/ invalidates the code signature, which
+    // causes Gatekeeper to flag the binary as "damaged" and refuse to
+    // launch it. Dolphin's own --user/-u CLI flag is the documented way
+    // to redirect its config directory away from the bundle.
+    return installDir() + "/User";
 }
 
 QString DolphinAdapter::userConfigDir() {
-    return portableDir() + "/User/Config";
+    return userBaseDir() + "/Config";
+}
+
+QStringList DolphinAdapter::additionalLaunchArgs() const {
+    return {"-u", userBaseDir()};
 }
 
 QString DolphinAdapter::dolphinIniPath()          { return userConfigDir() + "/Dolphin.ini"; }
@@ -285,11 +286,12 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 bool DolphinAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
                                    const QString& /*biosPath*/,
                                    const QString& /*savesPath*/) {
-    // 1) Portable marker so Dolphin reads from User/ next to the binary.
-    if (!ensurePortableMarker(portableDir(), "Dolphin"))
-        return false;
-
-    // 2) Ensure User/Config exists.
+    // 1) Ensure User/Config exists, sibling to (NOT inside) the .app bundle.
+    //    Dolphin is pointed at this directory via the `-u` CLI flag — see
+    //    additionalLaunchArgs(). We deliberately do NOT write portable.txt
+    //    inside the bundle: that would invalidate the macOS code signature
+    //    and Gatekeeper would refuse to launch the binary ("a sealed
+    //    resource is missing or invalid").
     if (!QDir().mkpath(userConfigDir())) {
         qWarning() << "[Dolphin] Failed to create" << userConfigDir();
         return false;

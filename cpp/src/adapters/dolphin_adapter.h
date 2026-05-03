@@ -64,11 +64,27 @@ public:
      */
     DirectDownloadInfo resolveDirectDownload(const EmulatorManifest& manifest) const override;
 
-private:
-    /** On macOS: path inside .app bundle (Contents/MacOS/). Otherwise: emulators dir. */
-    static QString portableDir();
+    /**
+     * Returns `["-u", userBaseDir()]` so Dolphin reads/writes its config from
+     * our managed sibling-of-the-bundle directory. We can't use Dolphin's
+     * portable.txt mechanism on macOS — placing portable.txt or a User/
+     * directory inside the .app bundle invalidates the Developer ID code
+     * signature ("a sealed resource is missing or invalid") and causes
+     * Gatekeeper to refuse to launch the binary.
+     */
+    QStringList additionalLaunchArgs() const override;
 
-    /** Absolute path to {portableDir}/User/Config/. */
+private:
+    /** Absolute path to {emulators-dir}/dolphin (the install root). */
+    static QString installDir();
+
+    /**
+     * Absolute path to the user data root, located OUTSIDE the .app bundle
+     * at {installDir}/User. Passed to Dolphin via `-u`.
+     */
+    static QString userBaseDir();
+
+    /** Absolute path to {userBaseDir}/Config/. */
     static QString userConfigDir();
 
     /** Per-INI-file path helpers that resolve under userConfigDir(). */
