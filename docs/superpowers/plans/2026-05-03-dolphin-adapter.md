@@ -93,7 +93,7 @@ struct AspectRatioOption {
 /**
  * AspectRatioOptions — describes aspect ratio choices for an emulator.
  *
- * Per-patch `IniPatch::file` overrides the destination file on a per-patch
+ * Per-patch `IniPatch::iniFilePath` overrides the destination file on a per-patch
  * basis. The top-level `file` here is unused; per-patch granularity is what
  * Dolphin needs (a single aspect choice may touch GFX.ini only).
  */
@@ -128,15 +128,15 @@ behavior unchanged."
 
 - [ ] **Step 1: Add a helper at the top of the file**
 
-Open `cpp/src/services/config_service.cpp`. After the existing `#include`s (around line 10), add this small helper that picks between `opts.file` and `adapter->configFilePath()`:
+Open `cpp/src/services/config_service.cpp`. After the existing `#include`s (around line 10), add this small helper that picks between `opts.iniFilePath` and `adapter->configFilePath()`:
 
 ```cpp
-// Returns options.file if non-empty, else adapter->configFilePath().
+// Returns options.iniFilePath if non-empty, else adapter->configFilePath().
 // Used by quick-settings paths so adapters can target a non-main INI file
 // (e.g. Dolphin's GFX.ini for resolution/aspect).
 template <typename Opts>
 static QString resolveQuickSettingsPath(const Opts& opts, EmulatorAdapter* adapter) {
-    return opts.file.isEmpty() ? adapter->configFilePath() : opts.file;
+    return opts.iniFilePath.isEmpty() ? adapter->configFilePath() : opts.iniFilePath;
 }
 ```
 
@@ -199,7 +199,7 @@ Expected: clean compile.
 
 ```bash
 git add cpp/src/services/config_service.cpp
-git commit -m "ConfigService: honor ResolutionOptions::file in quick resolution path"
+git commit -m "ConfigService: honor ResolutionOptions::iniFilePath in quick resolution path"
 ```
 
 ---
@@ -230,7 +230,7 @@ QString ConfigService::currentAspectRatio(const QString& emuId) const {
     for (const auto& opt : opts.options) {
         if (opt.patches.isEmpty()) continue;
         const auto& firstPatch = opt.patches.first();
-        const QString path = firstPatch.file.isEmpty() ? fallbackPath : firstPatch.file;
+        const QString path = firstPatch.iniFilePath.isEmpty() ? fallbackPath : firstPatch.iniFilePath;
         if (path.isEmpty()) continue;
 
         IniFile ini;
@@ -265,7 +265,7 @@ void ConfigService::applyQuickAspectRatio(const QVariantMap& choices) {
             // Group patches by file so we load each file once.
             QMap<QString, QVector<IniPatch>> byFile;
             for (const auto& patch : opt.patches) {
-                const QString path = patch.file.isEmpty() ? fallbackPath : patch.file;
+                const QString path = patch.iniFilePath.isEmpty() ? fallbackPath : patch.iniFilePath;
                 if (path.isEmpty()) continue;
                 byFile[path].append(patch);
             }
@@ -297,7 +297,7 @@ Expected: clean compile.
 
 ```bash
 git add cpp/src/services/config_service.cpp
-git commit -m "ConfigService: honor IniPatch::file in quick aspect ratio path"
+git commit -m "ConfigService: honor IniPatch::iniFilePath in quick aspect ratio path"
 ```
 
 ---
@@ -392,7 +392,7 @@ private slots:
         QVERIFY(alt.open(QIODevice::ReadOnly));
         QString altContent = QString::fromUtf8(alt.readAll());
         QVERIFY2(altContent.contains("InternalResolution = 2"),
-                 "Resolution should have been written to ResolutionOptions::file");
+                 "Resolution should have been written to ResolutionOptions::iniFilePath");
     }
 
     void resolutionReadsFromAltFile() {
@@ -407,7 +407,7 @@ private slots:
         QVERIFY(alt.open(QIODevice::ReadOnly));
         QString altContent = QString::fromUtf8(alt.readAll());
         QVERIFY2(altContent.contains("AspectRatio = 1"),
-                 "Aspect should have been written to IniPatch::file");
+                 "Aspect should have been written to IniPatch::iniFilePath");
     }
 
     void aspectRatioReadsFromAltFile() {
@@ -468,7 +468,7 @@ Expected: all tests still pass. If anything red flags, the framework change leak
 
 ```bash
 git add cpp/tests/test_quick_settings_file_field.cpp cpp/CMakeLists.txt
-git commit -m "Tests: verify ResolutionOptions::file / IniPatch::file route to alternate file"
+git commit -m "Tests: verify ResolutionOptions::iniFilePath / IniPatch::iniFilePath route to alternate file"
 ```
 
 ---
@@ -533,7 +533,7 @@ Create `cpp/src/adapters/dolphin_adapter.h`:
  * configFilePath() returns the path to Dolphin.ini. The settings UI exposes
  * only Dolphin.ini settings in v1 (graphics page deferred to native UI).
  * Resolution and aspect ratio are routed to GFX.ini via the framework's
- * ResolutionOptions::file / IniPatch::file overrides.
+ * ResolutionOptions::iniFilePath / IniPatch::iniFilePath overrides.
  *
  * Controllers: default profiles are baked into GCPadNew.ini and WiimoteNew.ini
  * at install time (create-only — never overwritten on subsequent launches).
@@ -1544,9 +1544,9 @@ private slots:
         DolphinAdapter adapter;
         ResolutionOptions opts = adapter.resolutionOptions();
         QVERIFY(!opts.options.isEmpty());
-        QVERIFY2(!opts.file.isEmpty(),
+        QVERIFY2(!opts.iniFilePath.isEmpty(),
                  "Resolution must target GFX.ini via the file field");
-        QVERIFY(opts.file.endsWith("GFX.ini"));
+        QVERIFY(opts.iniFilePath.endsWith("GFX.ini"));
         QCOMPARE(opts.section, QString("Settings"));
         QCOMPARE(opts.key, QString("InternalResolution"));
     }
@@ -1558,9 +1558,9 @@ private slots:
         for (const auto& opt : opts.options) {
             QVERIFY(!opt.patches.isEmpty());
             for (const auto& patch : opt.patches) {
-                QVERIFY2(!patch.file.isEmpty(),
+                QVERIFY2(!patch.iniFilePath.isEmpty(),
                          qPrintable(QString("Aspect '%1' patch missing file field").arg(opt.label)));
-                QVERIFY(patch.file.endsWith("GFX.ini"));
+                QVERIFY(patch.iniFilePath.endsWith("GFX.ini"));
             }
         }
     }
