@@ -1,12 +1,12 @@
 #include "pcsx2_graphics_post_processing_page.h"
 #include "../pcsx2_settings_dialog.h"
-#include "../pcsx2_theme.h"
-#include "../widgets/pcsx2_card.h"
-#include "../widgets/pcsx2_section_header.h"
-#include "../widgets/pcsx2_combo_row.h"
-#include "../widgets/pcsx2_toggle_row.h"
-#include "../widgets/pcsx2_slider_row.h"
-#include "../widgets/pcsx2_toggle.h"
+#include "ui/settings/settings_dialog_theme.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_section_header.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_slider_row.h"
+#include "ui/settings/widgets/settings_toggle.h"
 #include "ui/app_controller.h"
 #include "adapters/pcsx2_adapter.h"
 #include <QVBoxLayout>
@@ -59,17 +59,17 @@ void Pcsx2GraphicsPostProcessingPage::resetDependentsOf(const QString& masterKey
     for (const SettingDef& d : m_schema) {
         if (d.dependsOn != masterKey) continue;
         saveValue(d.section, d.key, d.defaultValue);
-        for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+        for (auto* tog : findChildren<SettingsToggleRow*>()) {
             if (tog->settingDef().key != d.key) continue;
             QSignalBlocker sb(tog);
             tog->setChecked(d.defaultValue.compare("true", Qt::CaseInsensitive) == 0);
         }
-        for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+        for (auto* slider : findChildren<SettingsSliderRow*>()) {
             if (slider->settingDef().key != d.key) continue;
             QSignalBlocker sb(slider);
             slider->setValue(static_cast<int>(d.defaultValue.toDouble()));
         }
-        for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+        for (auto* combo : findChildren<SettingsComboRow*>()) {
             if (combo->settingDef().key != d.key) continue;
             QSignalBlocker sb(combo);
             combo->setValue(d.defaultValue);
@@ -78,7 +78,7 @@ void Pcsx2GraphicsPostProcessingPage::resetDependentsOf(const QString& masterKey
 }
 
 void Pcsx2GraphicsPostProcessingPage::refreshDependencies() {
-    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         if (d.dependsOn.isEmpty()) continue;
         const bool active = masterToggleState(d.dependsOn);
@@ -103,15 +103,15 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
     root->setContentsMargins(24, 12, 24, 16);
     root->setSpacing(10);
 
-    auto makeComboRow = [this](const QString& key) -> Pcsx2ComboRow* {
+    auto makeComboRow = [this](const QString& key) -> SettingsComboRow* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* row = new Pcsx2ComboRow(this);
+        auto* row = new SettingsComboRow(this);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ComboRow::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val){
+        connect(row, &SettingsComboRow::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
+        connect(row, &SettingsComboRow::valueChanged, this, [this, key](const QString& val){
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, val);
             const bool nowInactive = val.isEmpty() || val == "0"
@@ -124,14 +124,14 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
         return row;
     };
 
-    auto makeToggleRow = [this](const QString& key) -> Pcsx2ToggleRow* {
+    auto makeToggleRow = [this](const QString& key) -> SettingsToggleRow* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* row = new Pcsx2ToggleRow(this);
+        auto* row = new SettingsToggleRow(this);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
+        connect(row, &SettingsToggleRow::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on){
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
             if (!on) resetDependentsOf(key);
@@ -141,16 +141,16 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
         return row;
     };
 
-    auto makeSliderRow = [this](const QString& key) -> Pcsx2SliderRow* {
+    auto makeSliderRow = [this](const QString& key) -> SettingsSliderRow* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* row = new Pcsx2SliderRow(this);
+        auto* row = new SettingsSliderRow(this);
         row->setLabel(d->label);
         row->setRange(int(d->minVal), int(d->maxVal));
         row->setSuffix(d->suffix);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2SliderRow::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
-        connect(row, &Pcsx2SliderRow::valueChanged, this, [this, key](int val){
+        connect(row, &SettingsSliderRow::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
+        connect(row, &SettingsSliderRow::valueChanged, this, [this, key](int val){
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, QString::number(val));
         });
@@ -158,9 +158,9 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
     };
 
     // Section 1: Sharpening / Anti-Aliasing
-    root->addWidget(new Pcsx2SectionHeader("Sharpening / Anti-Aliasing", this));
+    root->addWidget(new SettingsSectionHeader("Sharpening / Anti-Aliasing", this));
 
-    auto* sharpCard = new Pcsx2Card(this);
+    auto* sharpCard = new SettingsCard(this);
     sharpCard->setFocusPolicy(Qt::NoFocus);
     auto* sharpV = new QVBoxLayout(sharpCard);
     sharpV->setContentsMargins(14, 12, 14, 12);
@@ -172,13 +172,13 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
     auto* sharpRow = new QHBoxLayout();
     sharpRow->setSpacing(16);
     if (const SettingDef* ds = findDef("CASSharpness")) {
-        auto* slider = new Pcsx2SliderRow(sharpCard);
+        auto* slider = new SettingsSliderRow(sharpCard);
         slider->setLabel(ds->label);
         slider->setRange(int(ds->minVal), int(ds->maxVal));
         slider->setSuffix(ds->suffix);
         slider->setSettingDef(*ds);
-        connect(slider, &Pcsx2SliderRow::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
-        connect(slider, &Pcsx2SliderRow::valueChanged, this, [this](int val){
+        connect(slider, &SettingsSliderRow::focused, this, &Pcsx2GraphicsPostProcessingPage::settingFocused);
+        connect(slider, &SettingsSliderRow::valueChanged, this, [this](int val){
             const SettingDef* dd = findDef("CASSharpness");
             if (dd) saveValue(dd->section, dd->key, QString::number(val));
         });
@@ -191,9 +191,9 @@ void Pcsx2GraphicsPostProcessingPage::buildUi() {
     root->addWidget(sharpCard);
 
     // Section 2: Filters
-    root->addWidget(new Pcsx2SectionHeader("Filters", this));
+    root->addWidget(new SettingsSectionHeader("Filters", this));
 
-    auto* filterCard = new Pcsx2Card(this);
+    auto* filterCard = new SettingsCard(this);
     filterCard->setFocusPolicy(Qt::NoFocus);
     auto* filterV = new QVBoxLayout(filterCard);
     filterV->setContentsMargins(14, 12, 14, 12);
@@ -224,18 +224,18 @@ void Pcsx2GraphicsPostProcessingPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* tog : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = tog->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
         tog->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
     }
-    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         bool ok = false;
@@ -299,13 +299,13 @@ QList<QWidget*> Pcsx2GraphicsPostProcessingPage::collectFocusables() const {
         if (w->focusPolicy() == Qt::NoFocus) continue;
         if (qobject_cast<QComboBox*>(w)   ||
             qobject_cast<QSlider*>(w)     ||
-            qobject_cast<Pcsx2Toggle*>(w) ||
-            qobject_cast<Pcsx2Card*>(w)) {
-            // If this control lives inside a focusable Pcsx2Card, skip it.
-            if (!qobject_cast<Pcsx2Card*>(w)) {
+            qobject_cast<SettingsToggle*>(w) ||
+            qobject_cast<SettingsCard*>(w)) {
+            // If this control lives inside a focusable SettingsCard, skip it.
+            if (!qobject_cast<SettingsCard*>(w)) {
                 bool insideFocusableCard = false;
                 for (QWidget* p = w->parentWidget(); p && p != this; p = p->parentWidget()) {
-                    if (auto* card = qobject_cast<Pcsx2Card*>(p)) {
+                    if (auto* card = qobject_cast<SettingsCard*>(p)) {
                         if (card->focusPolicy() != Qt::NoFocus) {
                             insideFocusableCard = true;
                             break;

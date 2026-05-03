@@ -7,10 +7,10 @@
 class QLabel;
 class QSlider;
 
-class Pcsx2SliderRow : public QWidget {
+class SettingsSliderRow : public QWidget {
     Q_OBJECT
 public:
-    explicit Pcsx2SliderRow(QWidget* parent = nullptr);
+    explicit SettingsSliderRow(QWidget* parent = nullptr);
     void setLabel(const QString& text);
     void setRange(int lo, int hi);
     void setSuffix(const QString& s);

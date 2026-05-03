@@ -4,8 +4,8 @@
 #include "core/setting_def.h"
 
 class Pcsx2SettingsDialog;
-class Pcsx2ComboRow;
-class Pcsx2ToggleRow;
+class SettingsComboRow;
+class SettingsToggleRow;
 
 class Pcsx2EmulationPage : public QWidget {
     Q_OBJECT

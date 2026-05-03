@@ -1,13 +1,14 @@
 #include "duckstation_graphics_osd_page.h"
 #include "../duckstation_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_section_header.h"
-#include "../../pcsx2/widgets/pcsx2_combo_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle_row.h"
-#include "../../pcsx2/widgets/pcsx2_slider_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_section_header.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_slider_row.h"
+#include "ui/settings/widgets/settings_toggle.h"
 #include "../widgets/duckstation_osd_preview.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/duckstation_adapter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -59,14 +60,7 @@ void DuckStationGraphicsOsdPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -87,11 +81,11 @@ void DuckStationGraphicsOsdPage::buildUi() {
 }
 
 void DuckStationGraphicsOsdPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
-    auto* card = new Pcsx2Card(this);
+    auto* card = new SettingsCard(this);
     card->setFocusPolicy(Qt::NoFocus);
     if (const SettingDef* d = findDef("ShowFPS"))
         card->setSettingDef(*d);
-    connect(card, &Pcsx2Card::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
+    connect(card, &SettingsCard::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
 
     auto* v = new QVBoxLayout(card);
     v->setContentsMargins(14, 12, 14, 12);
@@ -108,11 +102,11 @@ void DuckStationGraphicsOsdPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
     auto addToggle = [&](const QString& key) {
         const SettingDef* d = findDef(key);
         if (!d) return;
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on) {
+        connect(row, &SettingsToggleRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on) {
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
             if (!m_preview) return;
@@ -145,11 +139,11 @@ void DuckStationGraphicsOsdPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
 }
 
 void DuckStationGraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
-    auto* card = new Pcsx2Card(this);
+    auto* card = new SettingsCard(this);
     card->setFocusPolicy(Qt::NoFocus);
     card->setPreviewStyle(true);
     if (const SettingDef* d = findDef("OSDScale")) card->setSettingDef(*d);
-    connect(card, &Pcsx2Card::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
+    connect(card, &SettingsCard::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
 
     auto* v = new QVBoxLayout(card);
     v->setContentsMargins(14, 12, 14, 12);
@@ -163,13 +157,13 @@ void DuckStationGraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
     v->addWidget(m_preview);
 
     if (const SettingDef* d = findDef("OSDScale")) {
-        m_scaleSlider = new Pcsx2SliderRow(card);
+        m_scaleSlider = new SettingsSliderRow(card);
         m_scaleSlider->setLabel(d->label);
         m_scaleSlider->setRange(int(d->minVal), int(d->maxVal));
         m_scaleSlider->setSuffix(d->suffix);
         m_scaleSlider->setSettingDef(*d);
-        connect(m_scaleSlider, &Pcsx2SliderRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
-        connect(m_scaleSlider, &Pcsx2SliderRow::valueChanged, this, [this](int val) {
+        connect(m_scaleSlider, &SettingsSliderRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
+        connect(m_scaleSlider, &SettingsSliderRow::valueChanged, this, [this](int val) {
             const SettingDef* dd = findDef("OSDScale");
             if (dd) saveValue(dd->section, dd->key, QString::number(val));
             if (m_preview) m_preview->setScale(val);
@@ -178,13 +172,13 @@ void DuckStationGraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
     }
 
     if (const SettingDef* d = findDef("OSDMargin")) {
-        m_marginSlider = new Pcsx2SliderRow(card);
+        m_marginSlider = new SettingsSliderRow(card);
         m_marginSlider->setLabel(d->label);
         m_marginSlider->setRange(int(d->minVal), int(d->maxVal));
         m_marginSlider->setSuffix(d->suffix);
         m_marginSlider->setSettingDef(*d);
-        connect(m_marginSlider, &Pcsx2SliderRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
-        connect(m_marginSlider, &Pcsx2SliderRow::valueChanged, this, [this](int val) {
+        connect(m_marginSlider, &SettingsSliderRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
+        connect(m_marginSlider, &SettingsSliderRow::valueChanged, this, [this](int val) {
             const SettingDef* dd = findDef("OSDMargin");
             if (dd) saveValue(dd->section, dd->key, QString::number(val));
             if (m_preview) m_preview->setMargin(val);
@@ -193,12 +187,12 @@ void DuckStationGraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
     }
 
     if (const SettingDef* d = findDef("OSDMessageLocation")) {
-        m_locationCombo = new Pcsx2ComboRow(card, /*stacked=*/false);
+        m_locationCombo = new SettingsComboRow(card, /*stacked=*/false);
         m_locationCombo->setLabel(d->label);
         m_locationCombo->setOptions(d->options);
         m_locationCombo->setSettingDef(*d);
-        connect(m_locationCombo, &Pcsx2ComboRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
-        connect(m_locationCombo, &Pcsx2ComboRow::valueChanged, this, [this](const QString& val) {
+        connect(m_locationCombo, &SettingsComboRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
+        connect(m_locationCombo, &SettingsComboRow::valueChanged, this, [this](const QString& val) {
             const SettingDef* dd = findDef("OSDMessageLocation");
             if (dd) saveValue(dd->section, dd->key, val);
             if (m_preview) m_preview->setMessageLocation(val);
@@ -211,20 +205,20 @@ void DuckStationGraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
 }
 
 void DuckStationGraphicsOsdPage::buildBottomToggleGrid(QVBoxLayout* root) {
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeToggleCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
 
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on) {
+        connect(card, &SettingsCard::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
+        connect(row, &SettingsToggleRow::focused, this, &DuckStationGraphicsOsdPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on) {
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
             if (!m_preview) return;
@@ -267,18 +261,18 @@ void DuckStationGraphicsOsdPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* tog : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = tog->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
         tog->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
     }
-    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         bool ok = false;
@@ -294,7 +288,7 @@ void DuckStationGraphicsOsdPage::syncPreview() {
     if (m_marginSlider)  m_preview->setMargin(m_marginSlider->value());
     if (m_locationCombo) m_preview->setMessageLocation(m_locationCombo->value());
 
-    for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* tog : findChildren<SettingsToggleRow*>()) {
         const QString& key = tog->settingDef().key;
         const bool on = tog->isChecked();
         if      (key == "ShowFPS")               m_preview->setShowFPS(on);
@@ -348,14 +342,14 @@ QList<QWidget*> DuckStationGraphicsOsdPage::collectFocusables() const {
         if (w->focusPolicy() == Qt::NoFocus) continue;
         if (qobject_cast<QComboBox*>(w)   ||
             qobject_cast<QSlider*>(w)     ||
-            qobject_cast<Pcsx2Toggle*>(w) ||
-            qobject_cast<Pcsx2Card*>(w)) {
-            // Skip controls that live inside a focusable Pcsx2Card — the card
+            qobject_cast<SettingsToggle*>(w) ||
+            qobject_cast<SettingsCard*>(w)) {
+            // Skip controls that live inside a focusable SettingsCard — the card
             // is the focus stop and Enter activates the inner widget.
-            if (!qobject_cast<Pcsx2Card*>(w)) {
+            if (!qobject_cast<SettingsCard*>(w)) {
                 bool insideFocusableCard = false;
                 for (QWidget* p = w->parentWidget(); p && p != this; p = p->parentWidget()) {
-                    if (auto* card = qobject_cast<Pcsx2Card*>(p)) {
+                    if (auto* card = qobject_cast<SettingsCard*>(p)) {
                         if (card->focusPolicy() != Qt::NoFocus) {
                             insideFocusableCard = true;
                             break;

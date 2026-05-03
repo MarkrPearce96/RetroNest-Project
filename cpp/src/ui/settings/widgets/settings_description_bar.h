@@ -7,7 +7,7 @@ class QLabel;
 class QHBoxLayout;
 class SdlInputManager;
 
-class Pcsx2DescriptionBar : public QFrame {
+class SettingsDescriptionBar : public QFrame {
     Q_OBJECT
 public:
     struct ButtonHint {
@@ -15,7 +15,7 @@ public:
         QString label;   // "Select", "Back", "Navigate", "Switch Tab"
     };
 
-    explicit Pcsx2DescriptionBar(QWidget* parent = nullptr);
+    explicit SettingsDescriptionBar(QWidget* parent = nullptr);
 
     void setSetting(const SettingDef& def);
     void clear();

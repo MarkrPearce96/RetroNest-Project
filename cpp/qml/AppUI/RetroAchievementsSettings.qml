@@ -37,11 +37,13 @@ Item {
         onTriggered: refreshDashboard()
     }
 
+    property int _pendingFetches: 0
+
     function refreshDashboard() {
         loading = true
-        userSummary = app.raUserSummary()
-        userGames = app.raUserGames()
-        loading = false
+        _pendingFetches = 2
+        app.raRequestUserSummary()
+        app.raRequestUserGames()
     }
 
     Connections {
@@ -59,6 +61,14 @@ Item {
             screenState = "login"
             userSummary = {}
             userGames = []
+        }
+        function onRaUserSummaryReady(summary) {
+            userSummary = summary
+            if (--_pendingFetches <= 0) loading = false
+        }
+        function onRaUserGamesReady(games) {
+            userGames = games
+            if (--_pendingFetches <= 0) loading = false
         }
     }
 

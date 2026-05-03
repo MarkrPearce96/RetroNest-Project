@@ -24,6 +24,7 @@ public:
     QString configFilePath() const override;
     QString controllerBindingsConfigFilePath() const override;
     QString controllerBindingsSection(int port) const override;
+    QString controllerSettingsSection(int port) const override;
     QVector<BiosDef> biosFiles() const override;
     QVector<PathDef> pathsDefs() const override;
     ResolutionOptions resolutionOptions() const override;
@@ -32,10 +33,8 @@ public:
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<SettingDef> controllerSettingDefs() const override;
     bool supportsRetroAchievements() const override { return true; }
-    void patchRetroAchievements(const QString& username, const QString& token,
-                                 bool enabled, bool hardcore,
-                                 bool notifications, bool sounds) override;
-    QString matchAsset(const QStringList& assetNames) const override;
+    RetroAchievementsKeyMap retroAchievementsKeyMap() const override;
+    QVector<AssetMatchRule> assetMatchRules() const override;
     QString extractSerial(const QString& romPath) const override;
     // Note: PPSSPP does not support save-on-exit. It has no SaveStateOnShutdown
     // INI key, no SIGTERM handler that flushes state, and no auto-save slot.

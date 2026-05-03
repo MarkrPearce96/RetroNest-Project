@@ -37,11 +37,19 @@ Item {
         supportsSaveOnExit = gameInfo.supportsSaveOnExit === true;
         if (app.hasRACredentials() && gameInfo.title) {
             raGameTitle = gameInfo.title;
-            raGameId = app.raFindGameId(gameInfo.title, gameInfo.system || "");
+            // raGameId is filled in asynchronously via onRaGameIdLookupReady below.
+            app.raRequestGameIdLookup(gameInfo.title, gameInfo.system || "");
         }
 
         visible = true;
         forceActiveFocus();
+    }
+
+    Connections {
+        target: app
+        function onRaGameIdLookupReady(title, lookedUpId) {
+            if (title === raGameTitle) raGameId = lookedUpId;
+        }
     }
 
     function close() {

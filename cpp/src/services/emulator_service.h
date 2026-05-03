@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/manifest_loader.h"
-#include "core/emulator_installer.h"
+#include "emulator_installer.h"
 #include <QObject>
 #include <QString>
 

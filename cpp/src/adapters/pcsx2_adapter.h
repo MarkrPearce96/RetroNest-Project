@@ -36,10 +36,8 @@ public:
     QVector<SettingDef> controllerSettingDefsForType(const QString& type) const override;
     bool supportsRetroAchievements() const override { return true; }
     bool supportsSaveOnExit() const override { return true; }
-    void patchRetroAchievements(const QString& username, const QString& token,
-                                 bool enabled, bool hardcore,
-                                 bool notifications, bool sounds) override;
-    QString matchAsset(const QStringList& assetNames) const override;
+    RetroAchievementsKeyMap retroAchievementsKeyMap() const override;
+    QVector<AssetMatchRule> assetMatchRules() const override;
     QString findResumeFile(const QString& serial) const override;
 
 private:

@@ -1,5 +1,5 @@
 #include "pcsx2_aspect_ratio_preview.h"
-#include "../pcsx2_theme.h"
+#include "ui/settings/settings_dialog_theme.h"
 #include <QPainter>
 #include <QPaintEvent>
 #include <QLinearGradient>
@@ -184,7 +184,7 @@ void Pcsx2AspectRatioPreview::paintEvent(QPaintEvent*) {
     // Background — letterbox/pillarbox colour everywhere. Any portion
     // not covered by the draw rect below stays this colour.
     const QRectF full = rect();
-    p.fillRect(full, Pcsx2Theme::letterbox());
+    p.fillRect(full, SettingsDialogTheme::letterbox());
 
     // No inset — the widget IS the preview screen. When the user picks
     // Stretch, the draw rect fills the entire widget edge-to-edge with
@@ -208,7 +208,7 @@ void Pcsx2AspectRatioPreview::paintEvent(QPaintEvent*) {
     if (m_cropL || m_cropT || m_cropR || m_cropB) {
         const double scaleX = dst.width()  / kSrcW;
         const double scaleY = dst.height() / kSrcH;
-        p.setBrush(Pcsx2Theme::letterbox());
+        p.setBrush(SettingsDialogTheme::letterbox());
         p.setPen(Qt::NoPen);
         if (m_cropL > 0)
             p.drawRect(QRectF(dst.left(), dst.top(), m_cropL * scaleX, dst.height()));
@@ -224,7 +224,7 @@ void Pcsx2AspectRatioPreview::paintEvent(QPaintEvent*) {
 
     // 1px amber border around the draw rect.
     {
-        QPen pen(Pcsx2Theme::accent(), 1.0);
+        QPen pen(SettingsDialogTheme::accent(), 1.0);
         p.setPen(pen);
         p.setBrush(Qt::NoBrush);
         p.drawRect(dst.adjusted(0.5, 0.5, -0.5, -0.5));
@@ -236,7 +236,7 @@ void Pcsx2AspectRatioPreview::paintEvent(QPaintEvent*) {
         f.setPointSize(11);
         f.setBold(true);
         p.setFont(f);
-        p.setPen(Pcsx2Theme::textPrimary());
+        p.setPen(SettingsDialogTheme::textPrimary());
         p.drawText(dst, Qt::AlignCenter, labelForCurrentRatio());
     }
 }

@@ -1,11 +1,12 @@
 #include "ppsspp_overlay_page.h"
 #include "../ppsspp_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_section_header.h"
-#include "../../pcsx2/widgets/pcsx2_combo_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle_row.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_section_header.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
 #include "core/bitmask_helpers.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/ppsspp_adapter.h"
 #include <QVBoxLayout>
 #include <QPushButton>
@@ -35,14 +36,7 @@ void PpssppOverlayPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -59,52 +53,52 @@ void PpssppOverlayPage::buildUi() {
     connect(back, &QPushButton::clicked, m_dialog, &PpssppSettingsDialog::popPage);
     root->addWidget(back);
 
-    auto makeBitmaskCard = [this](const QString& label) -> Pcsx2Card* {
+    auto makeBitmaskCard = [this](const QString& label) -> SettingsCard* {
         const SettingDef* d = findByLabel(label);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &PpssppOverlayPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &PpssppOverlayPage::settingFocused);
+        connect(card, &SettingsCard::focused, this, &PpssppOverlayPage::settingFocused);
+        connect(row, &SettingsToggleRow::focused, this, &PpssppOverlayPage::settingFocused);
         SettingDef defCopy = *d;
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, defCopy](bool on){
+        connect(row, &SettingsToggleRow::toggled, this, [this, defCopy](bool on){
             saveBitmaskBit(defCopy, on);
         });
         v->addWidget(row);
         return card;
     };
-    auto makeComboCard = [this](const QString& label) -> Pcsx2Card* {
+    auto makeComboCard = [this](const QString& label) -> SettingsCard* {
         const SettingDef* d = findByLabel(label);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ComboRow(card);
+        auto* row = new SettingsComboRow(card);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &PpssppOverlayPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::focused, this, &PpssppOverlayPage::settingFocused);
+        connect(card, &SettingsCard::focused, this, &PpssppOverlayPage::settingFocused);
+        connect(row, &SettingsComboRow::focused, this, &PpssppOverlayPage::settingFocused);
         SettingDef defCopy = *d;
-        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, defCopy](const QString& v){
+        connect(row, &SettingsComboRow::valueChanged, this, [this, defCopy](const QString& v){
             saveValue(defCopy.section, defCopy.key, v);
         });
         v->addWidget(row);
         return card;
     };
 
-    root->addWidget(new Pcsx2SectionHeader("Status Indicators", this));
+    root->addWidget(new SettingsSectionHeader("Status Indicators", this));
     if (auto* c = makeBitmaskCard("Show FPS Counter")) root->addWidget(c);
     if (auto* c = makeBitmaskCard("Show Speed"))       root->addWidget(c);
     if (auto* c = makeBitmaskCard("Show Battery %"))   root->addWidget(c);
 
-    root->addWidget(new Pcsx2SectionHeader("Debug", this));
+    root->addWidget(new SettingsSectionHeader("Debug", this));
     if (auto* c = makeComboCard("Debug Overlay")) root->addWidget(c);
 
     root->addStretch();
@@ -114,13 +108,13 @@ void PpssppOverlayPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* row : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* row : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const int curInt = cur.isEmpty() ? d.defaultValue.toInt() : cur.toInt();
         row->setChecked(BitmaskHelpers::getBit(curInt, d.bitmask));
     }
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);

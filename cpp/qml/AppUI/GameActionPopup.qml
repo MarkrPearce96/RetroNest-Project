@@ -34,11 +34,22 @@ Item {
         isFavorite = details.favorite === 1
         gameTitle = details.title
         canScrape = themeContext.hasScraperCredentials()
-        raGameId = themeContext.hasRACredentials() ? themeContext.raFindGameId(details.title, details.system || "") : 0
+        // raGameId resolved asynchronously via onRaGameIdLookupReady below.
+        raGameId = 0
+        if (themeContext.hasRACredentials()) {
+            themeContext.raRequestGameIdLookup(details.title, details.system || "")
+        }
         popupState = "actions"
         focusIndex = 0
         visible = true
         popup.forceActiveFocus()
+    }
+
+    Connections {
+        target: themeContext
+        function onRaGameIdLookupReady(title, lookedUpId) {
+            if (title === gameTitle) raGameId = lookedUpId
+        }
     }
 
     function close() {

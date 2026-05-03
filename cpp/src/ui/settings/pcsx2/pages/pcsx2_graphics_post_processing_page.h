@@ -5,7 +5,7 @@
 #include "core/setting_def.h"
 
 class Pcsx2SettingsDialog;
-class Pcsx2ToggleRow;
+class SettingsToggleRow;
 
 class Pcsx2GraphicsPostProcessingPage : public QWidget {
     Q_OBJECT
@@ -32,5 +32,5 @@ private:
 
     Pcsx2SettingsDialog* m_dialog;
     QVector<SettingDef> m_schema;
-    QHash<QString, Pcsx2ToggleRow*> m_masterToggles;
+    QHash<QString, SettingsToggleRow*> m_masterToggles;
 };

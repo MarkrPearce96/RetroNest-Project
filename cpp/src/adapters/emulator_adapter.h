@@ -156,6 +156,17 @@ public:
     }
 
     /**
+     * Return the INI section name where controller settings (deadzone,
+     * sensitivity, vibration) for a given port are stored. Default mirrors
+     * controllerBindingsSection. Override when the emulator reads settings
+     * from a different section than its bindings — e.g., PPSSPP stores
+     * bindings in [ControlMapping] but settings in [Control].
+     */
+    virtual QString controllerSettingsSection(int port) const {
+        return QString("Pad%1").arg(port);
+    }
+
+    /**
      * Return the list of BIOS files this emulator uses.
      */
     virtual QVector<BiosDef> biosFiles() const { return {}; }
@@ -180,6 +191,11 @@ public:
     /**
      * Return controller-specific settings (deadzone, sensitivity, vibration, etc.).
      * Displayed under the "Settings" sub-tab in the controller mapping page.
+     *
+     * Note: this is the type-agnostic legacy entry. Production code paths from
+     * QML go through controllerSettingsForPort() → controllerSettingDefsForType().
+     * Override this method only if your emulator has a single controller type,
+     * or as an internal helper called by your controllerSettingDefsForType().
      */
     virtual QVector<SettingDef> controllerSettingDefs() const { return {}; }
 
@@ -254,11 +270,46 @@ public:
     }
 
     /**
+     * Declarative rule for matching a GitHub release asset by name.
+     * An asset name matches if every entry in `substrings` is contained in
+     * the lower-cased asset name AND the asset name ends with `extension`.
+     * Order in assetMatchRules() is preference order — first match wins.
+     */
+    struct AssetMatchRule {
+        QStringList substrings;  // all must be in name.toLower(); empty = no substring requirement
+        QString extension;       // name.endsWith(extension)
+    };
+
+    /**
+     * Return the list of asset-match rules for the *current* platform.
+     * Each adapter declares its own rules inside the appropriate Q_OS_* block.
+     * Returning an empty list falls back to the generic platform-keyword
+     * heuristic in matchAsset().
+     */
+    virtual QVector<AssetMatchRule> assetMatchRules() const { return {}; }
+
+    /**
      * Select the correct GitHub release asset for this platform.
-     * Override to handle emulator-specific naming conventions.
-     * Default: matches any asset containing the platform name with a common archive extension.
+     * Default implementation walks assetMatchRules() first, then falls back
+     * to a generic "name contains platform name + common archive extension"
+     * heuristic. Override only for unusual logic — most adapters should
+     * override assetMatchRules() instead.
      */
     virtual QString matchAsset(const QStringList& assetNames) const {
+        const auto rules = assetMatchRules();
+        for (const auto& name : assetNames) {
+            const QString lower = name.toLower();
+            for (const auto& rule : rules) {
+                if (!name.endsWith(rule.extension)) continue;
+                bool ok = true;
+                for (const auto& s : rule.substrings) {
+                    if (!lower.contains(s.toLower())) { ok = false; break; }
+                }
+                if (ok) return name;
+            }
+        }
+
+        // Fallback: generic platform-keyword + common archive extension.
 #if defined(Q_OS_MACOS)
         const QString platform = "mac";
 #elif defined(Q_OS_WIN)
@@ -283,20 +334,87 @@ public:
     virtual bool supportsRetroAchievements() const { return false; }
 
     /**
+     * Per-emulator INI key names used for RetroAchievements settings.
+     * Each adapter declares its section + key names + bool formatting; the
+     * base patchRetroAchievements() does the read/patch/write dance.
+     *
+     * An empty key (empty QString) means "this emulator doesn't expose this
+     * setting" — the patch is skipped for that field.
+     */
+    struct RetroAchievementsKeyMap {
+        QString section;             // e.g. "Achievements" or "Cheevos"
+        QString enabledKey;          // e.g. "Enabled" or "AchievementsEnable"
+        QString hardcoreKey;         // e.g. "HardcoreMode" or "ChallengeMode"
+        QString notificationsKey;    // empty → skip
+        QString soundEffectsKey;     // e.g. "SoundEffects"
+        QString trueValue = "true";  // some emulators want "True" (title case)
+        QString falseValue = "false";
+        QString configTag;           // "PCSX2"/"DuckStation"/"PPSSPP" — for log messages
+    };
+
+    /**
+     * Override to declare the RA key map. Default returns an empty map,
+     * which causes patchRetroAchievements() to be a no-op.
+     */
+    virtual RetroAchievementsKeyMap retroAchievementsKeyMap() const { return {}; }
+
+    /**
      * Patch RA credentials and settings into the emulator's config.
-     * Username + connect token are patched so the emulator is pre-logged-in.
+     * Default implementation uses retroAchievementsKeyMap() and configFilePath()
+     * to do the read/patch/write. Override only for emulator-specific quirks
+     * (e.g. credentials living in a separate file).
      */
     virtual void patchRetroAchievements(const QString& username, const QString& token,
                                          bool enabled, bool hardcore,
                                          bool notifications, bool sounds) {
         Q_UNUSED(username); Q_UNUSED(token);
-        Q_UNUSED(enabled); Q_UNUSED(hardcore);
-        Q_UNUSED(notifications); Q_UNUSED(sounds);
+
+        const auto map = retroAchievementsKeyMap();
+        if (map.section.isEmpty()) return;
+
+        const QString path = configFilePath();
+        QString content;
+        if (!readConfigFile(path, content, map.configTag.isEmpty() ? "Adapter" : map.configTag))
+            return;
+
+        const QString trueVal = map.trueValue;
+        const QString falseVal = map.falseValue;
+        QVector<IniKeyPatch> patches;
+        if (!map.enabledKey.isEmpty())
+            patches.append({map.section, map.enabledKey, enabled ? trueVal : falseVal});
+        if (!map.hardcoreKey.isEmpty())
+            patches.append({map.section, map.hardcoreKey, hardcore ? trueVal : falseVal});
+        if (!map.notificationsKey.isEmpty())
+            patches.append({map.section, map.notificationsKey, notifications ? trueVal : falseVal});
+        if (!map.soundEffectsKey.isEmpty())
+            patches.append({map.section, map.soundEffectsKey, sounds ? trueVal : falseVal});
+
+        if (patchIniKeys(content, patches))
+            writeConfigFile(path, content, map.configTag.isEmpty() ? "Adapter" : map.configTag);
     }
 
     /**
      * Format a captured SDL input event into the emulator's INI binding string.
-     * Default: "SDL-{deviceIndex}/{+/-}{element}"
+     *
+     * Per-emulator output format reference (DO NOT REMOVE — adding a new
+     * emulator that silently inherits the wrong default will look correct in
+     * the UI but produce non-functional bindings):
+     *
+     *   PCSX2     : "SDL-{idx}/FaceSouth"      buttons    (no + prefix)
+     *               "SDL-{idx}/+LeftX"         axes       (always polarity prefixed)
+     *               default below matches this convention
+     *
+     *   DuckStation: "SDL-{idx}/A"             buttons    (SDL names, bare)
+     *                "SDL-{idx}/LeftX"          full axes (no polarity)
+     *                "SDL-{idx}/+LeftTrigger"   trigger    (polarity for triggers only)
+     *                overrides this method to differentiate trigger vs full axis
+     *
+     *   PPSSPP    : "{deviceId}-{NKCODE}"      buttons    (numeric only)
+     *                e.g. "10-19" for d-pad up — uses NKCODE table not SDL names
+     *                often needs dual bindings ("10-96,10-189") for fallback
+     *                overrides this method completely; default is unused
+     *
+     * Default below produces the PCSX2 convention.
      */
     virtual QString formatBinding(int deviceIndex, const QString& element,
                                    bool isAxis, bool positive) const {

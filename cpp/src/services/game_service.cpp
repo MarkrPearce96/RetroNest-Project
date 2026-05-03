@@ -1,10 +1,13 @@
 #include "game_service.h"
-#include "core/rom_scanner.h"
+#include "rom_scanner.h"
 #include "core/paths.h"
 #include "adapters/adapter_registry.h"
 
+#include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
+#include <QMetaObject>
+#include <QtConcurrent>
 
 GameService::GameService(ManifestLoader* loader, Database* db, QObject* parent)
     : QObject(parent), m_loader(loader), m_db(db)
@@ -174,21 +177,36 @@ void GameService::clearResumeState(const QString& romPath, const QString& emuId)
 }
 
 void GameService::backfillSerials() {
-    auto games = m_db->allGames();
-    int filled = 0;
-    for (const auto& game : games) {
-        if (!game.serial.isEmpty()) continue;
+    // Snapshot the games whose serials need filling on the GUI thread
+    // (database access is single-threaded).
+    auto allGames = m_db->allGames();
+    struct PendingExtract { int id; QString rom_path; QString emuId; };
+    QVector<PendingExtract> pending;
+    for (const auto& g : allGames) {
+        if (!g.serial.isEmpty()) continue;
+        pending.append({g.id, g.rom_path, g.emulator_id});
+    }
+    if (pending.isEmpty()) return;
 
-        auto* adapter = AdapterRegistry::instance().adapterFor(game.emulator_id);
-        if (!adapter) continue;
-
-        QString serial = adapter->extractSerial(game.rom_path);
-        if (!serial.isEmpty()) {
-            m_db->updateSerial(game.id, serial);
-            filled++;
+    // Run the heavy ISO/SFO reads on a worker thread; queue each DB write
+    // back to the main thread one at a time. Pattern matches ScraperService.
+    Database* db = m_db;
+    QtConcurrent::run([pending, db]() {
+        int filled = 0;
+        for (const auto& p : pending) {
+            auto* adapter = AdapterRegistry::instance().adapterFor(p.emuId);
+            if (!adapter) continue;
+            QString serial = adapter->extractSerial(p.rom_path);
+            if (serial.isEmpty()) continue;
+            QMetaObject::invokeMethod(qApp, [db, id = p.id, serial]() {
+                db->updateSerial(id, serial);
+            }, Qt::QueuedConnection);
+            ++filled;
         }
-    }
-    if (filled > 0) {
-        qInfo() << "[GameService] Backfilled serials for" << filled << "games";
-    }
+        if (filled > 0) {
+            QMetaObject::invokeMethod(qApp, [filled]() {
+                qInfo() << "[GameService] Backfilled serials for" << filled << "games";
+            }, Qt::QueuedConnection);
+        }
+    });
 }

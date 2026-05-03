@@ -83,6 +83,7 @@ void IniFile::setValue(const QString& section, const QString& key, const QString
 
     // Key not found — find or create section, then append key
     int secIdx = findSection(section);
+    bool sectionAppended = false;
     if (secIdx < 0) {
         // Add blank line + section at end
         Line blank;
@@ -94,6 +95,7 @@ void IniFile::setValue(const QString& section, const QString& key, const QString
         secLine.section = section;
         m_lines.append(secLine);
         secIdx = m_lines.size() - 1;
+        sectionAppended = true;
     }
 
     // Insert key after last line in this section
@@ -110,8 +112,18 @@ void IniFile::setValue(const QString& section, const QString& key, const QString
     kvLine.value = val;
     m_lines.insert(insertAt, kvLine);
 
-    // Rebuild index after structural change (insert shifts indices)
-    rebuildIndex();
+    // Incremental index update — much cheaper than rebuilding both hashes
+    // from scratch on every new key. If insertAt is at the end (sectionAppended
+    // path), nothing in the hash points past it so no shift is needed.
+    if (!sectionAppended) {
+        for (auto it = m_sectionIndex.begin(); it != m_sectionIndex.end(); ++it)
+            if (it.value() >= insertAt) ++it.value();
+        for (auto it = m_keyIndex.begin(); it != m_keyIndex.end(); ++it)
+            if (it.value() >= insertAt) ++it.value();
+    } else {
+        m_sectionIndex.insert(section, secIdx);
+    }
+    m_keyIndex.insert(keyIndexKey(section, key), insertAt);
 }
 
 bool IniFile::containsKey(const QString& section, const QString& key) const {

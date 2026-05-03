@@ -42,95 +42,126 @@ void RAService::signOut() {
     emit signedOut();
 }
 
-// ── Data Access ──
+// ── Async Data Access ──
 
-QVariantMap RAService::userSummary() {
-    if (!m_creds.hasCredentials()) return {};
-
-    auto us = m_client->fetchUserSummary();
-    if (!us.success) return {};
-
-    QVariantMap map;
-    map["username"] = us.username;
-    map["totalPoints"] = us.totalPoints;
-    map["softcorePoints"] = us.softcorePoints;
-    map["rank"] = us.rank;
-    map["userPic"] = us.userPic.isEmpty() ? ""
-        : "https://media.retroachievements.org" + us.userPic;
-    map["memberSince"] = us.memberSince;
-    map["totalTruePoints"] = us.totalTruePoints;
-    map["lastGameTitle"] = us.lastGameTitle;
-    map["lastGameIcon"] = us.lastGameIcon.isEmpty() ? ""
-        : "https://retroachievements.org" + us.lastGameIcon;
-    map["lastGameId"] = us.lastGameId;
-    map["recentGames"] = us.recentGames;
-    map["recentAchievements"] = us.recentAchievements;
-
-    return map;
-}
-
-QVariantList RAService::userGames() {
-    if (!m_creds.hasCredentials()) return {};
-
-    auto games = m_client->fetchUserGames();
-    m_cachedUserGames = games;
-
-    QVariantList list;
-    for (const auto& g : games) {
+void RAService::requestUserSummary() {
+    if (!m_creds.hasCredentials()) {
+        emit userSummaryReady({});
+        return;
+    }
+    QtConcurrent::run([this]() {
+        auto us = m_client->fetchUserSummary();
         QVariantMap map;
-        map["raGameId"] = g.gameId;
-        map["title"] = g.title;
-        map["consoleName"] = g.consoleName;
-        map["imageIcon"] = g.imageIcon;
-        map["numAchievements"] = g.numAchievements;
-        map["numAwarded"] = g.numAwarded;
-        map["numAwardedHardcore"] = g.numAwardedHardcore;
-        map["completionPct"] = g.completionPct;
-        map["mastered"] = (g.numAwarded >= g.numAchievements && g.numAchievements > 0);
-        list.append(map);
-    }
-    return list;
+        if (us.success) {
+            map["username"] = us.username;
+            map["totalPoints"] = us.totalPoints;
+            map["softcorePoints"] = us.softcorePoints;
+            map["rank"] = us.rank;
+            map["userPic"] = us.userPic.isEmpty() ? ""
+                : "https://media.retroachievements.org" + us.userPic;
+            map["memberSince"] = us.memberSince;
+            map["totalTruePoints"] = us.totalTruePoints;
+            map["lastGameTitle"] = us.lastGameTitle;
+            map["lastGameIcon"] = us.lastGameIcon.isEmpty() ? ""
+                : "https://retroachievements.org" + us.lastGameIcon;
+            map["lastGameId"] = us.lastGameId;
+            map["recentGames"] = us.recentGames;
+            map["recentAchievements"] = us.recentAchievements;
+        }
+        QMetaObject::invokeMethod(this, [this, map]() {
+            emit userSummaryReady(map);
+        });
+    });
 }
 
-QVariantMap RAService::gameDetail(int raGameId) {
-    if (!m_creds.hasCredentials()) return {};
-
-    auto detail = m_client->fetchGameDetail(raGameId);
-    if (detail.gameId == 0) return {};
-
-    QVariantMap map;
-    map["gameId"] = detail.gameId;
-    map["title"] = detail.title;
-    map["consoleName"] = detail.consoleName;
-    map["imageIcon"] = detail.imageIcon;
-    map["numAchievements"] = detail.numAchievements;
-    map["numAwarded"] = detail.numAwarded;
-    map["numAwardedHardcore"] = detail.numAwardedHardcore;
-    map["completionPct"] = detail.completionPct;
-
-    QVariantList achList;
-    for (const auto& ach : detail.achievements) {
-        QVariantMap achMap;
-        achMap["id"] = ach.id;
-        achMap["title"] = ach.title;
-        achMap["description"] = ach.description;
-        achMap["points"] = ach.points;
-        achMap["trueRatio"] = ach.trueRatio;
-        achMap["badgeName"] = ach.badgeName;
-        achMap["badgeUrl"] = "https://media.retroachievements.org/Badge/" + ach.badgeName + ".png";
-        achMap["type"] = ach.type;
-        achMap["earned"] = ach.earned;
-        achMap["earnedHardcore"] = ach.earnedHardcore;
-        achMap["earnedDate"] = ach.earnedDate;
-        achList.append(achMap);
+void RAService::requestUserGames() {
+    if (!m_creds.hasCredentials()) {
+        emit userGamesReady({});
+        return;
     }
-    map["achievements"] = achList;
+    QtConcurrent::run([this]() {
+        auto games = m_client->fetchUserGames();
+        {
+            QMutexLocker lock(&m_cacheMutex);
+            m_cachedUserGames = games;
+        }
 
-    return map;
+        QVariantList list;
+        for (const auto& g : games) {
+            QVariantMap map;
+            map["raGameId"] = g.gameId;
+            map["title"] = g.title;
+            map["consoleName"] = g.consoleName;
+            map["imageIcon"] = g.imageIcon;
+            map["numAchievements"] = g.numAchievements;
+            map["numAwarded"] = g.numAwarded;
+            map["numAwardedHardcore"] = g.numAwardedHardcore;
+            map["completionPct"] = g.completionPct;
+            map["mastered"] = (g.numAwarded >= g.numAchievements && g.numAchievements > 0);
+            list.append(map);
+        }
+        QMetaObject::invokeMethod(this, [this, list]() {
+            emit userGamesReady(list);
+        });
+    });
 }
 
-int RAService::findRaGameId(const QString& title, const QString& system) {
-    if (!m_creds.hasCredentials()) return 0;
+void RAService::requestGameDetail(int raGameId) {
+    if (!m_creds.hasCredentials()) {
+        emit gameDetailReady(raGameId, {});
+        return;
+    }
+    QtConcurrent::run([this, raGameId]() {
+        auto detail = m_client->fetchGameDetail(raGameId);
+        QVariantMap map;
+        if (detail.gameId != 0) {
+            map["gameId"] = detail.gameId;
+            map["title"] = detail.title;
+            map["consoleName"] = detail.consoleName;
+            map["imageIcon"] = detail.imageIcon;
+            map["numAchievements"] = detail.numAchievements;
+            map["numAwarded"] = detail.numAwarded;
+            map["numAwardedHardcore"] = detail.numAwardedHardcore;
+            map["completionPct"] = detail.completionPct;
+
+            QVariantList achList;
+            for (const auto& ach : detail.achievements) {
+                QVariantMap achMap;
+                achMap["id"] = ach.id;
+                achMap["title"] = ach.title;
+                achMap["description"] = ach.description;
+                achMap["points"] = ach.points;
+                achMap["trueRatio"] = ach.trueRatio;
+                achMap["badgeName"] = ach.badgeName;
+                achMap["badgeUrl"] = "https://media.retroachievements.org/Badge/" + ach.badgeName + ".png";
+                achMap["type"] = ach.type;
+                achMap["earned"] = ach.earned;
+                achMap["earnedHardcore"] = ach.earnedHardcore;
+                achMap["earnedDate"] = ach.earnedDate;
+                achList.append(achMap);
+            }
+            map["achievements"] = achList;
+        }
+        QMetaObject::invokeMethod(this, [this, raGameId, map]() {
+            emit gameDetailReady(raGameId, map);
+        });
+    });
+}
+
+void RAService::requestGameIdLookup(const QString& title, const QString& system) {
+    if (!m_creds.hasCredentials()) {
+        emit gameIdLookupReady(title, 0);
+        return;
+    }
+    QtConcurrent::run([this, title, system]() {
+        int id = matchRaGameIdSync(title, system);
+        QMetaObject::invokeMethod(this, [this, title, id]() {
+            emit gameIdLookupReady(title, id);
+        });
+    });
+}
+
+int RAService::matchRaGameIdSync(const QString& title, const QString& system) {
 
     // Normalize a title for comparison: lowercase, standardize separators, remove fluff
     auto normalize = [](const QString& t) -> QString {
@@ -226,13 +257,21 @@ int RAService::findRaGameId(const QString& title, const QString& system) {
     int bestId = 0;
     int bestScore = 0;
 
-    // 1. Check user's played games first (fast, already cached)
-    if (m_cachedUserGames.isEmpty()) {
-        m_cachedUserGames = m_client->fetchUserGames();
+    // 1. Check user's played games first. Snapshot under the lock; if empty,
+    // fetch (HTTP) without holding the lock, then publish.
+    QVector<RAClient::GameProgressEntry> userGamesSnapshot;
+    {
+        QMutexLocker lock(&m_cacheMutex);
+        userGamesSnapshot = m_cachedUserGames;
     }
-    for (const auto& g : m_cachedUserGames) {
+    if (userGamesSnapshot.isEmpty()) {
+        userGamesSnapshot = m_client->fetchUserGames();
+        QMutexLocker lock(&m_cacheMutex);
+        m_cachedUserGames = userGamesSnapshot;
+    }
+    for (const auto& g : userGamesSnapshot) {
         int score = matchScore(g.title);
-        if (score >= 1000) return g.gameId;  // exact match, return immediately
+        if (score >= 1000) return g.gameId;
         if (score > bestScore) { bestScore = score; bestId = g.gameId; }
     }
 
@@ -246,12 +285,23 @@ int RAService::findRaGameId(const QString& title, const QString& system) {
     }
 
     for (int cid : consoleIds) {
-        if (!m_consoleGames.contains(cid)) {
-            m_consoleGames[cid] = m_client->fetchConsoleGames(cid);
+        QVector<RAClient::ConsoleGame> consoleSnapshot;
+        bool needFetch = false;
+        {
+            QMutexLocker lock(&m_cacheMutex);
+            if (m_consoleGames.contains(cid))
+                consoleSnapshot = m_consoleGames[cid];
+            else
+                needFetch = true;
         }
-        for (const auto& g : m_consoleGames[cid]) {
+        if (needFetch) {
+            consoleSnapshot = m_client->fetchConsoleGames(cid);
+            QMutexLocker lock(&m_cacheMutex);
+            m_consoleGames[cid] = consoleSnapshot;
+        }
+        for (const auto& g : consoleSnapshot) {
             int score = matchScore(g.title);
-            if (score >= 1000) return g.gameId;  // exact match, return immediately
+            if (score >= 1000) return g.gameId;
             if (score > bestScore) { bestScore = score; bestId = g.gameId; }
         }
     }
@@ -291,17 +341,23 @@ void RAService::preCacheGameLists() {
     QtConcurrent::run([this]() {
         QList<int> consoleIds = RAClient::allConsoleIds();
         for (int cid : consoleIds) {
-            if (m_consoleGames.contains(cid)) continue;
+            {
+                QMutexLocker lock(&m_cacheMutex);
+                if (m_consoleGames.contains(cid)) continue;
+            }
             auto games = m_client->fetchConsoleGames(cid);
-            QMetaObject::invokeMethod(this, [this, cid, games]() {
-                m_consoleGames[cid] = games;
-            });
+            QMutexLocker lock(&m_cacheMutex);
+            m_consoleGames[cid] = games;
         }
-        if (m_cachedUserGames.isEmpty()) {
+        bool userGamesNeeded = false;
+        {
+            QMutexLocker lock(&m_cacheMutex);
+            userGamesNeeded = m_cachedUserGames.isEmpty();
+        }
+        if (userGamesNeeded) {
             auto games = m_client->fetchUserGames();
-            QMetaObject::invokeMethod(this, [this, games]() {
-                m_cachedUserGames = games;
-            });
+            QMutexLocker lock(&m_cacheMutex);
+            m_cachedUserGames = games;
         }
     });
 }

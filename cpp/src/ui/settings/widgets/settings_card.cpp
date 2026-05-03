@@ -1,7 +1,7 @@
-#include "pcsx2_card.h"
-#include "../pcsx2_theme.h"
-#include "pcsx2_toggle.h"
-#include "pcsx2_slider_row.h"
+#include "settings_card.h"
+#include "ui/settings/settings_dialog_theme.h"
+#include "settings_toggle.h"
+#include "settings_slider_row.h"
 #include <QScrollArea>
 #include <QSlider>
 #include <QSpinBox>
@@ -15,35 +15,35 @@
 #include <QTimer>
 #include <limits>
 
-Pcsx2Card::Pcsx2Card(QWidget* parent) : QFrame(parent) {
-    setObjectName("Pcsx2Card");
+SettingsCard::SettingsCard(QWidget* parent) : QFrame(parent) {
+    setObjectName("SettingsCard");
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_StyledBackground, true);   // make QSS background paint
     setFrameStyle(QFrame::NoFrame);                // disable QFrame's default frame
-    setStyleSheet(Pcsx2Theme::cardQss());
+    setStyleSheet(SettingsDialogTheme::cardQss());
     setProperty("focused", false);
 }
 
-void Pcsx2Card::setPreviewStyle(bool preview) {
+void SettingsCard::setPreviewStyle(bool preview) {
     if (preview) {
         setStyleSheet(QStringLiteral(
-            "QFrame#Pcsx2Card {"
+            "QFrame#SettingsCard {"
             "  background-color: #504c48;"
             "  border: 1px solid #706c66;"
             "  border-radius: 8px;"
             "}"
-            "QFrame#Pcsx2Card[focused=\"true\"] {"
+            "QFrame#SettingsCard[focused=\"true\"] {"
             "  border: 1px solid #f59e0b;"
             "}"));
     } else {
-        setStyleSheet(Pcsx2Theme::cardQss());
+        setStyleSheet(SettingsDialogTheme::cardQss());
     }
     style()->unpolish(this);
     style()->polish(this);
     update();
 }
 
-void Pcsx2Card::focusInEvent(QFocusEvent* e) {
+void SettingsCard::focusInEvent(QFocusEvent* e) {
     QFrame::focusInEvent(e);
     setProperty("focused", true);
     style()->unpolish(this); style()->polish(this);
@@ -52,18 +52,18 @@ void Pcsx2Card::focusInEvent(QFocusEvent* e) {
     update();
 }
 
-void Pcsx2Card::mousePressEvent(QMouseEvent* e) {
+void SettingsCard::mousePressEvent(QMouseEvent* e) {
     QFrame::mousePressEvent(e);
     setFocus(Qt::MouseFocusReason);
     emit activated();
 }
 
-void Pcsx2Card::enterEvent(QEnterEvent* e) {
+void SettingsCard::enterEvent(QEnterEvent* e) {
     QFrame::enterEvent(e);
     emit focused(m_settingDef);
 }
 
-void Pcsx2Card::focusOutEvent(QFocusEvent* e) {
+void SettingsCard::focusOutEvent(QFocusEvent* e) {
     QFrame::focusOutEvent(e);
     setProperty("focused", false);
     style()->unpolish(this); style()->polish(this);
@@ -71,12 +71,12 @@ void Pcsx2Card::focusOutEvent(QFocusEvent* e) {
     update();
 }
 
-void Pcsx2Card::paintEvent(QPaintEvent* e) {
+void SettingsCard::paintEvent(QPaintEvent* e) {
     QFrame::paintEvent(e);
     if (!hasFocus()) return;
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
-    QColor halo = Pcsx2Theme::accent();
+    QColor halo = SettingsDialogTheme::accent();
     halo.setAlphaF(0.30);
     QPen pen(halo, 2);
     p.setPen(pen);
@@ -85,7 +85,7 @@ void Pcsx2Card::paintEvent(QPaintEvent* e) {
     p.drawRoundedRect(r, 8, 8);
 }
 
-void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
+void SettingsCard::keyPressEvent(QKeyEvent* e) {
     const int k = e->key();
 
     // Only handle Enter/arrow if the card itself has focus — not when a
@@ -100,7 +100,7 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
         // Each branch honors the inner widget's isEnabled() so a card whose
         // dependency master is off (we disable the inner control there) can't
         // be activated via keyboard either.
-        if (auto* t = findChild<Pcsx2Toggle*>()) {
+        if (auto* t = findChild<SettingsToggle*>()) {
             if (t->isEnabled()) t->toggle();
             return;
         }
@@ -113,7 +113,7 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
             }
             return;
         }
-        if (auto* sliderRow = findChild<Pcsx2SliderRow*>()) {
+        if (auto* sliderRow = findChild<SettingsSliderRow*>()) {
             if (auto* slider = sliderRow->findChild<QSlider*>()) {
                 if (slider->isEnabled()) {
                     slider->setFocus(Qt::TabFocusReason);
@@ -137,12 +137,12 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
     if (k == Qt::Key_Left || k == Qt::Key_Right || k == Qt::Key_Up || k == Qt::Key_Down) {
         QWidget* parent = parentWidget();
         if (parent) {
-            const auto siblings = parent->findChildren<Pcsx2Card*>(QString(), Qt::FindDirectChildrenOnly);
+            const auto siblings = parent->findChildren<SettingsCard*>(QString(), Qt::FindDirectChildrenOnly);
             if (siblings.size() >= 2) {
                 const QRect mine = geometry();
                 const QPoint myCenter = mine.center();
 
-                Pcsx2Card* bestOverlap = nullptr;
+                SettingsCard* bestOverlap = nullptr;
                 long long bestOverlapScore = std::numeric_limits<long long>::max();
 
                 auto rangesOverlap = [](int a0, int a1, int b0, int b1) {
@@ -151,7 +151,7 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
 
                 const bool vertical = (k == Qt::Key_Up || k == Qt::Key_Down);
 
-                for (Pcsx2Card* s : siblings) {
+                for (SettingsCard* s : siblings) {
                     if (s == this || !s->isVisible()) continue;
                     const QRect r = s->geometry();
                     const QPoint c = r.center();
@@ -206,7 +206,7 @@ void Pcsx2Card::keyPressEvent(QKeyEvent* e) {
                     }
                 }
 
-                Pcsx2Card* best = bestOverlap;
+                SettingsCard* best = bestOverlap;
                 if (best) {
                     best->setFocus(Qt::TabFocusReason);
                     // If we're inside a scroll area, scroll the new focus into view.

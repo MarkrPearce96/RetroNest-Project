@@ -1,11 +1,12 @@
 #include "ppsspp_emulation_page.h"
 #include "../ppsspp_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_section_header.h"
-#include "../../pcsx2/widgets/pcsx2_combo_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle_row.h"
-#include "../../pcsx2/widgets/pcsx2_slider_row.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_section_header.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_slider_row.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/ppsspp_adapter.h"
 #include <QVBoxLayout>
 #include <QPushButton>
@@ -35,14 +36,7 @@ void PpssppEmulationPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -59,65 +53,14 @@ void PpssppEmulationPage::buildUi() {
     connect(back, &QPushButton::clicked, m_dialog, &PpssppSettingsDialog::popPage);
     root->addWidget(back);
 
-    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ComboRow(card);
-        row->setLabel(d->label);
-        row->setOptions(d->options);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &PpssppEmulationPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::focused, this, &PpssppEmulationPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val){
-            if (const SettingDef* dd = findDef(key)) saveValue(dd->section, dd->key, val);
-        });
-        v->addWidget(row);
-        return card;
-    };
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ToggleRow(card);
-        row->setLabel(d->label);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &PpssppEmulationPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &PpssppEmulationPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
-            if (const SettingDef* dd = findDef(key)) saveValue(dd->section, dd->key, on ? "true" : "false");
-        });
-        v->addWidget(row);
-        return card;
-    };
-    auto makeSliderCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2SliderRow(card);
-        row->setLabel(d->label);
-        row->setRange(int(d->minVal), int(d->maxVal));
-        row->setSuffix(d->suffix);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &PpssppEmulationPage::settingFocused);
-        connect(row, &Pcsx2SliderRow::focused, this, &PpssppEmulationPage::settingFocused);
-        connect(row, &Pcsx2SliderRow::valueChanged, this, [this, key](int val){
-            if (const SettingDef* dd = findDef(key)) saveValue(dd->section, dd->key, QString::number(val));
-        });
-        v->addWidget(row);
-        return card;
-    };
+    SettingsPageBuilder builder(this, m_schema,
+        [this](const QString& sec, const QString& k, const QString& v){ saveValue(sec, k, v); },
+        [this](const SettingDef& d){ emit settingFocused(d); });
+    auto makeComboCard  = [&builder](const QString& key){ return builder.makeComboCard(key); };
+    auto makeSliderCard = [&builder](const QString& key){ return builder.makeSliderCard(key); };
+    auto makeToggleCard = [&builder](const QString& key){ return builder.makeToggleCard(key); };
 
-    root->addWidget(new Pcsx2SectionHeader("CPU & Memory", this));
+    root->addWidget(new SettingsSectionHeader("CPU & Memory", this));
     if (auto* c = makeToggleCard("FastMemoryAccess"))   root->addWidget(c);
     if (auto* c = makeToggleCard("IgnoreBadMemAccess")) root->addWidget(c);
     if (auto* c = makeComboCard ("IOTimingMethod"))     root->addWidget(c);
@@ -131,18 +74,18 @@ void PpssppEmulationPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* row : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* row : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
         row->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
     }
-    for (auto* row : findChildren<Pcsx2SliderRow*>()) {
+    for (auto* row : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;

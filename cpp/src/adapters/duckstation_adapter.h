@@ -37,10 +37,8 @@ public:
                           bool isAxis, bool positive) const override;
     bool supportsRetroAchievements() const override { return true; }
     bool supportsSaveOnExit() const override { return true; }
-    QString matchAsset(const QStringList& assetNames) const override;
-    void patchRetroAchievements(const QString& username, const QString& token,
-                                 bool enabled, bool hardcore,
-                                 bool notifications, bool sounds) override;
+    QVector<AssetMatchRule> assetMatchRules() const override;
+    RetroAchievementsKeyMap retroAchievementsKeyMap() const override;
     QString findResumeFile(const QString& serial) const override;
 
 private:

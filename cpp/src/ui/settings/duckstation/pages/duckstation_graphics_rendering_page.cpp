@@ -1,12 +1,13 @@
 #include "duckstation_graphics_rendering_page.h"
 #include "../duckstation_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_combo_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle_row.h"
-#include "../../pcsx2/widgets/pcsx2_slider_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_slider_row.h"
+#include "ui/settings/widgets/settings_toggle.h"
 #include "../widgets/duckstation_aspect_ratio_preview.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/duckstation_adapter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -61,14 +62,7 @@ void DuckStationGraphicsRenderingPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -87,25 +81,10 @@ void DuckStationGraphicsRenderingPage::buildUi() {
     buildBottomToggleGrid(root);
 
     // Remaining combo cards
-    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ComboRow(card);
-        row->setLabel(d->label);
-        row->setOptions(d->options);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val) {
-            if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, val);
-        });
-        v->addWidget(row);
-        return card;
-    };
+    SettingsPageBuilder builder(this, m_schema,
+        [this](const QString& sec, const QString& k, const QString& v){ saveValue(sec, k, v); },
+        [this](const SettingDef& d){ emit settingFocused(d); });
+    auto makeComboCard = [&builder](const QString& key){ return builder.makeComboCard(key); };
 
     if (auto* c = makeComboCard("ResolutionScale"))     root->addWidget(c);
     if (auto* c = makeComboCard("DownsampleMode"))      root->addWidget(c);
@@ -117,27 +96,27 @@ void DuckStationGraphicsRenderingPage::buildUi() {
 }
 
 void DuckStationGraphicsRenderingPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
-    auto* card = new Pcsx2Card(this);
+    auto* card = new SettingsCard(this);
     card->setFocusPolicy(Qt::NoFocus);
     card->setMinimumHeight(460);
 
     if (const SettingDef* arDef = findDef("AspectRatio"))
         card->setSettingDef(*arDef);
-    connect(card, &Pcsx2Card::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
+    connect(card, &SettingsCard::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
 
     auto* v = new QVBoxLayout(card);
     v->setContentsMargins(14, 12, 14, 12);
     v->setSpacing(8);
 
-    auto addCombo = [&](const QString& key) -> Pcsx2ComboRow* {
+    auto addCombo = [&](const QString& key) -> SettingsComboRow* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* row = new Pcsx2ComboRow(card, /*stacked=*/true);
+        auto* row = new SettingsComboRow(card, /*stacked=*/true);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ComboRow::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val) {
+        connect(row, &SettingsComboRow::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
+        connect(row, &SettingsComboRow::valueChanged, this, [this, key](const QString& val) {
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, val);
         });
@@ -152,11 +131,11 @@ void DuckStationGraphicsRenderingPage::buildLeftCompoundCard(QHBoxLayout* topRow
     addCombo("Scaling");
 
     if (const SettingDef* d = findDef("WidescreenHack")) {
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this](bool on) {
+        connect(row, &SettingsToggleRow::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this](bool on) {
             const SettingDef* dd = findDef("WidescreenHack");
             if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
         });
@@ -164,7 +143,7 @@ void DuckStationGraphicsRenderingPage::buildLeftCompoundCard(QHBoxLayout* topRow
     }
 
     if (m_aspectCombo) {
-        connect(m_aspectCombo, &Pcsx2ComboRow::valueChanged, this, [this](const QString& val) {
+        connect(m_aspectCombo, &SettingsComboRow::valueChanged, this, [this](const QString& val) {
             if (m_preview) m_preview->setAspectRatio(
                 DuckStationAspectRatioPreview::fromSchemaValue(val));
         });
@@ -174,11 +153,11 @@ void DuckStationGraphicsRenderingPage::buildLeftCompoundCard(QHBoxLayout* topRow
 }
 
 void DuckStationGraphicsRenderingPage::buildRightPreviewCard(QHBoxLayout* topRow) {
-    auto* card = new Pcsx2Card(this);
+    auto* card = new SettingsCard(this);
     card->setFocusPolicy(Qt::NoFocus);
     card->setMinimumHeight(460);
     card->setPreviewStyle(true);
-    connect(card, &Pcsx2Card::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
+    connect(card, &SettingsCard::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
 
     auto* v = new QVBoxLayout(card);
     v->setContentsMargins(14, 12, 14, 12);
@@ -195,12 +174,12 @@ void DuckStationGraphicsRenderingPage::buildRightPreviewCard(QHBoxLayout* topRow
     auto addCombo = [&](const QString& key) {
         const SettingDef* d = findDef(key);
         if (!d) return;
-        auto* row = new Pcsx2ComboRow(card, /*stacked=*/true);
+        auto* row = new SettingsComboRow(card, /*stacked=*/true);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ComboRow::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val) {
+        connect(row, &SettingsComboRow::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
+        connect(row, &SettingsComboRow::valueChanged, this, [this, key](const QString& val) {
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, val);
         });
@@ -214,20 +193,20 @@ void DuckStationGraphicsRenderingPage::buildRightPreviewCard(QHBoxLayout* topRow
 }
 
 void DuckStationGraphicsRenderingPage::buildBottomToggleGrid(QVBoxLayout* root) {
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeToggleCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         if (!d) return card;
         card->setSettingDef(*d);
 
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on) {
+        connect(card, &SettingsCard::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
+        connect(row, &SettingsToggleRow::focused, this, &DuckStationGraphicsRenderingPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on) {
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
         });
@@ -255,12 +234,12 @@ void DuckStationGraphicsRenderingPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* tog : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = tog->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
@@ -310,12 +289,12 @@ QList<QWidget*> DuckStationGraphicsRenderingPage::collectFocusables() const {
         if (w->focusPolicy() == Qt::NoFocus) continue;
         if (qobject_cast<QComboBox*>(w)   ||
             qobject_cast<QSlider*>(w)     ||
-            qobject_cast<Pcsx2Toggle*>(w) ||
-            qobject_cast<Pcsx2Card*>(w)) {
-            if (!qobject_cast<Pcsx2Card*>(w)) {
+            qobject_cast<SettingsToggle*>(w) ||
+            qobject_cast<SettingsCard*>(w)) {
+            if (!qobject_cast<SettingsCard*>(w)) {
                 bool insideFocusableCard = false;
                 for (QWidget* p = w->parentWidget(); p && p != this; p = p->parentWidget()) {
-                    if (auto* card = qobject_cast<Pcsx2Card*>(p)) {
+                    if (auto* card = qobject_cast<SettingsCard*>(p)) {
                         if (card->focusPolicy() != Qt::NoFocus) {
                             insideFocusableCard = true;
                             break;

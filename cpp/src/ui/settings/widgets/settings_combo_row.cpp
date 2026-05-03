@@ -1,5 +1,5 @@
-#include "pcsx2_combo_row.h"
-#include "../pcsx2_theme.h"
+#include "settings_combo_row.h"
+#include "ui/settings/settings_dialog_theme.h"
 #include <QAbstractItemView>
 #include <QComboBox>
 #include <QCoreApplication>
@@ -15,7 +15,7 @@
 #include <QTimer>
 #include <QWheelEvent>
 
-Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent, bool stacked) : QWidget(parent) {
+SettingsComboRow::SettingsComboRow(QWidget* parent, bool stacked) : QWidget(parent) {
     QBoxLayout* lay = nullptr;
     if (stacked) {
         auto* vlay = new QVBoxLayout(this);
@@ -47,7 +47,7 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent, bool stacked) : QWidget(parent) {
     }
     m_combo->setView(listView);
 
-    m_combo->setStyleSheet(Pcsx2Theme::comboQss());
+    m_combo->setStyleSheet(SettingsDialogTheme::comboQss());
     m_combo->setMinimumWidth(200);
     // Style the popup container (QComboBoxPrivateContainer) directly so
     // Qt's default frame background doesn't show as black bars top/bottom.
@@ -117,23 +117,23 @@ Pcsx2ComboRow::Pcsx2ComboRow(QWidget* parent, bool stacked) : QWidget(parent) {
     setMinimumHeight(42);
 }
 
-void Pcsx2ComboRow::setLabel(const QString& text) { m_label->setText(text); }
+void SettingsComboRow::setLabel(const QString& text) { m_label->setText(text); }
 
-void Pcsx2ComboRow::setLabelVisible(bool visible) {
+void SettingsComboRow::setLabelVisible(bool visible) {
     m_label->setVisible(visible);
     // Also drop the 180px reservation when hidden so two combos can fit in
     // a paired card without leaving a phantom label gutter.
     m_label->setMinimumWidth(visible ? 180 : 0);
 }
 
-void Pcsx2ComboRow::setOptions(const QVector<QPair<QString, QString>>& opts) {
+void SettingsComboRow::setOptions(const QVector<QPair<QString, QString>>& opts) {
     m_combo->blockSignals(true);
     m_combo->clear();
     for (const auto& o : opts) m_combo->addItem(o.first, o.second);
     m_combo->blockSignals(false);
 }
 
-void Pcsx2ComboRow::setValue(const QString& iniValue) {
+void SettingsComboRow::setValue(const QString& iniValue) {
     for (int i = 0; i < m_combo->count(); ++i) {
         if (m_combo->itemData(i).toString() == iniValue) {
             m_combo->setCurrentIndex(i);
@@ -142,11 +142,11 @@ void Pcsx2ComboRow::setValue(const QString& iniValue) {
     }
 }
 
-QString Pcsx2ComboRow::value() const {
+QString SettingsComboRow::value() const {
     return m_combo->currentData().toString();
 }
 
-bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
+bool SettingsComboRow::eventFilter(QObject* obj, QEvent* e) {
     if (obj == m_combo && e->type() == QEvent::FocusIn) {
         emit focused(m_def);
     }
@@ -190,7 +190,7 @@ bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
             // parent card if it's focusable (for card-based arrow nav).
             QWidget* w = parentWidget();
             while (w) {
-                if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("Pcsx2Card")) {
+                if (QString::fromLatin1(w->metaObject()->className()) == QLatin1String("SettingsCard")) {
                     if (w->focusPolicy() != Qt::NoFocus)
                         w->setFocus(Qt::OtherFocusReason);
                     break;
@@ -203,7 +203,7 @@ bool Pcsx2ComboRow::eventFilter(QObject* obj, QEvent* e) {
     return QWidget::eventFilter(obj, e);
 }
 
-void Pcsx2ComboRow::enterEvent(QEnterEvent* e) {
+void SettingsComboRow::enterEvent(QEnterEvent* e) {
     QWidget::enterEvent(e);
     emit focused(m_def);
 }

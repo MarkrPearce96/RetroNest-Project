@@ -17,13 +17,20 @@ Item {
 
     Component.onCompleted: {
         loading = true
-        var detail = app.raGameDetail(raGameId)
-        if (detail && detail.achievements) {
-            achievements = detail.achievements
-            if (detail.title) gameTitle = detail.title
+        app.raRequestGameDetail(raGameId)
+    }
+
+    Connections {
+        target: app
+        function onRaGameDetailReady(returnedRaGameId, detail) {
+            if (returnedRaGameId !== raGameId) return
+            if (detail && detail.achievements) {
+                achievements = detail.achievements
+                if (detail.title) gameTitle = detail.title
+            }
+            computeTotals()
+            loading = false
         }
-        computeTotals()
-        loading = false
     }
 
     function computeTotals() {

@@ -30,7 +30,8 @@ set(SOURCES
     src/main.cpp
     src/core/manifest_loader.cpp
     src/core/paths.cpp
-    src/core/emulator_installer.cpp
+    src/services/emulator_installer.cpp
+    src/services/config_service.cpp
     src/core/game_session.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
@@ -41,8 +42,8 @@ set(SOURCES
     src/core/ini_file.cpp
     src/core/scraper.cpp
     src/core/database.cpp
-    src/core/rom_scanner.cpp
-    src/core/ra_credentials.cpp
+    src/services/rom_scanner.cpp
+    src/services/ra_credentials.cpp
     src/core/ra_client.cpp
     src/core/iso9660_reader.cpp
     src/services/game_service.cpp
@@ -65,26 +66,27 @@ set(SOURCES
     src/ui/settings/negcon_bindings_widget.cpp
     src/ui/settings/popn_bindings_widget.cpp
     src/ui/settings/ds_jogcon_bindings_widget.cpp
-    src/ui/settings/ds_popn_bindings_widget.cpp
     src/ui/settings/psp_bindings_widget.cpp
     src/ui/settings/digital_bindings_widget.cpp
     src/ui/settings/analog_bindings_widget.cpp
     src/ui/settings/analog_joystick_bindings_widget.cpp
     src/ui/settings/ds_negcon_bindings_widget.cpp
     src/ui/settings/ds_negcon_rumble_bindings_widget.cpp
-    src/ui/settings/emulator_settings_page.cpp
+    src/ui/settings/emulator_settings_dialog_base.cpp
+    src/ui/settings/emulator_category_hub_base.cpp
+    src/ui/settings/settings_page_builder.cpp
     src/ui/settings/hotkey_settings_page.cpp
     src/ui/settings/controller_settings_widget.cpp
     src/core/sdl_input_manager.cpp
     src/core/macos_fullscreen.mm
-    src/ui/settings/pcsx2/widgets/pcsx2_card.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_section_header.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_toggle.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_toggle_row.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_combo_row.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_slider_row.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_description_bar.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_graphics_sub_tab_bar.cpp
+    src/ui/settings/widgets/settings_card.cpp
+    src/ui/settings/widgets/settings_section_header.cpp
+    src/ui/settings/widgets/settings_toggle.cpp
+    src/ui/settings/widgets/settings_toggle_row.cpp
+    src/ui/settings/widgets/settings_combo_row.cpp
+    src/ui/settings/widgets/settings_slider_row.cpp
+    src/ui/settings/widgets/settings_description_bar.cpp
+    src/ui/settings/widgets/settings_graphics_sub_tab_bar.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_osd_preview.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
@@ -104,7 +106,6 @@ set(SOURCES
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_audio_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.cpp
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_stub_sub_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.cpp
     src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.cpp
@@ -127,7 +128,7 @@ set(HEADERS
     src/core/manifest.h
     src/core/manifest_loader.h
     src/core/paths.h
-    src/core/emulator_installer.h
+    src/services/emulator_installer.h
     src/core/game_session.h
     src/adapters/emulator_adapter.h
     src/adapters/adapter_registry.h
@@ -141,8 +142,8 @@ set(HEADERS
     src/core/database.h
     src/core/cover_resolver.h
     src/core/github_client.h
-    src/core/rom_scanner.h
-    src/core/ra_credentials.h
+    src/services/rom_scanner.h
+    src/services/ra_credentials.h
     src/core/ra_client.h
     src/core/iso9660_reader.h
     src/services/game_service.h
@@ -167,14 +168,15 @@ set(HEADERS
     src/ui/settings/negcon_bindings_widget.h
     src/ui/settings/popn_bindings_widget.h
     src/ui/settings/ds_jogcon_bindings_widget.h
-    src/ui/settings/ds_popn_bindings_widget.h
     src/ui/settings/psp_bindings_widget.h
     src/ui/settings/digital_bindings_widget.h
     src/ui/settings/analog_bindings_widget.h
     src/ui/settings/analog_joystick_bindings_widget.h
     src/ui/settings/ds_negcon_bindings_widget.h
     src/ui/settings/ds_negcon_rumble_bindings_widget.h
-    src/ui/settings/emulator_settings_page.h
+    src/ui/settings/emulator_settings_dialog_base.h
+    src/ui/settings/emulator_category_hub_base.h
+    src/ui/settings/settings_page_builder.h
     src/ui/settings/hotkey_settings_page.h
     src/ui/settings/controller_settings_widget.h
     src/core/sdl_input_manager.h
@@ -183,9 +185,8 @@ set(HEADERS
     src/ui/settings/binding_widget_common.h
     src/core/controller_type_def.h
     src/core/macos_fullscreen.h
-    src/ui/settings/pcsx2/pcsx2_theme.h
+    src/ui/settings/settings_dialog_theme.h
     # DuckStation settings
-    src/ui/settings/duckstation/duckstation_theme.h
     src/ui/settings/duckstation/duckstation_settings_dialog.h
     src/ui/settings/duckstation/duckstation_category_hub.h
     src/ui/settings/duckstation/pages/duckstation_audio_page.h
@@ -198,14 +199,14 @@ set(HEADERS
     src/ui/settings/duckstation/pages/duckstation_memory_cards_page.h
     src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.h
     src/ui/settings/duckstation/widgets/duckstation_osd_preview.h
-    src/ui/settings/pcsx2/widgets/pcsx2_card.h
-    src/ui/settings/pcsx2/widgets/pcsx2_section_header.h
-    src/ui/settings/pcsx2/widgets/pcsx2_toggle.h
-    src/ui/settings/pcsx2/widgets/pcsx2_toggle_row.h
-    src/ui/settings/pcsx2/widgets/pcsx2_combo_row.h
-    src/ui/settings/pcsx2/widgets/pcsx2_slider_row.h
-    src/ui/settings/pcsx2/widgets/pcsx2_description_bar.h
-    src/ui/settings/pcsx2/widgets/pcsx2_graphics_sub_tab_bar.h
+    src/ui/settings/widgets/settings_card.h
+    src/ui/settings/widgets/settings_section_header.h
+    src/ui/settings/widgets/settings_toggle.h
+    src/ui/settings/widgets/settings_toggle_row.h
+    src/ui/settings/widgets/settings_combo_row.h
+    src/ui/settings/widgets/settings_slider_row.h
+    src/ui/settings/widgets/settings_description_bar.h
+    src/ui/settings/widgets/settings_graphics_sub_tab_bar.h
     src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.h
     src/ui/settings/pcsx2/widgets/pcsx2_osd_preview.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
@@ -213,14 +214,12 @@ set(HEADERS
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.h
     src/ui/settings/pcsx2/pages/pcsx2_audio_page.h
     src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.h
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_stub_sub_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_osd_page.h
     src/ui/settings/pcsx2/pages/pcsx2_graphics_page.h
     # PPSSPP settings
-    src/ui/settings/ppsspp/ppsspp_theme.h
     src/ui/settings/ppsspp/ppsspp_category_hub.h
     src/ui/settings/ppsspp/ppsspp_settings_dialog.h
     src/ui/settings/ppsspp/pages/ppsspp_emulation_page.h
@@ -418,9 +417,38 @@ target_include_directories(test_ini_file PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 target_link_libraries(test_ini_file PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME IniFile COMMAND test_ini_file)
 
+add_executable(test_patch_ini_keys
+    tests/test_patch_ini_keys.cpp
+    src/adapters/emulator_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_patch_ini_keys PROPERTIES AUTOMOC ON)
+target_include_directories(test_patch_ini_keys PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_patch_ini_keys PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_test(NAME PatchIniKeys COMMAND test_patch_ini_keys)
+
+add_executable(test_format_binding
+    tests/test_format_binding.cpp
+    src/adapters/emulator_adapter.cpp
+    src/adapters/pcsx2_adapter.cpp
+    src/adapters/duckstation_adapter.cpp
+    src/adapters/ppsspp_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_format_binding PROPERTIES AUTOMOC ON)
+target_include_directories(test_format_binding PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_format_binding PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_test(NAME FormatBinding COMMAND test_format_binding)
+
 add_executable(test_rom_scanner
     tests/test_rom_scanner.cpp
-    src/core/rom_scanner.cpp
+    src/services/rom_scanner.cpp
     src/core/manifest_loader.cpp
     src/core/paths.cpp
     src/core/database.cpp
@@ -475,23 +503,9 @@ target_include_directories(test_ppsspp_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(test_ppsspp_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME PPSSPPSchema COMMAND test_ppsspp_schema)
 
-add_executable(test_pcsx2_recommended_values
-    tests/test_pcsx2_recommended_values.cpp
-    src/adapters/pcsx2_adapter.cpp
-    src/adapters/emulator_adapter.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-)
-set_target_properties(test_pcsx2_recommended_values PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_recommended_values PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_pcsx2_recommended_values PRIVATE Qt6::Core Qt6::Test chdr-static)
-add_test(NAME Pcsx2RecommendedValues COMMAND test_pcsx2_recommended_values)
-
 add_executable(test_pcsx2_toggle
     tests/test_pcsx2_toggle.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_toggle.cpp
+    src/ui/settings/widgets/settings_toggle.cpp
 )
 set_target_properties(test_pcsx2_toggle PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_toggle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -500,7 +514,7 @@ add_test(NAME Pcsx2Toggle COMMAND test_pcsx2_toggle)
 
 add_executable(test_pcsx2_combo_row
     tests/test_pcsx2_combo_row.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_combo_row.cpp
+    src/ui/settings/widgets/settings_combo_row.cpp
 )
 set_target_properties(test_pcsx2_combo_row PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_combo_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -509,7 +523,7 @@ add_test(NAME Pcsx2ComboRow COMMAND test_pcsx2_combo_row)
 
 add_executable(test_pcsx2_slider_row
     tests/test_pcsx2_slider_row.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_slider_row.cpp
+    src/ui/settings/widgets/settings_slider_row.cpp
 )
 set_target_properties(test_pcsx2_slider_row PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_slider_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -518,7 +532,7 @@ add_test(NAME Pcsx2SliderRow COMMAND test_pcsx2_slider_row)
 
 add_executable(test_pcsx2_description_bar
     tests/test_pcsx2_description_bar.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_description_bar.cpp
+    src/ui/settings/widgets/settings_description_bar.cpp
 )
 set_target_properties(test_pcsx2_description_bar PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_description_bar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${SDL2_INCLUDE_DIRS})

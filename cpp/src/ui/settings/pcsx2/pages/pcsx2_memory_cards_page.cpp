@@ -1,8 +1,8 @@
 #include "pcsx2_memory_cards_page.h"
 #include "../pcsx2_settings_dialog.h"
-#include "../widgets/pcsx2_card.h"
-#include "../widgets/pcsx2_toggle_row.h"
-#include "../pcsx2_theme.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/settings_dialog_theme.h"
 #include "ui/app_controller.h"
 #include "adapters/pcsx2_adapter.h"
 #include <QVBoxLayout>
@@ -60,26 +60,26 @@ void Pcsx2MemoryCardsPage::buildUi() {
     connect(back, &QPushButton::clicked, m_dialog, &Pcsx2SettingsDialog::popPage);
     root->addWidget(back);
 
-    auto makeToggleRow = [this](const QString& key, const QString& labelOverride = QString()) -> Pcsx2ToggleRow* {
+    auto makeToggleRow = [this](const QString& key, const QString& labelOverride = QString()) -> SettingsToggleRow* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* row = new Pcsx2ToggleRow(this);
+        auto* row = new SettingsToggleRow(this);
         row->setLabel(labelOverride.isEmpty() ? d->label : labelOverride);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2MemoryCardsPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
+        connect(row, &SettingsToggleRow::focused, this, &Pcsx2MemoryCardsPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
         });
         return row;
     };
 
     auto makeSlotCard = [this, &makeToggleRow](const QString& enableKey, const QString& filenameKey,
-                                               const QString& label, QLabel** outFilenameLabel) -> Pcsx2Card* {
+                                               const QString& label, QLabel** outFilenameLabel) -> SettingsCard* {
         const SettingDef* fd = findDef(filenameKey);
         if (!fd) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         if (const SettingDef* ed = findDef(enableKey)) card->setSettingDef(*ed);
-        connect(card, &Pcsx2Card::focused, this, &Pcsx2MemoryCardsPage::settingFocused);
+        connect(card, &SettingsCard::focused, this, &Pcsx2MemoryCardsPage::settingFocused);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         v->setSpacing(8);
@@ -107,7 +107,7 @@ void Pcsx2MemoryCardsPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* row : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* row : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;

@@ -6,6 +6,7 @@
 #include "services/scraper_service.h"
 #include "services/emulator_service.h"
 #include "services/ra_service.h"
+#include "services/config_service.h"
 #include "adapters/emulator_adapter.h"
 #include <QObject>
 #include <QGuiApplication>
@@ -77,6 +78,12 @@ public:
     Q_INVOKABLE void saveSettings(const QString& emuId, const QVariantMap& values);
     Q_INVOKABLE void resetConfiguration(const QString& emuId);
 
+    // Settings session lifecycle — call from settings dialog ctor/dtor.
+    // While a session is active, settingValue/saveSettings hit an in-memory
+    // IniFile cache instead of opening + parsing the INI on every widget read.
+    void beginSettingsSession(const QString& emuId);
+    void endSettingsSession(const QString& emuId);
+
     // Quick settings (resolution / aspect ratio)
     Q_INVOKABLE QVariantList quickResolutionOptions(const QString& emuId) const;
     Q_INVOKABLE QString currentResolution(const QString& emuId) const;
@@ -92,20 +99,6 @@ public:
     Q_INVOKABLE void savePaths(const QString& emuId, const QVariantMap& values);
     Q_INVOKABLE QString browsePath(const QString& title);
 
-    // Controller settings (per-emulator, Settings sub-tab)
-    Q_INVOKABLE QVariantList controllerSettings(const QString& emuId) const;
-    Q_INVOKABLE void saveControllerSetting(const QString& emuId, const QString& section,
-                                            const QString& key, const QString& value);
-    Q_INVOKABLE void resetControllerSettings(const QString& emuId);
-
-    // Controller bindings (per-emulator)
-    Q_INVOKABLE QVariantList controllerBindings(const QString& emuId) const;
-    Q_INVOKABLE void saveBinding(const QString& emuId, const QString& section,
-                                  const QString& key, const QString& value);
-    Q_INVOKABLE void clearBinding(const QString& emuId, const QString& section, const QString& key);
-    Q_INVOKABLE void resetControllerBindings(const QString& emuId);
-    Q_INVOKABLE void clearControllerBindings(const QString& emuId);
-    Q_INVOKABLE void autoMapController(const QString& emuId, int deviceIndex);
     Q_INVOKABLE QString formatCapturedBinding(const QString& emuId, int deviceIndex,
                                                const QString& element, bool isAxis, bool positive) const;
     Q_INVOKABLE QString formatCapturedKeyboard(const QString& emuId, int qtKey, int modifiers) const;
@@ -166,10 +159,11 @@ public:
     Q_INVOKABLE void raSignOut();
     Q_INVOKABLE bool hasRACredentials() const;
     Q_INVOKABLE QString raUsername() const;
-    Q_INVOKABLE QVariantMap raUserSummary();
-    Q_INVOKABLE QVariantList raUserGames();
-    Q_INVOKABLE QVariantMap raGameDetail(int raGameId);
-    Q_INVOKABLE int raFindGameId(const QString& title, const QString& system = {});
+    // Async fetches — connect to ra*Ready signals for results.
+    Q_INVOKABLE void raRequestUserSummary();
+    Q_INVOKABLE void raRequestUserGames();
+    Q_INVOKABLE void raRequestGameDetail(int raGameId);
+    Q_INVOKABLE void raRequestGameIdLookup(const QString& title, const QString& system = {});
     Q_INVOKABLE QVariantMap currentGameInfo() const;
     Q_INVOKABLE void raProceedAfterLoginPrompt();
     Q_INVOKABLE bool raHardcoreMode() const;
@@ -205,6 +199,10 @@ signals:
     void raLoginCompleted(bool success, const QString& message);
     void raSignedOut();
     void raEmulatorLoginPrompt(const QString& emulatorName);
+    void raUserSummaryReady(const QVariantMap& summary);
+    void raUserGamesReady(const QVariantList& games);
+    void raGameDetailReady(int raGameId, const QVariantMap& detail);
+    void raGameIdLookupReady(const QString& title, int raGameId);
 
 private:
     void setStatus(const QString& msg);
@@ -216,6 +214,7 @@ private:
     ScraperService m_scraperService;
     EmulatorService m_emuService;
     RAService m_raService;
+    ConfigService m_configService;
 
     // Pending launch (deferred while RA login prompt is shown)
     QString m_pendingLaunchRom;

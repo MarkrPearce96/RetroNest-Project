@@ -1,12 +1,12 @@
 #include <QtTest>
-#include "ui/settings/pcsx2/widgets/pcsx2_description_bar.h"
+#include "ui/settings/widgets/settings_description_bar.h"
 #include "core/setting_def.h"
 
-class TestPcsx2DescriptionBar : public QObject {
+class TestSettingsDescriptionBar : public QObject {
     Q_OBJECT
 private slots:
     void setSettingFillsTextAndPill() {
-        Pcsx2DescriptionBar bar;
+        SettingsDescriptionBar bar;
         SettingDef d;
         d.tooltip = "Runs VU1 on a second thread.";
         d.defaultValue = "true";
@@ -16,7 +16,7 @@ private slots:
         QCOMPARE(bar.recommendedText(), QString("Recommended: true"));
     }
     void emptyRecommendedFallsBackToDefault() {
-        Pcsx2DescriptionBar bar;
+        SettingsDescriptionBar bar;
         SettingDef d;
         d.tooltip = "t";
         d.defaultValue = "42";
@@ -24,12 +24,12 @@ private slots:
         QCOMPARE(bar.recommendedText(), QString("Recommended: 42"));
     }
     void clearShowsPlaceholder() {
-        Pcsx2DescriptionBar bar;
+        SettingsDescriptionBar bar;
         bar.clear();
         QVERIFY(bar.descText().contains("Focus"));
     }
     void comboRecommendedTranslatesToLabel() {
-        Pcsx2DescriptionBar bar;
+        SettingsDescriptionBar bar;
         SettingDef d;
         d.tooltip = "t";
         d.type = SettingDef::Combo;
@@ -40,8 +40,8 @@ private slots:
     }
 
     void setHintsStoresHints() {
-        Pcsx2DescriptionBar bar;
-        QVector<Pcsx2DescriptionBar::ButtonHint> hints = {
+        SettingsDescriptionBar bar;
+        QVector<SettingsDescriptionBar::ButtonHint> hints = {
             {"navigate_ud", "Navigate"},
             {"confirm", "Select"},
             {"back", "Close"},
@@ -54,12 +54,12 @@ private slots:
     }
 
     void clearHintsRemovesAll() {
-        Pcsx2DescriptionBar bar;
+        SettingsDescriptionBar bar;
         bar.setHints({{"confirm", "Select"}});
         QCOMPARE(bar.hints().size(), 1);
         bar.clearHints();
         QCOMPARE(bar.hints().size(), 0);
     }
 };
-QTEST_MAIN(TestPcsx2DescriptionBar)
+QTEST_MAIN(TestSettingsDescriptionBar)
 #include "test_pcsx2_description_bar.moc"

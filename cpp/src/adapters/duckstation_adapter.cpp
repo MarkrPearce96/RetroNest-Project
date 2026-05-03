@@ -1061,53 +1061,33 @@ QVector<HotkeyDef> DuckStationAdapter::hotkeyBindingDefs() const {
 // patchRetroAchievements — enable/disable RA in [Cheevos] section
 // ============================================================================
 
-void DuckStationAdapter::patchRetroAchievements(const QString& username,
-                                                  const QString& token,
-                                                  bool enabled,
-                                                  bool hardcore,
-                                                  bool notifications,
-                                                  bool sounds) {
-    const QString path = portableDir() + "/settings.ini";
-
-    QString content;
-    if (!readConfigFile(path, content, "DuckStation"))
-        return;
-
-    Q_UNUSED(username);
-    Q_UNUSED(token);
-    // DuckStation encrypts its token with a machine-specific key.
-    // We can't pre-patch credentials — only enable RA and set preferences.
-    // DuckStation will prompt the user to log in on first launch.
-    QVector<IniKeyPatch> patches = {
-        {"Cheevos", "Enabled", enabled ? "true" : "false"},
-        {"Cheevos", "ChallengeMode", hardcore ? "true" : "false"},
-        {"Cheevos", "Notifications", notifications ? "true" : "false"},
-        {"Cheevos", "SoundEffects", sounds ? "true" : "false"},
+EmulatorAdapter::RetroAchievementsKeyMap DuckStationAdapter::retroAchievementsKeyMap() const {
+    // DuckStation encrypts its token with a machine-specific key, so we can't
+    // pre-patch credentials. The base implementation just toggles the RA prefs;
+    // DuckStation prompts the user to log in on first launch.
+    return {
+        "Cheevos",            // section
+        "Enabled",            // enabledKey
+        "ChallengeMode",      // hardcoreKey
+        "Notifications",      // notificationsKey
+        "SoundEffects",       // soundEffectsKey
+        "true", "false",      // bool format
+        "DuckStation",        // configTag
     };
-
-    if (patchIniKeys(content, patches))
-        writeConfigFile(path, content, "DuckStation");
 }
 
 // ============================================================================
 // Asset matching — select the right GitHub release asset for this platform
 // ============================================================================
 
-QString DuckStationAdapter::matchAsset(const QStringList& assetNames) const {
-    for (const auto& name : assetNames) {
-        const QString lower = name.toLower();
+QVector<EmulatorAdapter::AssetMatchRule> DuckStationAdapter::assetMatchRules() const {
 #if defined(Q_OS_MACOS)
-        if (lower.contains("mac") && name.endsWith(".zip"))
-            return name;
+    return { {{"mac"}, ".zip"} };
 #elif defined(Q_OS_WIN)
-        if (lower.contains("windows") && lower.contains("x64") && name.endsWith(".zip"))
-            return name;
+    return { {{"windows", "x64"}, ".zip"} };
 #else
-        if (lower.contains("linux") && lower.contains("x64") && name.endsWith(".AppImage"))
-            return name;
+    return { {{"linux", "x64"}, ".AppImage"} };
 #endif
-    }
-    return EmulatorAdapter::matchAsset(assetNames);
 }
 
 // ============================================================================

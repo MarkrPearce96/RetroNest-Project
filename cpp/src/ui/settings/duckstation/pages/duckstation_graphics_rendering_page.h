@@ -7,9 +7,9 @@ class QHBoxLayout;
 class QVBoxLayout;
 class DuckStationSettingsDialog;
 class DuckStationAspectRatioPreview;
-class Pcsx2ComboRow;
-class Pcsx2SliderRow;
-class Pcsx2ToggleRow;
+class SettingsComboRow;
+class SettingsSliderRow;
+class SettingsToggleRow;
 
 class DuckStationGraphicsRenderingPage : public QWidget {
     Q_OBJECT
@@ -39,5 +39,5 @@ private:
     DuckStationSettingsDialog* m_dialog;
     QVector<SettingDef> m_schema;
     DuckStationAspectRatioPreview* m_preview = nullptr;
-    Pcsx2ComboRow* m_aspectCombo = nullptr;
+    SettingsComboRow* m_aspectCombo = nullptr;
 };

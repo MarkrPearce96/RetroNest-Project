@@ -1,11 +1,12 @@
 #include "pcsx2_emulation_page.h"
 #include "../pcsx2_settings_dialog.h"
-#include "../widgets/pcsx2_card.h"
-#include "../widgets/pcsx2_section_header.h"
-#include "../widgets/pcsx2_combo_row.h"
-#include "../widgets/pcsx2_toggle_row.h"
-#include "../pcsx2_theme.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_section_header.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/settings_dialog_theme.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/pcsx2_adapter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -38,14 +39,7 @@ void Pcsx2EmulationPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -62,54 +56,22 @@ void Pcsx2EmulationPage::buildUi() {
     connect(back, &QPushButton::clicked, m_dialog, &Pcsx2SettingsDialog::popPage);
     root->addWidget(back);
 
-    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ComboRow(card);
-        row->setLabel(d->label);
-        row->setOptions(d->options);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &Pcsx2EmulationPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::focused, this, &Pcsx2EmulationPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
-            if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, v);
-        });
-        v->addWidget(row);
-        return card;
-    };
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ToggleRow(card);
-        row->setLabel(d->label);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &Pcsx2EmulationPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2EmulationPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
-            if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
-        });
-        v->addWidget(row);
-        return card;
-    };
+    SettingsPageBuilder builder(this, m_schema,
+        [this](const QString& sec, const QString& k, const QString& v){ saveValue(sec, k, v); },
+        [this](const SettingDef& d){ emit settingFocused(d); });
+    auto makeComboCard  = [&builder](const QString& key){ return builder.makeComboCard(key); };
+    auto makeToggleCard = [&builder](const QString& key){ return builder.makeToggleCard(key); };
     auto addIfPresent = [](QBoxLayout* layout, QWidget* w){ if (w) layout->addWidget(w); };
     (void)addIfPresent;
 
     // Speed Control
-    root->addWidget(new Pcsx2SectionHeader("Speed Control", this));
+    root->addWidget(new SettingsSectionHeader("Speed Control", this));
     if (auto* c = makeComboCard("NominalScalar")) root->addWidget(c);
     if (auto* c = makeComboCard("TurboScalar"))   root->addWidget(c);
     if (auto* c = makeComboCard("SlomoScalar"))   root->addWidget(c);
 
     // System Settings
-    root->addWidget(new Pcsx2SectionHeader("System Settings", this));
+    root->addWidget(new SettingsSectionHeader("System Settings", this));
     if (auto* c = makeComboCard("EECycleRate")) root->addWidget(c);
     if (auto* c = makeComboCard("EECycleSkip")) root->addWidget(c);
 
@@ -131,7 +93,7 @@ void Pcsx2EmulationPage::buildUi() {
     root->addLayout(sysGrid);
 
     // Frame Pacing
-    root->addWidget(new Pcsx2SectionHeader("Frame Pacing", this));
+    root->addWidget(new SettingsSectionHeader("Frame Pacing", this));
     if (auto* c = makeComboCard("VsyncQueueSize")) root->addWidget(c);
 
     auto* fpGrid = new QGridLayout();
@@ -156,12 +118,12 @@ void Pcsx2EmulationPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* row : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* row : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;

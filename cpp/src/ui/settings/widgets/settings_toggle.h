@@ -3,10 +3,10 @@
 
 class QKeyEvent;
 
-class Pcsx2Toggle : public QAbstractButton {
+class SettingsToggle : public QAbstractButton {
     Q_OBJECT
 public:
-    explicit Pcsx2Toggle(QWidget* parent = nullptr);
+    explicit SettingsToggle(QWidget* parent = nullptr);
     QSize sizeHint() const override { return QSize(34, 18); }
 protected:
     void paintEvent(QPaintEvent*) override;

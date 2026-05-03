@@ -4,10 +4,10 @@
 #include "core/setting_def.h"
 
 class Pcsx2SettingsDialog;
-class Pcsx2Card;
-class Pcsx2ComboRow;
-class Pcsx2ToggleRow;
-class Pcsx2SliderRow;
+class SettingsCard;
+class SettingsComboRow;
+class SettingsToggleRow;
+class SettingsSliderRow;
 
 class Pcsx2AudioPage : public QWidget {
     Q_OBJECT

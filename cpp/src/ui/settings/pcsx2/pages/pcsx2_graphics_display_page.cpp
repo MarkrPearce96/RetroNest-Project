@@ -1,13 +1,14 @@
 #include "pcsx2_graphics_display_page.h"
 #include "../pcsx2_settings_dialog.h"
-#include "../pcsx2_theme.h"
-#include "../widgets/pcsx2_card.h"
-#include "../widgets/pcsx2_combo_row.h"
-#include "../widgets/pcsx2_toggle_row.h"
-#include "../widgets/pcsx2_slider_row.h"
+#include "ui/settings/settings_dialog_theme.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_slider_row.h"
 #include "../widgets/pcsx2_aspect_ratio_preview.h"
-#include "../widgets/pcsx2_toggle.h"
+#include "ui/settings/widgets/settings_toggle.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/pcsx2_adapter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -62,14 +63,7 @@ void Pcsx2GraphicsDisplayPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -90,27 +84,27 @@ void Pcsx2GraphicsDisplayPage::buildUi() {
 }
 
 void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
-    auto* card = new Pcsx2Card(this);
+    auto* card = new SettingsCard(this);
     card->setFocusPolicy(Qt::NoFocus);
     card->setMinimumHeight(460);
 
     if (const SettingDef* arDef = findDef("AspectRatio"))
         card->setSettingDef(*arDef);
-    connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+    connect(card, &SettingsCard::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
 
     auto* v = new QVBoxLayout(card);
     v->setContentsMargins(14, 12, 14, 12);
     v->setSpacing(8);
 
-    auto addCombo = [&](const QString& key) -> Pcsx2ComboRow* {
+    auto addCombo = [&](const QString& key) -> SettingsComboRow* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* row = new Pcsx2ComboRow(card, /*stacked=*/true);
+        auto* row = new SettingsComboRow(card, /*stacked=*/true);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ComboRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val) {
+        connect(row, &SettingsComboRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(row, &SettingsComboRow::valueChanged, this, [this, key](const QString& val) {
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, val);
         });
@@ -125,11 +119,11 @@ void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
     addCombo("linear_present_mode");
 
     if (const SettingDef* d = findDef("EnableWideScreenPatches")) {
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this](bool on) {
+        connect(row, &SettingsToggleRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this](bool on) {
             const SettingDef* dd = findDef("EnableWideScreenPatches");
             if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
         });
@@ -137,7 +131,7 @@ void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
     }
 
     if (m_aspectCombo) {
-        connect(m_aspectCombo, &Pcsx2ComboRow::valueChanged, this, [this](const QString& val) {
+        connect(m_aspectCombo, &SettingsComboRow::valueChanged, this, [this](const QString& val) {
             if (m_preview) {
                 m_preview->setAspectRatio(Pcsx2AspectRatioPreview::fromSchemaValue(val));
             }
@@ -148,13 +142,13 @@ void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
 }
 
 void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
-    auto* card = new Pcsx2Card(this);
+    auto* card = new SettingsCard(this);
     card->setFocusPolicy(Qt::NoFocus);
     card->setMinimumHeight(460);
     card->setPreviewStyle(true);
     if (const SettingDef* d = findDef("StretchY"))
         card->setSettingDef(*d);
-    connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+    connect(card, &SettingsCard::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
 
     auto* v = new QVBoxLayout(card);
     v->setContentsMargins(14, 12, 14, 12);
@@ -172,13 +166,13 @@ void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
     v->addWidget(m_preview);
 
     if (const SettingDef* d = findDef("StretchY")) {
-        m_stretchSlider = new Pcsx2SliderRow(card);
+        m_stretchSlider = new SettingsSliderRow(card);
         m_stretchSlider->setLabel(d->label);
         m_stretchSlider->setRange(int(d->minVal), int(d->maxVal));
         m_stretchSlider->setSuffix(d->suffix);
         m_stretchSlider->setSettingDef(*d);
-        connect(m_stretchSlider, &Pcsx2SliderRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
-        connect(m_stretchSlider, &Pcsx2SliderRow::valueChanged, this, [this](int val) {
+        connect(m_stretchSlider, &SettingsSliderRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(m_stretchSlider, &SettingsSliderRow::valueChanged, this, [this](int val) {
             const SettingDef* dd = findDef("StretchY");
             if (dd) saveValue(dd->section, dd->key, QString::number(val));
             if (m_preview) m_preview->setStretchY(val);
@@ -245,20 +239,20 @@ void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
 }
 
 void Pcsx2GraphicsDisplayPage::buildBottomToggleGrid(QVBoxLayout* root) {
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeToggleCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         if (!d) return card;
         card->setSettingDef(*d);
 
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on) {
+        connect(card, &SettingsCard::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(row, &SettingsToggleRow::focused, this, &Pcsx2GraphicsDisplayPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on) {
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
             if (key == "IntegerScaling" && m_preview)
@@ -291,18 +285,18 @@ void Pcsx2GraphicsDisplayPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* tog : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = tog->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
         tog->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
     }
-    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         bool ok = false;
@@ -434,14 +428,14 @@ QList<QWidget*> Pcsx2GraphicsDisplayPage::collectFocusables() const {
         if (qobject_cast<QComboBox*>(w)   ||
             qobject_cast<QSlider*>(w)     ||
             qobject_cast<QSpinBox*>(w)    ||
-            qobject_cast<Pcsx2Toggle*>(w) ||
-            qobject_cast<Pcsx2Card*>(w)) {
-            // If this control lives inside a focusable Pcsx2Card, skip it —
+            qobject_cast<SettingsToggle*>(w) ||
+            qobject_cast<SettingsCard*>(w)) {
+            // If this control lives inside a focusable SettingsCard, skip it —
             // the card itself is the focus stop and Enter activates the control.
-            if (!qobject_cast<Pcsx2Card*>(w)) {
+            if (!qobject_cast<SettingsCard*>(w)) {
                 bool insideFocusableCard = false;
                 for (QWidget* p = w->parentWidget(); p && p != this; p = p->parentWidget()) {
-                    if (auto* card = qobject_cast<Pcsx2Card*>(p)) {
+                    if (auto* card = qobject_cast<SettingsCard*>(p)) {
                         if (card->focusPolicy() != Qt::NoFocus) {
                             insideFocusableCard = true;
                             break;

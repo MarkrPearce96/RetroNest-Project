@@ -3,14 +3,13 @@
 #include "guitar_bindings_widget.h"
 #include "jogcon_bindings_widget.h"
 #include "negcon_bindings_widget.h"
-#include "popn_bindings_widget.h"
 #include "digital_bindings_widget.h"
 #include "analog_bindings_widget.h"
 #include "analog_joystick_bindings_widget.h"
 #include "ds_negcon_bindings_widget.h"
 #include "ds_negcon_rumble_bindings_widget.h"
 #include "ds_jogcon_bindings_widget.h"
-#include "ds_popn_bindings_widget.h"
+#include "popn_bindings_widget.h"
 #include "psp_bindings_widget.h"
 #include "controller_settings_widget.h"
 #include "binding_widget_common.h"
@@ -350,7 +349,7 @@ QWidget* ControllerMappingPage::createBindingsWidget(const QString& type) {
     if (type == "Guitar")     return new GuitarBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);
     if (type == "Jogcon")     return new JogconBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);
     if (type == "Negcon")     return new NegconBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);
-    if (type == "Popn")       return new PopnBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);
+    if (type == "Popn")       return new PopnBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, PopnBindingsWidget::Variant::Pcsx2, this);
 
     // DuckStation controller types
     if (type == "DigitalController") return new DigitalBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);
@@ -359,7 +358,7 @@ QWidget* ControllerMappingPage::createBindingsWidget(const QString& type) {
     if (type == "NeGcon")            return new DSNegconBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);
     if (type == "NeGconRumble")      return new DSNegconRumbleBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);
     if (type == "JogCon")            return new DSJogconBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);
-    if (type == "PopnController")    return new DSPopnBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);
+    if (type == "PopnController")    return new PopnBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, PopnBindingsWidget::Variant::DuckStation, this);
 
     // PPSSPP
     if (type == "Standard")          return new PSPBindingsWidget(m_inputManager, m_appController, m_emuId, m_currentPort, this);

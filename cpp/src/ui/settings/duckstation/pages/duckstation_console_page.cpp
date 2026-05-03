@@ -1,11 +1,12 @@
 #include "duckstation_console_page.h"
 #include "../duckstation_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_section_header.h"
-#include "../../pcsx2/widgets/pcsx2_combo_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle_row.h"
-#include "../../pcsx2/widgets/pcsx2_slider_row.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_section_header.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_slider_row.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/duckstation_adapter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -34,7 +35,7 @@ DuckStationConsolePage::DuckStationConsolePage(DuckStationSettingsDialog* dialog
     buildUi();
     loadValues();
     refreshDependencies();
-    // Page-level arrow-key spatial nav. Pcsx2Card's own keyPressEvent only
+    // Page-level arrow-key spatial nav. SettingsCard's own keyPressEvent only
     // looks at direct sibling cards, which misses cards nested inside grid
     // sub-layouts (e.g. the OverclockEnable / RecompilerICache row sitting
     // below the full-width Clock Speed Multiplier slider). The app-level
@@ -62,14 +63,7 @@ void DuckStationConsolePage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -86,44 +80,29 @@ void DuckStationConsolePage::buildUi() {
     connect(back, &QPushButton::clicked, m_dialog, &DuckStationSettingsDialog::popPage);
     root->addWidget(back);
 
-    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ComboRow(card);
-        row->setLabel(d->label);
-        row->setOptions(d->options);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationConsolePage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::focused, this, &DuckStationConsolePage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
-            if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, v);
-        });
-        v->addWidget(row);
-        return card;
-    };
+    SettingsPageBuilder builder(this, m_schema,
+        [this](const QString& sec, const QString& k, const QString& v){ saveValue(sec, k, v); },
+        [this](const SettingDef& d){ emit settingFocused(d); });
+    auto makeComboCard  = [&builder](const QString& key){ return builder.makeComboCard(key); };
     auto makeSliderCard = [this](const QString& key,
-                                 std::function<void(int)> onChange = {}) -> Pcsx2Card* {
+                                 std::function<void(int)> onChange = {}) -> SettingsCard* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2SliderRow(card);
+        auto* row = new SettingsSliderRow(card);
         row->setLabel(d->label);
         row->setRange(int(d->minVal), int(d->maxVal));
         row->setSuffix(d->suffix);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationConsolePage::settingFocused);
-        connect(row, &Pcsx2SliderRow::focused, this, &DuckStationConsolePage::settingFocused);
+        connect(card, &SettingsCard::focused, this, &DuckStationConsolePage::settingFocused);
+        connect(row, &SettingsSliderRow::focused, this, &DuckStationConsolePage::settingFocused);
         if (onChange) {
-            connect(row, &Pcsx2SliderRow::valueChanged, this, onChange);
+            connect(row, &SettingsSliderRow::valueChanged, this, onChange);
         } else {
-            connect(row, &Pcsx2SliderRow::valueChanged, this, [this, key](int val){
+            connect(row, &SettingsSliderRow::valueChanged, this, [this, key](int val){
                 if (const SettingDef* d2 = findDef(key))
                     saveValue(d2->section, d2->key, QString::number(val));
             });
@@ -131,25 +110,25 @@ void DuckStationConsolePage::buildUi() {
         v->addWidget(row);
         return card;
     };
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeToggleCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationConsolePage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationConsolePage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
+        connect(card, &SettingsCard::focused, this, &DuckStationConsolePage::settingFocused);
+        connect(row, &SettingsToggleRow::focused, this, &DuckStationConsolePage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
             // Toggling overclocking off resets the multiplier back to 100%
             // (numerator/denominator = 1/1) so a stale value can't take effect
             // the next time the user re-enables the toggle.
             if (key == "OverclockEnable" && !on) {
-                for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+                for (auto* slider : findChildren<SettingsSliderRow*>()) {
                     if (slider->settingDef().key == "OverclockNumerator") {
                         QSignalBlocker sb(slider);
                         slider->setValue(100);
@@ -167,7 +146,7 @@ void DuckStationConsolePage::buildUi() {
     (void)addIfPresent;
 
     // Console
-    root->addWidget(new Pcsx2SectionHeader("Console", this));
+    root->addWidget(new SettingsSectionHeader("Console", this));
     if (auto* c = makeComboCard("Region"))          root->addWidget(c);
     if (auto* c = makeComboCard("ForceVideoTiming")) root->addWidget(c);
 
@@ -187,7 +166,7 @@ void DuckStationConsolePage::buildUi() {
     root->addLayout(consoleGrid);
 
     // CPU Emulation
-    root->addWidget(new Pcsx2SectionHeader("CPU Emulation", this));
+    root->addWidget(new SettingsSectionHeader("CPU Emulation", this));
     if (auto* c = makeComboCard("ExecutionMode"))      root->addWidget(c);
     // Clock Speed Multiplier — slider in percent (10–1000%, step 5).
     // DuckStation stores this as a GCD-reduced numerator/denominator pair, so
@@ -199,7 +178,7 @@ void DuckStationConsolePage::buildUi() {
     })) {
         // Replace the default "215%" label with "215% (72.82MHz)", matching
         // DuckStation's upstream label. Base PSX CPU runs at 33.8688 MHz.
-        if (auto* slider = c->findChild<Pcsx2SliderRow*>()) {
+        if (auto* slider = c->findChild<SettingsSliderRow*>()) {
             slider->setValueFormatter([](int percent){
                 constexpr double kPsxClockMHz = 33.8688;
                 return QString("%1% (%2MHz)")
@@ -224,7 +203,7 @@ void DuckStationConsolePage::buildUi() {
     root->addLayout(cpuGrid);
 
     // CD-ROM Emulation
-    root->addWidget(new Pcsx2SectionHeader("CD-ROM Emulation", this));
+    root->addWidget(new SettingsSectionHeader("CD-ROM Emulation", this));
     if (auto* c = makeComboCard("ReadSpeedup")) root->addWidget(c);
     if (auto* c = makeComboCard("SeekSpeedup")) root->addWidget(c);
 
@@ -250,18 +229,18 @@ void DuckStationConsolePage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* row : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* row : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
         row->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
     }
-    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         if (d.key == "OverclockNumerator") {
             const QString numStr = app->settingValue(emuId, "CPU", "OverclockNumerator");
@@ -300,17 +279,17 @@ bool DuckStationConsolePage::eventFilter(QObject* obj, QEvent* e) {
         if (combo->view() && combo->view()->isVisible())
             return QWidget::eventFilter(obj, e);
 
-    // Slider in edit mode handles its own arrows (see Pcsx2SliderRow::setEditing).
+    // Slider in edit mode handles its own arrows (see SettingsSliderRow::setEditing).
     if (current->property("editing").toBool())
         return QWidget::eventFilter(obj, e);
 
-    Pcsx2Card* sourceCard = nullptr;
+    SettingsCard* sourceCard = nullptr;
     for (QWidget* w = current; w; w = w->parentWidget()) {
-        if (auto* card = qobject_cast<Pcsx2Card*>(w)) { sourceCard = card; break; }
+        if (auto* card = qobject_cast<SettingsCard*>(w)) { sourceCard = card; break; }
     }
     if (!sourceCard) return QWidget::eventFilter(obj, e);
 
-    if (Pcsx2Card* next = findNextCardSpatial(sourceCard, k)) {
+    if (SettingsCard* next = findNextCardSpatial(sourceCard, k)) {
         next->setFocus(Qt::TabFocusReason);
         for (QWidget* p = next->parentWidget(); p; p = p->parentWidget()) {
             if (auto* sa = qobject_cast<QScrollArea*>(p)) {
@@ -323,7 +302,7 @@ bool DuckStationConsolePage::eventFilter(QObject* obj, QEvent* e) {
     return true;
 }
 
-Pcsx2Card* DuckStationConsolePage::findNextCardSpatial(Pcsx2Card* current, int key) const {
+SettingsCard* DuckStationConsolePage::findNextCardSpatial(SettingsCard* current, int key) const {
     auto pagePoint = [this](QWidget* w) -> QPoint {
         return w->mapTo(const_cast<DuckStationConsolePage*>(this), QPoint(0, 0));
     };
@@ -338,11 +317,11 @@ Pcsx2Card* DuckStationConsolePage::findNextCardSpatial(Pcsx2Card* current, int k
     // primary-axis gap so a strictly closer card always wins over a farther
     // but better-aligned one — without this, a full-width row two rows down
     // can outscore a half-width card immediately below.
-    struct Cand { Pcsx2Card* card; long long primary; long long secondary; };
+    struct Cand { SettingsCard* card; long long primary; long long secondary; };
     QList<Cand> cands;
     long long minPrimary = std::numeric_limits<long long>::max();
 
-    for (Pcsx2Card* card : findChildren<Pcsx2Card*>()) {
+    for (SettingsCard* card : findChildren<SettingsCard*>()) {
         if (card == current || !card->isVisible() || card->focusPolicy() == Qt::NoFocus) continue;
         const QRect r(pagePoint(card), card->size());
         const QPoint c = r.center();
@@ -382,7 +361,7 @@ Pcsx2Card* DuckStationConsolePage::findNextCardSpatial(Pcsx2Card* current, int k
     // Within the closest row/column (primary ≈ minPrimary, with a small
     // tolerance for grid spacing differences), pick the most-aligned card.
     constexpr long long kRowTolerance = 8;
-    Pcsx2Card* best = nullptr;
+    SettingsCard* best = nullptr;
     long long bestSecondary = std::numeric_limits<long long>::max();
     for (const Cand& c : cands) {
         if (c.primary > minPrimary + kRowTolerance) continue;
@@ -393,10 +372,10 @@ Pcsx2Card* DuckStationConsolePage::findNextCardSpatial(Pcsx2Card* current, int k
 
 void DuckStationConsolePage::refreshDependencies() {
     QHash<QString, bool> masterStates;
-    for (auto* tog : findChildren<Pcsx2ToggleRow*>())
+    for (auto* tog : findChildren<SettingsToggleRow*>())
         masterStates.insert(tog->settingDef().key, tog->isChecked());
 
-    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         if (d.dependsOn.isEmpty()) continue;
         const bool active = masterStates.value(d.dependsOn, true);

@@ -1,5 +1,5 @@
 #include "rom_scanner.h"
-#include "paths.h"
+#include "core/paths.h"
 #include "adapters/adapter_registry.h"
 
 #include <QDir>
@@ -225,16 +225,9 @@ RomScanner::Result RomScanner::scan(const QString& directory,
         if (addResult > 0) {
             result.added++;
             qInfo() << "[Scanner] Added:" << game.title << "[" << game.system << "]";
-
-            // Extract serial from ROM and store in DB
-            auto* adapter = AdapterRegistry::instance().adapterFor(game.emulator_id);
-            if (adapter) {
-                QString serial = adapter->extractSerial(romPath);
-                if (!serial.isEmpty()) {
-                    db.updateSerial(addResult, serial);
-                    qInfo() << "[Scanner] Serial:" << serial << "for" << game.title;
-                }
-            }
+            // Serial extraction is deferred to GameService::backfillSerials() —
+            // running it here would block the UI while reading SYSTEM.CNF /
+            // PARAM.SFO out of every freshly-imported ISO.
         } else if (addResult == 0) {
             result.skipped++;
         } else {

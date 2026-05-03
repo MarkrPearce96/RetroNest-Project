@@ -8,7 +8,6 @@
 
 #include <QCursor>
 #include "settings/controller_mapping_page.h"
-#include "settings/emulator_settings_page.h"
 #include "settings/pcsx2/pcsx2_settings_dialog.h"
 #include "settings/duckstation/duckstation_settings_dialog.h"
 #include "settings/ppsspp/ppsspp_settings_dialog.h"
@@ -32,7 +31,11 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     , m_scraperService(db)
     , m_emuService(loader)
     , m_raService(db)
+    , m_configService(loader)
 {
+    connect(&m_configService, &ConfigService::statusMessage, this, &AppController::setStatus);
+    connect(&m_configService, &ConfigService::configurationReset,
+            this, &AppController::configurationReset);
     m_scraperService.loadCredentials();
     m_raService.loadCredentials();
 
@@ -85,6 +88,10 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     // Forward RA signals
     connect(&m_raService, &RAService::loginCompleted, this, &AppController::raLoginCompleted);
     connect(&m_raService, &RAService::signedOut, this, &AppController::raSignedOut);
+    connect(&m_raService, &RAService::userSummaryReady, this, &AppController::raUserSummaryReady);
+    connect(&m_raService, &RAService::userGamesReady, this, &AppController::raUserGamesReady);
+    connect(&m_raService, &RAService::gameDetailReady, this, &AppController::raGameDetailReady);
+    connect(&m_raService, &RAService::gameIdLookupReady, this, &AppController::raGameIdLookupReady);
 }
 
 // ── App State ──────────────────────────────────────────────
@@ -318,537 +325,35 @@ void AppController::checkForUpdates() {
 
 // ── Config Settings ────────────────────────────────────────
 
-QVariantList AppController::settingsSchema(const QString& emuId) const {
-    QVariantList list;
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return list;
+QVariantList AppController::settingsSchema(const QString& emuId) const { return m_configService.settingsSchema(emuId); }
+QString AppController::settingValue(const QString& emuId, const QString& section, const QString& key) const { return m_configService.settingValue(emuId, section, key); }
+void AppController::saveSettings(const QString& emuId, const QVariantMap& values) { m_configService.saveSettings(emuId, values); }
+void AppController::beginSettingsSession(const QString& emuId) { m_configService.beginSettingsSession(emuId); }
+void AppController::endSettingsSession(const QString& emuId) { m_configService.endSettingsSession(emuId); }
+void AppController::resetConfiguration(const QString& emuId) { m_configService.resetConfiguration(emuId); }
 
-    for (const auto& def : adapter->settingsSchema()) {
-        QVariantMap item;
-        item["label"] = def.label;
-        item["category"] = def.category;
-        item["subcategory"] = def.subcategory;
-        item["group"] = def.group;
-        item["section"] = def.section;
-        item["key"] = def.key;
-        item["type"] = static_cast<int>(def.type);
-        item["defaultValue"] = def.defaultValue;
-        item["minVal"] = def.minVal;
-        item["maxVal"] = def.maxVal;
-        item["step"] = def.step;
-        QVariantList opts;
-        QVariantMap optValues;
-        for (const auto& pair : def.options) {
-            opts.append(pair.first);  // display label for ComboBox
-            optValues[pair.first] = pair.second;  // label → INI value
-        }
-        item["options"] = opts;
-        item["optionValues"] = optValues;
-        item["tooltip"] = def.tooltip;
-        item["layout"] = def.layout;
-        item["suffix"] = def.suffix;
-        list.append(item);
-    }
-    return list;
-}
+QVariantList AppController::quickResolutionOptions(const QString& emuId) const { return m_configService.quickResolutionOptions(emuId); }
+QString AppController::currentResolution(const QString& emuId) const { return m_configService.currentResolution(emuId); }
+void AppController::applyQuickResolution(const QVariantMap& choices) { m_configService.applyQuickResolution(choices); }
+QVariantList AppController::quickAspectRatioOptions(const QString& emuId) const { return m_configService.quickAspectRatioOptions(emuId); }
+QString AppController::currentAspectRatio(const QString& emuId) const { return m_configService.currentAspectRatio(emuId); }
+void AppController::applyQuickAspectRatio(const QVariantMap& choices) { m_configService.applyQuickAspectRatio(choices); }
 
-QString AppController::settingValue(const QString& emuId, const QString& section, const QString& key) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return {};
-
-    IniFile ini;
-    ini.load(configPath);
-    return ini.value(section, key);
-}
-
-void AppController::saveSettings(const QString& emuId, const QVariantMap& values) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-
-    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
-        // Key format: "section/key" — split on LAST '/' since sections can contain '/'
-        // e.g. "EmuCore/GS/Renderer" → section="EmuCore/GS", key="Renderer"
-        int lastSlash = it.key().lastIndexOf('/');
-        if (lastSlash > 0) {
-            QString section = it.key().left(lastSlash);
-            QString key = it.key().mid(lastSlash + 1);
-            ini.setValue(section, key, it.value().toString());
-        } else {
-            qWarning() << "[Settings] Skipping malformed key (no section separator):" << it.key();
-        }
-    }
-
-    if (ini.save(configPath))
-        setStatus("Settings saved.");
-    else
-        setStatus("Failed to save settings.");
-}
-
-void AppController::resetConfiguration(const QString& emuId) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    const auto* manifest = m_loader->emulatorById(emuId);
-    if (!manifest) return;
-
-    // Delete the existing config file
-    QString configPath = adapter->configFilePath();
-    if (!configPath.isEmpty() && QFileInfo::exists(configPath)) {
-        QFile::remove(configPath);
-        qInfo() << "[Reset] Removed config:" << configPath;
-    }
-
-    // Re-run ensureConfig to regenerate the fresh install defaults
-    QString systemId = Paths::systemIdFor(emuId, manifest->systems);
-    QString biosPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
-    QString dataPath = QFileInfo(Paths::emulatorDataDir(emuId, systemId)).absoluteFilePath();
-    adapter->ensureConfig(*manifest, biosPath, dataPath);
-
-    // Also reset controller bindings and settings to defaults
-    resetControllerBindings(emuId);
-    resetControllerSettings(emuId);
-
-    // Reset hotkeys to defaults for this emulator
-    resetHotkeys(emuId);
-
-    setStatus(manifest->name + " configuration reset to install defaults.");
-    emit configurationReset(emuId);
-}
-
-// ── Quick Settings (Resolution / Aspect Ratio) ───────────
-
-QVariantList AppController::quickResolutionOptions(const QString& emuId) const {
-    QVariantList list;
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return list;
-
-    auto opts = adapter->resolutionOptions();
-    for (const auto& opt : opts.options) {
-        QVariantMap item;
-        item["label"] = opt.label;
-        item["value"] = opt.value;
-        list.append(item);
-    }
-    return list;
-}
-
-QString AppController::currentResolution(const QString& emuId) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    auto opts = adapter->resolutionOptions();
-    if (opts.options.isEmpty()) return {};
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return opts.defaultValue;
-
-    IniFile ini;
-    ini.load(configPath);
-    QString val = ini.value(opts.section, opts.key);
-    return val.isEmpty() ? opts.defaultValue : val;
-}
-
-void AppController::applyQuickResolution(const QVariantMap& choices) {
-    for (auto it = choices.constBegin(); it != choices.constEnd(); ++it) {
-        const QString& emuId = it.key();
-        const QString value = it.value().toString();
-
-        auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-        if (!adapter) continue;
-
-        auto opts = adapter->resolutionOptions();
-        if (opts.options.isEmpty()) continue;
-
-        QString configPath = adapter->configFilePath();
-        if (configPath.isEmpty()) continue;
-
-        IniFile ini;
-        ini.load(configPath);
-        ini.setValue(opts.section, opts.key, value);
-        ini.save(configPath);
-    }
-    setStatus("Resolution settings saved.");
-}
-
-QVariantList AppController::quickAspectRatioOptions(const QString& emuId) const {
-    QVariantList list;
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return list;
-
-    auto opts = adapter->aspectRatioOptions();
-    for (const auto& opt : opts.options) {
-        QVariantMap item;
-        item["label"] = opt.label;
-        list.append(item);
-    }
-    return list;
-}
-
-QString AppController::currentAspectRatio(const QString& emuId) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    auto opts = adapter->aspectRatioOptions();
-    if (opts.options.isEmpty()) return {};
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return opts.defaultLabel;
-
-    IniFile ini;
-    ini.load(configPath);
-
-    // Check which option matches the current INI state by comparing the first patch key
-    for (const auto& opt : opts.options) {
-        if (opt.patches.isEmpty()) continue;
-        const auto& firstPatch = opt.patches.first();
-        QString val = ini.value(firstPatch.section, firstPatch.key);
-        if (val == firstPatch.value)
-            return opt.label;
-    }
-    return opts.defaultLabel;
-}
-
-void AppController::applyQuickAspectRatio(const QVariantMap& choices) {
-    for (auto it = choices.constBegin(); it != choices.constEnd(); ++it) {
-        const QString& emuId = it.key();
-        const QString label = it.value().toString();
-
-        auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-        if (!adapter) continue;
-
-        auto opts = adapter->aspectRatioOptions();
-
-        // Find the matching option by label
-        for (const auto& opt : opts.options) {
-            if (opt.label != label) continue;
-
-            QString configPath = adapter->configFilePath();
-            if (configPath.isEmpty()) break;
-
-            IniFile ini;
-            ini.load(configPath);
-
-            // Write ALL patches for this option (e.g. aspect ratio + widescreen patches)
-            for (const auto& patch : opt.patches)
-                ini.setValue(patch.section, patch.key, patch.value);
-
-            ini.save(configPath);
-            break;
-        }
-    }
-    setStatus("Aspect ratio settings saved.");
-}
-
-// ── Path Settings ──────────────────────────────────────────
-
-QVariantList AppController::pathDefs(const QString& emuId) const {
-    QVariantList list;
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return list;
-
-    const auto* manifest = m_loader->emulatorById(emuId);
-    QString systemId = manifest ? Paths::systemIdFor(emuId, manifest->systems) : emuId;
-
-    for (const auto& pd : adapter->pathsDefs()) {
-        QVariantMap item;
-        item["label"] = pd.label;
-        item["section"] = pd.section;
-        item["key"] = pd.key;
-        // Compute default path
-        QString defPath;
-        switch (pd.base) {
-            case PathBase::Bios:
-                defPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
-                break;
-            case PathBase::EmulatorData:
-                defPath = QFileInfo(Paths::emulatorDataDir(emuId, systemId) + "/" + pd.defaultSuffix).absoluteFilePath();
-                break;
-        }
-        item["defaultPath"] = defPath;
-        list.append(item);
-    }
-    return list;
-}
-
-QString AppController::pathValue(const QString& emuId, const QString& section, const QString& key) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return {};
-
-    IniFile ini;
-    ini.load(configPath);
-    return ini.value(section, key);
-}
-
-QString AppController::pathDefault(const QString& emuId, const QString& section, const QString& key) const {
-    auto defs = pathDefs(emuId);
-    for (const auto& d : defs) {
-        auto map = d.toMap();
-        if (map["section"].toString() == section && map["key"].toString() == key)
-            return map["defaultPath"].toString();
-    }
-    return {};
-}
-
-void AppController::savePaths(const QString& emuId, const QVariantMap& values) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-
-    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
-        int lastSlash = it.key().lastIndexOf('/');
-        if (lastSlash > 0) {
-            QString section = it.key().left(lastSlash);
-            QString key = it.key().mid(lastSlash + 1);
-            ini.setValue(section, key, it.value().toString());
-        } else {
-            qWarning() << "[Paths] Skipping malformed key (no section separator):" << it.key();
-        }
-    }
-
-    if (ini.save(configPath))
-        setStatus("Paths saved.");
-    else
-        setStatus("Failed to save paths.");
-}
+QVariantList AppController::pathDefs(const QString& emuId) const { return m_configService.pathDefs(emuId); }
+QString AppController::pathValue(const QString& emuId, const QString& section, const QString& key) const { return m_configService.pathValue(emuId, section, key); }
+QString AppController::pathDefault(const QString& emuId, const QString& section, const QString& key) const { return m_configService.pathDefault(emuId, section, key); }
+void AppController::savePaths(const QString& emuId, const QVariantMap& values) { m_configService.savePaths(emuId, values); }
 
 QString AppController::browsePath(const QString& title) {
-    return QFileDialog::getExistingDirectory(nullptr, title,
-        QDir::homePath(), QFileDialog::ShowDirsOnly);
+    return QFileDialog::getExistingDirectory(nullptr, title, QDir::homePath(), QFileDialog::ShowDirsOnly);
 }
 
-// ── Controller Settings (Settings sub-tab) ────────────────
-
-QVariantList AppController::controllerSettings(const QString& emuId) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    QString configPath = adapter->configFilePath();
-    IniFile ini;
-    if (!configPath.isEmpty())
-        ini.load(configPath);
-
-    QVariantList list;
-    for (const auto& def : adapter->controllerSettingDefs()) {
-        QVariantMap item;
-        item["label"] = def.label;
-        item["tooltip"] = def.tooltip;
-        item["section"] = def.section;
-        item["key"] = def.key;
-        item["defaultValue"] = def.defaultValue;
-        item["type"] = static_cast<int>(def.type);
-        item["suffix"] = def.suffix;
-        item["minVal"] = def.minVal;
-        item["maxVal"] = def.maxVal;
-        item["step"] = def.step;
-
-        QVariantList opts;
-        for (const auto& opt : def.options) {
-            QVariantMap o;
-            o["label"] = opt.first;
-            o["value"] = opt.second;
-            opts.append(o);
-        }
-        item["options"] = opts;
-
-        QString val = ini.value(def.section, def.key);
-        item["currentValue"] = val.isEmpty() ? def.defaultValue : val;
-        list.append(item);
-    }
-    return list;
+QString AppController::formatCapturedBinding(const QString& emuId, int deviceIndex, const QString& element, bool isAxis, bool positive) const {
+    return m_configService.formatCapturedBinding(emuId, deviceIndex, element, isAxis, positive);
 }
-
-void AppController::saveControllerSetting(const QString& emuId, const QString& section,
-                                           const QString& key, const QString& value) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-    ini.setValue(section, key, value);
-
-    if (ini.save(configPath))
-        setStatus("Controller setting saved.");
-    else
-        setStatus("Failed to save controller setting.");
-}
-
-void AppController::resetControllerSettings(const QString& emuId) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-
-    for (const auto& def : adapter->controllerSettingDefs())
-        ini.setValue(def.section, def.key, def.defaultValue);
-
-    if (ini.save(configPath))
-        setStatus("Controller settings reset to defaults.");
-    else
-        setStatus("Failed to reset controller settings.");
-}
-
-// ── Controller Bindings ───────────────────────────────────
-
-QVariantList AppController::controllerBindings(const QString& emuId) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    QString configPath = adapter->configFilePath();
-    IniFile ini;
-    if (!configPath.isEmpty())
-        ini.load(configPath);
-
-    QVariantList list;
-    for (const auto& def : adapter->controllerBindingDefs()) {
-        QVariantMap item;
-        item["label"] = def.label;
-        item["group"] = def.group;
-        item["section"] = def.section;
-        item["key"] = def.key;
-        item["defaultValue"] = def.defaultValue;
-        item["kind"] = static_cast<int>(def.kind);
-
-        item["currentValue"] = ini.value(def.section, def.key);
-        list.append(item);
-    }
-    return list;
-}
-
-void AppController::saveBinding(const QString& emuId, const QString& section,
-                                 const QString& key, const QString& value) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-    ini.setValue(section, key, value);
-
-    if (ini.save(configPath))
-        setStatus("Binding saved.");
-    else
-        setStatus("Failed to save binding.");
-}
-
-void AppController::clearBinding(const QString& emuId, const QString& section, const QString& key) {
-    saveBinding(emuId, section, key, "");
-}
-
-void AppController::resetControllerBindings(const QString& emuId) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-
-    for (const auto& def : adapter->controllerBindingDefs())
-        ini.setValue(def.section, def.key, def.defaultValue);
-
-    if (ini.save(configPath))
-        setStatus("Controller bindings reset to defaults.");
-    else
-        setStatus("Failed to reset controller bindings.");
-}
-
-void AppController::clearControllerBindings(const QString& emuId) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-
-    for (const auto& def : adapter->controllerBindingDefs())
-        ini.setValue(def.section, def.key, "");
-
-    if (ini.save(configPath))
-        setStatus("Controller bindings cleared.");
-    else
-        setStatus("Failed to clear controller bindings.");
-}
-
-void AppController::autoMapController(const QString& emuId, int deviceIndex) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-
-    // Write default bindings, replacing SDL-0 with the selected device index
-    QString fromPrefix = QStringLiteral("SDL-0/");
-    QString toPrefix = QString("SDL-%1/").arg(deviceIndex);
-
-    for (const auto& def : adapter->controllerBindingDefs()) {
-        QString value = def.defaultValue;
-        if (!value.isEmpty())
-            value.replace(fromPrefix, toPrefix);
-        ini.setValue(def.section, def.key, value);
-    }
-
-    if (ini.save(configPath))
-        setStatus(QString("Controller mapped to SDL-%1.").arg(deviceIndex));
-    else
-        setStatus("Failed to save controller mappings.");
-}
-
-QString AppController::formatCapturedBinding(const QString& emuId, int deviceIndex,
-                                              const QString& element, bool isAxis, bool positive) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-    return adapter->formatBinding(deviceIndex, element, isAxis, positive);
-}
-
-QString AppController::formatCapturedKeyboard(const QString& emuId, int qtKey, int modifiers) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-    return adapter->formatKeyboardBinding(qtKey, modifiers);
-}
-
-QString AppController::formatCapturedMouse(const QString& emuId, int qtButton) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-    return adapter->formatMouseBinding(qtButton);
-}
-
-QString AppController::formatCapturedWheel(const QString& emuId, int direction) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-    return adapter->formatWheelBinding(direction);
-}
+QString AppController::formatCapturedKeyboard(const QString& emuId, int qtKey, int modifiers) const { return m_configService.formatCapturedKeyboard(emuId, qtKey, modifiers); }
+QString AppController::formatCapturedMouse(const QString& emuId, int qtButton) const { return m_configService.formatCapturedMouse(emuId, qtButton); }
+QString AppController::formatCapturedWheel(const QString& emuId, int direction) const { return m_configService.formatCapturedWheel(emuId, direction); }
 
 void AppController::showControllerMapping(const QString& emuId) {
     if (!m_inputManager) {
@@ -879,9 +384,7 @@ void AppController::showEmulatorSettings(const QString& emuId) {
         dialog->show();
         return;
     }
-    auto* dialog = new EmulatorSettingsPage(this, emuId);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->show();
+    qWarning() << "showEmulatorSettings: no settings dialog registered for emulator" << emuId;
 }
 
 void AppController::openNativeEmulatorSettings(const QString& emuId) {
@@ -946,433 +449,29 @@ void AppController::setCursorVisible(bool visible) {
     }
 }
 
-// ── Hotkeys (per-emulator) ────────────────────────────────
-
-QVariantList AppController::hotkeyBindings(const QString& emuId) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    auto defs = adapter->hotkeyBindingDefs();
-    if (defs.isEmpty()) return {};
-
-    QString configPath = adapter->controllerBindingsConfigFilePath();
-    IniFile ini;
-    if (!configPath.isEmpty())
-        ini.load(configPath);
-
-    QVariantList list;
-    for (const auto& def : defs) {
-        QVariantMap item;
-        item["label"] = def.label;
-        item["group"] = def.group;
-        item["section"] = def.section;
-        item["key"] = def.key;
-        item["defaultValue"] = def.defaultValue;
-
-        QString current = ini.value(def.section, def.key);
-        item["currentValue"] = current.isEmpty() ? def.defaultValue : current;
-        list.append(item);
-    }
-    return list;
-}
-
-void AppController::saveHotkey(const QString& emuId, const QString& section,
-                                const QString& key, const QString& value) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->controllerBindingsConfigFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-    ini.setValue(section, key, value);
-
-    if (!ini.save(configPath))
-        setStatus("Failed to save hotkey.");
-}
-
-void AppController::clearHotkey(const QString& emuId, const QString& section, const QString& key) {
-    saveHotkey(emuId, section, key, "");
-}
-
-void AppController::resetHotkeys(const QString& emuId) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->controllerBindingsConfigFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-    for (const auto& def : adapter->hotkeyBindingDefs())
-        ini.setValue(def.section, def.key, def.defaultValue);
-
-    if (ini.save(configPath))
-        setStatus("Hotkeys reset to defaults.");
-    else
-        setStatus("Failed to reset hotkeys.");
-}
-
-// ── Controller Types ────────────────────────────────────────
-
-QVariantList AppController::controllerTypes(const QString& emuId) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    QVariantList list;
-    for (const auto& t : adapter->controllerTypes()) {
-        QVariantMap item;
-        item["id"] = t.id;
-        item["displayName"] = t.displayName;
-        item["svgResource"] = t.svgResource;
-        list.append(item);
-    }
-    return list;
-}
-
-QString AppController::controllerType(const QString& emuId, int port) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return "NotConnected";
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return "NotConnected";
-
-    IniFile ini;
-    ini.load(configPath);
-    QString section = QString("Pad%1").arg(port);
-    QString type = ini.value(section, "Type");
-    return type.isEmpty() ? "DualShock2" : type;
-}
-
-void AppController::setControllerType(const QString& emuId, int port, const QString& type) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-    QString section = QString("Pad%1").arg(port);
-    ini.setValue(section, "Type", type);
-
-    if (ini.save(configPath))
-        setStatus(QString("Controller type set to %1.").arg(type));
-    else
-        setStatus("Failed to save controller type.");
-}
-
-// ── Port-Aware Controller Bindings ──────────────────────────
-
-QVariantList AppController::controllerBindingsForPort(const QString& emuId, int port) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    // Controller type is stored in the main config file under Pad{port}/Type
-    QString mainConfigPath = adapter->configFilePath();
-    IniFile mainIni;
-    if (!mainConfigPath.isEmpty())
-        mainIni.load(mainConfigPath);
-
-    QString type = mainIni.value(QString("Pad%1").arg(port), "Type");
-    if (type.isEmpty()) type = "DualShock2";
-
-    // Bindings may live in a different file/section (e.g., PPSSPP's controls.ini)
-    QString bindingsPath = adapter->controllerBindingsConfigFilePath();
-    IniFile bindingsIni;
-    if (!bindingsPath.isEmpty())
-        bindingsIni.load(bindingsPath);
-
-    QString section = adapter->controllerBindingsSection(port);
-
-    QVariantList list;
-    for (const auto& def : adapter->controllerBindingDefsForType(type)) {
-        QVariantMap item;
-        item["label"] = def.label;
-        item["group"] = def.group;
-        item["section"] = section;
-        item["key"] = def.key;
-        item["defaultValue"] = def.defaultValue;
-        item["currentValue"] = bindingsIni.value(section, def.key);
-        list.append(item);
-    }
-    return list;
-}
-
-QVariantList AppController::controllerSettingsForPort(const QString& emuId, int port) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
-
-    QString configPath = adapter->configFilePath();
-    IniFile ini;
-    if (!configPath.isEmpty())
-        ini.load(configPath);
-
-    QString type = ini.value(QString("Pad%1").arg(port), "Type");
-    if (type.isEmpty()) type = "DualShock2";
-
-    QString section = QString("Pad%1").arg(port);
-
-    QVariantList list;
-    for (const auto& def : adapter->controllerSettingDefsForType(type)) {
-        QVariantMap item;
-        item["label"] = def.label;
-        item["tooltip"] = def.tooltip;
-        item["section"] = section;
-        item["key"] = def.key;
-        item["defaultValue"] = def.defaultValue;
-        item["type"] = static_cast<int>(def.type);
-        item["suffix"] = def.suffix;
-        item["minVal"] = def.minVal;
-        item["maxVal"] = def.maxVal;
-        item["step"] = def.step;
-
-        QVariantList opts;
-        for (const auto& opt : def.options) {
-            QVariantMap o;
-            o["label"] = opt.first;
-            o["value"] = opt.second;
-            opts.append(o);
-        }
-        item["options"] = opts;
-
-        QString val = ini.value(section, def.key);
-        item["currentValue"] = val.isEmpty() ? def.defaultValue : val;
-        list.append(item);
-    }
-    return list;
-}
-
-void AppController::saveBindingForPort(const QString& emuId, int port,
-                                        const QString& key, const QString& value) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->controllerBindingsConfigFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-    QString section = adapter->controllerBindingsSection(port);
-    ini.setValue(section, key, value);
-
-    if (!ini.save(configPath))
-        setStatus("Failed to save binding.");
-}
-
-void AppController::clearBindingForPort(const QString& emuId, int port, const QString& key) {
-    saveBindingForPort(emuId, port, key, "");
-}
-
-void AppController::clearAllBindingsForPort(const QString& emuId, int port) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->controllerBindingsConfigFilePath();
-    if (configPath.isEmpty()) return;
-
-    QString type = controllerType(emuId, port);
-    QString section = adapter->controllerBindingsSection(port);
-
-    IniFile ini;
-    ini.load(configPath);
-
-    for (const auto& def : adapter->controllerBindingDefsForType(type))
-        ini.setValue(section, def.key, "");
-
-    if (ini.save(configPath))
-        setStatus("Bindings cleared.");
-    else
-        setStatus("Failed to clear bindings.");
-}
-
-void AppController::autoMapControllerForPort(const QString& emuId, int port, int deviceIndex) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->controllerBindingsConfigFilePath();
-    if (configPath.isEmpty()) return;
-
-    QString type = controllerType(emuId, port);
-    QString section = adapter->controllerBindingsSection(port);
-
-    IniFile ini;
-    ini.load(configPath);
-
-    for (const auto& def : adapter->controllerBindingDefsForType(type)) {
-        QString mapped = def.defaultValue;
-        if (!mapped.isEmpty() && deviceIndex != 0) {
-            mapped.replace("SDL-0/", QString("SDL-%1/").arg(deviceIndex));
-        }
-        ini.setValue(section, def.key, mapped);
-    }
-
-    if (ini.save(configPath))
-        setStatus("Controller auto-mapped.");
-    else
-        setStatus("Failed to auto-map controller.");
-}
-
-void AppController::saveControllerSettingForPort(const QString& emuId, int port,
-                                                  const QString& key, const QString& value) {
-    // Controller settings (deadzone, sensitivity) live in the main config file
-    // under Pad{port}, even for emulators that store bindings elsewhere.
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-    QString section = QString("Pad%1").arg(port);
-    ini.setValue(section, key, value);
-
-    if (!ini.save(configPath))
-        setStatus("Failed to save controller setting.");
-}
-
-void AppController::restoreDefaultsForPort(const QString& emuId, int port) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString type = controllerType(emuId, port);
-
-    // Restore bindings to defaults (may live in a separate file/section)
-    QString bindingsPath = adapter->controllerBindingsConfigFilePath();
-    if (!bindingsPath.isEmpty()) {
-        IniFile bindingsIni;
-        bindingsIni.load(bindingsPath);
-        QString bindingsSection = adapter->controllerBindingsSection(port);
-        for (const auto& def : adapter->controllerBindingDefsForType(type))
-            bindingsIni.setValue(bindingsSection, def.key, def.defaultValue);
-        bindingsIni.save(bindingsPath);
-    }
-
-    // Reset controller settings to defaults (always in main configFilePath + Pad{port})
-    QString configPath = adapter->configFilePath();
-    if (!configPath.isEmpty()) {
-        IniFile ini;
-        ini.load(configPath);
-        QString section = QString("Pad%1").arg(port);
-        for (const auto& def : adapter->controllerSettingDefsForType(type))
-            ini.setValue(section, def.key, def.defaultValue);
-        ini.save(configPath);
-    }
-
-    setStatus("Controller defaults restored.");
-}
-
-// ── Controller Profile Management ───────────────────────────
-
-QStringList AppController::controllerProfiles(const QString& emuId) const {
-    Q_UNUSED(emuId);
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QDir dir(profileDir);
-    QStringList profiles;
-    if (dir.exists()) {
-        for (const auto& entry : dir.entryList({"*.ini"}, QDir::Files))
-            profiles.append(entry.chopped(4)); // remove .ini
-    }
-    return profiles;
-}
-
-static QString sanitizeProfileName(const QString& name) {
-    QString safe = name;
-    safe.remove(QRegularExpression("[/\\\\:*?\"<>|.]"));
-    return safe.trimmed();
-}
-
-void AppController::createControllerProfile(const QString& emuId, const QString& name) {
-    QString safeName = sanitizeProfileName(name);
-    if (safeName.isEmpty()) return;
-
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QDir().mkpath(profileDir);
-
-    QString srcPath = adapter->configFilePath();
-    QString dstPath = profileDir + "/" + safeName + ".ini";
-
-    if (srcPath.isEmpty()) return;
-
-    // Copy current pad sections to profile
-    IniFile src;
-    src.load(srcPath);
-
-    IniFile dst;
-    for (int port = 1; port <= 2; port++) {
-        QString section = QString("Pad%1").arg(port);
-        for (const auto& key : src.keys(section))
-            dst.setValue(section, key, src.value(section, key));
-    }
-
-    if (dst.save(dstPath))
-        setStatus(QString("Profile '%1' created.").arg(safeName));
-    else
-        setStatus("Failed to create profile.");
-}
-
-void AppController::applyControllerProfile(const QString& emuId, const QString& name) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QString profilePath = profileDir + "/" + name + ".ini";
-    QString configPath = adapter->configFilePath();
-
-    if (configPath.isEmpty() || !QFileInfo::exists(profilePath)) return;
-
-    IniFile profile;
-    profile.load(profilePath);
-
-    IniFile config;
-    config.load(configPath);
-
-    for (int port = 1; port <= 2; port++) {
-        QString section = QString("Pad%1").arg(port);
-        for (const auto& key : profile.keys(section))
-            config.setValue(section, key, profile.value(section, key));
-    }
-
-    if (config.save(configPath))
-        setStatus(QString("Profile '%1' applied.").arg(name));
-    else
-        setStatus("Failed to apply profile.");
-}
-
-void AppController::renameControllerProfile(const QString& emuId, const QString& oldName,
-                                             const QString& newName) {
-    Q_UNUSED(emuId);
-    QString safeNewName = sanitizeProfileName(newName);
-    if (safeNewName.isEmpty()) return;
-
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QString oldPath = profileDir + "/" + oldName + ".ini";
-    QString newPath = profileDir + "/" + safeNewName + ".ini";
-
-    if (QFile::rename(oldPath, newPath))
-        setStatus(QString("Profile renamed to '%1'.").arg(safeNewName));
-    else
-        setStatus("Failed to rename profile.");
-}
-
-void AppController::deleteControllerProfile(const QString& emuId, const QString& name) {
-    Q_UNUSED(emuId);
-    QString safeName = sanitizeProfileName(name);
-    if (safeName.isEmpty()) return;
-
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QString path = profileDir + "/" + safeName + ".ini";
-
-    if (QFile::remove(path))
-        setStatus(QString("Profile '%1' deleted.").arg(safeName));
-    else
-        setStatus("Failed to delete profile.");
-}
+QVariantList AppController::hotkeyBindings(const QString& emuId) const { return m_configService.hotkeyBindings(emuId); }
+void AppController::saveHotkey(const QString& emuId, const QString& section, const QString& key, const QString& value) { m_configService.saveHotkey(emuId, section, key, value); }
+void AppController::clearHotkey(const QString& emuId, const QString& section, const QString& key) { m_configService.clearHotkey(emuId, section, key); }
+void AppController::resetHotkeys(const QString& emuId) { m_configService.resetHotkeys(emuId); }
+
+QVariantList AppController::controllerTypes(const QString& emuId) const { return m_configService.controllerTypes(emuId); }
+QString AppController::controllerType(const QString& emuId, int port) const { return m_configService.controllerType(emuId, port); }
+void AppController::setControllerType(const QString& emuId, int port, const QString& type) { m_configService.setControllerType(emuId, port, type); }
+
+QVariantList AppController::controllerBindingsForPort(const QString& emuId, int port) const { return m_configService.controllerBindingsForPort(emuId, port); }
+QVariantList AppController::controllerSettingsForPort(const QString& emuId, int port) const { return m_configService.controllerSettingsForPort(emuId, port); }
+void AppController::saveBindingForPort(const QString& emuId, int port, const QString& key, const QString& value) { m_configService.saveBindingForPort(emuId, port, key, value); }
+void AppController::clearBindingForPort(const QString& emuId, int port, const QString& key) { m_configService.clearBindingForPort(emuId, port, key); }
+void AppController::clearAllBindingsForPort(const QString& emuId, int port) { m_configService.clearAllBindingsForPort(emuId, port); }
+void AppController::autoMapControllerForPort(const QString& emuId, int port, int deviceIndex) { m_configService.autoMapControllerForPort(emuId, port, deviceIndex); }
+void AppController::saveControllerSettingForPort(const QString& emuId, int port, const QString& key, const QString& value) { m_configService.saveControllerSettingForPort(emuId, port, key, value); }
+void AppController::restoreDefaultsForPort(const QString& emuId, int port) { m_configService.restoreDefaultsForPort(emuId, port); }
+
+QStringList AppController::controllerProfiles(const QString& emuId) const { return m_configService.controllerProfiles(emuId); }
+void AppController::createControllerProfile(const QString& emuId, const QString& name) { m_configService.createControllerProfile(emuId, name); }
+void AppController::applyControllerProfile(const QString& emuId, const QString& name) { m_configService.applyControllerProfile(emuId, name); }
+void AppController::renameControllerProfile(const QString& emuId, const QString& oldName, const QString& newName) { m_configService.renameControllerProfile(emuId, oldName, newName); }
+void AppController::deleteControllerProfile(const QString& emuId, const QString& name) { m_configService.deleteControllerProfile(emuId, name); }
 
 // ── Scraper ───────────────────────────────────────────────
 
@@ -1494,10 +593,12 @@ void AppController::raSignOut() {
 
 bool AppController::hasRACredentials() const { return m_raService.hasCredentials(); }
 QString AppController::raUsername() const { return m_raService.username(); }
-QVariantMap AppController::raUserSummary() { return m_raService.userSummary(); }
-QVariantList AppController::raUserGames() { return m_raService.userGames(); }
-QVariantMap AppController::raGameDetail(int raGameId) { return m_raService.gameDetail(raGameId); }
-int AppController::raFindGameId(const QString& title, const QString& system) { return m_raService.findRaGameId(title, system); }
+void AppController::raRequestUserSummary() { m_raService.requestUserSummary(); }
+void AppController::raRequestUserGames() { m_raService.requestUserGames(); }
+void AppController::raRequestGameDetail(int raGameId) { m_raService.requestGameDetail(raGameId); }
+void AppController::raRequestGameIdLookup(const QString& title, const QString& system) {
+    m_raService.requestGameIdLookup(title, system);
+}
 
 void AppController::raProceedAfterLoginPrompt() {
     if (m_pendingLaunchRom.isEmpty()) return;

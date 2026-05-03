@@ -1,14 +1,13 @@
 #include "pcsx2_graphics_page.h"
-#include "pcsx2_graphics_stub_sub_page.h"
 #include "pcsx2_graphics_rendering_page.h"
 #include "pcsx2_graphics_post_processing_page.h"
 #include "pcsx2_graphics_display_page.h"
 #include "pcsx2_graphics_osd_page.h"
 #include "../pcsx2_settings_dialog.h"
-#include "../pcsx2_theme.h"
-#include "../widgets/pcsx2_graphics_sub_tab_bar.h"
-#include "../widgets/pcsx2_card.h"
-#include "../widgets/pcsx2_toggle.h"
+#include "ui/settings/settings_dialog_theme.h"
+#include "ui/settings/widgets/settings_graphics_sub_tab_bar.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_toggle.h"
 #include "ui/app_controller.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -41,13 +40,13 @@ Pcsx2GraphicsPage::Pcsx2GraphicsPage(Pcsx2SettingsDialog* dialog)
     topRow->addStretch();
     root->addLayout(topRow);
 
-    m_tabBar = new Pcsx2GraphicsSubTabBar(this);
+    m_tabBar = new SettingsGraphicsSubTabBar(this);
     m_tabBar->setFocusPolicy(Qt::NoFocus);
     m_tabBar->addTab(QStringLiteral("\U0001F5A5"), "Display");
     m_tabBar->addTab(QStringLiteral("\U0001F3A8"), "Rendering");
     m_tabBar->addTab(QStringLiteral("\u2728"),     "Post-Proc");
     m_tabBar->addTab(QStringLiteral("\U0001F4CA"), "OSD");
-    connect(m_tabBar, &Pcsx2GraphicsSubTabBar::tabActivated,
+    connect(m_tabBar, &SettingsGraphicsSubTabBar::tabActivated,
             this, &Pcsx2GraphicsPage::onSubTabActivated);
     root->addWidget(m_tabBar, 0, Qt::AlignLeft);
 
@@ -137,8 +136,8 @@ void Pcsx2GraphicsPage::focusFirstSettingOnCurrentTab() {
         if (w->focusPolicy() == Qt::NoFocus) continue;
         if (qobject_cast<QComboBox*>(w)    ||
             qobject_cast<QSlider*>(w)      ||
-            qobject_cast<Pcsx2Toggle*>(w)  ||
-            (qobject_cast<Pcsx2Card*>(w) && w->focusPolicy() != Qt::NoFocus)) {
+            qobject_cast<SettingsToggle*>(w)  ||
+            (qobject_cast<SettingsCard*>(w) && w->focusPolicy() != Qt::NoFocus)) {
             w->setFocus(Qt::TabFocusReason);
             return;
         }

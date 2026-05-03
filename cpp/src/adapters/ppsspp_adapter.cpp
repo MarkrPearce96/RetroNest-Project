@@ -50,6 +50,13 @@ QString PPSSPPAdapter::controllerBindingsSection(int /*port*/) const {
     return "ControlMapping";
 }
 
+QString PPSSPPAdapter::controllerSettingsSection(int /*port*/) const {
+    // PPSSPP reads deadzone/sensitivity from the [Control] section.
+    // Writing here directly removes the need for the Pad1→Control sync that
+    // syncToNativeConfig used to perform on every launch.
+    return "Control";
+}
+
 // ============================================================================
 // Settings schema
 // ============================================================================
@@ -486,26 +493,27 @@ bool PPSSPPAdapter::patchExistingConfig(const QString& path,
 }
 
 // ============================================================================
-// syncToNativeConfig — sync controller settings [Pad1] → [Control]
+// syncToNativeConfig — backwards-compat migration of [Pad1] → [Control]
 // ============================================================================
+//
+// Historic note: RetroNest used to write PPSSPP controller settings under
+// [Pad1], because saveControllerSettingForPort hard-coded "Pad{port}" as
+// the section. PPSSPP itself reads them from [Control], so on every launch
+// we copied [Pad1] → [Control].
+//
+// That bug was fixed by adding controllerSettingsSection(port) → "Control"
+// for PPSSPP, so new writes go directly to [Control]. This function now
+// only matters for users upgrading from a build with the old behavior:
+// it migrates any orphaned [Pad1] values into [Control] once, after which
+// it's a no-op.
 
 bool PPSSPPAdapter::syncToNativeConfig(const QString& mainIniPath) {
-    // configFilePath() returns the native ppsspp.ini directly, so our settings UI
-    // writes there in real-time (like PCSX2/DuckStation).
-    //
-    // controllerBindingsConfigFilePath() returns controls.ini directly, so the
-    // controller binding UI writes there in real-time too.
-    //
-    // The only state that still needs syncing on launch is controller settings
-    // (deadzone, sensitivity) — our UI writes them under [Pad1] but PPSSPP reads
-    // them from the [Control] section in the same ppsspp.ini.
     IniFile mainIni;
     if (!mainIni.load(mainIniPath)) {
         qWarning() << "[PPSSPP] Cannot read ppsspp.ini for sync:" << mainIniPath;
         return false;
     }
 
-    // ── Sync controller settings from [Pad1] → [Control] in ppsspp.ini ──
     bool mainChanged = false;
     for (const auto& def : controllerSettingDefs()) {
         QString val = mainIni.value("Pad1", def.key);
@@ -517,7 +525,7 @@ bool PPSSPPAdapter::syncToNativeConfig(const QString& mainIniPath) {
 
     if (mainChanged) {
         if (!mainIni.save(mainIniPath))
-            qWarning() << "[PPSSPP] Failed to sync controller settings to:" << mainIniPath;
+            qWarning() << "[PPSSPP] Failed to migrate legacy [Pad1] settings to [Control]:" << mainIniPath;
     }
 
     return true;
@@ -804,48 +812,34 @@ QString PPSSPPAdapter::extractSerial(const QString& romPath) const {
 // RetroAchievements
 // ============================================================================
 
-void PPSSPPAdapter::patchRetroAchievements(const QString& username,
-                                            const QString& token,
-                                            bool enabled,
-                                            bool hardcore,
-                                            bool notifications,
-                                            bool sounds) {
-    Q_UNUSED(username);
-    Q_UNUSED(token);
-    Q_UNUSED(notifications);
-    // No credential patching — PPSSPP stores its own RA login.
-    const QString mainPath = configFilePath();
-    QString content;
-    if (readConfigFile(mainPath, content, "PPSSPP")) {
-        QVector<IniKeyPatch> patches = {
-            {"Achievements", "AchievementsEnable", enabled ? "True" : "False"},
-            {"Achievements", "AchievementsHardcoreMode", hardcore ? "True" : "False"},
-            {"Achievements", "AchievementsSoundEffects", sounds ? "True" : "False"},
-        };
-        if (patchIniKeys(content, patches))
-            writeConfigFile(mainPath, content, "PPSSPP");
-    }
+EmulatorAdapter::RetroAchievementsKeyMap PPSSPPAdapter::retroAchievementsKeyMap() const {
+    // PPSSPP uses Title-cased "True"/"False" booleans and prefixes its key
+    // names with "Achievements". No notifications key is exposed.
+    return {
+        "Achievements",                // section
+        "AchievementsEnable",          // enabledKey
+        "AchievementsHardcoreMode",    // hardcoreKey
+        "",                            // notificationsKey (unsupported)
+        "AchievementsSoundEffects",    // soundEffectsKey
+        "True", "False",               // bool format (Title-case)
+        "PPSSPP",                      // configTag
+    };
 }
 
 // ============================================================================
 // Asset matching — select the right GitHub release asset for this platform
 // ============================================================================
 
-QString PPSSPPAdapter::matchAsset(const QStringList& assetNames) const {
-    for (const auto& name : assetNames) {
-        const QString lower = name.toLower();
+QVector<EmulatorAdapter::AssetMatchRule> PPSSPPAdapter::assetMatchRules() const {
 #if defined(Q_OS_MACOS)
-        if (lower.contains("macos") && name.endsWith(".zip"))
-            return name;
+    return { {{"macos"}, ".zip"} };
 #elif defined(Q_OS_WIN)
-        if (lower.contains("windows") && lower.contains("x64") && name.endsWith(".zip"))
-            return name;
+    return { {{"windows", "x64"}, ".zip"} };
 #else
-        if (name.endsWith(".AppImage"))
-            return name;
-        if (lower.contains("linux") && (name.endsWith(".tar.gz") || name.endsWith(".tar.xz")))
-            return name;
+    return {
+        {{}, ".AppImage"},
+        {{"linux"}, ".tar.gz"},
+        {{"linux"}, ".tar.xz"},
+    };
 #endif
-    }
-    return EmulatorAdapter::matchAsset(assetNames);
 }

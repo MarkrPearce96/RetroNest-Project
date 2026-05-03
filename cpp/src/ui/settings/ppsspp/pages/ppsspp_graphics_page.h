@@ -3,7 +3,7 @@
 #include "core/setting_def.h"
 
 class PpssppSettingsDialog;
-class Pcsx2GraphicsSubTabBar;
+class SettingsGraphicsSubTabBar;
 class QStackedWidget;
 
 class PpssppGraphicsPage : public QWidget {
@@ -25,6 +25,6 @@ private:
     void focusFirstSettingOnCurrentTab();
 
     PpssppSettingsDialog* m_dialog;
-    Pcsx2GraphicsSubTabBar* m_tabBar = nullptr;
+    SettingsGraphicsSubTabBar* m_tabBar = nullptr;
     QStackedWidget* m_stack = nullptr;
 };

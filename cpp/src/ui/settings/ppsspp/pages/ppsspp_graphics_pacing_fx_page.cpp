@@ -1,10 +1,11 @@
 #include "ppsspp_graphics_pacing_fx_page.h"
 #include "../ppsspp_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_section_header.h"
-#include "../../pcsx2/widgets/pcsx2_combo_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle_row.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_section_header.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/ppsspp_adapter.h"
 #include <QVBoxLayout>
 #include <QScrollArea>
@@ -36,14 +37,7 @@ void PpssppGraphicsPacingFxPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -53,45 +47,13 @@ void PpssppGraphicsPacingFxPage::buildUi() {
     root->setContentsMargins(24, 12, 24, 16);
     root->setSpacing(12);
 
-    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ComboRow(card);
-        row->setLabel(d->label);
-        row->setOptions(d->options);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &PpssppGraphicsPacingFxPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::focused, this, &PpssppGraphicsPacingFxPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val){
-            if (const SettingDef* dd = findDef(key)) saveValue(dd->section, dd->key, val);
-        });
-        v->addWidget(row);
-        return card;
-    };
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ToggleRow(card);
-        row->setLabel(d->label);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &PpssppGraphicsPacingFxPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &PpssppGraphicsPacingFxPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
-            if (const SettingDef* dd = findDef(key)) saveValue(dd->section, dd->key, on ? "true" : "false");
-        });
-        v->addWidget(row);
-        return card;
-    };
+    SettingsPageBuilder builder(this, m_schema,
+        [this](const QString& sec, const QString& k, const QString& v){ saveValue(sec, k, v); },
+        [this](const SettingDef& d){ emit settingFocused(d); });
+    auto makeComboCard  = [&builder](const QString& key){ return builder.makeComboCard(key); };
+    auto makeToggleCard = [&builder](const QString& key){ return builder.makeToggleCard(key); };
 
-    root->addWidget(new Pcsx2SectionHeader("Frame Pacing", this));
+    root->addWidget(new SettingsSectionHeader("Frame Pacing", this));
     if (auto* c = makeToggleCard("VerticalSync"))           root->addWidget(c);
     if (auto* c = makeComboCard ("FrameSkip"))              root->addWidget(c);
     if (auto* c = makeToggleCard("AutoFrameSkip"))          root->addWidget(c);
@@ -99,7 +61,7 @@ void PpssppGraphicsPacingFxPage::buildUi() {
     if (auto* c = makeComboCard ("FrameRate2"))             root->addWidget(c);
     if (auto* c = makeToggleCard("RenderDuplicateFrames"))  root->addWidget(c);
 
-    root->addWidget(new Pcsx2SectionHeader("Post-Processing", this));
+    root->addWidget(new SettingsSectionHeader("Post-Processing", this));
     if (auto* c = makeComboCard("PostShader1")) root->addWidget(c);
 
     root->addStretch();
@@ -109,12 +71,12 @@ void PpssppGraphicsPacingFxPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* row : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* row : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;

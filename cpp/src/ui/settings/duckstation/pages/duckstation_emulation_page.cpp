@@ -1,12 +1,13 @@
 #include "duckstation_emulation_page.h"
 #include "../duckstation_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_section_header.h"
-#include "../../pcsx2/widgets/pcsx2_combo_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle.h"
-#include "../../pcsx2/widgets/pcsx2_slider_row.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_section_header.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_toggle.h"
+#include "ui/settings/widgets/settings_slider_row.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/duckstation_adapter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -45,14 +46,7 @@ void DuckStationEmulationPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -69,20 +63,20 @@ void DuckStationEmulationPage::buildUi() {
     connect(back, &QPushButton::clicked, m_dialog, &DuckStationSettingsDialog::popPage);
     root->addWidget(back);
 
-    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeComboCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ComboRow(card);
+        auto* row = new SettingsComboRow(card);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationEmulationPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::focused, this, &DuckStationEmulationPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
+        connect(card, &SettingsCard::focused, this, &DuckStationEmulationPage::settingFocused);
+        connect(row,  &SettingsComboRow::focused, this, &DuckStationEmulationPage::settingFocused);
+        connect(row,  &SettingsComboRow::valueChanged, this, [this, key](const QString& v){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, v);
             // If this combo just transitioned to an inactive sentinel value,
             // reset every dependent setting back to its schema default.
@@ -96,19 +90,19 @@ void DuckStationEmulationPage::buildUi() {
         v->addWidget(row);
         return card;
     };
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeToggleCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationEmulationPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationEmulationPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
+        connect(card, &SettingsCard::focused, this, &DuckStationEmulationPage::settingFocused);
+        connect(row, &SettingsToggleRow::focused, this, &DuckStationEmulationPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
             // Master toggle just turned off — reset its dependents to defaults.
             if (!on) resetDependentsOf(key);
@@ -117,21 +111,21 @@ void DuckStationEmulationPage::buildUi() {
         v->addWidget(row);
         return card;
     };
-    auto makeSliderCard = [this](const QString& key, int lo, int hi, const QString& suffix) -> Pcsx2Card* {
+    auto makeSliderCard = [this](const QString& key, int lo, int hi, const QString& suffix) -> SettingsCard* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2SliderRow(card);
+        auto* row = new SettingsSliderRow(card);
         row->setLabel(d->label);
         row->setRange(lo, hi);
         row->setSuffix(suffix);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationEmulationPage::settingFocused);
-        connect(row,  &Pcsx2SliderRow::focused, this, &DuckStationEmulationPage::settingFocused);
-        connect(row,  &Pcsx2SliderRow::valueChanged, this, [this, key](int val){
+        connect(card, &SettingsCard::focused, this, &DuckStationEmulationPage::settingFocused);
+        connect(row,  &SettingsSliderRow::focused, this, &DuckStationEmulationPage::settingFocused);
+        connect(row,  &SettingsSliderRow::valueChanged, this, [this, key](int val){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, QString::number(val));
         });
         v->addWidget(row);
@@ -139,13 +133,13 @@ void DuckStationEmulationPage::buildUi() {
     };
 
     // Speed Control
-    root->addWidget(new Pcsx2SectionHeader("Speed Control", this));
+    root->addWidget(new SettingsSectionHeader("Speed Control", this));
     if (auto* c = makeComboCard("EmulationSpeed"))   root->addWidget(c);
     if (auto* c = makeComboCard("FastForwardSpeed")) root->addWidget(c);
     if (auto* c = makeComboCard("TurboSpeed"))       root->addWidget(c);
 
     // Latency Control
-    root->addWidget(new Pcsx2SectionHeader("Latency Control", this));
+    root->addWidget(new SettingsSectionHeader("Latency Control", this));
     auto* latencyGrid = new QGridLayout();
     latencyGrid->setSpacing(10);
     int lgr = 0, lgc = 0;
@@ -163,14 +157,14 @@ void DuckStationEmulationPage::buildUi() {
     root->addLayout(latencyGrid);
 
     // Rewind
-    root->addWidget(new Pcsx2SectionHeader("Rewind", this));
+    root->addWidget(new SettingsSectionHeader("Rewind", this));
     if (auto* c = makeToggleCard("RewindEnable"))                       root->addWidget(c);
     if (auto* c = makeToggleCard("UseSoftwareRendererForMemoryStates")) root->addWidget(c);
     if (auto* c = makeSliderCard("RewindFrequency", 0, 60, " s"))       root->addWidget(c);
     if (auto* c = makeSliderCard("RewindSaveSlots",  1, 50, ""))        root->addWidget(c);
 
     // Runahead
-    root->addWidget(new Pcsx2SectionHeader("Runahead", this));
+    root->addWidget(new SettingsSectionHeader("Runahead", this));
     if (auto* c = makeComboCard("RunaheadFrameCount"))     root->addWidget(c);
     if (auto* c = makeToggleCard("RunaheadForAnalogInput")) root->addWidget(c);
 
@@ -181,18 +175,18 @@ void DuckStationEmulationPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* row : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* row : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
         row->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
     }
-    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
@@ -214,17 +208,17 @@ void DuckStationEmulationPage::resetDependentsOf(const QString& masterKey) {
     for (const SettingDef& d : m_schema) {
         if (d.dependsOn != masterKey) continue;
         saveValue(d.section, d.key, d.defaultValue);
-        for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+        for (auto* tog : findChildren<SettingsToggleRow*>()) {
             if (tog->settingDef().key != d.key) continue;
             QSignalBlocker sb(tog);
             tog->setChecked(d.defaultValue.compare("true", Qt::CaseInsensitive) == 0);
         }
-        for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+        for (auto* slider : findChildren<SettingsSliderRow*>()) {
             if (slider->settingDef().key != d.key) continue;
             QSignalBlocker sb(slider);
             slider->setValue(static_cast<int>(d.defaultValue.toDouble()));
         }
-        for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+        for (auto* combo : findChildren<SettingsComboRow*>()) {
             if (combo->settingDef().key != d.key) continue;
             QSignalBlocker sb(combo);
             combo->setValue(d.defaultValue);
@@ -238,9 +232,9 @@ void DuckStationEmulationPage::refreshDependencies() {
     // sentinel "0" / "false" / empty — matching how DuckStation's Runahead
     // combo uses "0" for "Disabled".
     QHash<QString, bool> masterStates;
-    for (auto* tog : findChildren<Pcsx2ToggleRow*>())
+    for (auto* tog : findChildren<SettingsToggleRow*>())
         masterStates.insert(tog->settingDef().key, tog->isChecked());
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const QString v = combo->value();
         const bool active = !v.isEmpty()
             && v != "0"
@@ -254,21 +248,21 @@ void DuckStationEmulationPage::refreshDependencies() {
     // that's currently inactive, dim the row and disable its inner control so
     // the user can't click or drag it. The card itself stays focusable so
     // arrow-key spatial nav still passes through.
-    for (auto* card : findChildren<Pcsx2Card*>()) {
+    for (auto* card : findChildren<SettingsCard*>()) {
         const QString& dep = card->settingDef().dependsOn;
         if (dep.isEmpty()) continue;
         const bool active = masterStates.value(dep, true);
 
         QWidget* dimTarget = nullptr;
-        if (auto* sliderRow = card->findChild<Pcsx2SliderRow*>()) {
+        if (auto* sliderRow = card->findChild<SettingsSliderRow*>()) {
             sliderRow->setProperty("dependencyActive", active);
             if (auto* inner = sliderRow->findChild<QSlider*>()) inner->setEnabled(active);
             dimTarget = sliderRow;
-        } else if (auto* toggleRow = card->findChild<Pcsx2ToggleRow*>()) {
+        } else if (auto* toggleRow = card->findChild<SettingsToggleRow*>()) {
             toggleRow->setProperty("dependencyActive", active);
-            if (auto* inner = toggleRow->findChild<Pcsx2Toggle*>()) inner->setEnabled(active);
+            if (auto* inner = toggleRow->findChild<SettingsToggle*>()) inner->setEnabled(active);
             dimTarget = toggleRow;
-        } else if (auto* comboRow = card->findChild<Pcsx2ComboRow*>()) {
+        } else if (auto* comboRow = card->findChild<SettingsComboRow*>()) {
             comboRow->setProperty("dependencyActive", active);
             if (auto* inner = comboRow->findChild<QComboBox*>()) inner->setEnabled(active);
             dimTarget = comboRow;

@@ -370,15 +370,24 @@ bool Database::removeGameByPath(const QString& romPath) {
 }
 
 int Database::removeStaleGames() {
-    auto games = allGames();
-    int removed = 0;
-    for (const auto& g : games) {
-        if (!QFileInfo::exists(g.rom_path)) {
-            removeGame(g.id);
-            removed++;
-            qInfo() << "[Database] Removed stale game:" << g.title;
-        }
+    // Targeted SELECT — pulling every column just to check QFileInfo::exists
+    // was ~10x more data than needed on large libraries.
+    auto db = QSqlDatabase::database(DB_CONNECTION);
+    QSqlQuery q(db);
+    if (!q.exec("SELECT id, rom_path FROM games")) {
+        qWarning() << "[Database] removeStaleGames query failed:" << q.lastError().text();
+        return 0;
     }
+    QVector<int> staleIds;
+    while (q.next()) {
+        if (!QFileInfo::exists(q.value(1).toString()))
+            staleIds.append(q.value(0).toInt());
+    }
+    int removed = 0;
+    for (int id : staleIds)
+        if (removeGame(id)) ++removed;
+    if (removed > 0)
+        qInfo() << "[Database] Removed" << removed << "stale games";
     return removed;
 }
 

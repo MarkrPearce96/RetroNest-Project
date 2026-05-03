@@ -49,7 +49,7 @@ public:
     Q_INVOKABLE void scrapeGameWithProgress(int gameId);
     Q_INVOKABLE bool hasScraperCredentials() const;
     Q_INVOKABLE bool hasRACredentials() const;
-    Q_INVOKABLE int raFindGameId(const QString& title, const QString& system = {}) const;
+    Q_INVOKABLE void raRequestGameIdLookup(const QString& title, const QString& system = {});
     Q_INVOKABLE void openGameRomFolder(int gameId);
 
     // Async game control
@@ -78,6 +78,7 @@ signals:
     void gameStarted();
     void gameFinished(int exitCode, bool crashed);
     void resumeStateFound(int gameId, const QString& romPath, const QString& emuId);
+    void raGameIdLookupReady(const QString& title, int raGameId);
 
 private:
     static QString systemDisplayName(const QString& systemId);

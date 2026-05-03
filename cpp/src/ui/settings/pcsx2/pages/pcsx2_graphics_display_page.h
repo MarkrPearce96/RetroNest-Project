@@ -5,11 +5,11 @@
 #include "core/setting_def.h"
 
 class Pcsx2SettingsDialog;
-class Pcsx2Card;
+class SettingsCard;
 class Pcsx2AspectRatioPreview;
-class Pcsx2ComboRow;
-class Pcsx2ToggleRow;
-class Pcsx2SliderRow;
+class SettingsComboRow;
+class SettingsToggleRow;
+class SettingsSliderRow;
 class QSpinBox;
 class QHBoxLayout;
 class QVBoxLayout;
@@ -45,11 +45,11 @@ private:
     QVector<SettingDef>  m_schema;
 
     Pcsx2AspectRatioPreview* m_preview = nullptr;
-    Pcsx2ComboRow*  m_aspectCombo = nullptr;
-    Pcsx2SliderRow* m_stretchSlider = nullptr;
+    SettingsComboRow*  m_aspectCombo = nullptr;
+    SettingsSliderRow* m_stretchSlider = nullptr;
     QSpinBox* m_cropL = nullptr;
     QSpinBox* m_cropT = nullptr;
     QSpinBox* m_cropR = nullptr;
     QSpinBox* m_cropB = nullptr;
-    Pcsx2ToggleRow* m_integerScalingToggle = nullptr;
+    SettingsToggleRow* m_integerScalingToggle = nullptr;
 };

@@ -1,10 +1,11 @@
 #include "duckstation_memory_cards_page.h"
 #include "../duckstation_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_combo_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle_row.h"
-#include "../../pcsx2/widgets/pcsx2_section_header.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_section_header.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/duckstation_adapter.h"
 #include <QVBoxLayout>
 #include <QPushButton>
@@ -35,14 +36,7 @@ void DuckStationMemoryCardsPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -61,12 +55,12 @@ void DuckStationMemoryCardsPage::buildUi() {
 
     // Helper: make a slot card with a combo row for card type and a read-only path label
     auto makeSlotCard = [this](const QString& typeKey, const QString& pathKey,
-                               const QString& title, QLabel** outPathLabel) -> Pcsx2Card* {
+                               const QString& title, QLabel** outPathLabel) -> SettingsCard* {
         const SettingDef* td = findDef(typeKey);
         const SettingDef* pd = findDef(pathKey);
         if (!td || !pd) return nullptr;
 
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*td);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
@@ -76,13 +70,13 @@ void DuckStationMemoryCardsPage::buildUi() {
         header->setStyleSheet("color:#f2efe8;font-size:14px;font-weight:bold;");
         v->addWidget(header);
 
-        auto* row = new Pcsx2ComboRow(card);
+        auto* row = new SettingsComboRow(card);
         row->setLabel(td->label);
         row->setOptions(td->options);
         row->setSettingDef(*td);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationMemoryCardsPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::focused, this, &DuckStationMemoryCardsPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, typeKey](const QString& val) {
+        connect(card, &SettingsCard::focused, this, &DuckStationMemoryCardsPage::settingFocused);
+        connect(row,  &SettingsComboRow::focused, this, &DuckStationMemoryCardsPage::settingFocused);
+        connect(row,  &SettingsComboRow::valueChanged, this, [this, typeKey](const QString& val) {
             if (const SettingDef* d2 = findDef(typeKey)) saveValue(d2->section, d2->key, val);
         });
         v->addWidget(row);
@@ -96,7 +90,7 @@ void DuckStationMemoryCardsPage::buildUi() {
     };
 
     // Slot 1
-    root->addWidget(new Pcsx2SectionHeader("Memory Card Slots", this));
+    root->addWidget(new SettingsSectionHeader("Memory Card Slots", this));
     if (auto* c = makeSlotCard("Card1Type", "Card1Path", "Slot 1", &m_slot1PathLabel))
         root->addWidget(c);
 
@@ -105,26 +99,12 @@ void DuckStationMemoryCardsPage::buildUi() {
         root->addWidget(c);
 
     // Additional toggle options
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
-        const SettingDef* d = findDef(key);
-        if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
-        card->setSettingDef(*d);
-        auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ToggleRow(card);
-        row->setLabel(d->label);
-        row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationMemoryCardsPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationMemoryCardsPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on) {
-            if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
-        });
-        v->addWidget(row);
-        return card;
-    };
+    SettingsPageBuilder builder(this, m_schema,
+        [this](const QString& sec, const QString& k, const QString& v){ saveValue(sec, k, v); },
+        [this](const SettingDef& d){ emit settingFocused(d); });
+    auto makeToggleCard = [&builder](const QString& key){ return builder.makeToggleCard(key); };
 
-    root->addWidget(new Pcsx2SectionHeader("Game-Specific Settings", this));
+    root->addWidget(new SettingsSectionHeader("Game-Specific Settings", this));
     if (auto* c = makeToggleCard("UsePlaylistTitle")) root->addWidget(c);
 
     root->addStretch();
@@ -134,12 +114,12 @@ void DuckStationMemoryCardsPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* row : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* row : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;

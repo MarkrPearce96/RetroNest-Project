@@ -26,6 +26,7 @@ ThemeContext::ThemeContext(AppController* app, GameListModel* model, Database* d
         m_gameModel->reload();
         emit gameFinished(exitCode, crashed);
     });
+    connect(m_app, &AppController::raGameIdLookupReady, this, &ThemeContext::raGameIdLookupReady);
 }
 
 QStringList ThemeContext::systems() const {
@@ -224,8 +225,8 @@ bool ThemeContext::hasRACredentials() const {
     return m_app->hasRACredentials();
 }
 
-int ThemeContext::raFindGameId(const QString& title, const QString& system) const {
-    return m_app->raFindGameId(title, system);
+void ThemeContext::raRequestGameIdLookup(const QString& title, const QString& system) {
+    m_app->raRequestGameIdLookup(title, system);
 }
 
 void ThemeContext::scrapeGameWithProgress(int gameId) {

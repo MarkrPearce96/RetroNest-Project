@@ -1,17 +1,15 @@
 #include "popn_bindings_widget.h"
 #include "binding_widget_common.h"
 
-#include <QGridLayout>
-#include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPixmap>
-
-// ─────────────────────────────────────────────────────────────
+#include <QVBoxLayout>
 
 PopnBindingsWidget::PopnBindingsWidget(SdlInputManager* inputManager,
                                        AppController* appController,
                                        const QString& emuId,
                                        int port,
+                                       Variant variant,
                                        QWidget* parent)
     : BindingsWidgetBase(inputManager, appController, emuId, port, parent)
 {
@@ -41,28 +39,35 @@ PopnBindingsWidget::PopnBindingsWidget(SdlInputManager* inputManager,
         return group;
     };
 
-    // -- Row 1: 9 coloured buttons --
+    // PCSX2 and DuckStation use different binding keys for the same physical
+    // 9-button + Start/Select layout. Choose the right keys per variant.
+    QStringList mainButtons;
+    QStringList systemButtons;
+    if (variant == Variant::DuckStation) {
+        mainButtons = {"Left White", "Left Yellow", "Left Green", "Left Blue",
+                       "Middle Red",
+                       "Right Blue", "Right Green", "Right Yellow", "Right White"};
+        systemButtons = {"Select", "Start"};
+    } else {
+        mainButtons = {"Yellow Left", "Yellow Right", "Blue Left", "Blue Right",
+                       "White Left", "White Right", "Green Left", "Green Right",
+                       "Red"};
+        systemButtons = {"Start", "Select"};
+    }
+
     auto* row1 = new QHBoxLayout();
     row1->setSpacing(8);
     row1->addStretch();
-    row1->addWidget(makeBindGroup("Yellow Left"));
-    row1->addWidget(makeBindGroup("Yellow Right"));
-    row1->addWidget(makeBindGroup("Blue Left"));
-    row1->addWidget(makeBindGroup("Blue Right"));
-    row1->addWidget(makeBindGroup("White Left"));
-    row1->addWidget(makeBindGroup("White Right"));
-    row1->addWidget(makeBindGroup("Green Left"));
-    row1->addWidget(makeBindGroup("Green Right"));
-    row1->addWidget(makeBindGroup("Red"));
+    for (const auto& label : mainButtons)
+        row1->addWidget(makeBindGroup(label));
     row1->addStretch();
     mainLayout->addLayout(row1);
 
-    // -- Row 2: Start, Select --
     auto* row2 = new QHBoxLayout();
     row2->setSpacing(12);
     row2->addStretch();
-    row2->addWidget(makeBindGroup("Start"));
-    row2->addWidget(makeBindGroup("Select"));
+    for (const auto& label : systemButtons)
+        row2->addWidget(makeBindGroup(label));
     row2->addStretch();
     mainLayout->addLayout(row2);
 

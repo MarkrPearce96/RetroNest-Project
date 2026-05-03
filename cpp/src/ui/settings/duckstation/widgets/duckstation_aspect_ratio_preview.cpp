@@ -1,5 +1,5 @@
 #include "duckstation_aspect_ratio_preview.h"
-#include "../duckstation_theme.h"
+#include "ui/settings/settings_dialog_theme.h"
 #include <QPainter>
 #include <QPaintEvent>
 #include <QLinearGradient>
@@ -146,7 +146,7 @@ void DuckStationAspectRatioPreview::paintEvent(QPaintEvent*) {
     p.setRenderHint(QPainter::Antialiasing, true);
 
     const QRectF full = rect();
-    p.fillRect(full, DuckStationTheme::letterbox());
+    p.fillRect(full, SettingsDialogTheme::letterbox());
 
     const QRectF client = full;
     const QRectF dst = computeDrawRect(client);
@@ -162,7 +162,7 @@ void DuckStationAspectRatioPreview::paintEvent(QPaintEvent*) {
     if (m_cropL || m_cropT || m_cropR || m_cropB) {
         const double scaleX = dst.width()  / kSrcW;
         const double scaleY = dst.height() / kSrcH;
-        p.setBrush(DuckStationTheme::letterbox());
+        p.setBrush(SettingsDialogTheme::letterbox());
         p.setPen(Qt::NoPen);
         if (m_cropL > 0)
             p.drawRect(QRectF(dst.left(), dst.top(), m_cropL * scaleX, dst.height()));
@@ -178,7 +178,7 @@ void DuckStationAspectRatioPreview::paintEvent(QPaintEvent*) {
 
     // 1px amber border around the draw rect.
     {
-        QPen pen(DuckStationTheme::accent(), 1.0);
+        QPen pen(SettingsDialogTheme::accent(), 1.0);
         p.setPen(pen);
         p.setBrush(Qt::NoBrush);
         p.drawRect(dst.adjusted(0.5, 0.5, -0.5, -0.5));
@@ -190,7 +190,7 @@ void DuckStationAspectRatioPreview::paintEvent(QPaintEvent*) {
         f.setPointSize(11);
         f.setBold(true);
         p.setFont(f);
-        p.setPen(DuckStationTheme::textPrimary());
+        p.setPen(SettingsDialogTheme::textPrimary());
         p.drawText(dst, Qt::AlignCenter, labelForCurrentRatio());
     }
 }

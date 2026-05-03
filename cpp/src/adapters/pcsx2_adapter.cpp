@@ -52,19 +52,16 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     {
         SettingDef d{"Emulation", "", "Speed Control", "Framerate", "NominalScalar", "Normal Speed",
                   "Sets the target speed for normal gameplay.", SettingDef::Combo, "1", speedOptions, 0, 0, 0};
-        d.recommendedValue = "1";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "Speed Control", "Framerate", "TurboScalar", "Fast-Forward Speed",
                   "Sets the target speed when turbo mode is activated.", SettingDef::Combo, "2", speedOptions, 0, 0, 0};
-        d.recommendedValue = "2";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "Speed Control", "Framerate", "SlomoScalar", "Slow-Motion Speed",
                   "Sets the target speed when slow motion mode is activated.", SettingDef::Combo, "0.5", speedOptions, 0, 0, 0};
-        d.recommendedValue = "0.5";
         s.append(d);
     }
 
@@ -77,7 +74,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                       {"100% (Normal Speed)", "0"},
                       {"130% (Overclock)", "1"}, {"180% (Overclock)", "2"}, {"300% (Overclock)", "3"}
                   }, 0, 0, 0};
-        d.recommendedValue = "0";
         s.append(d);
     }
     {
@@ -86,43 +82,36 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                   SettingDef::Combo, "0", {
                       {"Disabled", "0"}, {"Mild Underclock", "1"}, {"Moderate Underclock", "2"}, {"Maximum Underclock", "3"}
                   }, 0, 0, 0};
-        d.recommendedValue = "0";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "System Settings", "EmuCore/Speedhacks", "vuThread", "Enable Multithreaded VU1 (MTVU)",
                   "Runs VU1 on a second thread. Substantial speed improvement in most games.", SettingDef::Bool, "true", {}, 0, 0, 0};
-        d.recommendedValue = "true";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableThreadPinning", "Enable Thread Pinning",
                   "Pins emulation threads to specific CPU cores for improved performance.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "System Settings", "EmuCore", "CdvdPrecache", "Enable CDVD Precaching",
                   "Loads the disc image into RAM before starting. Can reduce stutter but uses more memory.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "System Settings", "EmuCore", "HostFs", "Enable Host Filesystem",
                   "Enables access to the host filesystem from the emulated PS2.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableCheats", "Enable Cheats",
                   "Enables loading cheats from pnach files.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableFastBoot", "Fast Boot",
                   "Skips the PS2 BIOS splash screen when booting a game.", SettingDef::Bool, "true", {}, 0, 0, 0};
-        d.recommendedValue = "true";
         s.append(d);
     }
 
@@ -133,31 +122,26 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                   SettingDef::Combo, "2", {
                       {"Optimal (Frame Pacing)", "0"}, {"1 frame", "1"}, {"2 frames", "2"}, {"3 frames", "3"}
                   }, 0, 0, 0};
-        d.recommendedValue = "2";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "SyncToHostRefreshRate", "Sync to Host Refresh Rate",
                   "Adjusts emulation speed slightly to match your monitor's refresh rate.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "VsyncEnable", "Vertical Sync (VSync)",
                   "Synchronizes frame output with the monitor to prevent screen tearing.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "UseVSyncForTiming", "Use Host VSync Timing",
                   "Uses the host's VSync timing instead of the emulated console's timing.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "SkipDuplicateFrames", "Skip Presenting Duplicate Frames",
                   "Skips presenting frames that are identical to the previous frame.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
 
@@ -173,7 +157,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                       {"Metal", "17"},
 #endif
                       {"Software", "13"}}, 0, 0, 0};
-        d.recommendedValue = "-1";
         s.append(d);
     }
     {
@@ -182,7 +165,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      SettingDef::Combo, "4:3",
                      {{"Auto 4:3/3:2", "Auto 4:3/3:2"}, {"4:3", "4:3"}, {"16:9", "16:9"},
                       {"10:7", "10:7"}, {"Stretch", "Stretch"}}, 0, 0, 0};
-        d.recommendedValue = "4:3";
         s.append(d);
     }
     {
@@ -191,7 +173,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      SettingDef::Combo, "Off",
                      {{"Off (Default)", "Off"}, {"Auto Standard (4:3 Interlaced / 3:2 Progressive)", "Auto 4:3/3:2"},
                       {"Standard (4:3)", "4:3"}, {"Widescreen (16:9)", "16:9"}, {"Native/Full (10:7)", "10:7"}}, 0, 0, 0};
-        d.recommendedValue = "Off";
         s.append(d);
     }
     {
@@ -201,7 +182,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      {{"Automatic", "0"}, {"Off", "1"}, {"Weave (Top)", "2"}, {"Weave (Bottom)", "3"},
                       {"Bob (Top)", "4"}, {"Bob (Bottom)", "5"}, {"Blend (Top)", "6"}, {"Blend (Bottom)", "7"},
                       {"Adaptive (Top)", "8"}, {"Adaptive (Bottom)", "9"}}, 0, 0, 0};
-        d.recommendedValue = "0";
         s.append(d);
     }
     {
@@ -209,7 +189,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      "Applies a bilinear filter when scaling the final image to the window. Smooth is the standard option; Sharp uses a pixel-art-friendly variant that keeps edges crisp.",
                      SettingDef::Combo, "1",
                      {{"None", "0"}, {"Bilinear (Smooth)", "1"}, {"Bilinear (Sharp)", "2"}}, 0, 0, 0};
-        d.recommendedValue = "1";
         s.append(d);
     }
 
@@ -217,35 +196,30 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "StretchY", "Vertical Stretch",
                      "Multiplies the display height after aspect-ratio fitting. Values above 100% make the image taller than its letterbox; values below leave extra vertical space. Default is 100%.",
                      SettingDef::Int, "100", {}, 10, 300, 1, "", "%"};
-        d.recommendedValue = "100";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "CropLeft", "Left",
                      "Trims pixels from the left edge of the source image before it's fit to the display window. Useful for games with garbage pixels at the border.",
                      SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"};
-        d.recommendedValue = "0";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "CropTop", "Top",
                      "Trims pixels from the top edge of the source image before it's fit to the display window. Useful for games with garbage pixels at the border.",
                      SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"};
-        d.recommendedValue = "0";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "CropRight", "Right",
                      "Trims pixels from the right edge of the source image before it's fit to the display window. Useful for games with garbage pixels at the border.",
                      SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"};
-        d.recommendedValue = "0";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "CropBottom", "Bottom",
                      "Trims pixels from the bottom edge of the source image before it's fit to the display window. Useful for games with garbage pixels at the border.",
                      SettingDef::Int, "0", {}, 0, 100, 1, "paired", "px"};
-        d.recommendedValue = "0";
         s.append(d);
     }
     // Display checkboxes
@@ -253,49 +227,42 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         SettingDef d{"Graphics", "Display", "", "EmuCore", "EnableWideScreenPatches", "Apply Widescreen Patches",
                      "Automatically applies community widescreen patches to supported games. Reshapes the rendering to true 16:9 instead of stretching the 4:3 picture.",
                      SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore", "EnableNoInterlacingPatches", "Apply No-Interlacing Patches",
                      "Automatically applies community no-interlacing patches to supported games. Removes flicker in games that render in interlaced mode.",
                      SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "pcrtc_antiblur", "Anti-Blur",
                      "Enables internal anti-blur hacks that remove the PS2's GS smear on commonly-affected games. Safe to leave on.",
                      SettingDef::Bool, "true", {}, 0, 0, 0};
-        d.recommendedValue = "true";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "IntegerScaling", "Integer Scaling",
                      "Snaps the rendered image to an integer multiple of the source pixel size. Produces crisp pixel-art scaling at the cost of leaving letterbox bars.",
                      SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "pcrtc_offsets", "Screen Offsets",
                      "Enables PCRTC offsets so the screen is positioned exactly where the game requests. Fixes games that deliberately offset the viewport.",
                      SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "disable_interlace_offset", "Disable Interlace Offset",
                      "Disables the half-pixel interlace offset which can reduce jitter on some games that render at half vertical resolution.",
                      SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "pcrtc_overscan", "Show Overscan",
                      "Shows the overscan area of the display that would normally be hidden by a CRT bezel. Exposes any garbage the game draws outside the safe area.",
                      SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
 
@@ -311,7 +278,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                       {"4x Native (~1440px/QHD)", "4"}, {"5x Native (~1800px/QHD+)", "5"}, {"6x Native (~2160px/4K UHD)", "6"},
                       {"7x Native (~2520px)", "7"}, {"8x Native (~2880px/5K UHD)", "8"}, {"9x Native (~3240px)", "9"},
                       {"10x Native (~3600px/6K UHD)", "10"}, {"11x Native (~3960px)", "11"}, {"12x Native (~4320px/8K UHD)", "12"}}, 0, 0, 0};
-        d.recommendedValue = "1";
         s.append(d);
     }
     {
@@ -319,7 +285,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      "Controls how textures are sampled when rendered. Bilinear (PS2) matches the original hardware behavior; Forced options ignore the game's preference.",
                      SettingDef::Combo, "2",
                      {{"Nearest", "0"}, {"Bilinear (Forced)", "1"}, {"Bilinear (PS2)", "2"}, {"Bilinear (Forced excluding sprite)", "3"}}, 0, 0, 0};
-        d.recommendedValue = "2";
         s.append(d);
     }
     {
@@ -327,7 +292,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      "Enables trilinear filtering for smoother transitions between mipmap levels. Auto leaves this decision to each game.",
                      SettingDef::Combo, "-1",
                      {{"Auto (Default)", "-1"}, {"Off", "0"}, {"Trilinear (PS2)", "1"}, {"Trilinear (Forced)", "2"}}, 0, 0, 0};
-        d.recommendedValue = "-1";
         s.append(d);
     }
     {
@@ -335,7 +299,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      "Improves texture clarity at oblique viewing angles. Low cost on modern GPUs and generally safe to raise.",
                      SettingDef::Combo, "0",
                      {{"Off", "0"}, {"2x", "2"}, {"4x", "4"}, {"8x", "8"}, {"16x", "16"}}, 0, 0, 0};
-        d.recommendedValue = "0";
         s.append(d);
     }
     {
@@ -343,7 +306,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      "Controls how PS2 dithering patterns are applied to upscaled rendering. Unscaled matches the original appearance.",
                      SettingDef::Combo, "2",
                      {{"Off", "0"}, {"Scaled", "1"}, {"Unscaled (Default)", "2"}, {"Force 32bit", "3"}}, 0, 0, 0};
-        d.recommendedValue = "2";
         s.append(d);
     }
     {
@@ -351,14 +313,12 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      "Controls how accurately PS2 blending operations are emulated. Higher levels improve compatibility with heavy effects at a performance cost.",
                      SettingDef::Combo, "1",
                      {{"Minimum", "0"}, {"Basic (Default)", "1"}, {"Medium", "2"}, {"High", "3"}, {"Full", "4"}, {"Maximum", "5"}}, 0, 0, 0};
-        d.recommendedValue = "1";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "hw_mipmap", "Mipmapping",
                      "Enables mipmapping which improves texture quality at the cost of performance.",
                      SettingDef::Bool, "true", {}, 0, 0, 0};
-        d.recommendedValue = "true";
         s.append(d);
     }
 
@@ -373,20 +333,17 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      SettingDef::Combo, "0",
                      {{"None (Default)", "0"}, {"Sharpen Only (Internal Resolution)", "1"},
                       {"Sharpen and Resize (Display Resolution)", "2"}}, 0, 0, 0};
-        d.recommendedValue = "0";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASSharpness", "Sharpness",
                      "Strength of the CAS sharpening effect. Higher values produce sharper but potentially noisier images.",
                      SettingDef::Int, "50", {}, 0, 100, 1, "", "%"};
-        d.recommendedValue = "50";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "fxaa", "FXAA",
                      "Enables Fast Approximate Anti-Aliasing.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
 
@@ -398,41 +355,35 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                       {"Wave Filter", "4"}, {"Lottes CRT", "5"},
                       {"4xRGSS downsampling (4x Rotated Grid SuperSampling)", "6"},
                       {"NxAGSS downsampling (Nx Automatic Grid SuperSampling)", "7"}}, 0, 0, 0};
-        d.recommendedValue = "0";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost", "Shade Boost",
                      "Enables manual adjustment of display brightness, contrast, and saturation.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Brightness", "Brightness",
                      "Adjusts the overall brightness of the display when Shade Boost is enabled.",
                      SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
-        d.recommendedValue = "50";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Contrast", "Contrast",
                      "Adjusts the contrast between dark and light areas when Shade Boost is enabled.",
                      SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
-        d.recommendedValue = "50";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Saturation", "Saturation",
                      "Adjusts color saturation when Shade Boost is enabled.",
                      SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
-        d.recommendedValue = "50";
         s.append(d);
     }
     {
         SettingDef d{"Graphics", "Post-Processing", "Filters", "EmuCore/GS", "ShadeBoost_Gamma", "Gamma",
                      "Adjusts gamma correction when Shade Boost is enabled.",
                      SettingDef::Int, "50", {}, 1, 100, 1, "paired", "", "ShadeBoost"};
-        d.recommendedValue = "50";
         s.append(d);
     }
 
@@ -442,97 +393,97 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     { SettingDef d{"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdScale", "OSD Scale",
                    "Global multiplier applied to every OSD overlay. 100% matches PCSX2 upstream's default size.",
                    SettingDef::Int, "100", {}, 25, 500, 25, "", "%"};
-      d.recommendedValue = "100"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdMessagesPos", "OSD Messages Position",
                    "Corner where transient messages (save-state loaded, shader reload, etc.) are drawn.",
                    SettingDef::Combo, "1",
                    {{"None", "0"}, {"Top Left (Default)", "1"}, {"Top Center", "2"}, {"Top Right", "3"},
                     {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
                     {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0};
-      d.recommendedValue = "1"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdPerformancePos", "OSD Performance Position",
                    "Corner where the performance stats column (FPS/Speed/CPU/GPU/etc.) is drawn.",
                    SettingDef::Combo, "3",
                    {{"None", "0"}, {"Top Left", "1"}, {"Top Center", "2"}, {"Top Right (Default)", "3"},
                     {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
                     {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0};
-      d.recommendedValue = "3"; s.append(d); }
+      s.append(d); }
     // ── Performance Stats ─────────────────────────────────────────────
     { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowSpeed", "Show Speed Percentages",
                    "Displays the emulation speed as a percentage. Red below 95%, green above 105%.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowFPS", "Show FPS",
                    "Displays the current frame rate reported by the GS. Useful for spotting performance issues.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowVPS", "Show VPS",
                    "Displays vertical syncs per second — the PS2 display refresh reported by the GS.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowResolution", "Show Resolution",
                    "Displays the PS2 internal render resolution and interlacing mode.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowGSStats", "Show GS Statistics",
                    "Displays per-frame GS statistics: draw-call count, VRAM use, and a frame-time summary.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowCPU", "Show CPU Usage",
                    "Displays per-component CPU usage (EE, GS, VU).",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowGPU", "Show GPU Usage",
                    "Displays GPU usage percentage and frame time in milliseconds.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowIndicators", "Show Status Indicators",
                    "Displays icons for pause, fast-forward, slow-motion, and turbo modes in the top-right corner.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
-      d.recommendedValue = "true"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowFrameTimes", "Show Frame Times",
                    "Displays a rolling graph of recent frame times to visualise stutter.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     // ── System Information ───────────────────────────────────────────
     { SettingDef d{"Graphics", "OSD", "System Information", "EmuCore/GS", "OsdShowHardwareInfo", "Show Hardware Info",
                    "Displays the CPU and GPU model names as two lines in the performance column.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "System Information", "EmuCore/GS", "OsdShowVersion", "Show PCSX2 Version",
                    "Displays the PCSX2 version string in the performance column.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     // ── Settings & Inputs ────────────────────────────────────────────
     { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowSettings", "Show Settings",
                    "Displays a compact summary of active emulation settings in the bottom-right corner.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdshowPatches", "Show Patches",
                    "Appends active patches (widescreen, no-interlacing, etc.) to the settings line.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowInputs", "Show Inputs",
                    "Displays the current controller input state at the bottom-left corner.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowVideoCapture", "Show Video Capture Status",
                    "Displays a recording indicator while video capture is active.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
-      d.recommendedValue = "true"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowInputRec", "Show Input Recording Status",
                    "Displays an indicator while input recording is active.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
-      d.recommendedValue = "true"; s.append(d); }
+      s.append(d); }
     { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowTextureReplacements", "Show Texture Replacement Status",
                    "Displays an indicator when replacement textures are loaded for the current game.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      d.recommendedValue = "false"; s.append(d); }
+      s.append(d); }
     // ── Messages ─────────────────────────────────────────────────────
     { SettingDef d{"Graphics", "OSD", "Messages", "EmuCore", "WarnAboutUnsafeSettings", "Warn About Unsafe Settings",
                    "Shows a startup warning if any unsafe settings are enabled.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
-      d.recommendedValue = "true"; s.append(d); }
+      s.append(d); }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Audio
@@ -546,7 +497,6 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "Backend", "Backend", "",
                      SettingDef::Combo, "Cubeb",
                      {{"Cubeb", "Cubeb"}, {"SDL", "SDL"}, {"Null (No Sound)", "Null"}}, 0, 0, 0};
-        d.recommendedValue = "Cubeb";
         s.append(d);
     }
     // TODO(audit-tier-4): DriverName/DeviceName should be enumerated at runtime
@@ -573,32 +523,27 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      {{"Disabled (Stereo)", "Disabled"}, {"Stereo with LFE", "StereoLFE"},
                       {"Quadraphonic", "Quadraphonic"}, {"Quadraphonic with LFE", "QuadraphonicLFE"},
                       {"5.1 Surround", "Surround51"}, {"7.1 Surround", "Surround71"}}, 0, 0, 0};
-        d.recommendedValue = "Disabled";
         s.append(d);
     }
     {
         SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "SyncMode", "Synchronization", "",
                      SettingDef::Combo, "TimeStretch",
                      {{"Disabled (Noisy)", "Disabled"}, {"TimeStretch (Recommended)", "TimeStretch"}}, 0, 0, 0};
-        d.recommendedValue = "TimeStretch";
         s.append(d);
     }
     {
         SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "BufferMS", "Buffer Size", "",
                      SettingDef::Int, "50", {}, 10, 500, 10, "slider", "ms"};
-        d.recommendedValue = "50";
         s.append(d);
     }
     {
         SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMS", "Output Latency", "",
                      SettingDef::Int, "20", {}, 0, 500, 5, "slider", "ms"};
-        d.recommendedValue = "20";
         s.append(d);
     }
     {
         SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "OutputLatencyMinimal", "Minimal Output Latency",
                      "Uses the smallest possible latency value. May cause crackling.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
 
@@ -606,19 +551,16 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     {
         SettingDef d{"Audio", "", "Controls", "SPU2/Output", "StandardVolume", "Standard Volume", "",
                      SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"};
-        d.recommendedValue = "100";
         s.append(d);
     }
     {
         SettingDef d{"Audio", "", "Controls", "SPU2/Output", "FastForwardVolume", "Fast Forward Volume", "",
                      SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"};
-        d.recommendedValue = "100";
         s.append(d);
     }
     {
         SettingDef d{"Audio", "", "Controls", "SPU2/Output", "OutputMuted", "Mute All Sound",
                      "Mutes all audio output.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
 
@@ -627,37 +569,30 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // ═══════════════════════════════════════════════════════════════════════
     {
         SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot1_Enable", "Slot 1", "", SettingDef::Bool, "true", {}, 0, 0, 0};
-        d.recommendedValue = "true";
         s.append(d);
     }
     {
         SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot1_Filename", "Slot 1 Filename", "", SettingDef::String, "Mcd001.ps2", {}, 0, 0, 0};
-        d.recommendedValue = "Mcd001.ps2";
         s.append(d);
     }
     {
         SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot2_Enable", "Slot 2", "", SettingDef::Bool, "true", {}, 0, 0, 0};
-        d.recommendedValue = "true";
         s.append(d);
     }
     {
         SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot2_Filename", "Slot 2 Filename", "", SettingDef::String, "Mcd002.ps2", {}, 0, 0, 0};
-        d.recommendedValue = "Mcd002.ps2";
         s.append(d);
     }
     {
         SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot2_Enable", "Multitap 1 - Slot 2", "", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot3_Enable", "Multitap 1 - Slot 3", "", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
     {
         SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot4_Enable", "Multitap 1 - Slot 4", "", SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.recommendedValue = "false";
         s.append(d);
     }
 
@@ -693,15 +628,6 @@ bool PCSX2Adapter::ensureConfig(const EmulatorManifest& /*manifest*/,
 
     if (!QFileInfo::exists(path))
         return createDefaultConfig(path, biosPath, savesPath);
-
-    // Check if the file is incomplete (no SettingsVersion = created by
-    // external setting writer before first PCSX2 launch)
-    QString content;
-    if (readConfigFile(path, content, "PCSX2") && !content.contains("SettingsVersion")) {
-        qInfo() << "[PCSX2] Config incomplete, recreating with defaults";
-        QFile::remove(path);
-        return createDefaultConfig(path, biosPath, savesPath);
-    }
     return patchExistingConfig(path, biosPath, savesPath);
 }
 
@@ -1222,49 +1148,30 @@ QVector<SettingDef> PCSX2Adapter::controllerSettingDefsForType(const QString& ty
 // patchRetroAchievements — enable/disable RA in PCSX2.ini
 // ============================================================================
 
-void PCSX2Adapter::patchRetroAchievements(const QString& username,
-                                            const QString& token,
-                                            bool enabled,
-                                            bool hardcore,
-                                            bool notifications,
-                                            bool sounds) {
-    Q_UNUSED(username);
-    Q_UNUSED(token);
-    // No credential patching — emulators handle their own RA login on first launch.
-    // Only enable/disable RA and set preferences.
-    const QString mainPath = configFilePath();
-    QString mainContent;
-    if (readConfigFile(mainPath, mainContent, "PCSX2")) {
-        QVector<IniKeyPatch> mainPatches = {
-            {"Achievements", "Enabled", enabled ? "true" : "false"},
-            {"Achievements", "HardcoreMode", hardcore ? "true" : "false"},
-            {"Achievements", "Notifications", notifications ? "true" : "false"},
-            {"Achievements", "SoundEffects", sounds ? "true" : "false"},
-        };
-        if (patchIniKeys(mainContent, mainPatches))
-            writeConfigFile(mainPath, mainContent, "PCSX2");
-    }
+EmulatorAdapter::RetroAchievementsKeyMap PCSX2Adapter::retroAchievementsKeyMap() const {
+    return {
+        "Achievements",       // section
+        "Enabled",            // enabledKey
+        "HardcoreMode",       // hardcoreKey
+        "Notifications",      // notificationsKey
+        "SoundEffects",       // soundEffectsKey
+        "true", "false",      // bool format
+        "PCSX2",              // configTag
+    };
 }
 
 // ============================================================================
 // Asset matching — select the right GitHub release asset for this platform
 // ============================================================================
 
-QString PCSX2Adapter::matchAsset(const QStringList& assetNames) const {
-    for (const auto& name : assetNames) {
-        const QString lower = name.toLower();
+QVector<EmulatorAdapter::AssetMatchRule> PCSX2Adapter::assetMatchRules() const {
 #if defined(Q_OS_MACOS)
-        if (lower.contains("mac") && (name.endsWith(".tar.xz") || name.endsWith(".dmg")))
-            return name;
+    return { {{"mac"}, ".tar.xz"}, {{"mac"}, ".dmg"} };
 #elif defined(Q_OS_WIN)
-        if (lower.contains("windows") && lower.contains("x64") && name.endsWith(".zip"))
-            return name;
+    return { {{"windows", "x64"}, ".zip"} };
 #else
-        if (name.endsWith(".AppImage"))
-            return name;
+    return { {{}, ".AppImage"} };
 #endif
-    }
-    return EmulatorAdapter::matchAsset(assetNames);
 }
 
 // ============================================================================

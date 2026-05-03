@@ -1,5 +1,5 @@
-#include "pcsx2_description_bar.h"
-#include "../pcsx2_theme.h"
+#include "settings_description_bar.h"
+#include "ui/settings/settings_dialog_theme.h"
 #include "core/sdl_input_manager.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -7,24 +7,24 @@
 #include <QPainter>
 #include <QFontMetrics>
 
-Pcsx2DescriptionBar::Pcsx2DescriptionBar(QWidget* parent) : QFrame(parent) {
-    setObjectName("Pcsx2DescriptionBar");
-    setStyleSheet(Pcsx2Theme::descriptionBarQss());
+SettingsDescriptionBar::SettingsDescriptionBar(QWidget* parent) : QFrame(parent) {
+    setObjectName("SettingsDescriptionBar");
+    setStyleSheet(SettingsDialogTheme::descriptionBarQss());
     setMinimumHeight(100);
     m_layout = new QHBoxLayout(this);
     m_layout->setContentsMargins(16, 12, 16, 12);
     m_text = new QLabel(this);
-    m_text->setObjectName("Pcsx2DescText");
+    m_text->setObjectName("SettingsDescText");
     m_text->setWordWrap(true);
     m_rec = new QLabel(this);
-    m_rec->setObjectName("Pcsx2DescRecommended");
+    m_rec->setObjectName("SettingsDescRecommended");
     m_rec->setAlignment(Qt::AlignTop | Qt::AlignRight);
     m_layout->addWidget(m_text, 1);
     m_layout->addWidget(m_rec, 0, Qt::AlignTop);
     clear();
 }
 
-void Pcsx2DescriptionBar::setSetting(const SettingDef& def) {
+void SettingsDescriptionBar::setSetting(const SettingDef& def) {
     m_text->setText(def.tooltip.isEmpty()
                     ? QStringLiteral("No description available.")
                     : def.tooltip);
@@ -41,12 +41,12 @@ void Pcsx2DescriptionBar::setSetting(const SettingDef& def) {
     m_rec->setVisible(!rec.isEmpty());
 }
 
-void Pcsx2DescriptionBar::clear() {
+void SettingsDescriptionBar::clear() {
     m_text->setText(QStringLiteral("Focus a setting to see its description."));
     m_rec->setVisible(false);
 }
 
-void Pcsx2DescriptionBar::setDescriptionVisible(bool visible) {
+void SettingsDescriptionBar::setDescriptionVisible(bool visible) {
     m_text->setVisible(visible);
     m_rec->setVisible(visible && !m_rec->text().isEmpty());
     // When description is hidden (hub mode), shrink to just fit the hints row.
@@ -58,7 +58,7 @@ void Pcsx2DescriptionBar::setDescriptionVisible(bool visible) {
     setMaximumHeight(visible ? QWIDGETSIZE_MAX : 48);
 }
 
-void Pcsx2DescriptionBar::setHints(const QVector<ButtonHint>& hints) {
+void SettingsDescriptionBar::setHints(const QVector<ButtonHint>& hints) {
     m_hints = hints;
     // Reserve space at bottom for the painted hints row so text doesn't overlap.
     // Hints row: 28px pill + 10px bottom padding + 8px gap above = 46px.
@@ -68,23 +68,23 @@ void Pcsx2DescriptionBar::setHints(const QVector<ButtonHint>& hints) {
     update();
 }
 
-void Pcsx2DescriptionBar::clearHints() {
+void SettingsDescriptionBar::clearHints() {
     m_hints.clear();
     update();
 }
 
-QVector<Pcsx2DescriptionBar::ButtonHint> Pcsx2DescriptionBar::hints() const {
+QVector<SettingsDescriptionBar::ButtonHint> SettingsDescriptionBar::hints() const {
     return m_hints;
 }
 
-void Pcsx2DescriptionBar::setInputManager(SdlInputManager* mgr) {
+void SettingsDescriptionBar::setInputManager(SdlInputManager* mgr) {
     m_inputManager = mgr;
     if (mgr) {
         connect(mgr, SIGNAL(controllerTypeChanged()), this, SLOT(update()));
     }
 }
 
-Pcsx2DescriptionBar::GlyphStyle Pcsx2DescriptionBar::glyphFor(const QString& action, int inputType) const {
+SettingsDescriptionBar::GlyphStyle SettingsDescriptionBar::glyphFor(const QString& action, int inputType) const {
     if (inputType == 2) {
         // PlayStation
         if (action == "confirm")     return { QStringLiteral("\u2715"), QColor("#2a3a6a"), QColor("#6d9ddc"), QColor("#3a5a8a"), 18 };
@@ -110,7 +110,7 @@ Pcsx2DescriptionBar::GlyphStyle Pcsx2DescriptionBar::glyphFor(const QString& act
     return { QStringLiteral("?"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
 }
 
-void Pcsx2DescriptionBar::paintEvent(QPaintEvent* e) {
+void SettingsDescriptionBar::paintEvent(QPaintEvent* e) {
     QFrame::paintEvent(e);
 
     if (m_hints.isEmpty()) return;
@@ -187,5 +187,5 @@ void Pcsx2DescriptionBar::paintEvent(QPaintEvent* e) {
     }
 }
 
-QString Pcsx2DescriptionBar::descText() const { return m_text->text(); }
-QString Pcsx2DescriptionBar::recommendedText() const { return m_rec->text(); }
+QString SettingsDescriptionBar::descText() const { return m_text->text(); }
+QString SettingsDescriptionBar::recommendedText() const { return m_rec->text(); }

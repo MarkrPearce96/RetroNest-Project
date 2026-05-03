@@ -4,12 +4,12 @@
 #include "core/setting_def.h"
 
 class QLabel;
-class Pcsx2Toggle;
+class SettingsToggle;
 
-class Pcsx2ToggleRow : public QWidget {
+class SettingsToggleRow : public QWidget {
     Q_OBJECT
 public:
-    explicit Pcsx2ToggleRow(QWidget* parent = nullptr);
+    explicit SettingsToggleRow(QWidget* parent = nullptr);
     void setLabel(const QString& text);
     void setChecked(bool on);
     bool isChecked() const;
@@ -27,6 +27,6 @@ protected:
 
 private:
     QLabel* m_label = nullptr;
-    Pcsx2Toggle* m_toggle = nullptr;
+    SettingsToggle* m_toggle = nullptr;
     SettingDef m_def;
 };

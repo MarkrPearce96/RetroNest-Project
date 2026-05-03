@@ -1,12 +1,12 @@
-#include "pcsx2_slider_row.h"
-#include "../pcsx2_theme.h"
+#include "settings_slider_row.h"
+#include "ui/settings/settings_dialog_theme.h"
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QSlider>
 #include <QEvent>
 #include <QKeyEvent>
 
-Pcsx2SliderRow::Pcsx2SliderRow(QWidget* parent) : QWidget(parent) {
+SettingsSliderRow::SettingsSliderRow(QWidget* parent) : QWidget(parent) {
     auto* lay = new QHBoxLayout(this);
     lay->setContentsMargins(0, 4, 0, 4);
     m_label = new QLabel(this);
@@ -14,7 +14,7 @@ Pcsx2SliderRow::Pcsx2SliderRow(QWidget* parent) : QWidget(parent) {
     m_label->setMinimumWidth(180);
     m_label->setMinimumHeight(24);
     m_slider = new QSlider(Qt::Horizontal, this);
-    m_slider->setStyleSheet(Pcsx2Theme::sliderQss());
+    m_slider->setStyleSheet(SettingsDialogTheme::sliderQss());
     m_value = new QLabel(this);
     m_value->setStyleSheet("color:#f2efe8;font-size:13px;");
     m_value->setMinimumWidth(60);
@@ -30,38 +30,38 @@ Pcsx2SliderRow::Pcsx2SliderRow(QWidget* parent) : QWidget(parent) {
     setMinimumHeight(42);
 }
 
-void Pcsx2SliderRow::setLabel(const QString& t) { m_label->setText(t); }
-void Pcsx2SliderRow::setRange(int lo, int hi) { m_slider->setRange(lo, hi); }
-void Pcsx2SliderRow::setSuffix(const QString& s) { m_suffix = s; refreshValueLabel(); }
-void Pcsx2SliderRow::setValue(int v) { m_slider->setValue(v); }
-int Pcsx2SliderRow::value() const { return m_slider->value(); }
+void SettingsSliderRow::setLabel(const QString& t) { m_label->setText(t); }
+void SettingsSliderRow::setRange(int lo, int hi) { m_slider->setRange(lo, hi); }
+void SettingsSliderRow::setSuffix(const QString& s) { m_suffix = s; refreshValueLabel(); }
+void SettingsSliderRow::setValue(int v) { m_slider->setValue(v); }
+int SettingsSliderRow::value() const { return m_slider->value(); }
 
-void Pcsx2SliderRow::setValueFormatter(std::function<QString(int)> fmt) {
+void SettingsSliderRow::setValueFormatter(std::function<QString(int)> fmt) {
     m_formatter = std::move(fmt);
     refreshValueLabel();
 }
 
-void Pcsx2SliderRow::refreshValueLabel() {
+void SettingsSliderRow::refreshValueLabel() {
     if (m_formatter)
         m_value->setText(m_formatter(m_slider->value()));
     else
         m_value->setText(QString::number(m_slider->value()) + m_suffix);
 }
 
-void Pcsx2SliderRow::setEditing(bool on) {
+void SettingsSliderRow::setEditing(bool on) {
     m_editing = on;
     m_slider->setProperty("editing", on);
     // Visual feedback: amber border when editing.
     if (on) {
         m_slider->setStyleSheet(
-            Pcsx2Theme::sliderQss() +
+            SettingsDialogTheme::sliderQss() +
             QStringLiteral("QSlider { border: 1px solid #f59e0b; border-radius: 4px; }"));
     } else {
-        m_slider->setStyleSheet(Pcsx2Theme::sliderQss());
+        m_slider->setStyleSheet(SettingsDialogTheme::sliderQss());
     }
 }
 
-bool Pcsx2SliderRow::eventFilter(QObject* o, QEvent* e) {
+bool SettingsSliderRow::eventFilter(QObject* o, QEvent* e) {
     if (o == m_slider && e->type() == QEvent::FocusIn) {
         emit focused(m_def);
     }
@@ -81,7 +81,7 @@ bool Pcsx2SliderRow::eventFilter(QObject* o, QEvent* e) {
                 setEditing(false);
                 QWidget* w = parentWidget();
                 while (w) {
-                    if (w->inherits("Pcsx2Card") && w->focusPolicy() != Qt::NoFocus) {
+                    if (w->inherits("SettingsCard") && w->focusPolicy() != Qt::NoFocus) {
                         w->setFocus(Qt::OtherFocusReason);
                         break;
                     }
@@ -103,7 +103,7 @@ bool Pcsx2SliderRow::eventFilter(QObject* o, QEvent* e) {
     return QWidget::eventFilter(o, e);
 }
 
-void Pcsx2SliderRow::enterEvent(QEnterEvent* e) {
+void SettingsSliderRow::enterEvent(QEnterEvent* e) {
     QWidget::enterEvent(e);
     emit focused(m_def);
 }

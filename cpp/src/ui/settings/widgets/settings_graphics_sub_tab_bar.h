@@ -5,10 +5,10 @@
 // Four-box sub-tab bar used by Pcsx2GraphicsPage. Each tab is a
 // vertical icon-over-label stack rendered inside a rounded box.
 // Keyboard-focusable; Left/Right changes selection, Enter activates.
-class Pcsx2GraphicsSubTabBar : public QWidget {
+class SettingsGraphicsSubTabBar : public QWidget {
     Q_OBJECT
 public:
-    explicit Pcsx2GraphicsSubTabBar(QWidget* parent = nullptr);
+    explicit SettingsGraphicsSubTabBar(QWidget* parent = nullptr);
 
     // Each call adds a tab at the next index. Icon is a short emoji
     // string; label is the tab title shown beneath.

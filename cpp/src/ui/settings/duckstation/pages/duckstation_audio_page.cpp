@@ -1,11 +1,12 @@
 #include "duckstation_audio_page.h"
 #include "../duckstation_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_section_header.h"
-#include "../../pcsx2/widgets/pcsx2_combo_row.h"
-#include "../../pcsx2/widgets/pcsx2_toggle_row.h"
-#include "../../pcsx2/widgets/pcsx2_slider_row.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_section_header.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_slider_row.h"
 #include "ui/app_controller.h"
+#include "ui/settings/settings_page_builder.h"
 #include "adapters/duckstation_adapter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -42,14 +43,7 @@ void DuckStationAudioPage::buildUi() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll->setStyleSheet(
-        "QScrollArea { background: transparent; border: none; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }"
-        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
-        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    scroll->setStyleSheet(SettingsPageBuilder::kScrollAreaQss);
     outer->addWidget(scroll);
 
     auto* content = new QWidget(scroll);
@@ -66,20 +60,20 @@ void DuckStationAudioPage::buildUi() {
     connect(back, &QPushButton::clicked, m_dialog, &DuckStationSettingsDialog::popPage);
     root->addWidget(back);
 
-    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeComboCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ComboRow(card);
+        auto* row = new SettingsComboRow(card);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationAudioPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::focused, this, &DuckStationAudioPage::settingFocused);
-        connect(row,  &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& v){
+        connect(card, &SettingsCard::focused, this, &DuckStationAudioPage::settingFocused);
+        connect(row,  &SettingsComboRow::focused, this, &DuckStationAudioPage::settingFocused);
+        connect(row,  &SettingsComboRow::valueChanged, this, [this, key](const QString& v){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, v);
             // Stretch mode contributes the SoundTouch sequence length term to
             // the Maximum Latency formula, so refresh on change.
@@ -88,21 +82,21 @@ void DuckStationAudioPage::buildUi() {
         v->addWidget(row);
         return card;
     };
-    auto makeSliderCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeSliderCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2SliderRow(card);
+        auto* row = new SettingsSliderRow(card);
         row->setLabel(d->label);
         row->setRange(int(d->minVal), int(d->maxVal));
         row->setSuffix(d->suffix);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationAudioPage::settingFocused);
-        connect(row, &Pcsx2SliderRow::focused, this, &DuckStationAudioPage::settingFocused);
-        connect(row, &Pcsx2SliderRow::valueChanged, this, [this, key](int val){
+        connect(card, &SettingsCard::focused, this, &DuckStationAudioPage::settingFocused);
+        connect(row, &SettingsSliderRow::focused, this, &DuckStationAudioPage::settingFocused);
+        connect(row, &SettingsSliderRow::valueChanged, this, [this, key](int val){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, QString::number(val));
             if (key == "BufferMS" || key == "OutputLatencyMS"
              || key == "StretchSequenceLengthMS")
@@ -111,19 +105,19 @@ void DuckStationAudioPage::buildUi() {
         v->addWidget(row);
         return card;
     };
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeToggleCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
         if (!d) return nullptr;
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         card->setSettingDef(*d);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &DuckStationAudioPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &DuckStationAudioPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
+        connect(card, &SettingsCard::focused, this, &DuckStationAudioPage::settingFocused);
+        connect(row, &SettingsToggleRow::focused, this, &DuckStationAudioPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on){
             if (const SettingDef* d2 = findDef(key)) saveValue(d2->section, d2->key, on ? "true" : "false");
             // Buffer/latency configuration affects the Maximum Latency label.
             if (key == "OutputLatencyMinimal") refreshLatencyLabel();
@@ -139,7 +133,7 @@ void DuckStationAudioPage::buildUi() {
     //   • Buffer Size slider on its own row
     //   • Output Latency slider + Minimal toggle paired in one row
     //   • Maximum Latency info label below
-    root->addWidget(new Pcsx2SectionHeader("Configuration", this));
+    root->addWidget(new SettingsSectionHeader("Configuration", this));
 
     auto* backendRow = new QHBoxLayout();
     backendRow->setSpacing(10);
@@ -171,7 +165,7 @@ void DuckStationAudioPage::buildUi() {
     root->addWidget(m_latencyLabel);
 
     // Volume Controls
-    root->addWidget(new Pcsx2SectionHeader("Volume Controls", this));
+    root->addWidget(new SettingsSectionHeader("Volume Controls", this));
     if (auto* volCard = makeSliderCard("OutputVolume")) root->addWidget(volCard);
 
     auto* volRow = new QHBoxLayout();
@@ -189,7 +183,7 @@ void DuckStationAudioPage::buildUi() {
     if (auto* c = makeToggleCard("MuteCDAudio")) root->addWidget(c);
 
     // Time Stretching
-    root->addWidget(new Pcsx2SectionHeader("Time Stretching", this));
+    root->addWidget(new SettingsSectionHeader("Time Stretching", this));
     if (auto* c = makeSliderCard("StretchSequenceLengthMS")) root->addWidget(c);
     if (auto* c = makeSliderCard("StretchSeekWindowMS"))     root->addWidget(c);
     if (auto* c = makeSliderCard("StretchOverlapMS"))        root->addWidget(c);
@@ -213,18 +207,18 @@ void DuckStationAudioPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* row : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* row : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = row->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
         row->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
     }
-    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
@@ -245,17 +239,17 @@ void DuckStationAudioPage::refreshLatencyLabel() {
     bool minimal = false;
     QString stretchMode = QStringLiteral("TimeStretch");
 
-    Pcsx2SliderRow* outputSlider = nullptr;
-    for (auto* slider : findChildren<Pcsx2SliderRow*>()) {
+    SettingsSliderRow* outputSlider = nullptr;
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const QString& k = slider->settingDef().key;
         if      (k == "BufferMS")                bufferMs        = slider->value();
         else if (k == "OutputLatencyMS")       { outputLatencyMs = slider->value(); outputSlider = slider; }
         else if (k == "StretchSequenceLengthMS") stretchSeqMs    = slider->value();
     }
-    for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* tog : findChildren<SettingsToggleRow*>()) {
         if (tog->settingDef().key == "OutputLatencyMinimal") minimal = tog->isChecked();
     }
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         if (combo->settingDef().key == "StretchMode") stretchMode = combo->value();
     }
 

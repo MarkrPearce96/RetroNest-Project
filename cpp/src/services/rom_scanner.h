@@ -1,7 +1,7 @@
 #pragma once
 
-#include "manifest_loader.h"
-#include "database.h"
+#include "core/manifest_loader.h"
+#include "core/database.h"
 #include <QString>
 #include <QSet>
 

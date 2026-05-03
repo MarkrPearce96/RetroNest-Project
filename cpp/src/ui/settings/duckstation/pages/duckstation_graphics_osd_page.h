@@ -5,8 +5,8 @@
 
 class DuckStationSettingsDialog;
 class DuckStationOsdPreview;
-class Pcsx2ComboRow;
-class Pcsx2SliderRow;
+class SettingsComboRow;
+class SettingsSliderRow;
 class QHBoxLayout;
 class QVBoxLayout;
 
@@ -39,7 +39,7 @@ private:
     DuckStationSettingsDialog* m_dialog;
     QVector<SettingDef>        m_schema;
     DuckStationOsdPreview*     m_preview          = nullptr;
-    Pcsx2SliderRow*            m_scaleSlider      = nullptr;
-    Pcsx2SliderRow*            m_marginSlider     = nullptr;
-    Pcsx2ComboRow*             m_locationCombo    = nullptr;
+    SettingsSliderRow*            m_scaleSlider      = nullptr;
+    SettingsSliderRow*            m_marginSlider     = nullptr;
+    SettingsComboRow*             m_locationCombo    = nullptr;
 };

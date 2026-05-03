@@ -5,11 +5,11 @@
 #include "core/setting_def.h"
 
 class Pcsx2SettingsDialog;
-class Pcsx2Card;
+class SettingsCard;
 class Pcsx2OsdPreview;
-class Pcsx2ComboRow;
-class Pcsx2ToggleRow;
-class Pcsx2SliderRow;
+class SettingsComboRow;
+class SettingsToggleRow;
+class SettingsSliderRow;
 class QHBoxLayout;
 class QVBoxLayout;
 
@@ -45,7 +45,7 @@ private:
 
     Pcsx2OsdPreview* m_preview = nullptr;
 
-    Pcsx2SliderRow* m_scaleSlider = nullptr;
-    Pcsx2ComboRow*  m_messagesPosCombo = nullptr;
-    Pcsx2ComboRow*  m_perfPosCombo = nullptr;
+    SettingsSliderRow* m_scaleSlider = nullptr;
+    SettingsComboRow*  m_messagesPosCombo = nullptr;
+    SettingsComboRow*  m_perfPosCombo = nullptr;
 };

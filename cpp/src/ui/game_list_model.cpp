@@ -88,6 +88,7 @@ void GameListModel::loadAll() {
     beginResetModel();
     m_games = m_db->allGames();
     m_currentSystem.clear();
+    m_coverPathCache.clear();
     endResetModel();
     emit countChanged();
 }
@@ -96,6 +97,7 @@ void GameListModel::loadBySystem(const QString& system) {
     beginResetModel();
     m_games = m_db->gamesBySystem(system);
     m_currentSystem = system;
+    m_coverPathCache.clear();
     endResetModel();
     emit countChanged();
 }
@@ -125,6 +127,11 @@ int GameListModel::indexForGameId(int gameId) const {
 }
 
 QString GameListModel::resolveCoverPath(const GameRecord& game) const {
-    return CoverResolver::resolve(game.cover_path, m_mediaDir,
-                                  game.system, game.title, game.rom_path);
+    auto it = m_coverPathCache.constFind(game.id);
+    if (it != m_coverPathCache.constEnd())
+        return it.value();
+    QString resolved = CoverResolver::resolve(game.cover_path, m_mediaDir,
+                                              game.system, game.title, game.rom_path);
+    m_coverPathCache.insert(game.id, resolved);
+    return resolved;
 }

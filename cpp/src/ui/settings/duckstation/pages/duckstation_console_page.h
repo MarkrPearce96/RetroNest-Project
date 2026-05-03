@@ -4,7 +4,7 @@
 #include "core/setting_def.h"
 
 class DuckStationSettingsDialog;
-class Pcsx2Card;
+class SettingsCard;
 
 class DuckStationConsolePage : public QWidget {
     Q_OBJECT
@@ -24,7 +24,7 @@ private:
     void saveValue(const QString& section, const QString& key, const QString& value);
     void refreshDependencies();
     const SettingDef* findDef(const QString& key) const;
-    Pcsx2Card* findNextCardSpatial(Pcsx2Card* current, int key) const;
+    SettingsCard* findNextCardSpatial(SettingsCard* current, int key) const;
 
     DuckStationSettingsDialog* m_dialog;
     QVector<SettingDef> m_schema;

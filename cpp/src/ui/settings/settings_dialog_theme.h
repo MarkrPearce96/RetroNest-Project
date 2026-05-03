@@ -2,10 +2,12 @@
 #include <QColor>
 #include <QString>
 
-// PCSX2 Settings dialog palette — spec 2026-04-11. Do NOT reuse
-// settings_theme.h constants; the spec mandates a warm mid-grey +
-// amber palette that differs from the global settings theme.
-namespace Pcsx2Theme {
+// Shared palette + stylesheet fragments for every per-emulator settings
+// dialog (PCSX2, DuckStation, PPSSPP). Spec 2026-04-11 mandates a warm
+// mid-grey + amber palette for these dialogs, distinct from the global
+// settings_theme.h. Per-emulator divergence has been deferred indefinitely;
+// when/if it returns, split this back into per-emulator headers.
+namespace SettingsDialogTheme {
 
 inline QColor windowBg()       { return QColor("#585450"); }
 inline QColor titleBarBg()     { return QColor("#4a4642"); }
@@ -20,22 +22,21 @@ inline QColor accent()         { return QColor("#f59e0b"); }
 inline QColor letterbox()      { return QColor("#3a3632"); }
 inline QColor previewCardBg()  { return QColor("#504c48"); }
 
-// Ready-to-use stylesheet fragments
 inline QString cardQss() {
     return QStringLiteral(
-        "QFrame#Pcsx2Card {"
+        "QFrame#SettingsCard {"
         "  background-color: #646058;"
         "  border: 1px solid #706c66;"
         "  border-radius: 8px;"
         "}"
-        "QFrame#Pcsx2Card[focused=\"true\"] {"
+        "QFrame#SettingsCard[focused=\"true\"] {"
         "  border: 1px solid #f59e0b;"
         "}");
 }
 
 inline QString sectionHeaderQss() {
     return QStringLiteral(
-        "QLabel#Pcsx2SectionHeader {"
+        "QLabel#SettingsSectionHeader {"
         "  color: #f59e0b;"
         "  font-size: 12px;"
         "  font-weight: 600;"
@@ -85,13 +86,13 @@ inline QString sliderQss() {
 
 inline QString descriptionBarQss() {
     return QStringLiteral(
-        "QFrame#Pcsx2DescriptionBar {"
+        "QFrame#SettingsDescriptionBar {"
         "  background-color: #4a4642;"
         "  border-left: 3px solid #f59e0b;"
         "  padding: 12px 16px;"
         "}"
-        "QLabel#Pcsx2DescText { color: #f2efe8; font-size: 13px; }"
-        "QLabel#Pcsx2DescRecommended {"
+        "QLabel#SettingsDescText { color: #f2efe8; font-size: 13px; }"
+        "QLabel#SettingsDescRecommended {"
         "  color: #f59e0b; font-size: 12px;"
         "  padding: 3px 8px;"
         "  border: 1px solid rgba(245,158,11,0.25);"
@@ -100,4 +101,4 @@ inline QString descriptionBarQss() {
         "}");
 }
 
-} // namespace Pcsx2Theme
+} // namespace SettingsDialogTheme

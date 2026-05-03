@@ -1,10 +1,10 @@
 #include "pcsx2_graphics_rendering_page.h"
 #include "../pcsx2_settings_dialog.h"
-#include "../pcsx2_theme.h"
-#include "../widgets/pcsx2_card.h"
-#include "../widgets/pcsx2_combo_row.h"
-#include "../widgets/pcsx2_toggle_row.h"
-#include "../widgets/pcsx2_toggle.h"
+#include "ui/settings/settings_dialog_theme.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_combo_row.h"
+#include "ui/settings/widgets/settings_toggle_row.h"
+#include "ui/settings/widgets/settings_toggle.h"
 #include "ui/app_controller.h"
 #include "adapters/pcsx2_adapter.h"
 #include <QVBoxLayout>
@@ -45,20 +45,20 @@ void Pcsx2GraphicsRenderingPage::buildUi() {
     root->setContentsMargins(24, 12, 24, 16);
     root->setSpacing(12);
 
-    auto makeComboCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeComboCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         if (!d) return card;
         card->setSettingDef(*d);
-        auto* row = new Pcsx2ComboRow(card, /*stacked=*/true);
+        auto* row = new SettingsComboRow(card, /*stacked=*/true);
         row->setLabel(d->label);
         row->setOptions(d->options);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsRenderingPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::focused, this, &Pcsx2GraphicsRenderingPage::settingFocused);
-        connect(row, &Pcsx2ComboRow::valueChanged, this, [this, key](const QString& val){
+        connect(card, &SettingsCard::focused, this, &Pcsx2GraphicsRenderingPage::settingFocused);
+        connect(row, &SettingsComboRow::focused, this, &Pcsx2GraphicsRenderingPage::settingFocused);
+        connect(row, &SettingsComboRow::valueChanged, this, [this, key](const QString& val){
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, val);
         });
@@ -66,19 +66,19 @@ void Pcsx2GraphicsRenderingPage::buildUi() {
         return card;
     };
 
-    auto makeToggleCard = [this](const QString& key) -> Pcsx2Card* {
+    auto makeToggleCard = [this](const QString& key) -> SettingsCard* {
         const SettingDef* d = findDef(key);
-        auto* card = new Pcsx2Card(this);
+        auto* card = new SettingsCard(this);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         if (!d) return card;
         card->setSettingDef(*d);
-        auto* row = new Pcsx2ToggleRow(card);
+        auto* row = new SettingsToggleRow(card);
         row->setLabel(d->label);
         row->setSettingDef(*d);
-        connect(card, &Pcsx2Card::focused, this, &Pcsx2GraphicsRenderingPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::focused, this, &Pcsx2GraphicsRenderingPage::settingFocused);
-        connect(row, &Pcsx2ToggleRow::toggled, this, [this, key](bool on){
+        connect(card, &SettingsCard::focused, this, &Pcsx2GraphicsRenderingPage::settingFocused);
+        connect(row, &SettingsToggleRow::focused, this, &Pcsx2GraphicsRenderingPage::settingFocused);
+        connect(row, &SettingsToggleRow::toggled, this, [this, key](bool on){
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, on ? "true" : "false");
         });
@@ -108,12 +108,12 @@ void Pcsx2GraphicsRenderingPage::loadValues() {
     auto* app = m_dialog->appController();
     const QString emuId = m_dialog->emuId();
 
-    for (auto* combo : findChildren<Pcsx2ComboRow*>()) {
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
-    for (auto* tog : findChildren<Pcsx2ToggleRow*>()) {
+    for (auto* tog : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = tog->settingDef();
         QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
@@ -166,13 +166,13 @@ QList<QWidget*> Pcsx2GraphicsRenderingPage::collectFocusables() const {
         if (w->focusPolicy() == Qt::NoFocus) continue;
         if (qobject_cast<QComboBox*>(w)   ||
             qobject_cast<QSlider*>(w)     ||
-            qobject_cast<Pcsx2Toggle*>(w) ||
-            qobject_cast<Pcsx2Card*>(w)) {
-            // If this control lives inside a focusable Pcsx2Card, skip it.
-            if (!qobject_cast<Pcsx2Card*>(w)) {
+            qobject_cast<SettingsToggle*>(w) ||
+            qobject_cast<SettingsCard*>(w)) {
+            // If this control lives inside a focusable SettingsCard, skip it.
+            if (!qobject_cast<SettingsCard*>(w)) {
                 bool insideFocusableCard = false;
                 for (QWidget* p = w->parentWidget(); p && p != this; p = p->parentWidget()) {
-                    if (auto* card = qobject_cast<Pcsx2Card*>(p)) {
+                    if (auto* card = qobject_cast<SettingsCard*>(p)) {
                         if (card->focusPolicy() != Qt::NoFocus) {
                             insideFocusableCard = true;
                             break;

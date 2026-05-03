@@ -1,6 +1,6 @@
 #pragma once
 
-#include "manifest.h"
+#include "core/manifest.h"
 #include <QObject>
 #include <QString>
 

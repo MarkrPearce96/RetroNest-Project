@@ -3,9 +3,9 @@
 #include "duckstation_graphics_advanced_page.h"
 #include "duckstation_graphics_osd_page.h"
 #include "../duckstation_settings_dialog.h"
-#include "../../pcsx2/widgets/pcsx2_graphics_sub_tab_bar.h"
-#include "../../pcsx2/widgets/pcsx2_card.h"
-#include "../../pcsx2/widgets/pcsx2_toggle.h"
+#include "ui/settings/widgets/settings_graphics_sub_tab_bar.h"
+#include "ui/settings/widgets/settings_card.h"
+#include "ui/settings/widgets/settings_toggle.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QStackedWidget>
@@ -37,12 +37,12 @@ DuckStationGraphicsPage::DuckStationGraphicsPage(DuckStationSettingsDialog* dial
     topRow->addStretch();
     root->addLayout(topRow);
 
-    m_tabBar = new Pcsx2GraphicsSubTabBar(this);
+    m_tabBar = new SettingsGraphicsSubTabBar(this);
     m_tabBar->setFocusPolicy(Qt::NoFocus);
     m_tabBar->addTab(QStringLiteral("\U0001F3A8"), "Rendering");
     m_tabBar->addTab(QStringLiteral("\u2699"),     "Advanced");
     m_tabBar->addTab(QStringLiteral("\U0001F4CA"), "OSD");
-    connect(m_tabBar, &Pcsx2GraphicsSubTabBar::tabActivated,
+    connect(m_tabBar, &SettingsGraphicsSubTabBar::tabActivated,
             this, &DuckStationGraphicsPage::onSubTabActivated);
     root->addWidget(m_tabBar, 0, Qt::AlignLeft);
 
@@ -129,8 +129,8 @@ void DuckStationGraphicsPage::focusFirstSettingOnCurrentTab() {
         if (w->focusPolicy() == Qt::NoFocus) continue;
         if (qobject_cast<QComboBox*>(w)    ||
             qobject_cast<QSlider*>(w)      ||
-            qobject_cast<Pcsx2Toggle*>(w)  ||
-            (qobject_cast<Pcsx2Card*>(w) && w->focusPolicy() != Qt::NoFocus)) {
+            qobject_cast<SettingsToggle*>(w)  ||
+            (qobject_cast<SettingsCard*>(w) && w->focusPolicy() != Qt::NoFocus)) {
             w->setFocus(Qt::TabFocusReason);
             return;
         }

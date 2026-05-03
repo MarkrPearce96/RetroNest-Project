@@ -2,7 +2,8 @@
 
 #include "core/database.h"
 #include "core/ra_client.h"
-#include "core/ra_credentials.h"
+#include "ra_credentials.h"
+#include <QMutex>
 #include <QObject>
 #include <QString>
 #include <QVariantList>
@@ -24,13 +25,12 @@ public:
     QString username() const { return m_creds.username; }
     const RACredentials& credentials() const { return m_creds; }
 
-    // Data access — fetches from web API
-    QVariantMap userSummary();
-    QVariantList userGames();
-    QVariantMap gameDetail(int raGameId);
-
-    /** Find RA game ID by title match. Searches user's games first, then full console game lists. */
-    int findRaGameId(const QString& title, const QString& system = {});
+    // Async data access — each request runs HTTP fetch on a worker thread
+    // and emits a *Ready signal on completion. Never blocks the caller.
+    void requestUserSummary();
+    void requestUserGames();
+    void requestGameDetail(int raGameId);
+    void requestGameIdLookup(const QString& title, const QString& system = {});
 
     // Settings
     bool hardcoreMode() const;
@@ -46,15 +46,22 @@ public:
 signals:
     void loginCompleted(bool success, const QString& message);
     void signedOut();
+    void userSummaryReady(const QVariantMap& summary);
+    void userGamesReady(const QVariantList& games);
+    void gameDetailReady(int raGameId, const QVariantMap& detail);
+    void gameIdLookupReady(const QString& title, int raGameId);
 
 private:
     Database* m_db;
     RAClient* m_client;
     RACredentials m_creds;
 
-    // Cached data for title lookup
+    // Cached data for title lookup. Touched from worker threads (lookup +
+    // pre-cache populator) and from the GUI thread, so guarded by m_cacheMutex.
+    QMutex m_cacheMutex;
     QVector<RAClient::GameProgressEntry> m_cachedUserGames;
     QMap<int, QVector<RAClient::ConsoleGame>> m_consoleGames; // consoleId → games
 
     void preCacheGameLists();
+    int matchRaGameIdSync(const QString& title, const QString& system);
 };

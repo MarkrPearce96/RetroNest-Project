@@ -66,4 +66,9 @@ private:
     QVector<GameRecord> m_games;
     QString m_currentSystem;
     QString m_mediaDir;
+
+    // Resolved cover-path cache. CoverResolver does up to 8 QFileInfo::exists
+    // calls per row; QML views call data() repeatedly while scrolling, so we
+    // memoize by game id. Invalidated on reload(). mutable because data() is const.
+    mutable QHash<int, QString> m_coverPathCache;
 };

@@ -2,7 +2,7 @@
 #include <QTemporaryDir>
 #include <QFile>
 #include <QTextStream>
-#include "core/rom_scanner.h"
+#include "services/rom_scanner.h"
 #include "core/manifest_loader.h"
 #include "core/database.h"
 
