@@ -340,6 +340,13 @@ bool DolphinAdapter::patchDolphinIni(const QString& dataRootGc, const QString& d
         {"Core", "SkipIPL",      "True"},
         {"Core", "EnableCheats", "False"},
 
+        // Analytics — opt out of Dolphin's usage statistics and mark the
+        // first-run consent prompt as already shown so the dialog doesn't
+        // pop up every time we open the native UI.
+        // Source: Source/Core/Core/Config/MainSettings.cpp:452-454.
+        {"Analytics", "Enabled",         "False"},
+        {"Analytics", "PermissionAsked", "True"},
+
         // General — point ISO scanning at our per-system data dirs so any
         // saves/states Dolphin writes via its own UI go to the right place.
         // Note: these are write-targets, not ROM-scan paths (RetroNest scans
