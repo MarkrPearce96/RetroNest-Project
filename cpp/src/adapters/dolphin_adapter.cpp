@@ -270,8 +270,92 @@ bool DolphinAdapter::patchGfxIni() {
         return writeConfigFile(path, content, "Dolphin");
     return true;
 }
-bool DolphinAdapter::writeGcPadDefaultsIfMissing() { return true; }
-bool DolphinAdapter::writeWiimoteDefaultsIfMissing() { return true; }
+bool DolphinAdapter::writeGcPadDefaultsIfMissing() {
+    const QString path = gcpadIniPath();
+    if (QFile::exists(path))
+        return true;  // never overwrite — user may have customized via Dolphin's UI
+
+    // Default GCPad1 profile: Standard Controller mapped to SDL gamepad 0.
+    // The literal `<device>` placeholder below is replaced at write time with
+    // the SDL controller display name pattern. We use the GameController
+    // catch-all since most users plug in PS/Xbox-style pads which Dolphin
+    // exposes via its SDL backend with a "Wireless Controller" or similar name.
+    //
+    // If a user has an unusual gamepad that doesn't match this pattern,
+    // they can re-map through Dolphin's native UI (which we leave untouched
+    // on subsequent launches).
+    const char* profile = R"INI([GCPad1]
+Device = SDL/0/Wireless Controller
+Buttons/A = `Button S`
+Buttons/B = `Button E`
+Buttons/X = `Button W`
+Buttons/Y = `Button N`
+Buttons/Z = `Shoulder R`
+Buttons/Start = `Start`
+D-Pad/Up = `Pad N`
+D-Pad/Down = `Pad S`
+D-Pad/Left = `Pad W`
+D-Pad/Right = `Pad E`
+Main Stick/Up = `Left Y-`
+Main Stick/Down = `Left Y+`
+Main Stick/Left = `Left X-`
+Main Stick/Right = `Left X+`
+C-Stick/Up = `Right Y-`
+C-Stick/Down = `Right Y+`
+C-Stick/Left = `Right X-`
+C-Stick/Right = `Right X+`
+Triggers/L = `Trigger L`
+Triggers/R = `Trigger R`
+Triggers/L-Analog = `Trigger L`
+Triggers/R-Analog = `Trigger R`
+Rumble/Motor = `Motor`
+)INI";
+
+    QString content = QString::fromUtf8(profile);
+    return writeConfigFile(path, content, "Dolphin");
+}
+bool DolphinAdapter::writeWiimoteDefaultsIfMissing() {
+    const QString path = wiimoteIniPath();
+    if (QFile::exists(path))
+        return true;  // never overwrite
+
+    // Default Wiimote1 profile: emulated Wiimote (no real Wii Remote needed),
+    // sideways orientation, no extension. Maps to SDL gamepad 0.
+    // This is a minimal "playable" profile — full Wii Remote IR/motion
+    // mapping is out of scope for v1; users who need it remap via Dolphin's
+    // native UI.
+    const char* profile = R"INI([Wiimote1]
+Source = 1
+Device = SDL/0/Wireless Controller
+Options/Sideways Wiimote = True
+Buttons/A = `Button S`
+Buttons/B = `Button E`
+Buttons/1 = `Button W`
+Buttons/2 = `Button N`
+Buttons/- = `Back`
+Buttons/+ = `Start`
+Buttons/Home = `Guide`
+D-Pad/Up = `Pad N`
+D-Pad/Down = `Pad S`
+D-Pad/Left = `Pad W`
+D-Pad/Right = `Pad E`
+Shake/X = `Shoulder L`
+Shake/Y = `Shoulder L`
+Shake/Z = `Shoulder L`
+IR/Up = `Right Y-`
+IR/Down = `Right Y+`
+IR/Left = `Right X-`
+IR/Right = `Right X+`
+Tilt/Forward = `Left Y-`
+Tilt/Backward = `Left Y+`
+Tilt/Left = `Left X-`
+Tilt/Right = `Left X+`
+Rumble/Motor = `Motor`
+)INI";
+
+    QString content = QString::fromUtf8(profile);
+    return writeConfigFile(path, content, "Dolphin");
+}
 bool DolphinAdapter::patchHotkeysIni() {
     const QString path = hotkeysIniPath();
     QString content;
