@@ -129,17 +129,24 @@ bool EmulatorInstaller::extract(const QString& archivePath, const QString& destP
             return false;
         }
 
-        // Find .app inside mount
+        // Find .app inside mount. Skip the "Applications" symlink that
+        // many DMGs include as a drop target.
         QDir mountDir(mountPoint.path());
-        auto apps = mountDir.entryList({"*.app"}, QDir::Dirs);
+        auto apps = mountDir.entryList({"*.app"}, QDir::Dirs | QDir::NoSymLinks);
         bool ok = false;
         if (!apps.isEmpty()) {
             const QString src = mountPoint.path() + "/" + apps.first();
             const QString dst = absDest + "/" + apps.first();
-            QProcess cp;
-            cp.start("cp", {"-R", src, dst});
-            cp.waitForFinished(120000);
-            ok = (cp.exitCode() == 0);
+            // ditto preserves code signatures, extended attributes, and
+            // resource forks. cp -R can subtly corrupt signed bundles when
+            // copying off a mounted HFS+ DMG onto APFS, leading to
+            // Gatekeeper "damaged" errors at launch time.
+            QProcess dittoProc;
+            dittoProc.start("ditto", {src, dst});
+            dittoProc.waitForFinished(120000);
+            ok = (dittoProc.exitCode() == 0);
+            if (!ok)
+                qWarning() << "[Installer] ditto failed:" << dittoProc.readAllStandardError();
         }
 
         QProcess detach;

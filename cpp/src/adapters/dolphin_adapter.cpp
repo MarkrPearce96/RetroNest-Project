@@ -55,7 +55,11 @@ QString DolphinAdapter::configFilePath() const {
 
 QString DolphinAdapter::resolveExecutable(const EmulatorManifest& manifest,
                                           const QString& installPath) {
-    return resolveExecutableInDir(manifest, installPath, "DolphinQt");
+    // The official dl.dolphin-emu.org .dmg ships the binary as `Dolphin`
+    // inside `Dolphin.app/Contents/MacOS/`. (Earlier checklist notes said
+    // `DolphinQt` based on the CMake target name — that's only the
+    // build-time name; the shipped product is `Dolphin`.)
+    return resolveExecutableInDir(manifest, installPath, "Dolphin");
 }
 
 // ============================================================================

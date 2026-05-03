@@ -4,7 +4,7 @@
   "description": "Dolphin is a GameCube and Wii emulator. Play GC/Wii games in HD with save states, controller support, and per-game configurations.",
   "systems": ["gc", "wii"],
   "github_repo": "dolphin-emu/dolphin",
-  "executable": "DolphinQt",
+  "executable": "Dolphin",
   "install_folder": "dolphin",
   "rom_extensions": ["iso", "gcm", "gcz", "ciso", "wbfs", "rvz", "wad", "wia", "nkit", "m3u"],
   "launch_args": ["-b", "-e", "{rom_path}"]
