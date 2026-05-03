@@ -336,15 +336,15 @@ bool DolphinAdapter::patchGfxIni() {
     }
 
     // Seed defaults only if these keys are absent (avoid overwriting user choices).
-    if (!content.contains("AspectRatio") || !content.contains("InternalResolution")) {
-        QVector<IniKeyPatch> seedPatches;
-        if (!content.contains("AspectRatio "))
-            seedPatches.append({"Settings", "AspectRatio", "0"});
-        if (!content.contains("InternalResolution"))
-            seedPatches.append({"Settings", "InternalResolution", "1"});
-        if (!seedPatches.isEmpty() && patchIniKeys(content, seedPatches))
-            return writeConfigFile(path, content, "Dolphin");
-    }
+    // Use the trailing-space form ("AspectRatio ") consistently so a key like
+    // "AspectRatioGreaterThan" can't accidentally satisfy the check.
+    QVector<IniKeyPatch> seedPatches;
+    if (!content.contains("AspectRatio "))
+        seedPatches.append({"Settings", "AspectRatio", "0"});
+    if (!content.contains("InternalResolution "))
+        seedPatches.append({"Settings", "InternalResolution", "1"});
+    if (!seedPatches.isEmpty() && patchIniKeys(content, seedPatches))
+        return writeConfigFile(path, content, "Dolphin");
 
     if (!wrote && !QFile::exists(path))
         return writeConfigFile(path, content, "Dolphin");

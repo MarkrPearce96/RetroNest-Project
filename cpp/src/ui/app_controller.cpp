@@ -384,6 +384,14 @@ void AppController::showEmulatorSettings(const QString& emuId) {
         dialog->show();
         return;
     }
+    if (emuId == QLatin1String("dolphin")) {
+        // Dolphin v1: no dedicated in-app settings dialog yet (deferred from
+        // the initial adapter scope). The schema in DolphinAdapter is read
+        // via the Quick Settings overlay (resolution, aspect ratio) and the
+        // remaining knobs are accessible through Dolphin's native UI.
+        openNativeEmulatorSettings(emuId);
+        return;
+    }
     qWarning() << "showEmulatorSettings: no settings dialog registered for emulator" << emuId;
 }
 
