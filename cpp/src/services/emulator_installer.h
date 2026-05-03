@@ -63,4 +63,16 @@ private:
                                        const QString& installPath,
                                        const QString& tagName,
                                        const QString& publishedAt);
+
+    /**
+     * Start an async download + extract pipeline given a fully-resolved
+     * (assetName, downloadUrl, version, publishedAt) tuple. Used by both
+     * the GitHub-Releases path (after asset resolution) and the
+     * adapter-direct-download path (Dolphin etc.).
+     */
+    void startDirectDownload(const QString& assetName,
+                              const QString& downloadUrl,
+                              const QString& tagName,
+                              const QString& publishedAt,
+                              const QString& installPath);
 };

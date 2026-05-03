@@ -4,8 +4,10 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QDebug>
+#include <QRegularExpression>
 #include <QStandardPaths>
 
+#include "core/github_client.h"
 #include "core/paths.h"
 
 namespace {
@@ -78,6 +80,44 @@ QVector<EmulatorAdapter::AssetMatchRule> DolphinAdapter::assetMatchRules() const
         {{"linux"}, ".tar.xz"},
     };
 #endif
+}
+
+// ============================================================================
+// Direct download (Dolphin distributes via dl.dolphin-emu.org, not GitHub)
+// ============================================================================
+
+EmulatorAdapter::DirectDownloadInfo
+DolphinAdapter::resolveDirectDownload(const EmulatorManifest& manifest) const {
+    DirectDownloadInfo info;
+
+    // Dolphin's stable tags are 4-digit version numbers with optional letter
+    // suffix (e.g. 2603, 2603a). The repo also has legacy/unrelated tags
+    // like "nJoy" — filter to the stable pattern.
+    static const QRegularExpression stablePattern("^(\\d{4})([a-z]?)$");
+    const QString tag = GitHubClient::fetchLatestStableTag(manifest.github_repo, stablePattern);
+    if (tag.isEmpty()) {
+        qWarning() << "[Dolphin] Could not resolve latest stable tag from"
+                   << manifest.github_repo << "tags";
+        return info;
+    }
+
+#if defined(Q_OS_MACOS)
+    info.assetName = QString("dolphin-%1-universal.dmg").arg(tag);
+    info.downloadUrl = QString("https://dl.dolphin-emu.org/releases/%1/%2")
+                           .arg(tag, info.assetName);
+#else
+    // Other platforms: dl.dolphin-emu.org publishes a different naming scheme;
+    // fall back to GitHub Releases for now (which will fail loudly, surfacing
+    // that non-mac install is unimplemented). When you add Win/Linux support,
+    // construct the right URL pattern here.
+    qWarning() << "[Dolphin] Direct download URL pattern only implemented for macOS";
+    return info;
+#endif
+
+    info.version = tag;
+    info.publishedAt = tag;  // Dolphin tags are unique per release; doubles as the update key.
+    qInfo() << "[Dolphin] Resolved direct download:" << info.downloadUrl;
+    return info;
 }
 
 // ============================================================================

@@ -286,6 +286,38 @@ public:
     }
 
     /**
+     * Resolved download for adapters whose binaries are NOT distributed
+     * through GitHub Releases (e.g. Dolphin distributes via dl.dolphin-emu.org).
+     * See `resolveDirectDownload()` below.
+     */
+    struct DirectDownloadInfo {
+        QString version;       // e.g. "2603a" — used for update checks + display
+        QString publishedAt;   // ISO 8601 — for update detection (may be empty if version alone is unique)
+        QString assetName;     // filename for the downloaded file (e.g. "dolphin-2603a-universal.dmg")
+        QString downloadUrl;   // direct URL to download
+    };
+
+    /**
+     * Optional override for adapters whose binaries are distributed outside
+     * GitHub Releases. Default returns an empty struct → EmulatorInstaller
+     * uses the normal GitHub Releases flow (`/releases/latest` + asset
+     * matching).
+     *
+     * If you override this and return a non-empty `downloadUrl`, the
+     * installer skips the GitHub Releases API entirely and downloads
+     * directly from `downloadUrl`. You're responsible for resolving the
+     * latest version (typically via the GitHub `/tags` endpoint —
+     * `GitHubClient::fetchLatestStableTag` is provided for this).
+     *
+     * Called synchronously from the installer (both sync and async paths),
+     * so any network work blocks for the duration. Keep it brief.
+     */
+    virtual DirectDownloadInfo resolveDirectDownload(const EmulatorManifest& manifest) const {
+        Q_UNUSED(manifest);
+        return {};
+    }
+
+    /**
      * Declarative rule for matching a GitHub release asset by name.
      * An asset name matches if every entry in `substrings` is contained in
      * the lower-cased asset name AND the asset name ends with `extension`.

@@ -448,7 +448,7 @@ add_executable(test_format_binding
 )
 set_target_properties(test_format_binding PROPERTIES AUTOMOC ON)
 target_include_directories(test_format_binding PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_format_binding PRIVATE Qt6::Core Qt6::Test chdr-static)
+target_link_libraries(test_format_binding PRIVATE Qt6::Core Qt6::Network Qt6::Test chdr-static)
 add_test(NAME FormatBinding COMMAND test_format_binding)
 
 add_executable(test_rom_scanner
@@ -468,7 +468,7 @@ add_executable(test_rom_scanner
     src/core/ini_file.cpp
 )
 target_include_directories(test_rom_scanner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_rom_scanner PRIVATE Qt6::Core Qt6::Sql Qt6::Test chdr-static)
+target_link_libraries(test_rom_scanner PRIVATE Qt6::Core Qt6::Network Qt6::Sql Qt6::Test chdr-static)
 add_test(NAME RomScanner COMMAND test_rom_scanner)
 
 add_executable(test_iso9660_reader
@@ -520,7 +520,7 @@ add_executable(test_dolphin_schema
 )
 set_target_properties(test_dolphin_schema PROPERTIES AUTOMOC ON)
 target_include_directories(test_dolphin_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_dolphin_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
+target_link_libraries(test_dolphin_schema PRIVATE Qt6::Core Qt6::Network Qt6::Test chdr-static)
 add_test(NAME DolphinSchema COMMAND test_dolphin_schema)
 
 add_executable(test_quick_settings_file_field
@@ -541,7 +541,7 @@ add_executable(test_quick_settings_file_field
 )
 set_target_properties(test_quick_settings_file_field PROPERTIES AUTOMOC ON)
 target_include_directories(test_quick_settings_file_field PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Sql Qt6::Test chdr-static)
+target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Network Qt6::Sql Qt6::Test chdr-static)
 add_test(NAME QuickSettingsFileField COMMAND test_quick_settings_file_field)
 
 add_executable(test_pcsx2_toggle

@@ -57,6 +57,13 @@ public:
 
     QVector<AssetMatchRule> assetMatchRules() const override;
 
+    /**
+     * Dolphin doesn't publish to GitHub Releases — they distribute from
+     * dl.dolphin-emu.org. We resolve the latest stable tag (e.g. "2603a")
+     * via the GitHub `/tags` API, then construct the .dmg URL directly.
+     */
+    DirectDownloadInfo resolveDirectDownload(const EmulatorManifest& manifest) const override;
+
 private:
     /** On macOS: path inside .app bundle (Contents/MacOS/). Otherwise: emulators dir. */
     static QString portableDir();
