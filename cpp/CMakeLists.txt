@@ -503,6 +503,26 @@ target_include_directories(test_ppsspp_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(test_ppsspp_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME PPSSPPSchema COMMAND test_ppsspp_schema)
 
+add_executable(test_quick_settings_file_field
+    tests/test_quick_settings_file_field.cpp
+    src/services/config_service.cpp
+    src/adapters/emulator_adapter.cpp
+    src/adapters/adapter_registry.cpp
+    src/adapters/pcsx2_adapter.cpp
+    src/adapters/duckstation_adapter.cpp
+    src/adapters/ppsspp_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+    src/core/database.cpp
+    src/core/manifest_loader.cpp
+)
+set_target_properties(test_quick_settings_file_field PROPERTIES AUTOMOC ON)
+target_include_directories(test_quick_settings_file_field PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Sql Qt6::Test chdr-static)
+add_test(NAME QuickSettingsFileField COMMAND test_quick_settings_file_field)
+
 add_executable(test_pcsx2_toggle
     tests/test_pcsx2_toggle.cpp
     src/ui/settings/widgets/settings_toggle.cpp
