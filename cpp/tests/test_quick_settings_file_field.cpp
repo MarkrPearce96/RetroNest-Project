@@ -45,19 +45,21 @@ private slots:
         auto adapter = std::make_unique<FileFieldTestAdapter>();
         adapter->mainFile = tmp_.path() + "/main.ini";
         adapter->altFile  = tmp_.path() + "/alt.ini";
-
-        // Seed both files with section headers so IniFile loads them.
-        for (const QString& path : {adapter->mainFile, adapter->altFile}) {
-            QFile f(path);
-            QVERIFY(f.open(QIODevice::WriteOnly));
-            f.write("[Settings]\n");
-            f.close();
-        }
-
         adapter_ = adapter.get();
         AdapterRegistry::instance().registerAdapter("filefieldtest", std::move(adapter));
         // Quick-settings paths only consult AdapterRegistry; nullptr loader is safe.
         svc_ = new ConfigService(/*loader=*/nullptr, /*parent=*/this);
+    }
+
+    // Each slot resets both files to a known empty state so test order doesn't
+    // matter and a single failing slot can't poison the next.
+    void init() {
+        for (const QString& path : {adapter_->mainFile, adapter_->altFile}) {
+            QFile f(path);
+            QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            f.write("[Settings]\n");
+            f.close();
+        }
     }
 
     void resolutionWritesToAltFile() {
@@ -79,6 +81,12 @@ private slots:
     }
 
     void resolutionReadsFromAltFile() {
+        // Pre-seed the alt file directly (don't depend on a sibling write slot).
+        QFile alt(adapter_->altFile);
+        QVERIFY(alt.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        alt.write("[Settings]\nInternalResolution = 2\n");
+        alt.close();
+
         QString val = svc_->currentResolution("filefieldtest");
         QCOMPARE(val, QString("2"));
     }
@@ -94,6 +102,12 @@ private slots:
     }
 
     void aspectRatioReadsFromAltFile() {
+        // Pre-seed the alt file directly (don't depend on a sibling write slot).
+        QFile alt(adapter_->altFile);
+        QVERIFY(alt.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        alt.write("[Settings]\nAspectRatio = 1\n");
+        alt.close();
+
         QString label = svc_->currentAspectRatio("filefieldtest");
         QCOMPARE(label, QString("16:9"));
     }
