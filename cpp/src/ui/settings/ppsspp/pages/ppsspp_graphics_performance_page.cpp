@@ -7,6 +7,8 @@
 #include "ui/app_controller.h"
 #include "adapters/ppsspp_adapter.h"
 #include <QVBoxLayout>
+#include <QScrollArea>
+#include <QFrame>
 #include <QVariantMap>
 
 PpssppGraphicsPerformancePage::PpssppGraphicsPerformancePage(PpssppSettingsDialog* dialog)
@@ -24,7 +26,28 @@ const SettingDef* PpssppGraphicsPerformancePage::findDef(const QString& key) con
 }
 
 void PpssppGraphicsPerformancePage::buildUi() {
-    auto* root = new QVBoxLayout(this);
+    auto* outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setStyleSheet(
+        "QScrollArea { background: transparent; border: none; }"
+        "QScrollArea > QWidget > QWidget { background: transparent; }"
+        "QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }"
+        "QScrollBar::handle:vertical { background: #706c66; border-radius: 4px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #7a7670; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
+    outer->addWidget(scroll);
+
+    auto* content = new QWidget(scroll);
+    scroll->setWidget(content);
+
+    auto* root = new QVBoxLayout(content);
     root->setContentsMargins(24, 12, 24, 16);
     root->setSpacing(12);
 
