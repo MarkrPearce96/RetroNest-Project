@@ -150,8 +150,88 @@ AspectRatioOptions DolphinAdapter::aspectRatioOptions() const {
 // ============================================================================
 
 QVector<SettingDef> DolphinAdapter::settingsSchema() const {
-    // Filled in by Task 12.
-    return {};
+    // Field order: category, subcategory, group, section, key, label, tooltip,
+    //              type, defaultValue, options, minVal, maxVal, step, layout, suffix
+    // All values use Dolphin's True/False capitalization (Common/StringUtil.cpp:289-292).
+
+    const QVector<QPair<QString,QString>> audioBackends = {
+        {"Cubeb",   "Cubeb"},
+        {"OpenAL",  "OpenAL"},
+        {"Null",    "Null"},
+    };
+
+    const QVector<QPair<QString,QString>> cpuCores = {
+        {"Interpreter (slow, accurate)",  "0"},
+        {"Cached Interpreter",             "5"},
+        {"JIT Recompiler (recommended)",   "1"},
+        {"JITARM64 (Apple Silicon)",       "4"},
+    };
+
+    return {
+        // ─── Interface ───────────────────────────────────────
+        {"Interface", "", "", "Interface", "PauseOnFocusLost",
+         "Pause When Window Loses Focus",
+         "Pauses emulation automatically when the RetroNest window loses focus. "
+         "Required for the in-game overlay to work cleanly.",
+         SettingDef::Bool, "True"},
+
+        {"Interface", "", "", "Interface", "ConfirmStop",
+         "Confirm Before Stopping Emulation",
+         "Show a confirmation dialog when stopping a game from Dolphin's UI. "
+         "Disabled by default so RetroNest's own exit flow is uninterrupted.",
+         SettingDef::Bool, "False"},
+
+        {"Interface", "", "", "Interface", "HideCursor",
+         "Hide Cursor During Gameplay",
+         "Hides the mouse cursor while a game is running.",
+         SettingDef::Bool, "True"},
+
+        // ─── Audio (DSP) ─────────────────────────────────────
+        {"Audio", "", "", "DSP", "Backend",
+         "Audio Backend",
+         "Sound output backend. Cubeb is recommended on macOS.",
+         SettingDef::Combo, "Cubeb", audioBackends},
+
+        {"Audio", "", "", "DSP", "Volume",
+         "Volume",
+         "Master output volume (0-100).",
+         SettingDef::Int, "100", {}, 0, 100, 1, "slider", "%"},
+
+        {"Audio", "", "", "DSP", "EnableJIT",
+         "Enable DSP JIT",
+         "Enables the DSP JIT recompiler. Significant performance improvement; "
+         "leave on unless debugging.",
+         SettingDef::Bool, "True"},
+
+        // ─── Core ────────────────────────────────────────────
+        {"Core", "", "", "Core", "CPUCore",
+         "CPU Core",
+         "The CPU emulation backend. JIT is required for full-speed gameplay.",
+         SettingDef::Combo, "1", cpuCores},
+
+        {"Core", "", "", "Core", "SkipIPL",
+         "Skip GameCube Boot Animation",
+         "Skips the GameCube IPL boot sequence and starts the game directly. "
+         "When disabled, requires IPL.bin in the BIOS folder.",
+         SettingDef::Bool, "True"},
+
+        {"Core", "", "", "Core", "EnableCheats",
+         "Enable Cheats",
+         "Enables AR/Gecko cheat code processing. Off by default for safety.",
+         SettingDef::Bool, "False"},
+
+        {"Core", "", "", "Core", "OverclockEnable",
+         "Enable CPU Overclocking",
+         "Allows the slider below to scale the emulated CPU's clock rate. "
+         "Some games run smoother with overclocking; others crash.",
+         SettingDef::Bool, "False"},
+
+        {"Core", "", "", "Core", "Overclock",
+         "Overclock Multiplier",
+         "Multiplier applied to the emulated CPU's clock when overclocking is enabled. "
+         "1.0 = native, 1.5 = +50%.",
+         SettingDef::Float, "1", {}, 0.5, 4.0, 0.05, "slider", "x"},
+    };
 }
 
 // ============================================================================
