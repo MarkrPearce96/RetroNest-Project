@@ -19,3 +19,7 @@ Thumbs.db
 
 # Git worktrees
 .worktrees/
+
+# Reference emulator source trees (extracted for investigation; never committed)
+references/*/
+
