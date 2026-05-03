@@ -509,6 +509,20 @@ target_include_directories(test_ppsspp_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(test_ppsspp_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME PPSSPPSchema COMMAND test_ppsspp_schema)
 
+add_executable(test_dolphin_schema
+    tests/test_dolphin_schema.cpp
+    src/adapters/dolphin_adapter.cpp
+    src/adapters/emulator_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_dolphin_schema PROPERTIES AUTOMOC ON)
+target_include_directories(test_dolphin_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_dolphin_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_test(NAME DolphinSchema COMMAND test_dolphin_schema)
+
 add_executable(test_quick_settings_file_field
     tests/test_quick_settings_file_field.cpp
     src/services/config_service.cpp
