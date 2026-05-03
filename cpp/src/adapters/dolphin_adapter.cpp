@@ -231,10 +231,77 @@ bool DolphinAdapter::patchDolphinIni(const QString& dataRootGc, const QString& d
         return writeConfigFile(path, content, "Dolphin");
     return true;
 }
-bool DolphinAdapter::patchGfxIni() { return true; }
+bool DolphinAdapter::patchGfxIni() {
+    const QString path = gfxIniPath();
+    QString content;
+
+    if (QFile::exists(path)) {
+        if (!readConfigFile(path, content, "Dolphin"))
+            return false;
+    } else {
+        content = "";
+    }
+
+    const QVector<IniKeyPatch> patches = {
+        {"Hardware", "VSync", "True"},
+        // AspectRatio + InternalResolution are user-tunable through the wizard;
+        // we only seed them if the file is fresh.
+    };
+
+    bool wrote = false;
+    if (patchIniKeys(content, patches)) {
+        if (!writeConfigFile(path, content, "Dolphin"))
+            return false;
+        wrote = true;
+    }
+
+    // Seed defaults only if these keys are absent (avoid overwriting user choices).
+    if (!content.contains("AspectRatio") || !content.contains("InternalResolution")) {
+        QVector<IniKeyPatch> seedPatches;
+        if (!content.contains("AspectRatio "))
+            seedPatches.append({"Settings", "AspectRatio", "0"});
+        if (!content.contains("InternalResolution"))
+            seedPatches.append({"Settings", "InternalResolution", "1"});
+        if (!seedPatches.isEmpty() && patchIniKeys(content, seedPatches))
+            return writeConfigFile(path, content, "Dolphin");
+    }
+
+    if (!wrote && !QFile::exists(path))
+        return writeConfigFile(path, content, "Dolphin");
+    return true;
+}
 bool DolphinAdapter::writeGcPadDefaultsIfMissing() { return true; }
 bool DolphinAdapter::writeWiimoteDefaultsIfMissing() { return true; }
-bool DolphinAdapter::patchHotkeysIni() { return true; }
+bool DolphinAdapter::patchHotkeysIni() {
+    const QString path = hotkeysIniPath();
+    QString content;
+
+    if (QFile::exists(path)) {
+        if (!readConfigFile(path, content, "Dolphin"))
+            return false;
+    } else {
+        // Create an empty file with just the [Hotkeys] section so Dolphin
+        // doesn't auto-populate defaults that conflict with our overlay.
+        content = "[Hotkeys]\n";
+    }
+
+    // Clear native hotkeys that compete with our Cmd+Esc overlay or
+    // automatic save-on-exit logic. Dolphin's expression parser tolerates
+    // empty values (returns 0/false, no crash).
+    const QVector<IniKeyPatch> patches = {
+        {"Hotkeys", "General/Toggle Pause",       ""},
+        {"Hotkeys", "General/Open",                ""},
+        {"Hotkeys", "General/Exit",                ""},
+        {"Hotkeys", "Save State/Save State Slot 1", ""},
+        {"Hotkeys", "Load State/Load State Slot 1", ""},
+    };
+
+    if (patchIniKeys(content, patches))
+        return writeConfigFile(path, content, "Dolphin");
+    if (!QFile::exists(path))
+        return writeConfigFile(path, content, "Dolphin");
+    return true;
+}
 
 // ============================================================================
 // RetroAchievements
