@@ -2,6 +2,7 @@
 #include "pcsx2_adapter.h"
 #include "duckstation_adapter.h"
 #include "ppsspp_adapter.h"
+#include "dolphin_adapter.h"
 
 #include <QDebug>
 
@@ -14,6 +15,7 @@ void AdapterRegistry::registerBuiltinAdapters() {
     registerAdapter("pcsx2", std::make_unique<PCSX2Adapter>());
     registerAdapter("duckstation", std::make_unique<DuckStationAdapter>());
     registerAdapter("ppsspp", std::make_unique<PPSSPPAdapter>());
+    registerAdapter("dolphin", std::make_unique<DolphinAdapter>());
 }
 
 void AdapterRegistry::registerAdapter(const QString& id, std::unique_ptr<EmulatorAdapter> adapter) {

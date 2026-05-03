@@ -38,6 +38,7 @@ set(SOURCES
     src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
     src/core/scraper.cpp
@@ -135,6 +136,7 @@ set(HEADERS
     src/adapters/pcsx2_adapter.h
     src/adapters/duckstation_adapter.h
     src/adapters/ppsspp_adapter.h
+    src/adapters/dolphin_adapter.h
     src/core/sfo_parser.h
     src/core/ini_file.h
     src/core/scraper.h
@@ -436,6 +438,7 @@ add_executable(test_format_binding
     src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
     src/core/ini_file.cpp
     src/core/iso9660_reader.cpp
     src/core/sfo_parser.cpp
@@ -458,6 +461,7 @@ add_executable(test_rom_scanner
     src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
 )
@@ -511,6 +515,7 @@ add_executable(test_quick_settings_file_field
     src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
     src/core/ini_file.cpp
     src/core/iso9660_reader.cpp
     src/core/sfo_parser.cpp
