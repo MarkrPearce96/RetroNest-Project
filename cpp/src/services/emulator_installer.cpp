@@ -129,17 +129,24 @@ bool EmulatorInstaller::extract(const QString& archivePath, const QString& destP
             return false;
         }
 
-        // Find .app inside mount
+        // Find .app inside mount. Skip the "Applications" symlink that
+        // many DMGs include as a drop target.
         QDir mountDir(mountPoint.path());
-        auto apps = mountDir.entryList({"*.app"}, QDir::Dirs);
+        auto apps = mountDir.entryList({"*.app"}, QDir::Dirs | QDir::NoSymLinks);
         bool ok = false;
         if (!apps.isEmpty()) {
             const QString src = mountPoint.path() + "/" + apps.first();
             const QString dst = absDest + "/" + apps.first();
-            QProcess cp;
-            cp.start("cp", {"-R", src, dst});
-            cp.waitForFinished(120000);
-            ok = (cp.exitCode() == 0);
+            // ditto preserves code signatures, extended attributes, and
+            // resource forks. cp -R can subtly corrupt signed bundles when
+            // copying off a mounted HFS+ DMG onto APFS, leading to
+            // Gatekeeper "damaged" errors at launch time.
+            QProcess dittoProc;
+            dittoProc.start("ditto", {src, dst});
+            dittoProc.waitForFinished(120000);
+            ok = (dittoProc.exitCode() == 0);
+            if (!ok)
+                qWarning() << "[Installer] ditto failed:" << dittoProc.readAllStandardError();
         }
 
         QProcess detach;
@@ -211,6 +218,23 @@ QString EmulatorInstaller::matchAsset(const QString& emuId, const QStringList& a
 
 EmulatorInstaller::ReleaseInfo EmulatorInstaller::fetchReleaseInfo(const EmulatorManifest& manifest) {
     ReleaseInfo info;
+
+    // Some emulators (e.g. Dolphin) distribute outside GitHub Releases.
+    // Consult the adapter first; if it returns a direct download, skip the
+    // /releases/latest API entirely.
+    if (auto* adapter = AdapterRegistry::instance().adapterFor(manifest.id)) {
+        const auto direct = adapter->resolveDirectDownload(manifest);
+        if (!direct.downloadUrl.isEmpty()) {
+            info.tagName = direct.version;
+            info.publishedAt = direct.publishedAt;
+            info.assetName = direct.assetName;
+            info.downloadUrl = direct.downloadUrl;
+            info.ok = true;
+            qInfo() << "[Installer] Using adapter-resolved direct download for" << manifest.id
+                    << ":" << direct.assetName << "(" << direct.version << ")";
+            return info;
+        }
+    }
 
     const QString apiUrl = "https://api.github.com/repos/" + manifest.github_repo + "/releases/latest";
     QByteArray releaseJson = httpGet(apiUrl);
@@ -341,6 +365,20 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
     // Phase 1: Fetch release metadata asynchronously
     emit progress(0.0, "Fetching", "Fetching release info...");
 
+    // Adapter override: some emulators (e.g. Dolphin) distribute outside
+    // GitHub Releases. If the adapter resolves a direct download, jump
+    // straight to the download phase and reuse the existing async pipeline.
+    if (auto* adapter = AdapterRegistry::instance().adapterFor(manifest.id)) {
+        const auto direct = adapter->resolveDirectDownload(manifest);
+        if (!direct.downloadUrl.isEmpty()) {
+            qInfo() << "[Installer] Using adapter-resolved direct download for" << manifest.id
+                    << ":" << direct.assetName << "(" << direct.version << ")";
+            startDirectDownload(direct.assetName, direct.downloadUrl,
+                                direct.version, direct.publishedAt, installPath);
+            return;
+        }
+    }
+
     const QString apiUrl = "https://api.github.com/repos/" + manifest.github_repo + "/releases/latest";
     const QString emuId = manifest.id;
 
@@ -399,86 +437,100 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
                 QString downloadUrl = assetUrls[assetName];
                 qInfo() << "[Installer] Selected asset:" << assetName;
 
-                // Phase 2: Download with byte-level progress and incremental writes
-                QDir().mkpath(installPath);
-                const QString tempFile = installPath + "/" + assetName;
+                // Done with the API NAM \u2014 the download phase creates its own.
+                nam->deleteLater();
+                startDirectDownload(assetName, downloadUrl, tagName, publishedAt, installPath);
+            });
+}
 
-                auto* file = new QFile(tempFile, this);
-                if (!file->open(QIODevice::WriteOnly)) {
-                    qWarning() << "[Installer] Cannot write to" << tempFile;
-                    nam->deleteLater();
-                    file->deleteLater();
-                    emit finished(InstallResult{false, "Cannot write temp file", tagName, publishedAt});
+// ============================================================================
+// Async download + extract (shared by GitHub-Releases path and adapter-direct path)
+// ============================================================================
+
+void EmulatorInstaller::startDirectDownload(const QString& assetName,
+                                              const QString& downloadUrl,
+                                              const QString& tagName,
+                                              const QString& publishedAt,
+                                              const QString& installPath) {
+    QDir().mkpath(installPath);
+    const QString tempFile = installPath + "/" + assetName;
+
+    auto* nam = new QNetworkAccessManager(this);
+    auto* file = new QFile(tempFile, this);
+    if (!file->open(QIODevice::WriteOnly)) {
+        qWarning() << "[Installer] Cannot write to" << tempFile;
+        nam->deleteLater();
+        file->deleteLater();
+        emit finished(InstallResult{false, "Cannot write temp file", tagName, publishedAt});
+        return;
+    }
+
+    QNetworkRequest dlReq{QUrl(downloadUrl)};
+    dlReq.setHeader(QNetworkRequest::UserAgentHeader, "RetroNest/1.0");
+    dlReq.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                       QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    QNetworkReply* dlReply = nam->get(dlReq);
+
+    // Write data incrementally as it arrives
+    connect(dlReply, &QNetworkReply::readyRead, this,
+            [file, dlReply]() {
+                file->write(dlReply->readAll());
+            });
+
+    connect(dlReply, &QNetworkReply::downloadProgress, this,
+            [this](qint64 received, qint64 total) {
+                if (total <= 0) {
+                    emit progress(-1.0, "Downloading", "Downloading...");
+                    return;
+                }
+                double ratio = static_cast<double>(received) / static_cast<double>(total);
+                int percent = static_cast<int>(ratio * 100.0);
+                qint64 receivedMB = received / (1024 * 1024);
+                qint64 totalMB = total / (1024 * 1024);
+                QString detail = QString("%1% \u2014 %2 MB / %3 MB")
+                                     .arg(percent).arg(receivedMB).arg(totalMB);
+                emit progress(ratio, "Downloading", detail);
+            });
+
+    connect(dlReply, &QNetworkReply::finished, this,
+            [this, dlReply, nam, file, tempFile, installPath, tagName, publishedAt]() {
+                dlReply->deleteLater();
+                nam->deleteLater();
+                file->close();
+                file->deleteLater();
+
+                if (dlReply->error() != QNetworkReply::NoError) {
+                    qWarning() << "[Installer] Download failed:" << dlReply->errorString();
+                    QFile::remove(tempFile);
+                    emit finished(InstallResult{false, "Download failed: " + dlReply->errorString(), tagName, publishedAt});
                     return;
                 }
 
-                QNetworkRequest dlReq{QUrl(downloadUrl)};
-                dlReq.setHeader(QNetworkRequest::UserAgentHeader, "RetroNest/1.0");
-                dlReq.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                                   QNetworkRequest::NoLessSafeRedirectPolicy);
+                qInfo() << "[Installer] Downloaded to" << tempFile
+                        << "(" << QFileInfo(tempFile).size() / (1024 * 1024) << "MB)";
 
-                QNetworkReply* dlReply = nam->get(dlReq);
+                // Phase 3: Extract on background thread
+                emit progress(-1.0, "Extracting", "Extracting files...");
 
-                // Write data incrementally as it arrives
-                connect(dlReply, &QNetworkReply::readyRead, this,
-                        [file, dlReply]() {
-                            file->write(dlReply->readAll());
-                        });
+                auto* watcher = new QFutureWatcher<InstallResult>(this);
+                connect(watcher, &QFutureWatcher<InstallResult>::finished, this,
+                        [this, watcher]() {
+                            InstallResult result = watcher->result();
+                            watcher->deleteLater();
 
-                connect(dlReply, &QNetworkReply::downloadProgress, this,
-                        [this](qint64 received, qint64 total) {
-                            if (total <= 0) {
-                                emit progress(-1.0, "Downloading", "Downloading...");
-                                return;
+                            if (result.success) {
+                                qInfo() << "[Installer] Async install complete ("
+                                        << result.version << ")";
                             }
-                            double ratio = static_cast<double>(received) / static_cast<double>(total);
-                            int percent = static_cast<int>(ratio * 100.0);
-                            qint64 receivedMB = received / (1024 * 1024);
-                            qint64 totalMB = total / (1024 * 1024);
-                            QString detail = QString("%1% \u2014 %2 MB / %3 MB")
-                                                 .arg(percent).arg(receivedMB).arg(totalMB);
-                            emit progress(ratio, "Downloading", detail);
+                            emit finished(result);
                         });
 
-                connect(dlReply, &QNetworkReply::finished, this,
-                        [this, dlReply, nam, file, tempFile, installPath, tagName, publishedAt]() {
-                            dlReply->deleteLater();
-                            nam->deleteLater();
-                            file->close();
-                            file->deleteLater();
+                QFuture<InstallResult> future = QtConcurrent::run(
+                    [tempFile, installPath, tagName, publishedAt]() -> InstallResult {
+                        return postDownload(tempFile, installPath, tagName, publishedAt);
+                    });
 
-                            if (dlReply->error() != QNetworkReply::NoError) {
-                                qWarning() << "[Installer] Download failed:" << dlReply->errorString();
-                                QFile::remove(tempFile);
-                                emit finished(InstallResult{false, "Download failed: " + dlReply->errorString(), tagName, publishedAt});
-                                return;
-                            }
-
-                            qInfo() << "[Installer] Downloaded to" << tempFile
-                                    << "(" << QFileInfo(tempFile).size() / (1024 * 1024) << "MB)";
-
-                            // Phase 3: Extract on background thread
-                            emit progress(-1.0, "Extracting", "Extracting files...");
-
-                            auto* watcher = new QFutureWatcher<InstallResult>(this);
-                            connect(watcher, &QFutureWatcher<InstallResult>::finished, this,
-                                    [this, watcher]() {
-                                        InstallResult result = watcher->result();
-                                        watcher->deleteLater();
-
-                                        if (result.success) {
-                                            qInfo() << "[Installer] Async install complete ("
-                                                    << result.version << ")";
-                                        }
-                                        emit finished(result);
-                                    });
-
-                            QFuture<InstallResult> future = QtConcurrent::run(
-                                [tempFile, installPath, tagName, publishedAt]() -> InstallResult {
-                                    return postDownload(tempFile, installPath, tagName, publishedAt);
-                                });
-
-                            watcher->setFuture(future);
-                        });
+                watcher->setFuture(future);
             });
 }

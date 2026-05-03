@@ -384,6 +384,14 @@ void AppController::showEmulatorSettings(const QString& emuId) {
         dialog->show();
         return;
     }
+    if (emuId == QLatin1String("dolphin")) {
+        // Dolphin v1: no dedicated in-app settings dialog yet (deferred from
+        // the initial adapter scope). The schema in DolphinAdapter is read
+        // via the Quick Settings overlay (resolution, aspect ratio) and the
+        // remaining knobs are accessible through Dolphin's native UI.
+        openNativeEmulatorSettings(emuId);
+        return;
+    }
     qWarning() << "showEmulatorSettings: no settings dialog registered for emulator" << emuId;
 }
 
@@ -419,7 +427,10 @@ void AppController::openNativeEmulatorSettings(const QString& emuId) {
     // route through Launch Services which applies app translocation/sandbox
     // rules to downloaded .app bundles, causing emulators like DuckStation to
     // fail when trying to save settings inside their own bundle.
-    QProcess::startDetached(exec, {});
+    //
+    // additionalLaunchArgs() lets adapters inject CLI flags that must be
+    // present on every launch (e.g. Dolphin's `-u <user-dir>`). Default empty.
+    QProcess::startDetached(exec, adapter->additionalLaunchArgs());
 }
 
 void AppController::showHotkeySettings(const QString& emuId) {

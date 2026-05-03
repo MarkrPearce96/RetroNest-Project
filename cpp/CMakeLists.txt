@@ -38,6 +38,7 @@ set(SOURCES
     src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
     src/core/scraper.cpp
@@ -135,6 +136,7 @@ set(HEADERS
     src/adapters/pcsx2_adapter.h
     src/adapters/duckstation_adapter.h
     src/adapters/ppsspp_adapter.h
+    src/adapters/dolphin_adapter.h
     src/core/sfo_parser.h
     src/core/ini_file.h
     src/core/scraper.h
@@ -330,6 +332,7 @@ qt_add_qml_module(setupwizard_backing
         qml/AppUI/images/pcsx2_logo.png
         qml/AppUI/images/duckstation_logo.png
         qml/AppUI/images/ppsspp_logo.png
+        qml/AppUI/images/dolphin_logo.png
     RESOURCE_PREFIX /
 )
 
@@ -380,6 +383,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/pcsx2_logo.png
         qml/AppUI/images/duckstation_logo.png
         qml/AppUI/images/ppsspp_logo.png
+        qml/AppUI/images/dolphin_logo.png
         qml/AppUI/images/retroachievements_logo.png
         qml/AppUI/images/screenscraper_logo.png
         qml/AppUI/images/empty-state-bg.webp
@@ -436,6 +440,7 @@ add_executable(test_format_binding
     src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
     src/core/ini_file.cpp
     src/core/iso9660_reader.cpp
     src/core/sfo_parser.cpp
@@ -443,7 +448,7 @@ add_executable(test_format_binding
 )
 set_target_properties(test_format_binding PROPERTIES AUTOMOC ON)
 target_include_directories(test_format_binding PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_format_binding PRIVATE Qt6::Core Qt6::Test chdr-static)
+target_link_libraries(test_format_binding PRIVATE Qt6::Core Qt6::Network Qt6::Test chdr-static)
 add_test(NAME FormatBinding COMMAND test_format_binding)
 
 add_executable(test_rom_scanner
@@ -458,11 +463,12 @@ add_executable(test_rom_scanner
     src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
 )
 target_include_directories(test_rom_scanner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_rom_scanner PRIVATE Qt6::Core Qt6::Sql Qt6::Test chdr-static)
+target_link_libraries(test_rom_scanner PRIVATE Qt6::Core Qt6::Network Qt6::Sql Qt6::Test chdr-static)
 add_test(NAME RomScanner COMMAND test_rom_scanner)
 
 add_executable(test_iso9660_reader
@@ -502,6 +508,41 @@ set_target_properties(test_ppsspp_schema PROPERTIES AUTOMOC ON)
 target_include_directories(test_ppsspp_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_ppsspp_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME PPSSPPSchema COMMAND test_ppsspp_schema)
+
+add_executable(test_dolphin_schema
+    tests/test_dolphin_schema.cpp
+    src/adapters/dolphin_adapter.cpp
+    src/adapters/emulator_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_dolphin_schema PROPERTIES AUTOMOC ON)
+target_include_directories(test_dolphin_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_dolphin_schema PRIVATE Qt6::Core Qt6::Network Qt6::Test chdr-static)
+add_test(NAME DolphinSchema COMMAND test_dolphin_schema)
+
+add_executable(test_quick_settings_file_field
+    tests/test_quick_settings_file_field.cpp
+    src/services/config_service.cpp
+    src/adapters/emulator_adapter.cpp
+    src/adapters/adapter_registry.cpp
+    src/adapters/pcsx2_adapter.cpp
+    src/adapters/duckstation_adapter.cpp
+    src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+    src/core/database.cpp
+    src/core/manifest_loader.cpp
+)
+set_target_properties(test_quick_settings_file_field PROPERTIES AUTOMOC ON)
+target_include_directories(test_quick_settings_file_field PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Network Qt6::Sql Qt6::Test chdr-static)
+add_test(NAME QuickSettingsFileField COMMAND test_quick_settings_file_field)
 
 add_executable(test_pcsx2_toggle
     tests/test_pcsx2_toggle.cpp

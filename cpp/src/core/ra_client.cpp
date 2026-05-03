@@ -297,6 +297,8 @@ static const QMap<QString, int>& consoleIdMapping() {
         {"psx", 12},
         {"ps2", 21},
         {"psp", 41},
+        {"gc", 16},
+        {"wii", 19},
     };
     return mapping;
 }
