@@ -18,7 +18,8 @@ Item {
         var logos = {
             "pcsx2": "qrc:/SetupWizard/qml/AppUI/images/pcsx2_logo.png",
             "duckstation": "qrc:/SetupWizard/qml/AppUI/images/duckstation_logo.png",
-            "ppsspp": "qrc:/SetupWizard/qml/AppUI/images/ppsspp_logo.png"
+            "ppsspp": "qrc:/SetupWizard/qml/AppUI/images/ppsspp_logo.png",
+            "dolphin": "qrc:/SetupWizard/qml/AppUI/images/dolphin_logo.png"
         }
         return logos[id] || ""
     }

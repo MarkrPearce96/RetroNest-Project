@@ -332,6 +332,7 @@ qt_add_qml_module(setupwizard_backing
         qml/AppUI/images/pcsx2_logo.png
         qml/AppUI/images/duckstation_logo.png
         qml/AppUI/images/ppsspp_logo.png
+        qml/AppUI/images/dolphin_logo.png
     RESOURCE_PREFIX /
 )
 
@@ -382,6 +383,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/pcsx2_logo.png
         qml/AppUI/images/duckstation_logo.png
         qml/AppUI/images/ppsspp_logo.png
+        qml/AppUI/images/dolphin_logo.png
         qml/AppUI/images/retroachievements_logo.png
         qml/AppUI/images/screenscraper_logo.png
         qml/AppUI/images/empty-state-bg.webp
