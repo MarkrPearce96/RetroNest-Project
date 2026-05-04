@@ -4,6 +4,9 @@
 #include "widgets/settings_graphics_sub_tab_bar.h"
 #include "widgets/settings_section_header.h"
 #include "widgets/settings_card.h"
+#include "widgets/settings_combo_row.h"
+#include "widgets/settings_toggle_row.h"
+#include "widgets/settings_slider_row.h"
 #include "ui/app_controller.h"
 #include "adapters/emulator_adapter.h"
 #include <QVBoxLayout>
@@ -159,13 +162,50 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
 }
 
 void GenericSettingsPage::loadValues() {
-    // Implemented in Task 11.
+    auto* app = m_dlg->appController();
+    const QString emuId = m_dlg->emuId();
+
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
+        const SettingDef& d = combo->settingDef();
+        const QString cur = app->settingValue(emuId, d.section, d.key);
+        combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
+    }
+    for (auto* toggle : findChildren<SettingsToggleRow*>()) {
+        const SettingDef& d = toggle->settingDef();
+        const QString cur = app->settingValue(emuId, d.section, d.key);
+        const QString v = cur.isEmpty() ? d.defaultValue : cur;
+        toggle->setChecked(v.compare("true", Qt::CaseInsensitive) == 0
+                       || v.compare("True", Qt::CaseInsensitive) == 0);
+    }
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
+        const SettingDef& d = slider->settingDef();
+        const QString cur = app->settingValue(emuId, d.section, d.key);
+        const QString v = cur.isEmpty() ? d.defaultValue : cur;
+        slider->setValue(v.toInt());
+    }
 }
 
-void GenericSettingsPage::saveValue(const QString& /*section*/,
-                                    const QString& /*key*/,
-                                    const QString& /*value*/) {
-    // Implemented in Task 11.
+void GenericSettingsPage::saveValue(const QString& section,
+                                    const QString& key,
+                                    const QString& value) {
+    auto* app = m_dlg->appController();
+    const QString emuId = m_dlg->emuId();
+
+    auto defaultSave = [app, emuId](const QString& sec, const QString& k,
+                                    const QString& v) {
+        QVariantMap m;
+        m[sec + "/" + k] = v;
+        app->saveSettings(emuId, m);
+    };
+
+    for (const auto& d : m_schema) {
+        if (d.section == section && d.key == key && d.saveTransform) {
+            d.saveTransform(value, defaultSave);
+            return;
+        }
+    }
+
+    defaultSave(section, key, value);
 }
 
 void GenericSettingsPage::refreshDependencies() {
