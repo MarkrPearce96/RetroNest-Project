@@ -185,10 +185,11 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         topRow->addWidget(leftHost, /*stretch=*/1);
 
         // Right column: preview card. Sized to content (label + preview)
-        // and top-aligned in the row so it doesn't stretch to match the
-        // left column's height — that produces a tall empty dark band
-        // below the preview which the user explicitly disliked
-        // (smoke 2026-05-04).
+        // and centered vertically in the row, so the preview always sits
+        // beside the middle of the left column regardless of how many
+        // settings the preview-bound group contains. Future emulators
+        // with shorter or longer preview-bound groups get the same
+        // visual rhythm — preview floats at the row's midline.
         auto* card = new SettingsCard(this);
         card->setFocusPolicy(Qt::NoFocus);
         card->setPreviewStyle(true);
@@ -204,11 +205,7 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         v->addWidget(lbl);
         preview = mountPreviewWidget(spec.previewType, card);
         if (preview) v->addWidget(preview);
-        // Qt::AlignTop pins the card to the top of the row; combined with
-        // the QSizePolicy::Maximum above the card sizes to its content.
-        // Empty space below the card is now ordinary page background, not
-        // a tall dark card-coloured rectangle.
-        topRow->addWidget(card, /*stretch=*/1, Qt::AlignTop);
+        topRow->addWidget(card, /*stretch=*/1, Qt::AlignVCenter);
 
         layout->addLayout(topRow);
         m_currentPreview = preview;
