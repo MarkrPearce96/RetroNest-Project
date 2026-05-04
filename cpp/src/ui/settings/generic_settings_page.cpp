@@ -226,16 +226,29 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         }
     }
 
-    for (const QString& group : groupOrder) {
-        // Preview-bound group → top-row left column. Everything else →
-        // full-width below-top-row layout.
-        QVBoxLayout* dest = (topLeftLayout && previewBoundGroups.contains(group))
-            ? topLeftLayout
-            : layout;
+    // Approximate number of cards that fit beside the preview at typical
+    // render widths. The preview is min 320×180; allocated width is roughly
+    // half the row, so heightForWidth ≈ 280px + chrome ≈ 330px. Each card
+    // after the slim-down is ~52px. 330 / 52 ≈ 6, but giving a bit of
+    // breathing room → 4 cards beside the preview, the rest wrap full-
+    // width below it. Future emulators with larger or smaller preview-
+    // bound groups get the same cap automatically.
+    const int kCardsBesidePreview = 4;
 
+    for (const QString& group : groupOrder) {
+        const bool isPreviewBound = topLeftLayout
+            && previewBoundGroups.contains(group);
+
+        // Section header — landed where the FIRST card of the group goes.
+        // For a split preview-bound group the header sits in topLeft;
+        // overflow cards in the bottom area appear without a duplicate
+        // header (orange uppercase styling above gives enough context).
         if (!group.isEmpty()) {
-            dest->addWidget(new SettingsSectionHeader(group, this));
+            QVBoxLayout* headerDest = isPreviewBound ? topLeftLayout : layout;
+            headerDest->addWidget(new SettingsSectionHeader(group, this));
         }
+
+        int cardIndex = 0;
         for (const auto& d : m_schema) {
             if (d.subcategory != subcategory || d.group != group) continue;
             QWidget* card = nullptr;
@@ -253,7 +266,16 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
                 default:
                     break;
             }
-            if (card) dest->addWidget(card);
+            if (!card) continue;
+
+            // First N preview-bound cards stay beside the preview;
+            // overflow wraps to full-width below. Non-preview-bound
+            // groups always go to the bottom layout.
+            QVBoxLayout* dest = (isPreviewBound && cardIndex < kCardsBesidePreview)
+                ? topLeftLayout
+                : layout;
+            dest->addWidget(card);
+            ++cardIndex;
         }
     }
 
