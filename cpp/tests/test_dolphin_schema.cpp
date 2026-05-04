@@ -19,7 +19,7 @@ private slots:
     void testTopLevelCategories() {
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
-        QCOMPARE(categories, QSet<QString>({"Interface", "Audio", "Core"}));
+        QCOMPARE(categories, QSet<QString>({"Interface", "Audio", "Core", "Graphics"}));
     }
 
     void testPauseOnFocusLostExists() {
@@ -85,6 +85,17 @@ private slots:
                 QVERIFY(patch.iniFilePath.endsWith("GFX.ini"));
             }
         }
+    }
+
+    void testGraphicsDisplaySubTabExists() {
+        const QSet<QString> expectedKeys{
+            "AspectRatio", "InternalResolution", "IntegerScaling", "VSync", "Fullscreen"
+        };
+        QSet<QString> got;
+        for (const auto& d : schema_)
+            if (d.category == "Graphics" && d.subcategory == "Display")
+                got.insert(d.key);
+        QCOMPARE(got, expectedKeys);
     }
 };
 

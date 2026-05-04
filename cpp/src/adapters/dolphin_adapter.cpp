@@ -199,6 +199,10 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
     //              type, defaultValue, options, minVal, maxVal, step, layout, suffix
     // All values use Dolphin's True/False capitalization (Common/StringUtil.cpp:289-292).
 
+    // Helper: stamp a SettingDef with GFX.ini as the target file.
+    // gfxIniPath() is static, so no capture needed.
+    auto gfx = [](SettingDef d) { d.iniFilePath = gfxIniPath(); return d; };
+
     const QVector<QPair<QString,QString>> audioBackends = {
         {"Cubeb",   "Cubeb"},
         {"OpenAL",  "OpenAL"},
@@ -276,6 +280,42 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Multiplier applied to the emulated CPU's clock when overclocking is enabled. "
          "1.0 = native, 1.5 = +50%.",
          SettingDef::Float, "1", {}, 0.5, 4.0, 0.05, "slider", "x"},
+
+        // ─── Graphics / Display ──────────────────────────────
+        // AspectRatio, InternalResolution, IntegerScaling, VSync live in
+        // GFX.ini → wrap in gfx(). Fullscreen lives in Dolphin.ini →
+        // omit gfx() so it inherits configFilePath() = Dolphin.ini.
+        gfx({"Graphics", "Display", "", "Settings", "AspectRatio",
+         "Aspect Ratio",
+         "Display aspect ratio. Auto matches the game's native aspect; "
+         "Stretch fills the screen.",
+         SettingDef::Combo, "0",
+         { {"Auto","0"}, {"Force 16:9","1"}, {"Force 4:3","2"}, {"Stretch","3"} }}),
+
+        gfx({"Graphics", "Display", "", "Settings", "InternalResolution",
+         "Internal Resolution",
+         "Render scale relative to native (1x = original, 6x ≈ 4K).",
+         SettingDef::Combo, "1",
+         { {"Native (1x)","1"}, {"2x (~720p)","2"}, {"3x (~1080p)","3"},
+           {"4x (~1440p)","4"}, {"5x (~1800p)","5"}, {"6x (~4K)","6"} }}),
+
+        gfx({"Graphics", "Display", "", "Settings", "IntegerScaling",
+         "Integer Scaling",
+         "Scales the rendered image by integer multiples only — produces "
+         "crisp pixels at the cost of unused screen area.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Display", "", "Hardware", "VSync",
+         "VSync",
+         "Synchronizes output to the display refresh rate. Reduces tearing.",
+         SettingDef::Bool, "True"}),
+
+        // No gfx() wrapper — Fullscreen is in Dolphin.ini's [Display] section.
+        {"Graphics", "Display", "", "Display", "Fullscreen",
+         "Fullscreen",
+         "Render in fullscreen mode. RetroNest already runs Dolphin "
+         "embedded in our window, so this is True by default.",
+         SettingDef::Bool, "True"},
     };
 }
 
