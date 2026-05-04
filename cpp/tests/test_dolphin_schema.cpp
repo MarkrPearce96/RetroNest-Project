@@ -160,42 +160,51 @@ private slots:
         }
     }
 
-    void testGraphicsDisplaySubTabExists() {
-        const QSet<QString> expectedKeys{
-            "AspectRatio", "InternalResolution", "VSync", "Fullscreen"
-        };
+    void testGraphicsSubTabsCovered() {
+        // Full Graphics audit: sub-tabs match DolphinQt's GraphicsPane
+        // structure exactly.
         QSet<QString> got;
         for (const auto& d : schema_)
-            if (d.category == "Graphics" && d.subcategory == "Display")
-                got.insert(d.key);
-        QCOMPARE(got, expectedKeys);
+            if (d.category == "Graphics") got.insert(d.subcategory);
+        QCOMPARE(got, QSet<QString>({
+            "General", "Enhancements", "Hacks", "Advanced", "On-Screen Display"
+        }));
     }
 
-    void testGraphicsRenderingSubTabExists() {
-        const QSet<QString> expectedKeys{
-            "MSAA", "MaxAnisotropy", "ShaderCompilationMode",
-            "WaitForShadersBeforeStarting", "EnablePixelLighting"
-        };
-        QSet<QString> got;
+    void testGraphicsCategoryHasMinimumExpectedKeys() {
+        // Headline keys per sub-tab — guards against accidental drops.
+        QSet<QString> graphicsKeys;
         for (const auto& d : schema_)
-            if (d.category == "Graphics" && d.subcategory == "Rendering")
-                got.insert(d.key);
-        QCOMPARE(got, expectedKeys);
+            if (d.category == "Graphics") graphicsKeys.insert(d.key);
+
+        const QStringList headline{
+            "GFXBackend", "AspectRatio", "InternalResolution", "VSync",
+            "Fullscreen", "ShaderCompilationMode",
+            "MSAA", "SSAA", "MaxAnisotropy", "EnablePixelLighting",
+            "ForceTextureFiltering", "StereoMode",
+            "EFBToTextureEnable", "XFBToTextureEnable", "BBoxEnable",
+            "VertexRounding", "FastDepthCalc",
+            "HiresTextures", "DumpTextures", "BitrateKbps",
+            "ShowFPS", "ShowSpeed", "OnScreenDisplayMessages",
+        };
+        for (const QString& k : headline)
+            QVERIFY2(graphicsKeys.contains(k), qPrintable("missing key: " + k));
     }
 
-    void testGraphicsDisplayHasAspectPreview() {
+    void testGraphicsGeneralHasAspectPreview() {
         DolphinAdapter a;
-        const auto spec = a.previewSpec("Graphics", "Display");
+        // Display sub-tab was renamed to General in the full audit.
+        const auto spec = a.previewSpec("Graphics", "General");
         QCOMPARE(spec.previewType, QString("aspect"));
-        QCOMPARE(spec.keyToProperty.size(), 1);
         QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
-        // Dolphin doesn't expose stretch/crop/integer-scaling as separate
-        // GFX.ini keys; AspectRatio is the only binding for now.
     }
 
-    void testGraphicsRenderingHasNoPreview() {
+    void testGraphicsOtherSubTabsHaveNoPreview() {
         DolphinAdapter a;
-        QVERIFY(a.previewSpec("Graphics", "Rendering").previewType.isEmpty());
+        QVERIFY(a.previewSpec("Graphics", "Enhancements").previewType.isEmpty());
+        QVERIFY(a.previewSpec("Graphics", "Hacks").previewType.isEmpty());
+        QVERIFY(a.previewSpec("Graphics", "Advanced").previewType.isEmpty());
+        QVERIFY(a.previewSpec("Graphics", "On-Screen Display").previewType.isEmpty());
     }
 };
 

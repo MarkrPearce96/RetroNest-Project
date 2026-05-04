@@ -565,51 +565,68 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Publish currently-playing game to Discord status when Dolphin runs.",
          SettingDef::Bool, "True"},
 
-        // ─── Graphics / Display ──────────────────────────────
-        // AspectRatio, InternalResolution, VSync live in
-        // GFX.ini → wrap in gfx(). Fullscreen lives in Dolphin.ini →
-        // omit gfx() so it inherits configFilePath() = Dolphin.ini.
-        gfx({"Graphics", "Display", "", "Settings", "AspectRatio",
+        // ═══ Graphics ═══════════════════════════════════════
+        // Five sub-tabs mirror DolphinQt's GraphicsPane structure:
+        // General / Enhancements / Hacks / Advanced / On-Screen Display.
+
+        // ─── Graphics / General ──────────────────────────────
+        // GFXBackend lives in Dolphin.ini's [Core] section, NOT GFX.ini.
+        // Backend names from Source/Core/VideoBackends/*/VideoBackend.h
+        // CONFIG_NAME constants. macOS default is Metal.
+        {"Graphics", "General", "Backend", "Core", "GFXBackend",
+         "Graphics Backend",
+         "Renderer used to draw frames. Metal is the macOS default; Vulkan "
+         "uses MoltenVK; OGL is OpenGL; Software/Null are reference/silent.",
+         SettingDef::Combo, "Metal",
+         { {"Metal","Metal"}, {"Vulkan","Vulkan"}, {"OpenGL","OGL"},
+           {"Software Renderer","Software Renderer"}, {"Null","Null"} }},
+
+        gfx({"Graphics", "General", "Backend", "Settings", "BackendMultithreading",
+         "Backend Multithreading",
+         "Distribute video-backend work across multiple threads. "
+         "Default-on is the recommended setting upstream.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "General", "Aspect & Window", "Settings", "AspectRatio",
          "Aspect Ratio",
          "Display aspect ratio. Auto matches the game's native aspect; "
          "Stretch fills the screen.",
          SettingDef::Combo, "0",
-         { {"Auto","0"}, {"Force 16:9","1"}, {"Force 4:3","2"}, {"Stretch","3"} }}),
+         { {"Auto","0"}, {"Force 16:9","1"}, {"Force 4:3","2"},
+           {"Stretch","3"}, {"Custom","4"} }}),
 
-        gfx({"Graphics", "Display", "", "Settings", "InternalResolution",
+        gfx({"Graphics", "General", "Aspect & Window", "Settings", "wideScreenHack",
+         "Widescreen Hack",
+         "Force 4:3 games to render in widescreen by hacking the projection "
+         "matrix. Can produce visual artifacts; useful for 4:3-only titles.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "General", "Aspect & Window", "Settings", "InternalResolution",
          "Internal Resolution",
          "Render scale relative to native (1x = original, 6x ≈ 4K).",
          SettingDef::Combo, "1",
          { {"Native (1x)","1"}, {"2x (~720p)","2"}, {"3x (~1080p)","3"},
            {"4x (~1440p)","4"}, {"5x (~1800p)","5"}, {"6x (~4K)","6"} }}),
 
-        gfx({"Graphics", "Display", "", "Hardware", "VSync",
+        gfx({"Graphics", "General", "Aspect & Window", "Hardware", "VSync",
          "VSync",
          "Synchronizes output to the display refresh rate. Reduces tearing.",
          SettingDef::Bool, "True"}),
 
+        gfx({"Graphics", "General", "Aspect & Window", "Settings", "BorderlessFullscreen",
+         "Borderless Fullscreen",
+         "Use a borderless window instead of exclusive fullscreen. Smoother "
+         "task-switching, slight latency cost on some setups.",
+         SettingDef::Bool, "False"}),
+
         // No gfx() wrapper — Fullscreen is in Dolphin.ini's [Display] section.
-        {"Graphics", "Display", "", "Display", "Fullscreen",
+        {"Graphics", "General", "Aspect & Window", "Display", "Fullscreen",
          "Fullscreen",
          "Render in fullscreen mode. RetroNest already runs Dolphin "
          "embedded in our window, so this is True by default.",
          SettingDef::Bool, "True"},
 
-        // ─── Graphics / Rendering ────────────────────────────
-        // All five Rendering keys live in GFX.ini → wrap each in gfx().
-        gfx({"Graphics", "Rendering", "", "Settings", "MSAA",
-         "Anti-Aliasing (MSAA)",
-         "Multi-sample anti-aliasing. Higher = smoother edges, slower.",
-         SettingDef::Combo, "1",
-         { {"None","1"}, {"2x","2"}, {"4x","4"}, {"8x","8"} }}),
-
-        gfx({"Graphics", "Rendering", "", "Enhancements", "MaxAnisotropy",
-         "Anisotropic Filtering",
-         "Sharpens textures viewed at oblique angles.",
-         SettingDef::Combo, "-1",
-         { {"Default","-1"}, {"Off (1x)","0"}, {"2x","1"}, {"4x","2"}, {"8x","3"}, {"16x","4"} }}),
-
-        gfx({"Graphics", "Rendering", "", "Settings", "ShaderCompilationMode",
+        gfx({"Graphics", "General", "Shader Compilation", "Settings", "ShaderCompilationMode",
          "Shader Compilation",
          "How shaders are compiled. Asynchronous reduces stutter at the "
          "cost of brief texture/lighting pop-in on first encounter.",
@@ -617,17 +634,386 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          { {"Specialized (Default)","0"}, {"Exclusive Ubershaders","1"},
            {"Hybrid Ubershaders","2"}, {"Skip Drawing","3"} }}),
 
-        gfx({"Graphics", "Rendering", "", "Settings", "WaitForShadersBeforeStarting",
+        gfx({"Graphics", "General", "Shader Compilation", "Settings", "WaitForShadersBeforeStarting",
          "Compile Shaders Before Starting",
          "Pre-compiles the shader pipeline before launching a game. "
          "Slower start, smoother gameplay.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Rendering", "", "Settings", "EnablePixelLighting",
+        // ─── Graphics / Enhancements ─────────────────────────
+        gfx({"Graphics", "Enhancements", "Anti-Aliasing", "Settings", "MSAA",
+         "Multi-Sample Anti-Aliasing (MSAA)",
+         "Higher = smoother edges, slower. Effectiveness depends on backend.",
+         SettingDef::Combo, "1",
+         { {"None","1"}, {"2x","2"}, {"4x","4"}, {"8x","8"} }}),
+
+        gfx({"Graphics", "Enhancements", "Anti-Aliasing", "Settings", "SSAA",
+         "Super-Sample Anti-Aliasing (SSAA)",
+         "Renders at MSAA's sample count and downsamples. Highest quality, "
+         "highest cost. Only takes effect with MSAA enabled.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Enhancements", "Texture Filtering", "Enhancements", "MaxAnisotropy",
+         "Anisotropic Filtering",
+         "Sharpens textures viewed at oblique angles.",
+         SettingDef::Combo, "-1",
+         { {"Default","-1"}, {"Off (1x)","0"}, {"2x","1"}, {"4x","2"}, {"8x","3"}, {"16x","4"} }}),
+
+        gfx({"Graphics", "Enhancements", "Texture Filtering", "Enhancements", "ForceTextureFiltering",
+         "Force Texture Filtering",
+         "Override the game's texture-filtering choice. Default respects the "
+         "game; Nearest = pixelated, Linear = smooth.",
+         SettingDef::Combo, "0",
+         { {"Default","0"}, {"Nearest","1"}, {"Linear","2"} }}),
+
+        gfx({"Graphics", "Enhancements", "Texture Filtering", "Enhancements", "OutputResampling",
+         "Output Resampling",
+         "Algorithm used to resample the rendered image to the window size.",
+         SettingDef::Combo, "0",
+         { {"Default","0"}, {"Bilinear","1"}, {"B-Spline","2"},
+           {"Mitchell-Netravali","3"}, {"Catmull-Rom","4"} }}),
+
+        gfx({"Graphics", "Enhancements", "Color & Lighting", "Enhancements", "ForceTrueColor",
+         "Force 24-Bit Color",
+         "Force higher-precision color output. Reduces banding on gradients.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Enhancements", "Color & Lighting", "Settings", "EnablePixelLighting",
          "Per-Pixel Lighting",
          "Higher-quality lighting. Slight performance cost; some games "
          "look noticeably better with it on.",
          SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Enhancements", "Color & Lighting", "Enhancements", "DisableCopyFilter",
+         "Disable Copy Filter",
+         "Disable the post-process copy-filter pass. Reduces blur some games "
+         "apply but may break intended visual effects.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Enhancements", "Color & Lighting", "Settings", "DisableFog",
+         "Disable Fog",
+         "Skip rendering fog effects. Improves visibility in foggy games at "
+         "the cost of intended atmosphere.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Enhancements", "Color & Lighting", "Enhancements", "ArbitraryMipmapDetection",
+         "Detect Arbitrary Mipmaps",
+         "Detect when a game uses mipmaps as separate images rather than "
+         "true LODs, and treat them appropriately.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Enhancements", "Color & Lighting", "Enhancements", "HDROutput",
+         "HDR Output",
+         "Output in HDR (high-dynamic-range) when the display supports it.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Enhancements", "Stereoscopy", "Stereoscopy", "StereoMode",
+         "Stereo Mode",
+         "3D-stereoscopic rendering mode. Off disables stereo entirely.",
+         SettingDef::Combo, "0",
+         { {"Off","0"}, {"Side-by-Side","1"}, {"Top-and-Bottom","2"},
+           {"Anaglyph","3"}, {"Quad Buffer","4"} }}),
+
+        gfx({"Graphics", "Enhancements", "Stereoscopy", "Stereoscopy", "StereoSwapEyes",
+         "Swap Eyes",
+         "Swap the left and right eye images.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Enhancements", "Stereoscopy", "Stereoscopy", "StereoPerEyeResolutionFull",
+         "Full Per-Eye Resolution",
+         "Render each eye at the full internal resolution instead of half. "
+         "Doubles GPU cost.",
+         SettingDef::Bool, "False"}),
+
+        // ─── Graphics / Hacks ────────────────────────────────
+        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBAccessEnable",
+         "Allow EFB CPU Access",
+         "Lets games read back the EFB on the CPU. Required for accurate "
+         "behavior in some games; slower when enabled.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBAccessDeferInvalidation",
+         "Defer EFB Cache Invalidation",
+         "Reduces overhead by deferring EFB-cache invalidations. Speed win "
+         "for many games; can cause visual glitches in a few.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBEmulateFormatChanges",
+         "Emulate EFB Format Changes",
+         "Accurately emulates EFB pixel-format changes. Slower but more correct.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBToTextureEnable",
+         "Skip EFB Copy to RAM",
+         "Skip the slow EFB→RAM copy and use a GPU texture instead. "
+         "Big speed boost; can break a few games that read the EFB.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Hacks", "EFB", "Hacks", "DeferEFBCopies",
+         "Defer EFB Copies",
+         "Delay flushing EFB copies until needed. Speed win for most games.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBScaledCopy",
+         "Scaled EFB Copy",
+         "Resize EFB copies to match the rendering scale. Required for "
+         "high internal resolutions to look right.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Hacks", "XFB", "Hacks", "XFBToTextureEnable",
+         "Skip XFB Copy to RAM",
+         "Skip the slow XFB→RAM copy. Big speed boost; required disabled "
+         "for games that decode the XFB on the CPU.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Hacks", "XFB", "Hacks", "ImmediateXFBEnable",
+         "Immediate XFB",
+         "Display the XFB as soon as it's drawn instead of on next vblank. "
+         "Lower latency, slight tearing risk.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Hacks", "XFB", "Hacks", "SkipDuplicateXFBs",
+         "Skip Duplicate XFBs",
+         "Detect and skip identical consecutive XFBs to save GPU work.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Hacks", "XFB", "Hacks", "DisableCopyToVRAM",
+         "Disable Copy To VRAM",
+         "Disable the GPU-side path for EFB/XFB copies. Forces a slower CPU "
+         "path; debug-only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Hacks", "Texture Cache", "Settings", "SafeTextureCacheColorSamples",
+         "Texture Cache Accuracy",
+         "How many color samples Dolphin checks to decide if a cached "
+         "texture is still valid. Lower = faster but may miss updates.",
+         SettingDef::Combo, "128",
+         { {"Safe (0)","0"}, {"Default (128)","128"}, {"Fast (512)","512"} }}),
+
+        gfx({"Graphics", "Hacks", "Texture Cache", "Hacks", "FastTextureSampling",
+         "Fast Texture Sampling",
+         "Trade some accuracy for speed in the texture sampler.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Hacks", "Texture Cache", "Settings", "SaveTextureCacheToState",
+         "Save Texture Cache To State",
+         "Save the texture cache contents in save states. Larger states, "
+         "smoother resume.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Hacks", "Other", "Hacks", "BBoxEnable",
+         "Bounding Box Emulation",
+         "Emulate the GameCube/Wii bounding-box hardware. Slower but required "
+         "for a small set of games (e.g. Paper Mario).",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Hacks", "Other", "Hacks", "VertexRounding",
+         "Vertex Rounding",
+         "Round vertex coordinates to integers. Fixes seams in some games.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Hacks", "Other", "Hacks", "VISkip",
+         "VI Skip",
+         "Skip Video-Interface processing on duplicate frames.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Hacks", "Other", "Settings", "FastDepthCalc",
+         "Fast Depth Calculation",
+         "Use a faster GPU-friendly depth-calculation path. Default-on.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Hacks", "Other", "Settings", "CPUCull",
+         "CPU Culling",
+         "Cull invisible geometry on the CPU before sending to the GPU. "
+         "Speeds up some games.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Hacks", "Other", "Settings", "EnableGPUTextureDecoding",
+         "GPU Texture Decoding",
+         "Decode textures on the GPU instead of the CPU. Speed win on most setups.",
+         SettingDef::Bool, "False"}),
+
+        // ─── Graphics / Advanced ─────────────────────────────
+        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "HiresTextures",
+         "Load Custom Textures",
+         "Load high-resolution texture replacements from "
+         "User/Load/Textures/<game-id>/.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "CacheHiresTextures",
+         "Prefetch Custom Textures",
+         "Pre-load all custom textures into VRAM at boot. Eliminates load "
+         "stutter; uses more memory.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpTextures",
+         "Dump Textures",
+         "Save every texture the game uses to disk. Used to create custom "
+         "texture packs.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpBaseTextures",
+         "Dump Base Textures",
+         "Include base mipmaps in the texture dump.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpMipTextures",
+         "Dump Mip Textures",
+         "Include all mipmap levels in the texture dump.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "DumpEFBTarget",
+         "Dump EFB Target",
+         "Dump the EFB contents to disk each frame. Debug only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "DumpXFBTarget",
+         "Dump XFB Target",
+         "Dump the XFB contents to disk each frame. Debug only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "BitrateKbps",
+         "Frame Dump Bitrate",
+         "Encoded video bitrate (kilobits per second) when dumping frames "
+         "to a video file.",
+         SettingDef::Int, "25000", {}, 1000, 100000, 1000, "slider", "kbps"}),
+
+        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "FrameDumpsResolutionType",
+         "Frame Dump Resolution",
+         "Source for the dumped frame's resolution.",
+         SettingDef::Combo, "0",
+         { {"Window","0"}, {"XFB Aspect-Corrected","1"}, {"Raw XFB","2"} }}),
+
+        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "PNGCompressionLevel",
+         "PNG Compression Level",
+         "Compression level for PNG screenshots and frame dumps. 0 = none, "
+         "9 = maximum.",
+         SettingDef::Int, "6", {}, 0, 9, 1, "slider", ""}),
+
+        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "UseLossless",
+         "Use Lossless Codec",
+         "Encode frame dumps with a lossless codec. Larger files, no quality loss.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debug", "Settings", "WireFrame",
+         "Wireframe",
+         "Render geometry as wireframe lines. Debug only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debug", "Settings", "OverlayStats",
+         "Show Statistics Overlay",
+         "Render a per-frame statistics overlay. Debug only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debug", "Settings", "OverlayProjStats",
+         "Show Projection Statistics",
+         "Render a projection-matrix statistics overlay. Debug only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debug", "Settings", "TexFmtOverlayEnable",
+         "Show Texture Format Overlay",
+         "Tag each texture with its format. Debug only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debug", "Settings", "EnableValidationLayer",
+         "Enable Validation Layer",
+         "Enable the graphics-API validation layer (Vulkan/D3D). Massive "
+         "slowdown; debug only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debug", "Settings", "LogRenderTimeToFile",
+         "Log Render Time To File",
+         "Append per-frame GPU timing data to a log file. Debug only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debug", "Settings", "PerfSampWindowMS",
+         "Performance Sample Window",
+         "Sliding window (in milliseconds) for perf-stat averaging.",
+         SettingDef::Int, "1000", {}, 100, 10000, 100, "slider", "ms"}),
+
+        gfx({"Graphics", "Advanced", "Misc", "Settings", "PreferVSForLinePointExpansion",
+         "Prefer Vertex Shader For Line/Point Expansion",
+         "Expand line/point primitives in the vertex shader instead of "
+         "geometry. Workaround for some drivers.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Misc", "Settings", "EnableMods",
+         "Enable Graphics Mods",
+         "Load graphics mods from User/Load/GraphicMods/<game-id>/.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Misc", "Settings", "Crop",
+         "Crop Black Borders",
+         "Crop overscan/black borders from the rendered image.",
+         SettingDef::Bool, "False"}),
+
+        // ─── Graphics / On-Screen Display ────────────────────
+        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowFPS",
+         "Show FPS",
+         "Frames per second the GPU is drawing.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowVPS",
+         "Show VPS",
+         "VBlanks per second — the rate the emulated game thinks it's running at.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowSpeed",
+         "Show Speed",
+         "Emulation speed as a percentage of native.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowSpeedColors",
+         "Color-Code Speed",
+         "Tint the Show Speed indicator green/yellow/red based on how close "
+         "to native it is.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowFTimes",
+         "Show Frame Times",
+         "Per-frame GPU time graph.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowVTimes",
+         "Show VBlank Times",
+         "Per-vblank time graph.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowGraphs",
+         "Show Performance Graphs",
+         "Render the FPS/VPS history as a graph instead of a single number.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "NetPlay", "Settings", "ShowNetPlayPing",
+         "Show NetPlay Ping",
+         "Display NetPlay session ping.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "NetPlay", "Settings", "ShowNetPlayMessages",
+         "Show NetPlay Messages",
+         "Display NetPlay chat/event messages on screen.",
+         SettingDef::Bool, "False"}),
+
+        // OSD messages + frame count + lag live in Dolphin.ini, not GFX.ini.
+        {"Graphics", "On-Screen Display", "Messages", "Interface", "OnScreenDisplayMessages",
+         "Show On-Screen Messages",
+         "Display Dolphin's own status messages (savestates, achievements, etc.)",
+         SettingDef::Bool, "True"},
+
+        {"Graphics", "On-Screen Display", "Messages", "Settings", "OSDFontSize",
+         "OSD Font Size",
+         "Point size for on-screen messages.",
+         SettingDef::Int, "13", {}, 8, 32, 1, "slider", "pt"},
+
+        {"Graphics", "On-Screen Display", "Messages", "General", "ShowFrameCount",
+         "Show Frame Count",
+         "Display the running frame number.",
+         SettingDef::Bool, "False"},
+
+        {"Graphics", "On-Screen Display", "Messages", "General", "ShowLag",
+         "Show Lag Counter",
+         "Display the per-frame input-lag counter (movie/replay tooling).",
+         SettingDef::Bool, "False"},
     };
 }
 
@@ -912,7 +1298,7 @@ void DolphinAdapter::patchRetroAchievements(const QString& /*username*/, const Q
 
 PreviewSpec DolphinAdapter::previewSpec(const QString& category,
                                         const QString& subcategory) const {
-    if (category == "Graphics" && subcategory == "Display") {
+    if (category == "Graphics" && subcategory == "General") {
         // Dolphin only exposes aspect ratio in a way that maps to the shared
         // AspectRatioPreview. Stretch / crop / integer-scaling are not
         // GFX.ini keys in Dolphin, so the preview shows just the aspect
