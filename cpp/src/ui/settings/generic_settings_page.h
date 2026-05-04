@@ -55,6 +55,13 @@ private:
     QWidget* mountPreviewWidget(const QString& previewType, QWidget* parent);
     void wirePreviewBinding(const PreviewSpec& spec, QWidget* preview);
 
+    // Drop focus onto the first focusable SettingsCard in the visible
+    // sub-stack page (multi-subcategory) or in the page (single).
+    // Mirrors DuckStationGraphicsPage::focusFirstSettingOnCurrentTab —
+    // called after sub-tab activation so the spatial-nav handler always
+    // has a focused starting point.
+    void focusFirstSettingOnCurrentSubTab();
+
     EmulatorSettingsDialogBase* m_dlg = nullptr;
     EmulatorAdapter* m_adapter = nullptr;
     QString m_category;                       // common to every entry in m_schema

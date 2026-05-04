@@ -75,8 +75,11 @@ void GenericSettingsPage::buildUi() {
     root->setContentsMargins(24, 16, 24, 16);
     root->setSpacing(10);
 
-    // Back button (matches existing pages — see duckstation_console_page.cpp:76-81)
+    // Back button (matches existing pages — see duckstation_console_page.cpp:76-81).
+    // NoFocus so Tab/arrows can't sink focus onto it — popPage is reachable
+    // via Esc/B-button at the dialog level.
     auto* back = new QPushButton("← Back", content);
+    back->setFocusPolicy(Qt::NoFocus);
     back->setStyleSheet("QPushButton { background:transparent; color:#f2efe8; border:none;"
                         " font-size:14px; padding:4px 0; text-align:left; }"
                         "QPushButton:focus { color:#f59e0b; }");
@@ -85,9 +88,14 @@ void GenericSettingsPage::buildUi() {
 
     // Sub-tab handling: if there's more than one subcategory, render a
     // SettingsGraphicsSubTabBar at the top + a QStackedWidget that swaps
-    // on tab change.
+    // on tab change. Mirrors duckstation_graphics_page.cpp:40-47.
     if (m_subcategories.size() > 1) {
         m_subTabBar = new SettingsGraphicsSubTabBar(content);
+        // NoFocus — the bar is driven by Tab/Shift-Tab in eventFilter, not
+        // by being a Tab stop itself. Otherwise it sinks focus and breaks
+        // the spatial-nav contract that focus always lives on a settings
+        // card while the page is interactive.
+        m_subTabBar->setFocusPolicy(Qt::NoFocus);
         for (const auto& s : m_subcategories) m_subTabBar->addTab("", s);
         root->addWidget(m_subTabBar);
 
@@ -104,8 +112,16 @@ void GenericSettingsPage::buildUi() {
         }
         root->addWidget(m_subStack);
 
+        // Sub-tab activation: swap the stack page, clear the description
+        // bar (the previously-focused setting is no longer visible), and
+        // shift focus to the first card on the new tab so spatial nav
+        // continues working without the user having to click.
         connect(m_subTabBar, &SettingsGraphicsSubTabBar::tabActivated,
-                m_subStack, &QStackedWidget::setCurrentIndex);
+                this, [this](int index) {
+                    m_subStack->setCurrentIndex(index);
+                    m_dlg->clearFocusedSetting();
+                    focusFirstSettingOnCurrentSubTab();
+                });
     }
 
     // Per-subcategory build happens here — populated in Task 10.
@@ -318,11 +334,29 @@ bool GenericSettingsPage::eventFilter(QObject* obj, QEvent* e) {
     if (e->type() != QEvent::KeyPress) return QWidget::eventFilter(obj, e);
     auto* ke = static_cast<QKeyEvent*>(e);
     const int k = ke->key();
-    if (k != Qt::Key_Left && k != Qt::Key_Right && k != Qt::Key_Up && k != Qt::Key_Down)
-        return QWidget::eventFilter(obj, e);
 
     QWidget* current = QApplication::focusWidget();
     if (!current || !isAncestorOf(current))
+        return QWidget::eventFilter(obj, e);
+
+    // Tab / Shift+Tab cycles through sub-tabs when present. Mirrors
+    // DuckStationGraphicsPage::eventFilter:106-117 (L1/R1 on a controller
+    // is mapped to Tab/Backtab by the global input layer).
+    if ((k == Qt::Key_Tab || k == Qt::Key_Backtab) && m_subTabBar) {
+        const int count = m_subTabBar->tabCount();
+        if (count >= 2) {
+            int next = m_subTabBar->currentIndex();
+            if (k == Qt::Key_Backtab || (ke->modifiers() & Qt::ShiftModifier)) {
+                next = (next - 1 + count) % count;
+            } else {
+                next = (next + 1) % count;
+            }
+            m_subTabBar->setCurrentIndex(next);
+            return true;
+        }
+    }
+
+    if (k != Qt::Key_Left && k != Qt::Key_Right && k != Qt::Key_Up && k != Qt::Key_Down)
         return QWidget::eventFilter(obj, e);
 
     // Combo dropdown open — let the popup handle arrows.
@@ -419,6 +453,20 @@ SettingsCard* GenericSettingsPage::findNextCardSpatial(SettingsCard* current, in
         if (c.secondary < bestSecondary) { bestSecondary = c.secondary; best = c.card; }
     }
     return best;
+}
+
+void GenericSettingsPage::focusFirstSettingOnCurrentSubTab() {
+    // Search inside the visible sub-stack page when present, otherwise the
+    // whole page. First focusable SettingsCard wins so spatial-nav has a
+    // starting point. Mirrors DuckStationGraphicsPage::focusFirstSettingOnCurrentTab.
+    QWidget* searchRoot = m_subStack ? m_subStack->currentWidget() : this;
+    if (!searchRoot) return;
+    for (auto* card : searchRoot->findChildren<SettingsCard*>()) {
+        if (!card->isVisible()) continue;
+        if (card->focusPolicy() == Qt::NoFocus) continue;
+        card->setFocus(Qt::TabFocusReason);
+        return;
+    }
 }
 
 QWidget* GenericSettingsPage::mountPreviewWidget(const QString& previewType,
