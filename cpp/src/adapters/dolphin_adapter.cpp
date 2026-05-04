@@ -322,19 +322,19 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         gfx({"Graphics", "Rendering", "", "Enhancements", "MaxAnisotropy",
          "Anisotropic Filtering",
          "Sharpens textures viewed at oblique angles.",
-         SettingDef::Combo, "0",
-         { {"Off","0"}, {"2x","1"}, {"4x","2"}, {"8x","3"}, {"16x","4"} }}),
+         SettingDef::Combo, "-1",
+         { {"Default","-1"}, {"Off (1x)","0"}, {"2x","1"}, {"4x","2"}, {"8x","3"}, {"16x","4"} }}),
 
         gfx({"Graphics", "Rendering", "", "Settings", "ShaderCompilationMode",
          "Shader Compilation",
          "How shaders are compiled. Asynchronous reduces stutter at the "
          "cost of brief texture/lighting pop-in on first encounter.",
          SettingDef::Combo, "0",
-         { {"Synchronous","0"}, {"Synchronous Ubershaders","1"},
-           {"Asynchronous Ubershaders","2"}, {"Skip Drawing","3"} }}),
+         { {"Specialized (Default)","0"}, {"Exclusive Ubershaders","1"},
+           {"Hybrid Ubershaders","2"}, {"Skip Drawing","3"} }}),
 
         gfx({"Graphics", "Rendering", "", "Settings", "WaitForShadersBeforeStarting",
-         "Wait for Shaders Before Starting",
+         "Compile Shaders Before Starting",
          "Pre-compiles the shader pipeline before launching a game. "
          "Slower start, smoother gameplay.",
          SettingDef::Bool, "False"}),
