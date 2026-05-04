@@ -11,6 +11,7 @@
 #include "settings/pcsx2/pcsx2_settings_dialog.h"
 #include "settings/duckstation/duckstation_settings_dialog.h"
 #include "settings/ppsspp/ppsspp_settings_dialog.h"
+#include "settings/dolphin/dolphin_settings_dialog.h"
 #include "settings/hotkey_settings_page.h"
 #include "core/sdl_input_manager.h"
 
@@ -385,11 +386,9 @@ void AppController::showEmulatorSettings(const QString& emuId) {
         return;
     }
     if (emuId == QLatin1String("dolphin")) {
-        // Dolphin v1: no dedicated in-app settings dialog yet (deferred from
-        // the initial adapter scope). The schema in DolphinAdapter is read
-        // via the Quick Settings overlay (resolution, aspect ratio) and the
-        // remaining knobs are accessible through Dolphin's native UI.
-        openNativeEmulatorSettings(emuId);
+        auto* dialog = new DolphinSettingsDialog(this, emuId);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->show();
         return;
     }
     qWarning() << "showEmulatorSettings: no settings dialog registered for emulator" << emuId;

@@ -93,6 +93,8 @@ set(SOURCES
     src/ui/settings/widgets/preview/osd_preview.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
     src/ui/settings/pcsx2/pcsx2_category_hub.cpp
+    src/ui/settings/dolphin/dolphin_settings_dialog.cpp
+    src/ui/settings/dolphin/dolphin_category_hub.cpp
     src/ui/settings/duckstation/duckstation_settings_dialog.cpp
     src/ui/settings/duckstation/duckstation_category_hub.cpp
     src/ui/settings/duckstation/pages/duckstation_audio_page.cpp
@@ -190,6 +192,9 @@ set(HEADERS
     src/core/controller_type_def.h
     src/core/macos_fullscreen.h
     src/ui/settings/settings_dialog_theme.h
+    # Dolphin settings
+    src/ui/settings/dolphin/dolphin_settings_dialog.h
+    src/ui/settings/dolphin/dolphin_category_hub.h
     # DuckStation settings
     src/ui/settings/duckstation/duckstation_settings_dialog.h
     src/ui/settings/duckstation/duckstation_category_hub.h
