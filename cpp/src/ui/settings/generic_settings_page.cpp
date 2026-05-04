@@ -148,54 +148,62 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         ? m_adapter->previewSpec(m_category, subcategory)
         : PreviewSpec{};
 
-    QVBoxLayout* settingsLayout = layout;       // default: cards stack in the main column
+    // When a preview is active, the top row gets a split layout:
+    //   left column  = SettingDef::group blocks containing preview-bound
+    //                  keys (i.e. groups that "belong with" the preview)
+    //   right column = preview card
+    // Everything else (groups with no preview-bound keys) flows into the
+    // full-width `layout` BELOW the top row. Mirrors PCSX2's display page
+    // pattern (pcsx2_graphics_display_page.cpp:79-83 — buildLeftCompoundCard
+    // + buildRightPreviewCard inside topRow, then buildBottomToggleGrid
+    // below).
+    QVBoxLayout* topLeftLayout = nullptr;     // only set when a preview exists
     QWidget* preview = nullptr;
+    QSet<QString> previewBoundGroups;          // groups whose entries feed the preview
 
     if (!spec.previewType.isEmpty()) {
-        // Preview layout: top row is split — cards left, preview card right.
-        // Use a SettingsCard with previewStyle for the preview container so
-        // the visual treatment matches existing PCSX2 pages.
+        // Identify which groups in this subcategory hold preview-bound keys.
+        // Those groups go in the top-row left column next to the preview.
+        for (auto it = spec.keyToProperty.constBegin();
+             it != spec.keyToProperty.constEnd(); ++it) {
+            for (const auto& d : m_schema) {
+                if (d.subcategory == subcategory && d.key == it.key()) {
+                    previewBoundGroups.insert(d.group);
+                    break;
+                }
+            }
+        }
+
         auto* topRow = new QHBoxLayout();
         topRow->setSpacing(14);
 
-        // Parent both columns to `this` immediately — addLayout doesn't
-        // happen until a few statements later, and a parent-less QWidget
-        // would leak if anything between here and there ever throws.
+        // leftHost — its layout takes preview-bound group(s).
         auto* leftHost = new QWidget(this);
-        settingsLayout = new QVBoxLayout(leftHost);
-        settingsLayout->setContentsMargins(0, 0, 0, 0);
-        settingsLayout->setSpacing(10);
+        topLeftLayout = new QVBoxLayout(leftHost);
+        topLeftLayout->setContentsMargins(0, 0, 0, 0);
+        topLeftLayout->setSpacing(10);
         topRow->addWidget(leftHost, /*stretch=*/1);
 
+        // Right column: preview card (label + preview + bottom stretch).
         auto* card = new SettingsCard(this);
-        card->setFocusPolicy(Qt::NoFocus);  // not arrow-key navigable; not interactive
+        card->setFocusPolicy(Qt::NoFocus);
         card->setPreviewStyle(true);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         v->setSpacing(10);
-
-        // Small uppercase header — matches the cosmetic rhythm PCSX2's
-        // bespoke Display/OSD pages use (pcsx2_graphics_display_page.cpp:157).
         auto* lbl = new QLabel(spec.previewType == "osd"
                                    ? QStringLiteral("OSD PREVIEW")
                                    : QStringLiteral("ASPECT RATIO PREVIEW"), card);
         lbl->setStyleSheet("color:#9a9690;font-size:11px;font-weight:600;"
                            "letter-spacing:0.8px;");
         v->addWidget(lbl);
-
         preview = mountPreviewWidget(spec.previewType, card);
         if (preview) v->addWidget(preview);
-        // Stretch below so the preview sits at its natural 16:9 height at
-        // the top of the card. Without this, the QVBoxLayout assigns the
-        // single child the full card height and AspectRatioPreview's
-        // heightForWidth ends up bottom-aligned with a large empty band
-        // above it (issue caught in user smoke 2026-05-04).
         v->addStretch();
-
         topRow->addWidget(card, /*stretch=*/1);
 
         layout->addLayout(topRow);
-        m_currentPreview = preview;  // expose to future sub-tab refresh hooks
+        m_currentPreview = preview;
     }
 
     SettingsPageBuilder builder(this, m_schema,
@@ -214,8 +222,14 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
     }
 
     for (const QString& group : groupOrder) {
+        // Preview-bound group → top-row left column. Everything else →
+        // full-width below-top-row layout.
+        QVBoxLayout* dest = (topLeftLayout && previewBoundGroups.contains(group))
+            ? topLeftLayout
+            : layout;
+
         if (!group.isEmpty()) {
-            settingsLayout->addWidget(new SettingsSectionHeader(group, this));
+            dest->addWidget(new SettingsSectionHeader(group, this));
         }
         for (const auto& d : m_schema) {
             if (d.subcategory != subcategory || d.group != group) continue;
@@ -234,17 +248,18 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
                 default:
                     break;
             }
-            if (card) settingsLayout->addWidget(card);
+            if (card) dest->addWidget(card);
         }
     }
 
     if (preview && !spec.keyToProperty.isEmpty())
         wirePreviewBinding(spec, preview);
 
-    // settingsLayout gets the stretch (it's where the cards live, and we
-    // want them top-aligned within their column even when the preview card
-    // on the right is shorter than the settings list).
-    settingsLayout->addStretch();
+    // Top-align cards in both layouts. The left column especially needs it
+    // — without a stretch its cards get vertically centered next to the
+    // taller preview card.
+    if (topLeftLayout) topLeftLayout->addStretch();
+    layout->addStretch();
 }
 
 void GenericSettingsPage::loadValues() {
