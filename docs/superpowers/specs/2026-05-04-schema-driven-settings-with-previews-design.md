@@ -160,14 +160,17 @@ Add to `SettingDef`:
 ```cpp
 // Optional. If set, generic page invokes this instead of the default
 // AppController::saveSettings() call when the widget's value changes.
-// Used for settings whose stored format diverges from the widget value
-// (e.g. DuckStation's overclock percentage → numerator/denominator pair).
+// Receives a defaultSave(section, key, value) callback the transform
+// can invoke 0..N times. Avoids depending on AppController in this
+// header.
+using SaveCallback = std::function<void(const QString& section,
+                                        const QString& key,
+                                        const QString& value)>;
 std::function<void(const QString& widgetValue,
-                   AppController* app,
-                   const QString& emuId)> saveTransform;
+                   const SaveCallback& defaultSave)> saveTransform;
 ```
 
-Default is unset → standard save path. Used only for the rare bespoke save logic; DuckStation overclock is the known case (relevant only when DuckStation later migrates to the generic page).
+Default is unset → standard save path. Used only for the rare bespoke save logic; DuckStation overclock is the known case (one slider value writes both `OverclockNumerator` and `OverclockDenominator` — transform calls `defaultSave` twice).
 
 ### Dolphin schema scope
 
