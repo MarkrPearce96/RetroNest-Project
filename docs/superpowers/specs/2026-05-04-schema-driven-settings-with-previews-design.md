@@ -48,7 +48,8 @@ EmulatorSettingsDialogBase            (existing, unchanged)
 - `cpp/src/ui/settings/dolphin/dolphin_category_hub.{h,cpp}`
 
 **Modified:**
-- `cpp/src/core/setting_def.h` — add optional `saveTransform` callback; optional `previewProperty` hint (or kept on adapter-level binding map — see "Open questions").
+- `cpp/src/core/setting_def.h` — add optional `saveTransform` callback **and** optional `iniFilePath` field for per-key file routing (mirrors the existing `IniPatch::iniFilePath`).
+- `cpp/src/services/config_service.{h,cpp}` — `settingValue()` and `saveSettings()` look up the matching `SettingDef` in the adapter schema; if `SettingDef::iniFilePath` is non-empty, route reads/writes to that file. `saveSettings()` groups by file so a single call can update multiple files atomically.
 - `cpp/src/adapters/emulator_adapter.h` — add new virtual `previewSpec(category, subcategory)` returning `{previewType, key→property map}`. Default returns empty (no preview).
 - `cpp/src/adapters/dolphin_adapter.{h,cpp}` — extend schema to cover Interface (3, unchanged) + Audio (3, unchanged) + Core (5, unchanged) + Graphics (NEW, two sub-tabs: Display + Rendering). Implement `previewSpec()` for Graphics/Display.
 - `cpp/src/adapters/pcsx2_adapter.{h,cpp}` — implement `previewSpec()` for Graphics/Display and Graphics/OSD. Behavior unchanged — this just declares via the new API what the bespoke pages already do.
@@ -211,7 +212,7 @@ Graphics settings route writes to `GFX.ini` via the existing `IniPatch::iniFileP
 | Generic page misses an edge case from an existing emulator | PCSX2/DuckStation/PPSSPP keep bespoke pages — they're not affected. Only Dolphin uses generic page in v1; edge cases discovered via Dolphin smoke. |
 | Preview-widget input generalization changes PCSX2 visual behavior | Q_PROPERTY defaults are "feature absent" → no overlay drawn. PCSX2 explicitly sets every input as today. Visual diff = none. |
 | Live binding via `setProperty()` is fragile (typos in property names) | Adapter unit test verifies every `keyToProperty` value names a real Q_PROPERTY on the named preview widget. |
-| Dolphin Graphics keys span multiple INI files (`Dolphin.ini` vs `GFX.ini`) | Each `SettingDef` already supports per-key `iniFilePath` routing. Schema entries declare the right file per key. Adapter's `patchExistingConfig` already supports this. |
+| Dolphin Graphics keys span multiple INI files (`Dolphin.ini` vs `GFX.ini`) | `SettingDef` does not support per-key `iniFilePath` routing today (only `IniPatch` does). The plan adds the field to `SettingDef` and updates `ConfigService::settingValue()`/`saveSettings()` to honor it (look up the matching `SettingDef` in the adapter's schema; if `iniFilePath` is non-empty, route reads/writes to that file; group writes by file). Existing single-file callers see no change. |
 
 ## Open questions
 
