@@ -108,7 +108,7 @@ void GenericSettingsPage::buildUi() {
             auto* sub = new QWidget(m_subStack);
             auto* subLayout = new QVBoxLayout(sub);  // populated by buildSubcategory
             subLayout->setContentsMargins(0, 0, 0, 0);
-            subLayout->setSpacing(10);
+            subLayout->setSpacing(8);
             m_subStack->addWidget(sub);
         }
         root->addWidget(m_subStack);
@@ -181,7 +181,7 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         auto* leftHost = new QWidget(this);
         topLeftLayout = new QVBoxLayout(leftHost);
         topLeftLayout->setContentsMargins(0, 0, 0, 0);
-        topLeftLayout->setSpacing(10);
+        topLeftLayout->setSpacing(8);
         topRow->addWidget(leftHost, /*stretch=*/1);
 
         // Right column: preview card. Sized to content (label + preview)
@@ -205,7 +205,7 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         v->addWidget(lbl);
         preview = mountPreviewWidget(spec.previewType, card);
         if (preview) v->addWidget(preview);
-        topRow->addWidget(card, /*stretch=*/1, Qt::AlignVCenter);
+        topRow->addWidget(card, /*stretch=*/1, Qt::AlignTop);
 
         layout->addLayout(topRow);
         m_currentPreview = preview;

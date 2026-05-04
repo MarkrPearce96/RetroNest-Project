@@ -37,7 +37,7 @@ SettingsCard* SettingsPageBuilder::makeComboCard(const QString& key) {
     auto* card = new SettingsCard(m_parent);
     card->setSettingDef(*d);
     auto* v = new QVBoxLayout(card);
-    v->setContentsMargins(14, 12, 14, 12);
+    v->setContentsMargins(14, 6, 14, 6);
     auto* row = new SettingsComboRow(card);
     row->setLabel(d->label);
     row->setOptions(d->options);
@@ -62,7 +62,7 @@ SettingsCard* SettingsPageBuilder::makeSliderCard(const QString& key) {
     auto* card = new SettingsCard(m_parent);
     card->setSettingDef(*d);
     auto* v = new QVBoxLayout(card);
-    v->setContentsMargins(14, 12, 14, 12);
+    v->setContentsMargins(14, 6, 14, 6);
     auto* row = new SettingsSliderRow(card);
     row->setLabel(d->label);
     row->setRange(int(d->minVal), int(d->maxVal));
@@ -88,7 +88,7 @@ SettingsCard* SettingsPageBuilder::makeToggleCard(const QString& key) {
     auto* card = new SettingsCard(m_parent);
     card->setSettingDef(*d);
     auto* v = new QVBoxLayout(card);
-    v->setContentsMargins(14, 12, 14, 12);
+    v->setContentsMargins(14, 6, 14, 6);
     auto* row = new SettingsToggleRow(card);
     row->setLabel(d->label);
     row->setSettingDef(*d);
