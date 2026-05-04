@@ -258,7 +258,9 @@ QString AspectRatioPreview::aspectModeString() const {
 
 void AspectRatioPreview::setFmvAspectModeString(const QString& v) {
     m_fmvRatio = fromSchemaValue(v);
-    update();
+    // Intentionally no update() — m_fmvRatio is held for API/Q_PROPERTY
+    // round-trip but is not yet consumed by paintEvent. Add update() here
+    // when paintEvent starts using m_fmvRatio.
 }
 
 QString AspectRatioPreview::fmvAspectModeString() const {

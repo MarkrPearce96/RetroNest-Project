@@ -74,6 +74,9 @@ private slots:
         // stretchY clamp: 999 → 300
         QVERIFY(w.setProperty("stretchY", 999));
         QCOMPARE(w.property("stretchY").toInt(), 300);
+        // FMV aspect mode round-trip — same enum mapping as aspectMode.
+        QVERIFY(w.setProperty("fmvAspectMode", "Auto 4:3/3:2"));
+        QCOMPARE(w.property("fmvAspectMode").toString(), QString("Auto 4:3/3:2"));
     }
 };
 

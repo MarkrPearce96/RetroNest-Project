@@ -3,7 +3,7 @@
 #include <QRectF>
 
 // Live aspect-ratio preview used inside DuckStationGraphicsPage.
-// Mirrors the structure of Pcsx2AspectRatioPreview but uses DuckStation's
+// Mirrors the structure of AspectRatioPreview but uses DuckStation's
 // aspect-ratio values and image assets.
 class DuckStationAspectRatioPreview : public QWidget {
     Q_OBJECT
