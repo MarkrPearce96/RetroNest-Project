@@ -200,9 +200,13 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         auto* rightHost = new QWidget(this);
         rightStack = new QVBoxLayout(rightHost);
         rightStack->setContentsMargins(0, 0, 0, 0);
-        // Match leftStack's spacing so both columns share the same
-        // header-then-card vertical rhythm and their first cards align.
-        rightStack->setSpacing(22);
+        // Match leftStack's 12px spacing so the section-header → first-
+        // card gap is identical on both columns and the preview card
+        // top aligns with Internal Resolution's top. The preview widget
+        // maxWidth below is bumped just enough that the resulting card
+        // is taller by the same amount the gap shrunk — so FTF below
+        // the preview ends at the same y as before.
+        rightStack->setSpacing(12);
         topRow->addWidget(rightHost, /*stretch=*/1);
 
         // Section-header at the top of rightStack mirrors leftStack's
@@ -215,11 +219,10 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
                                        : "Aspect Ratio Preview",
             this));
 
-        // Preview card. Standard chrome (14/12 margins). Inner widget
-        // width capped slightly above the previous 400px so the card
-        // ends up tall enough that FTF beneath the preview lines up
-        // (within a few pixels) with the bottom of leftStack's last
-        // card. Bumping further would push FTF below leftStack's bottom.
+        // Preview card. Standard chrome (14/12 margins). Width-cap on
+        // the inner widget tunes the card's heightForWidth so its top
+        // pairs with Internal Resolution and its bottom pairs with
+        // FTF. Wider here = taller card.
         auto* card = new SettingsCard(this);
         card->setFocusPolicy(Qt::NoFocus);
         card->setPreviewStyle(true);
@@ -229,7 +232,7 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         v->setSpacing(10);
         preview = mountPreviewWidget(spec.previewType, card);
         if (preview) {
-            preview->setMaximumWidth(450);
+            preview->setMaximumWidth(485);
             v->addWidget(preview);
         }
         rightStack->addWidget(card, /*stretch=*/0, Qt::AlignTop);
