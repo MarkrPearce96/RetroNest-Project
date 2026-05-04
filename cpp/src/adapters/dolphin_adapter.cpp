@@ -310,6 +310,40 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Render in fullscreen mode. RetroNest already runs Dolphin "
          "embedded in our window, so this is True by default.",
          SettingDef::Bool, "True"},
+
+        // ─── Graphics / Rendering ────────────────────────────
+        // All five Rendering keys live in GFX.ini → wrap each in gfx().
+        gfx({"Graphics", "Rendering", "", "Settings", "MSAA",
+         "Anti-Aliasing (MSAA)",
+         "Multi-sample anti-aliasing. Higher = smoother edges, slower.",
+         SettingDef::Combo, "1",
+         { {"None","1"}, {"2x","2"}, {"4x","4"}, {"8x","8"} }}),
+
+        gfx({"Graphics", "Rendering", "", "Enhancements", "MaxAnisotropy",
+         "Anisotropic Filtering",
+         "Sharpens textures viewed at oblique angles.",
+         SettingDef::Combo, "0",
+         { {"Off","0"}, {"2x","1"}, {"4x","2"}, {"8x","3"}, {"16x","4"} }}),
+
+        gfx({"Graphics", "Rendering", "", "Settings", "ShaderCompilationMode",
+         "Shader Compilation",
+         "How shaders are compiled. Asynchronous reduces stutter at the "
+         "cost of brief texture/lighting pop-in on first encounter.",
+         SettingDef::Combo, "0",
+         { {"Synchronous","0"}, {"Synchronous Ubershaders","1"},
+           {"Asynchronous Ubershaders","2"}, {"Skip Drawing","3"} }}),
+
+        gfx({"Graphics", "Rendering", "", "Settings", "WaitForShadersBeforeStarting",
+         "Wait for Shaders Before Starting",
+         "Pre-compiles the shader pipeline before launching a game. "
+         "Slower start, smoother gameplay.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Rendering", "", "Settings", "EnablePixelLighting",
+         "Per-Pixel Lighting",
+         "Higher-quality lighting. Slight performance cost; some games "
+         "look noticeably better with it on.",
+         SettingDef::Bool, "False"}),
     };
 }
 

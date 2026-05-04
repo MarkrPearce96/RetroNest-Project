@@ -97,6 +97,18 @@ private slots:
                 got.insert(d.key);
         QCOMPARE(got, expectedKeys);
     }
+
+    void testGraphicsRenderingSubTabExists() {
+        const QSet<QString> expectedKeys{
+            "MSAA", "MaxAnisotropy", "ShaderCompilationMode",
+            "WaitForShadersBeforeStarting", "EnablePixelLighting"
+        };
+        QSet<QString> got;
+        for (const auto& d : schema_)
+            if (d.category == "Graphics" && d.subcategory == "Rendering")
+                got.insert(d.key);
+        QCOMPARE(got, expectedKeys);
+    }
 };
 
 QTEST_MAIN(TestDolphinSchema)
