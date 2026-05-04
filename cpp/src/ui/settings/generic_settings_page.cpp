@@ -186,8 +186,6 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         // card), which the user explicitly asked for.
         auto* topRow = new QHBoxLayout();
         topRow->setSpacing(14);
-        m_pendingTopRow = topRow;  // attached to `layout` later, after the
-                                   // preview-bound group's header is emitted
 
         auto* leftHost = new QWidget(this);
         leftStack = new QVBoxLayout(leftHost);
@@ -235,9 +233,7 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         }
         rightStack->addWidget(card, /*stretch=*/0, Qt::AlignTop);
 
-        // topRow is added to `layout` later — after the preview-bound
-        // group's section header is emitted above it, so the header
-        // sits above BOTH columns and the columns top-align cleanly.
+        layout->addLayout(topRow);
         m_currentPreview = preview;
     }
 
@@ -276,27 +272,15 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
     // as a [left | right] row at the same y-level.
     const int kCardsBesidePreview = 4;
 
-    bool topRowAdded = false;
-
     for (const QString& group : groupOrder) {
         const bool isPreviewBound = leftStack
             && previewBoundGroups.contains(group);
 
-        // For preview-bound groups, emit the section header ABOVE the
-        // topRow (in `layout`) and add the topRow itself just after,
-        // so both columns inside the topRow begin with their first card
-        // / preview at the same y. Subsequent preview-bound groups
-        // (rare in practice) emit their header inside leftStack as
-        // before. Non-preview-bound groups: header in `layout`.
+        // Section header lands at the top of leftStack for preview-bound
+        // groups, or in the full-width bottom layout for the rest.
         if (!group.isEmpty()) {
-            QVBoxLayout* headerDest = isPreviewBound && !topRowAdded
-                ? layout
-                : (isPreviewBound ? leftStack : layout);
+            QVBoxLayout* headerDest = isPreviewBound ? leftStack : layout;
             headerDest->addWidget(new SettingsSectionHeader(group, this));
-        }
-        if (isPreviewBound && !topRowAdded) {
-            layout->addLayout(m_pendingTopRow);
-            topRowAdded = true;
         }
 
         QVector<const SettingDef*> groupDefs;
@@ -358,14 +342,6 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
 
     if (preview && !spec.keyToProperty.isEmpty())
         wirePreviewBinding(spec, preview);
-
-    // Safety net: topRow was created but no preview-bound group ever
-    // triggered the in-loop attach. Attach it now so it isn't orphaned.
-    if (m_pendingTopRow && !topRowAdded) {
-        layout->addLayout(m_pendingTopRow);
-        topRowAdded = true;
-    }
-    m_pendingTopRow = nullptr;  // reset for the next buildSubcategory call
 
     // Top-align cards in every column-stack so each shrinks to its
     // content height instead of inflating to match its sibling.
