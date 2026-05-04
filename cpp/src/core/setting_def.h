@@ -65,4 +65,11 @@ struct SettingDef {
                                             const QString& value)>;
     std::function<void(const QString& widgetValue,
                        const SaveCallback& defaultSave)> saveTransform;
+
+    // Optional per-key INI file override. When non-empty, ConfigService
+    // routes reads/writes for this setting to this absolute file path
+    // instead of adapter->configFilePath(). Mirrors IniPatch::iniFilePath.
+    // Used by emulators that span multiple config files (e.g. Dolphin's
+    // GFX.ini for graphics keys vs Dolphin.ini for everything else).
+    QString iniFilePath;
 };

@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QMap>
 #include <QRegularExpression>
 
@@ -64,7 +65,16 @@ QString ConfigService::settingValue(const QString& emuId, const QString& section
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return {};
 
-    QString configPath = adapter->configFilePath();
+    // Resolve which file to read: per-SettingDef override if set, else
+    // adapter->configFilePath().
+    QString configPath;
+    for (const auto& d : adapter->settingsSchema()) {
+        if (d.section == section && d.key == key) {
+            configPath = d.iniFilePath;
+            break;
+        }
+    }
+    if (configPath.isEmpty()) configPath = adapter->configFilePath();
     if (configPath.isEmpty()) return {};
 
     if (m_settingsCache && m_settingsCachePath == configPath)
@@ -79,32 +89,54 @@ void ConfigService::saveSettings(const QString& emuId, const QVariantMap& values
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return;
 
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
+    const QString defaultPath = adapter->configFilePath();
+    if (defaultPath.isEmpty()) return;
 
-    const bool useCache = m_settingsCache && m_settingsCachePath == configPath;
-    IniFile localIni;
-    IniFile& ini = useCache ? *m_settingsCache : localIni;
-    if (!useCache)
-        ini.load(configPath);
-
-    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
-        // Key format: "section/key" — split on LAST '/' since sections can contain '/'
-        // e.g. "EmuCore/GS/Renderer" → section="EmuCore/GS", key="Renderer"
-        int lastSlash = it.key().lastIndexOf('/');
-        if (lastSlash > 0) {
-            QString section = it.key().left(lastSlash);
-            QString key = it.key().mid(lastSlash + 1);
-            ini.setValue(section, key, it.value().toString());
-        } else {
-            qWarning() << "[Settings] Skipping malformed key (no section separator):" << it.key();
-        }
+    // Build a per-key file map from the schema — empty iniFilePath means
+    // "use defaultPath".
+    QHash<QPair<QString,QString>, QString> fileForKey;
+    for (const auto& d : adapter->settingsSchema()) {
+        if (!d.iniFilePath.isEmpty())
+            fileForKey.insert({d.section, d.key}, d.iniFilePath);
     }
 
-    if (ini.save(configPath))
-        emit statusMessage("Settings saved.");
-    else
-        emit statusMessage("Failed to save settings.");
+    // Group incoming values by destination file.
+    QHash<QString, QMap<QString, QString>> writesByFile;  // file → "section/key" → value
+    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
+        const int lastSlash = it.key().lastIndexOf('/');
+        if (lastSlash <= 0) {
+            qWarning() << "[Settings] Skipping malformed key:" << it.key();
+            continue;
+        }
+        const QString section = it.key().left(lastSlash);
+        const QString key     = it.key().mid(lastSlash + 1);
+        const QString path    = fileForKey.value({section, key}, defaultPath);
+        writesByFile[path].insert(section + "/" + key, it.value().toString());
+    }
+
+    // Apply each group to its file. Cache only the default file (the cache
+    // existed for a single-file world; multi-file invalidates it for non-
+    // default files — load fresh and save).
+    bool ok = true;
+    for (auto it = writesByFile.constBegin(); it != writesByFile.constEnd(); ++it) {
+        const QString& path = it.key();
+        const auto& entries = it.value();
+
+        const bool useCache = (m_settingsCache && m_settingsCachePath == path);
+        IniFile localIni;
+        IniFile& ini = useCache ? *m_settingsCache : localIni;
+        if (!useCache) ini.load(path);
+
+        for (auto e = entries.constBegin(); e != entries.constEnd(); ++e) {
+            const int lastSlash = e.key().lastIndexOf('/');
+            const QString section = e.key().left(lastSlash);
+            const QString key     = e.key().mid(lastSlash + 1);
+            ini.setValue(section, key, e.value());
+        }
+        if (!ini.save(path)) ok = false;
+    }
+
+    emit statusMessage(ok ? "Settings saved." : "Failed to save settings.");
 }
 
 void ConfigService::beginSettingsSession(const QString& emuId) {

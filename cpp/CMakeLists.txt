@@ -606,3 +606,12 @@ set_target_properties(test_pcsx2_osd_preview PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_osd_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_pcsx2_osd_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 add_test(NAME Pcsx2OsdPreview COMMAND test_pcsx2_osd_preview)
+
+add_executable(test_setting_def_ini_routing
+    tests/test_setting_def_ini_routing.cpp
+    src/core/ini_file.cpp
+)
+set_target_properties(test_setting_def_ini_routing PROPERTIES AUTOMOC ON)
+target_include_directories(test_setting_def_ini_routing PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_setting_def_ini_routing PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME SettingDefIniRouting COMMAND test_setting_def_ini_routing)
