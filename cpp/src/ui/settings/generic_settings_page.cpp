@@ -178,19 +178,25 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
             }
         }
 
+        // Symmetric 14px spacing on every axis of the topRow:
+        //   - between the two columns (topRow spacing)
+        //   - between cards within each column (left/rightStack spacing)
+        // Larger leftStack spacing also stretches the left column closer
+        // to matching the right column's height (preview + first-overflow
+        // card), which the user explicitly asked for.
         auto* topRow = new QHBoxLayout();
         topRow->setSpacing(14);
 
         auto* leftHost = new QWidget(this);
         leftStack = new QVBoxLayout(leftHost);
         leftStack->setContentsMargins(0, 0, 0, 0);
-        leftStack->setSpacing(8);
+        leftStack->setSpacing(14);
         topRow->addWidget(leftHost, /*stretch=*/1);
 
         auto* rightHost = new QWidget(this);
         rightStack = new QVBoxLayout(rightHost);
         rightStack->setContentsMargins(0, 0, 0, 0);
-        rightStack->setSpacing(8);
+        rightStack->setSpacing(14);
         topRow->addWidget(rightHost, /*stretch=*/1);
 
         // Preview card sits at the top of rightStack — sized to content
