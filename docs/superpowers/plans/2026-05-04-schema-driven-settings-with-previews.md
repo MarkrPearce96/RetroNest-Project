@@ -888,8 +888,10 @@ Add a new slot:
 
 ```cpp
     void testGraphicsDisplaySubTabExists() {
+        // Note: Dolphin has no IntegerScaling GFX.ini key — InternalResolution
+        // is already integer-by-definition (1..6 = 1x..6x). 4 keys, not 5.
         const QSet<QString> expectedKeys{
-            "AspectRatio", "InternalResolution", "IntegerScaling", "VSync", "Fullscreen"
+            "AspectRatio", "InternalResolution", "VSync", "Fullscreen"
         };
         QSet<QString> got;
         for (const auto& d : schema_)
@@ -1099,8 +1101,10 @@ Append to `test_dolphin_schema.cpp`:
         DolphinAdapter a;
         const auto spec = a.previewSpec("Graphics", "Display");
         QCOMPARE(spec.previewType, QString("aspect"));
-        QCOMPARE(spec.keyToProperty.value("AspectRatio"),    QString("aspectMode"));
-        QCOMPARE(spec.keyToProperty.value("IntegerScaling"), QString("integerScaling"));
+        QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
+        // Dolphin doesn't expose stretch/crop/integer-scaling as separate
+        // GFX.ini keys, so AspectRatio is the only binding for now. The
+        // preview's other Q_PROPERTYs stay at their "feature absent" defaults.
     }
 
     void testGraphicsRenderingHasNoPreview() {
@@ -1129,9 +1133,12 @@ In `cpp/src/adapters/dolphin_adapter.h`, near the other overrides:
 PreviewSpec DolphinAdapter::previewSpec(const QString& category,
                                          const QString& subcategory) const {
     if (category == "Graphics" && subcategory == "Display") {
+        // Dolphin only exposes aspect ratio in a way that maps to the
+        // shared AspectRatioPreview. Stretch / crop / integer-scaling are
+        // not GFX.ini keys in Dolphin, so the preview shows just the
+        // aspect rectangle and leaves the rest at "feature absent" defaults.
         return {"aspect", {
-            {"AspectRatio",    "aspectMode"},
-            {"IntegerScaling", "integerScaling"},
+            {"AspectRatio", "aspectMode"},
         }};
     }
     return {};

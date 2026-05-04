@@ -181,7 +181,7 @@ Current schema (3 categories, 11 settings — see `dolphin_adapter.cpp:197-280`)
 | Interface | — | PauseOnFocusLost, ConfirmStop, HideCursor | Unchanged from today |
 | Audio | — | Backend, Volume, EnableJIT | Unchanged from today |
 | Core | — | CPUCore, SkipIPL, EnableCheats, OverclockEnable, Overclock | Unchanged from today |
-| Graphics | Display | AspectRatio, InternalResolution, IntegerScaling, VSync, Fullscreen | NEW — preview enabled |
+| Graphics | Display | AspectRatio, InternalResolution, VSync, Fullscreen | NEW — preview enabled (aspect only — Dolphin has no IntegerScaling/Stretch/Crop GFX.ini keys) |
 | Graphics | Rendering | AntiAliasing, AnisotropicFiltering, ShaderCompilationMode, MaxAnisotropy, ShaderCache | NEW — no preview |
 
 Concrete keys + defaults + tooltip text are sourced from `references/dolphin-master/Source/Core/DolphinQt/Settings/` panes (used as a catalog reference, not copied code). Final list resolved during implementation when the schema is written against the native source.
