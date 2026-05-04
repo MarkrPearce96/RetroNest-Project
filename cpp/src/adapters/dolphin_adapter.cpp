@@ -253,23 +253,23 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "True"},
 
         // ─── Core ────────────────────────────────────────────
-        {"Core", "", "", "Core", "CPUCore",
+        {"General", "", "", "Core", "CPUCore",
          "CPU Core",
          "The CPU emulation backend. JIT is required for full-speed gameplay.",
          SettingDef::Combo, "1", cpuCores},
 
-        {"Core", "", "", "Core", "SkipIPL",
+        {"General", "", "", "Core", "SkipIPL",
          "Skip GameCube Boot Animation",
          "Skips the GameCube IPL boot sequence and starts the game directly. "
          "When disabled, requires IPL.bin in the BIOS folder.",
          SettingDef::Bool, "True"},
 
-        {"Core", "", "", "Core", "EnableCheats",
+        {"General", "", "", "Core", "EnableCheats",
          "Enable Cheats",
          "Enables AR/Gecko cheat code processing. Off by default for safety.",
          SettingDef::Bool, "False"},
 
-        {"Core", "", "", "Core", "OverclockEnable",
+        {"General", "", "", "Core", "OverclockEnable",
          "Enable CPU Overclocking",
          "Allows the slider below to scale the emulated CPU's clock rate. "
          "Some games run smoother with overclocking; others crash.",
@@ -281,7 +281,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // emulated CPU at native or above; below that Dolphin reads the
         // float as 0.0 and the emulator stalls. dependsOn gates the slider
         // on the OverclockEnable toggle above.
-        {"Core", "", "", "Core", "Overclock",
+        {"General", "", "", "Core", "Overclock",
          "Overclock Multiplier",
          "Multiplier applied to the emulated CPU's clock when overclocking is enabled. "
          "1 = native, 2 = +100%, 4 = +300%.",

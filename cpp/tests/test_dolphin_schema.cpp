@@ -19,7 +19,7 @@ private slots:
     void testTopLevelCategories() {
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
-        QCOMPARE(categories, QSet<QString>({"Interface", "Audio", "Core", "Graphics"}));
+        QCOMPARE(categories, QSet<QString>({"Interface", "Audio", "General", "Graphics"}));
     }
 
     void testPauseOnFocusLostExists() {
@@ -48,6 +48,7 @@ private slots:
         for (const auto& d : schema_)
             if (d.section == "Core" && d.key == "CPUCore") found = &d;
         QVERIFY(found != nullptr);
+        QCOMPARE(found->category, QString("General"));
         QCOMPARE(int(found->type), int(SettingDef::Combo));
         QVERIFY(found->options.size() >= 3);
     }
