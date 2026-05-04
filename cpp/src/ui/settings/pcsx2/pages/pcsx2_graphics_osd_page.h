@@ -6,7 +6,7 @@
 
 class Pcsx2SettingsDialog;
 class SettingsCard;
-class Pcsx2OsdPreview;
+class OsdPreview;
 class SettingsComboRow;
 class SettingsToggleRow;
 class SettingsSliderRow;
@@ -43,7 +43,7 @@ private:
     Pcsx2SettingsDialog* m_dialog;
     QVector<SettingDef>  m_schema;
 
-    Pcsx2OsdPreview* m_preview = nullptr;
+    OsdPreview* m_preview = nullptr;
 
     SettingsSliderRow* m_scaleSlider = nullptr;
     SettingsComboRow*  m_messagesPosCombo = nullptr;

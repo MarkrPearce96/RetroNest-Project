@@ -5,7 +5,7 @@
 #include "ui/settings/widgets/settings_combo_row.h"
 #include "ui/settings/widgets/settings_toggle_row.h"
 #include "ui/settings/widgets/settings_slider_row.h"
-#include "../widgets/pcsx2_osd_preview.h"
+#include "ui/settings/widgets/preview/osd_preview.h"
 #include "ui/settings/widgets/settings_toggle.h"
 #include "ui/app_controller.h"
 #include "ui/settings/settings_page_builder.h"
@@ -160,7 +160,7 @@ void Pcsx2GraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
                        "letter-spacing:0.8px;");
     v->addWidget(lbl);
 
-    m_preview = new Pcsx2OsdPreview(card);
+    m_preview = new OsdPreview(card);
     v->addWidget(m_preview);
 
     if (const SettingDef* d = findDef("OsdScale")) {
@@ -191,7 +191,7 @@ void Pcsx2GraphicsOsdPage::buildRightPreviewCard(QHBoxLayout* topRow) {
             const SettingDef* dd = findDef(key);
             if (dd) saveValue(dd->section, dd->key, val);
             if (drivePerfPreview && m_preview)
-                m_preview->setPerformancePos(Pcsx2OsdPreview::fromPosValue(val));
+                m_preview->setPerformancePos(OsdPreview::fromPosValue(val));
         });
         return row;
     };
@@ -287,7 +287,7 @@ void Pcsx2GraphicsOsdPage::syncPreview() {
 
     if (m_perfPosCombo) {
         m_preview->setPerformancePos(
-            Pcsx2OsdPreview::fromPosValue(m_perfPosCombo->value()));
+            OsdPreview::fromPosValue(m_perfPosCombo->value()));
     }
     if (m_scaleSlider)
         m_preview->setOsdScale(m_scaleSlider->value());

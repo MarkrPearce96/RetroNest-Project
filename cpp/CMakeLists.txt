@@ -89,7 +89,7 @@ set(SOURCES
     src/ui/settings/widgets/settings_description_bar.cpp
     src/ui/settings/widgets/settings_graphics_sub_tab_bar.cpp
     src/ui/settings/widgets/preview/aspect_ratio_preview.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_osd_preview.cpp
+    src/ui/settings/widgets/preview/osd_preview.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
     src/ui/settings/pcsx2/pcsx2_category_hub.cpp
     src/ui/settings/duckstation/duckstation_settings_dialog.cpp
@@ -210,7 +210,7 @@ set(HEADERS
     src/ui/settings/widgets/settings_description_bar.h
     src/ui/settings/widgets/settings_graphics_sub_tab_bar.h
     src/ui/settings/widgets/preview/aspect_ratio_preview.h
-    src/ui/settings/pcsx2/widgets/pcsx2_osd_preview.h
+    src/ui/settings/widgets/preview/osd_preview.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
     src/ui/settings/pcsx2/pages/pcsx2_emulation_page.h
@@ -598,14 +598,14 @@ target_include_directories(test_duckstation_aspect_ratio_preview PRIVATE ${CMAKE
 target_link_libraries(test_duckstation_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 add_test(NAME DuckStationAspectRatioPreview COMMAND test_duckstation_aspect_ratio_preview)
 
-add_executable(test_pcsx2_osd_preview
-    tests/test_pcsx2_osd_preview.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_osd_preview.cpp
+add_executable(test_osd_preview
+    tests/test_osd_preview.cpp
+    src/ui/settings/widgets/preview/osd_preview.cpp
 )
-set_target_properties(test_pcsx2_osd_preview PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_osd_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_pcsx2_osd_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
-add_test(NAME Pcsx2OsdPreview COMMAND test_pcsx2_osd_preview)
+set_target_properties(test_osd_preview PROPERTIES AUTOMOC ON)
+target_include_directories(test_osd_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_osd_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME OsdPreview COMMAND test_osd_preview)
 
 add_executable(test_setting_def_ini_routing
     tests/test_setting_def_ini_routing.cpp

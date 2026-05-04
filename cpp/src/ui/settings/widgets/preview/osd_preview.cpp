@@ -1,4 +1,4 @@
-#include "pcsx2_osd_preview.h"
+#include "ui/settings/widgets/preview/osd_preview.h"
 #include <QPainter>
 #include <QPaintEvent>
 #include <QLinearGradient>
@@ -40,42 +40,66 @@ void drawShadowedText(QPainter& p, const QPointF& baseline,
     p.setPen(color);
     p.drawText(baseline, text);
 }
+
+QString posToString(OsdPreview::OverlayPos pos) {
+    using P = OsdPreview::OverlayPos;
+    switch (pos) {
+        case P::None:         return "None";
+        case P::TopLeft:      return "Top Left";
+        case P::TopCenter:    return "Top Center";
+        case P::TopRight:     return "Top Right";
+        case P::CenterLeft:   return "Center Left";
+        case P::Center:       return "Center";
+        case P::CenterRight:  return "Center Right";
+        case P::BottomLeft:   return "Bottom Left";
+        case P::BottomCenter: return "Bottom Center";
+        case P::BottomRight:  return "Bottom Right";
+    }
+    return "None";
+}
 } // namespace
 
-Pcsx2OsdPreview::Pcsx2OsdPreview(QWidget* parent) : QWidget(parent) {
+OsdPreview::OsdPreview(QWidget* parent) : QWidget(parent) {
     setAttribute(Qt::WA_OpaquePaintEvent, false);
     QSizePolicy sp(QSizePolicy::Expanding, QSizePolicy::Preferred);
     sp.setHeightForWidth(true);
     setSizePolicy(sp);
 }
 
-void Pcsx2OsdPreview::setPerformancePos(OverlayPos pos) { m_s.perfPos = pos; update(); }
+void OsdPreview::setPerformancePos(OverlayPos pos) { m_s.perfPos = pos; update(); }
 
-void Pcsx2OsdPreview::setShowFps(bool on)             { m_s.fps = on;             update(); }
-void Pcsx2OsdPreview::setShowVps(bool on)             { m_s.vps = on;             update(); }
-void Pcsx2OsdPreview::setShowSpeed(bool on)           { m_s.speed = on;           update(); }
-void Pcsx2OsdPreview::setShowVersion(bool on)         { m_s.version = on;         update(); }
-void Pcsx2OsdPreview::setShowResolution(bool on)      { m_s.resolution = on;      update(); }
-void Pcsx2OsdPreview::setShowHardwareInfo(bool on)    { m_s.hardwareInfo = on;    update(); }
-void Pcsx2OsdPreview::setShowCpu(bool on)             { m_s.cpu = on;             update(); }
-void Pcsx2OsdPreview::setShowGpu(bool on)             { m_s.gpu = on;             update(); }
-void Pcsx2OsdPreview::setShowFrameTimes(bool on)      { m_s.frameTimes = on;      update(); }
-void Pcsx2OsdPreview::setShowGsStats(bool on)         { m_s.gsStats = on;         update(); }
+void OsdPreview::setMessagesPos(OverlayPos pos) {
+    m_s.messagesPos = pos;
+    // Intentionally no update() — m_s.messagesPos is held for API/Q_PROPERTY
+    // round-trip but is not yet consumed by paintEvent. Add update() here
+    // when paintEvent starts using m_s.messagesPos.
+}
 
-void Pcsx2OsdPreview::setShowIndicators(bool on)         { m_s.indicators = on;           update(); }
-void Pcsx2OsdPreview::setShowVideoCapture(bool on)       { m_s.videoCapture = on;         update(); }
-void Pcsx2OsdPreview::setShowInputRec(bool on)           { m_s.inputRec = on;             update(); }
-void Pcsx2OsdPreview::setShowTextureReplacements(bool on){ m_s.textureReplacements = on;  update(); }
-void Pcsx2OsdPreview::setShowSettings(bool on)           { m_s.settings = on;             update(); }
-void Pcsx2OsdPreview::setShowPatches(bool on)            { m_s.patches = on;              update(); }
-void Pcsx2OsdPreview::setShowInputs(bool on)             { m_s.inputs = on;               update(); }
+void OsdPreview::setShowFps(bool on)             { m_s.fps = on;             update(); }
+void OsdPreview::setShowVps(bool on)             { m_s.vps = on;             update(); }
+void OsdPreview::setShowSpeed(bool on)           { m_s.speed = on;           update(); }
+void OsdPreview::setShowVersion(bool on)         { m_s.version = on;         update(); }
+void OsdPreview::setShowResolution(bool on)      { m_s.resolution = on;      update(); }
+void OsdPreview::setShowHardwareInfo(bool on)    { m_s.hardwareInfo = on;    update(); }
+void OsdPreview::setShowCpu(bool on)             { m_s.cpu = on;             update(); }
+void OsdPreview::setShowGpu(bool on)             { m_s.gpu = on;             update(); }
+void OsdPreview::setShowFrameTimes(bool on)      { m_s.frameTimes = on;      update(); }
+void OsdPreview::setShowGsStats(bool on)         { m_s.gsStats = on;         update(); }
 
-void Pcsx2OsdPreview::setOsdScale(int percent) {
+void OsdPreview::setShowIndicators(bool on)         { m_s.indicators = on;           update(); }
+void OsdPreview::setShowVideoCapture(bool on)       { m_s.videoCapture = on;         update(); }
+void OsdPreview::setShowInputRec(bool on)           { m_s.inputRec = on;             update(); }
+void OsdPreview::setShowTextureReplacements(bool on){ m_s.textureReplacements = on;  update(); }
+void OsdPreview::setShowSettings(bool on)           { m_s.settings = on;             update(); }
+void OsdPreview::setShowPatches(bool on)            { m_s.patches = on;              update(); }
+void OsdPreview::setShowInputs(bool on)             { m_s.inputs = on;               update(); }
+
+void OsdPreview::setOsdScale(int percent) {
     m_s.osdScale = std::clamp(percent, 10, 300);
     update();
 }
 
-Pcsx2OsdPreview::OverlayPos Pcsx2OsdPreview::fromPosValue(const QString& v) {
+OsdPreview::OverlayPos OsdPreview::fromPosValue(const QString& v) {
     const QString s = v.trimmed();
 
     // Handle numeric INI values (0-9) used by PCSX2's OsdPerformancePos / OsdMessagesPos
@@ -112,12 +136,22 @@ Pcsx2OsdPreview::OverlayPos Pcsx2OsdPreview::fromPosValue(const QString& v) {
     return OverlayPos::TopLeft;
 }
 
-int Pcsx2OsdPreview::scaledFontPx() const {
+void OsdPreview::setPerformancePosString(const QString& v) {
+    setPerformancePos(fromPosValue(v));
+}
+QString OsdPreview::performancePosString() const { return posToString(m_s.perfPos); }
+
+void OsdPreview::setMessagesPosString(const QString& v) {
+    setMessagesPos(fromPosValue(v));
+}
+QString OsdPreview::messagesPosString() const { return posToString(m_s.messagesPos); }
+
+int OsdPreview::scaledFontPx() const {
     const int px = int(qRound(10.0 * double(m_s.osdScale) / 100.0));
     return std::clamp(px, 6, 24);
 }
 
-void Pcsx2OsdPreview::paintGameScene(QPainter& p, const QRectF& r) const {
+void OsdPreview::paintGameScene(QPainter& p, const QRectF& r) const {
     QLinearGradient g(r.topLeft(), r.bottomLeft());
     g.setColorAt(0.0,  QColor(0x5e, 0x7e, 0xa6));
     g.setColorAt(0.55, QColor(0x8a, 0x70, 0x58));
@@ -134,7 +168,7 @@ void Pcsx2OsdPreview::paintGameScene(QPainter& p, const QRectF& r) const {
     p.drawEllipse(sunC, sunR * 2.2, sunR * 2.2);
 }
 
-QStringList Pcsx2OsdPreview::buildPerfColumnLines() const {
+QStringList OsdPreview::buildPerfColumnLines() const {
     QStringList out;
 
     QStringList line1;
@@ -161,12 +195,12 @@ QStringList Pcsx2OsdPreview::buildPerfColumnLines() const {
     if (m_s.gpu)
         out << QStringLiteral("GPU: 42.3% (4.21ms)");
     if (m_s.frameTimes)
-        out << QStringLiteral("[\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588"
-                              "\u2587\u2586\u2585\u2584\u2583\u2582\u2581]");
+        out << QStringLiteral("[▁▂▃▄▅▆▇█"
+                              "▇▆▅▄▃▂▁]");
     return out;
 }
 
-void Pcsx2OsdPreview::drawPerfColumn(QPainter& p, const QRectF& screen) const {
+void OsdPreview::drawPerfColumn(QPainter& p, const QRectF& screen) const {
     if (m_s.perfPos == OverlayPos::None) return;
     const QStringList lines = buildPerfColumnLines();
     if (lines.isEmpty()) return;
@@ -244,11 +278,11 @@ void Pcsx2OsdPreview::drawPerfColumn(QPainter& p, const QRectF& screen) const {
     Q_UNUSED(kMuted);
 }
 
-void Pcsx2OsdPreview::drawTopRightIndicators(QPainter& p, const QRectF& screen) const {
+void OsdPreview::drawTopRightIndicators(QPainter& p, const QRectF& screen) const {
     QStringList items;
-    if (m_s.indicators)          items << QStringLiteral("\u23E9 FF");
-    if (m_s.videoCapture)        items << QStringLiteral("\u23FA REC");
-    if (m_s.inputRec)            items << QStringLiteral("\u25CF INPUT");
+    if (m_s.indicators)          items << QStringLiteral("⏩ FF");
+    if (m_s.videoCapture)        items << QStringLiteral("⏺ REC");
+    if (m_s.inputRec)            items << QStringLiteral("● INPUT");
     if (m_s.textureReplacements) items << QStringLiteral("\U0001F3A8 TEX");
     if (items.isEmpty()) return;
 
@@ -266,7 +300,7 @@ void Pcsx2OsdPreview::drawTopRightIndicators(QPainter& p, const QRectF& screen) 
     }
 }
 
-void Pcsx2OsdPreview::drawBottomRightSettings(QPainter& p, const QRectF& screen) const {
+void OsdPreview::drawBottomRightSettings(QPainter& p, const QRectF& screen) const {
     if (!m_s.settings && !m_s.patches) return;
 
     QStringList parts;
@@ -285,10 +319,10 @@ void Pcsx2OsdPreview::drawBottomRightSettings(QPainter& p, const QRectF& screen)
     drawShadowedText(p, QPointF(x, y), text, kWhite);
 }
 
-void Pcsx2OsdPreview::drawBottomLeftInputs(QPainter& p, const QRectF& screen) const {
+void OsdPreview::drawBottomLeftInputs(QPainter& p, const QRectF& screen) const {
     if (!m_s.inputs) return;
     const QString text =
-        QStringLiteral("\U0001F3AE 1 \u2022 DualShock | A X \u2191 LT:0.42");
+        QStringLiteral("\U0001F3AE 1 • DualShock | A X ↑ LT:0.42");
 
     QFont f = monospaceFont(scaledFontPx());
     p.setFont(f);
@@ -298,7 +332,7 @@ void Pcsx2OsdPreview::drawBottomLeftInputs(QPainter& p, const QRectF& screen) co
     drawShadowedText(p, QPointF(x, y), text, kWhite);
 }
 
-void Pcsx2OsdPreview::paintEvent(QPaintEvent*) {
+void OsdPreview::paintEvent(QPaintEvent*) {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
     p.setRenderHint(QPainter::TextAntialiasing);
