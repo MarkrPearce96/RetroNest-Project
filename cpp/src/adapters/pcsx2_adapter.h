@@ -39,6 +39,8 @@ public:
     RetroAchievementsKeyMap retroAchievementsKeyMap() const override;
     QVector<AssetMatchRule> assetMatchRules() const override;
     QString findResumeFile(const QString& serial) const override;
+    PreviewSpec previewSpec(const QString& category,
+                            const QString& subcategory) const override;
 
 private:
     /** Get the platform-specific PCSX2 config directory. */

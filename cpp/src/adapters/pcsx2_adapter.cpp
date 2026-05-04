@@ -1193,3 +1193,44 @@ QString PCSX2Adapter::findResumeFile(const QString& serial) const {
     }
     return {};
 }
+
+PreviewSpec PCSX2Adapter::previewSpec(const QString& category,
+                                       const QString& subcategory) const {
+    if (category == "Graphics" && subcategory == "Display") {
+        return {"aspect", {
+            {"AspectRatio",          "aspectMode"},
+            {"FMVAspectRatioSwitch", "fmvAspectMode"},
+            {"StretchY",             "stretchY"},
+            {"CropLeft",             "cropL"},
+            {"CropTop",              "cropT"},
+            {"CropRight",            "cropR"},
+            {"CropBottom",           "cropB"},
+            {"IntegerScaling",       "integerScaling"},
+        }};
+    }
+    if (category == "Graphics" && subcategory == "OSD") {
+        return {"osd", {
+            {"OsdShowFPS",                 "showFps"},
+            {"OsdShowSpeed",               "showSpeed"},
+            {"OsdShowVPS",                 "showVps"},
+            {"OsdShowResolution",          "showResolution"},
+            {"OsdShowCPU",                 "showCpu"},
+            {"OsdShowGPU",                 "showGpu"},
+            {"OsdShowSettings",            "showSettings"},
+            {"OsdshowPatches",             "showPatches"},
+            {"OsdShowInputs",              "showInputs"},
+            {"OsdShowFrameTimes",          "showFrameTimes"},
+            {"OsdShowIndicators",          "showIndicators"},
+            {"OsdShowGSStats",             "showGsStats"},
+            {"OsdShowHardwareInfo",        "showHardwareInfo"},
+            {"OsdShowVersion",             "showVersion"},
+            {"OsdShowVideoCapture",        "showVideoCapture"},
+            {"OsdShowInputRec",            "showInputRec"},
+            {"OsdShowTextureReplacements", "showTextureReplacements"},
+            {"OsdMessagesPos",             "messagesPos"},
+            {"OsdPerformancePos",          "performancePos"},
+            {"OsdScale",                   "osdScale"},
+        }};
+    }
+    return {};
+}
