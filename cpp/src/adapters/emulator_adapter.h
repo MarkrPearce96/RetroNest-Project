@@ -2,6 +2,7 @@
 
 #include "core/manifest.h"
 #include "core/paths.h"
+#include "core/preview_spec.h"
 #include "core/setting_def.h"
 #include "core/binding_def.h"
 #include "core/controller_type_def.h"
@@ -147,6 +148,19 @@ public:
      * Each entry describes one setting with its INI location, type, and UI metadata.
      */
     virtual QVector<SettingDef> settingsSchema() const { return {}; }
+
+    /**
+     * Return the preview-widget spec for one (category, subcategory) pair.
+     * Default returns empty (no preview). Adapters that want an
+     * AspectRatioPreview or OsdPreview shown alongside the settings cards
+     * override this to return a non-empty PreviewSpec.
+     */
+    virtual PreviewSpec previewSpec(const QString& category,
+                                    const QString& subcategory) const {
+        Q_UNUSED(category);
+        Q_UNUSED(subcategory);
+        return {};
+    }
 
     /**
      * Return the path to this emulator's main config file.
