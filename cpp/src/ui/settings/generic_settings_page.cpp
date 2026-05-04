@@ -240,15 +240,13 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
             && previewBoundGroups.contains(group);
 
         // Section header — landed where the FIRST card of the group goes.
-        // For a split preview-bound group the header sits in topLeft;
-        // overflow cards in the bottom area appear without a duplicate
-        // header (orange uppercase styling above gives enough context).
         if (!group.isEmpty()) {
             QVBoxLayout* headerDest = isPreviewBound ? topLeftLayout : layout;
             headerDest->addWidget(new SettingsSectionHeader(group, this));
         }
 
         int cardIndex = 0;
+        bool overflowHeaderEmitted = false;
         for (const auto& d : m_schema) {
             if (d.subcategory != subcategory || d.group != group) continue;
             QWidget* card = nullptr;
@@ -271,9 +269,21 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
             // First N preview-bound cards stay beside the preview;
             // overflow wraps to full-width below. Non-preview-bound
             // groups always go to the bottom layout.
-            QVBoxLayout* dest = (isPreviewBound && cardIndex < kCardsBesidePreview)
-                ? topLeftLayout
-                : layout;
+            const bool overflowing = isPreviewBound
+                                     && cardIndex >= kCardsBesidePreview;
+            QVBoxLayout* dest = overflowing ? layout : topLeftLayout;
+            if (!isPreviewBound) dest = layout;
+
+            // When a preview-bound group splits, repeat the section
+            // header at the start of the overflow so users still see
+            // 'VISUAL QUALITY' above the wrapped cards. Without this
+            // the overflow looks like it belongs to whichever group
+            // header sits below it (caught in user smoke 2026-05-04).
+            if (overflowing && !overflowHeaderEmitted && !group.isEmpty()) {
+                layout->addWidget(new SettingsSectionHeader(group, this));
+                overflowHeaderEmitted = true;
+            }
+
             dest->addWidget(card);
             ++cardIndex;
         }
