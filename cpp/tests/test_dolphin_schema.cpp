@@ -194,10 +194,13 @@ private slots:
             QVERIFY2(graphicsKeys.contains(k), qPrintable("missing key: " + k));
     }
 
-    void testGraphicsGeneralHasAspectPreview() {
+    void testRecommendedHasAspectPreview() {
         DolphinAdapter a;
-        // Display sub-tab was renamed to General in the full audit.
-        const auto spec = a.previewSpec("Graphics", "General");
+        // Aspect preview moved from Graphics/General to Recommended —
+        // Recommended is the primary entry point and already has the
+        // AspectRatio combo. Recommended is single-subcategory →
+        // subcategory == "".
+        const auto spec = a.previewSpec("Recommended", "");
         QCOMPARE(spec.previewType, QString("aspect"));
         QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
     }
@@ -270,8 +273,12 @@ private slots:
         QCOMPARE(got, expectedKeys);
     }
 
-    void testGraphicsOtherSubTabsHaveNoPreview() {
+    void testGraphicsSubTabsHaveNoPreview() {
+        // Graphics/General used to host the aspect preview but it moved
+        // to Recommended. Graphics is now a plain 5-sub-tab pane with no
+        // preview anywhere.
         DolphinAdapter a;
+        QVERIFY(a.previewSpec("Graphics", "General").previewType.isEmpty());
         QVERIFY(a.previewSpec("Graphics", "Enhancements").previewType.isEmpty());
         QVERIFY(a.previewSpec("Graphics", "Hacks").previewType.isEmpty());
         QVERIFY(a.previewSpec("Graphics", "Advanced").previewType.isEmpty());

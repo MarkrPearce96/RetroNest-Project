@@ -1527,12 +1527,18 @@ void DolphinAdapter::patchRetroAchievements(const QString& /*username*/, const Q
 
 PreviewSpec DolphinAdapter::previewSpec(const QString& category,
                                         const QString& subcategory) const {
-    if (category == "Graphics" && subcategory == "General") {
-        // Dolphin only exposes aspect ratio in a way that maps to the shared
-        // AspectRatioPreview. Stretch / crop / integer-scaling are not
-        // GFX.ini keys in Dolphin, so the preview shows just the aspect
-        // rectangle and leaves the other Q_PROPERTYs at their feature-absent
-        // defaults.
+    // Aspect-ratio preview lives on the Recommended category (single-
+    // subcategory page → subcategory == ""). Recommended is the primary
+    // entry point and already has the AspectRatio combo near the top, so
+    // the live preview is most useful there. Graphics/General has the
+    // same combo without the preview — it's now a plain settings list,
+    // matching the rest of the Graphics sub-tabs.
+    //
+    // Dolphin only exposes aspect ratio in a way that maps to the shared
+    // AspectRatioPreview. Stretch / crop / integer-scaling are not GFX.ini
+    // keys in Dolphin, so the preview shows just the aspect rectangle and
+    // leaves the other Q_PROPERTYs at their feature-absent defaults.
+    if (category == "Recommended" && subcategory.isEmpty()) {
         return {"aspect", {
             {"AspectRatio", "aspectMode"},
         }};
