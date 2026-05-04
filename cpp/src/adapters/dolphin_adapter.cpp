@@ -355,22 +355,76 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Record per-game playtime in Dolphin's title database.",
          SettingDef::Bool, "True"},
 
-        // ─── Audio (DSP) ─────────────────────────────────────
-        {"Audio", "", "", "DSP", "Backend",
+        // ─── Audio / Output ──────────────────────────────────
+        {"Audio", "", "Output", "DSP", "Backend",
          "Audio Backend",
          "Sound output backend. Cubeb is recommended on macOS.",
          SettingDef::Combo, "Cubeb", audioBackends},
 
-        {"Audio", "", "", "DSP", "Volume",
+        {"Audio", "", "Output", "DSP", "Volume",
          "Volume",
          "Master output volume (0-100).",
          SettingDef::Int, "100", {}, 0, 100, 1, "slider", "%"},
 
-        {"Audio", "", "", "DSP", "EnableJIT",
-         "Enable DSP JIT",
-         "Enables the DSP JIT recompiler. Significant performance improvement; "
-         "leave on unless debugging.",
+        {"Audio", "", "Output", "DSP", "MuteOnDisabledSpeedLimit",
+         "Mute When Speed Limit Disabled",
+         "Silence audio while emulation is running unthrottled (e.g. fast-forward). "
+         "Avoids unpleasant pitch/playback artifacts.",
+         SettingDef::Bool, "False"},
+
+        // ─── Audio / DSP Emulation ───────────────────────────
+        {"Audio", "", "DSP Emulation", "Core", "DSPHLE",
+         "DSP HLE",
+         "High-Level Emulation of the DSP — fast and compatible with most games. "
+         "Disable to use LLE (slower, more accurate; required for a small set of titles).",
          SettingDef::Bool, "True"},
+
+        {"Audio", "", "DSP Emulation", "DSP", "EnableJIT",
+         "DSP LLE — Enable JIT",
+         "When DSP HLE is off (LLE mode), use the JIT recompiler. "
+         "Significant performance improvement; leave on unless debugging.",
+         SettingDef::Bool, "True"},
+
+        // ─── Audio / Latency & Quality ───────────────────────
+        {"Audio", "", "Latency & Quality", "Core", "AudioLatency",
+         "Audio Latency",
+         "Output latency in milliseconds. Lower = tighter sync, more risk of "
+         "audio dropouts under load. 20 ms is a sensible default.",
+         SettingDef::Int, "20", {}, 0, 200, 1, "slider", "ms"},
+
+        {"Audio", "", "Latency & Quality", "Core", "AudioBufferSize",
+         "Audio Buffer Size",
+         "Internal mixer buffer in milliseconds. Higher = smoother but more "
+         "delay between picture and sound.",
+         SettingDef::Int, "80", {}, 16, 512, 1, "slider", "ms"},
+
+        {"Audio", "", "Latency & Quality", "Core", "AudioFillGaps",
+         "Fill Audio Gaps",
+         "Synthesize silence to fill gaps when emulation can't keep up. "
+         "Disable for a more accurate native-hardware behavior; enable for smoothness.",
+         SettingDef::Bool, "True"},
+
+        {"Audio", "", "Latency & Quality", "Core", "AudioPreservePitch",
+         "Preserve Pitch When Speed Changes",
+         "Time-stretch audio to keep pitch constant when emulation runs slower or "
+         "faster than 100%. Useful with fast-forward; otherwise leaves pitch unchanged.",
+         SettingDef::Bool, "False"},
+
+        // ─── Audio / Surround ────────────────────────────────
+        {"Audio", "", "Surround", "Core", "DPL2Decoder",
+         "Dolby Pro Logic II Decoder",
+         "Decode the emulated stereo mix into 5.1 surround output. Requires a "
+         "backend that supports it — Cubeb on macOS does not, so this is "
+         "effectively a no-op there. Active only when DSP HLE is off.",
+         SettingDef::Bool, "False"},
+
+        {"Audio", "", "Surround", "Core", "DPL2Quality",
+         "DPL2 Decoder Quality",
+         "Trade-off between CPU cost and surround-decode accuracy.",
+         SettingDef::Combo, "2",
+         { {"Lowest",  "0"}, {"Low",   "1"},
+           {"High",    "2"}, {"Highest","3"} },
+         0, 0, 0, "", "", "DPL2Decoder"},  // gated on DPL2Decoder
 
         // ─── General / CPU ───────────────────────────────────
         {"General", "", "CPU", "Core", "CPUCore",

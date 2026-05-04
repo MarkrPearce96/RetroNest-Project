@@ -63,6 +63,24 @@ private slots:
         QCOMPARE(found->options.size(), 3);
     }
 
+    void testAudioCategoryFullCatalog() {
+        // Mirrors DolphinQt AudioPane (Source/Core/DolphinQt/Settings/AudioPane.cpp).
+        const QSet<QString> expectedKeys{
+            // Output
+            "Backend", "Volume", "MuteOnDisabledSpeedLimit",
+            // DSP Emulation
+            "DSPHLE", "EnableJIT",
+            // Latency & Quality
+            "AudioLatency", "AudioBufferSize", "AudioFillGaps", "AudioPreservePitch",
+            // Surround
+            "DPL2Decoder", "DPL2Quality",
+        };
+        QSet<QString> got;
+        for (const auto& d : schema_)
+            if (d.category == "Audio") got.insert(d.key);
+        QCOMPARE(got, expectedKeys);
+    }
+
     void testAudioBackendIsCubebDefault() {
         const SettingDef* found = nullptr;
         for (const auto& d : schema_)
