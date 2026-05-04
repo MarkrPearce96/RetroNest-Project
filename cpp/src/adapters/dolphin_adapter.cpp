@@ -216,23 +216,143 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         {"JITARM64 (Apple Silicon)",       "4"},
     };
 
+    // Cursor visibility — written as the int underlying ShowCursor enum
+    // (MainSettings.h:255-261). DolphinQt renders this as 3 radio buttons.
+    const QVector<QPair<QString,QString>> cursorModes = {
+        {"Never",        "0"},
+        {"Always",       "1"},
+        {"On Movement",  "2"},
+    };
+
+    // Region fallback — DiscIO::Region enum (Source/Core/DiscIO/Enums.h).
+    const QVector<QPair<QString,QString>> regions = {
+        {"NTSC-J (Japan)",       "0"},
+        {"NTSC-U (Americas)",    "1"},
+        {"PAL (Europe)",         "2"},
+        {"Unknown / region-free","3"},
+        {"NTSC-K (Korea, Wii)",  "4"},
+    };
+
+    // Language list mirrors DolphinQt MakeLanguageComboBox()
+    // (InterfacePane.cpp). Stored as ISO 639-1 code (or "" for system default).
+    const QVector<QPair<QString,QString>> languages = {
+        {"<System Language>",       ""},
+        {"Bahasa Melayu",           "ms"},
+        {"Català",                  "ca"},
+        {"Čeština",                 "cs"},
+        {"Dansk",                   "da"},
+        {"Deutsch",                 "de"},
+        {"English",                 "en"},
+        {"Español",                 "es"},
+        {"Français",                "fr"},
+        {"Hrvatski",                "hr"},
+        {"Italiano",                "it"},
+        {"Magyar",                  "hu"},
+        {"Nederlands",              "nl"},
+        {"Norsk bokmål",            "nb"},
+        {"Polski",                  "pl"},
+        {"Português",               "pt"},
+        {"Português (Brasil)",      "pt_BR"},
+        {"Română",                  "ro"},
+        {"Srpski",                  "sr"},
+        {"Suomi",                   "fi"},
+        {"Svenska",                 "sv"},
+        {"Türkçe",                  "tr"},
+        {"Ελληνικά",               "el"},
+        {"Русский",                 "ru"},
+        {"العربية",                 "ar"},
+        {"فارسی",                   "fa"},
+        {"한국어",                   "ko"},
+        {"日本語",                   "ja"},
+        {"简体中文",                  "zh_CN"},
+        {"繁體中文",                  "zh_TW"},
+    };
+
     return {
-        // ─── Interface ───────────────────────────────────────
-        {"Interface", "", "", "Interface", "PauseOnFocusLost",
+        // ─── Interface / Window ──────────────────────────────
+        {"Interface", "", "Window", "Interface", "PauseOnFocusLost",
          "Pause When Window Loses Focus",
          "Pauses emulation automatically when the RetroNest window loses focus. "
          "Required for the in-game overlay to work cleanly.",
          SettingDef::Bool, "True"},
 
-        {"Interface", "", "", "Interface", "ConfirmStop",
+        {"Interface", "", "Window", "Interface", "ConfirmStop",
          "Confirm Before Stopping Emulation",
          "Show a confirmation dialog when stopping a game from Dolphin's UI. "
          "Disabled by default so RetroNest's own exit flow is uninterrupted.",
          SettingDef::Bool, "False"},
 
-        {"Interface", "", "", "Interface", "HideCursor",
-         "Hide Cursor During Gameplay",
-         "Hides the mouse cursor while a game is running.",
+        {"Interface", "", "Window", "Display", "KeepWindowOnTop",
+         "Keep Window On Top",
+         "Forces the Dolphin window to stay above other windows during play.",
+         SettingDef::Bool, "False"},
+
+        {"Interface", "", "Window", "Display", "DisableScreenSaver",
+         "Disable Screensaver During Play",
+         "Prevents the system screensaver from kicking in while a game is running.",
+         SettingDef::Bool, "True"},
+
+        // ─── Interface / Cursor ──────────────────────────────
+        {"Interface", "", "Cursor", "Interface", "CursorVisibility",
+         "Mouse Cursor",
+         "When the mouse cursor is shown over the render area. "
+         "Never = always hidden; Always = always shown; On Movement = "
+         "auto-hide after a short idle period.",
+         SettingDef::Combo, "2", cursorModes},
+
+        {"Interface", "", "Cursor", "Interface", "LockCursor",
+         "Lock Cursor To Window",
+         "Confines the mouse cursor to the render window. Useful for mouse-driven "
+         "Wii-pointer games. Windows-only effect upstream.",
+         SettingDef::Bool, "False"},
+
+        // ─── Interface / Language ────────────────────────────
+        {"Interface", "", "Language", "Interface", "LanguageCode",
+         "Dolphin UI Language",
+         "Language used by Dolphin's own UI (when you open native settings). "
+         "Does not change RetroNest's language. \"System Language\" matches the OS.",
+         SettingDef::Combo, "", languages},
+
+        {"Interface", "", "Language", "Core", "FallbackRegion",
+         "Fallback Region",
+         "Region used for games whose region cannot be auto-detected. "
+         "Affects boot timing and the system menu locale.",
+         SettingDef::Combo, "1", regions},
+
+        // ─── Interface / Library ─────────────────────────────
+        {"Interface", "", "Library", "Interface", "ShowActiveTitle",
+         "Show Active Title In Window Title",
+         "Appends the running game's title to the window-title bar.",
+         SettingDef::Bool, "True"},
+
+        {"Interface", "", "Library", "Interface", "UseBuiltinTitleDatabase",
+         "Use Built-In Title Database",
+         "Use Dolphin's bundled game-name database to display friendly titles "
+         "in the game list.",
+         SettingDef::Bool, "True"},
+
+        {"Interface", "", "Library", "General", "UseGameCovers",
+         "Download Game Covers",
+         "When enabled, Dolphin downloads cover art for known games to display "
+         "in its native game list. RetroNest scrapes its own art separately.",
+         SettingDef::Bool, "False"},
+
+        // ─── Interface / Other ───────────────────────────────
+        {"Interface", "", "Other", "Interface", "UsePanicHandlers",
+         "Use Panic Handlers",
+         "Show pop-up dialogs for non-fatal emulation errors. Disable for "
+         "kiosk-style play; enable for debugging.",
+         SettingDef::Bool, "True"},
+
+        {"Interface", "", "Other", "General", "HotkeysRequireFocus",
+         "Hotkeys Require Window Focus",
+         "When on, Dolphin's native hotkeys only fire while its window has focus. "
+         "RetroNest's overlay hotkeys are not affected.",
+         SettingDef::Bool, "True"},
+
+        {"Interface", "", "Other", "General", "EnablePlayTimeTracking",
+         "Track Play Time",
+         "Record per-game playtime in Dolphin's title database.",
          SettingDef::Bool, "True"},
 
         // ─── Audio (DSP) ─────────────────────────────────────

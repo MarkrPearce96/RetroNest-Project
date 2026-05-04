@@ -33,6 +33,36 @@ private slots:
         QCOMPARE(found->defaultValue, QString("True"));
     }
 
+    void testInterfaceCategoryFullCatalog() {
+        // Mirrors DolphinQt InterfacePane (Source/Core/DolphinQt/Settings/
+        // InterfacePane.cpp). 14 user-facing keys spread across the
+        // [Interface], [Display], [General], [Core] sections.
+        const QSet<QString> expectedKeys{
+            "PauseOnFocusLost", "ConfirmStop", "KeepWindowOnTop", "DisableScreenSaver",
+            "CursorVisibility", "LockCursor",
+            "LanguageCode", "FallbackRegion",
+            "ShowActiveTitle", "UseBuiltinTitleDatabase", "UseGameCovers",
+            "UsePanicHandlers", "HotkeysRequireFocus", "EnablePlayTimeTracking",
+        };
+        QSet<QString> got;
+        for (const auto& d : schema_)
+            if (d.category == "Interface") got.insert(d.key);
+        QCOMPARE(got, expectedKeys);
+    }
+
+    void testCursorVisibilityIsCombo() {
+        // Was previously a broken Bool 'HideCursor' (key didn't exist in
+        // Dolphin). Real key is CursorVisibility, written as the int
+        // ShowCursor enum value (0=Never, 1=Always, 2=OnMovement).
+        const SettingDef* found = nullptr;
+        for (const auto& d : schema_)
+            if (d.key == "CursorVisibility") found = &d;
+        QVERIFY(found != nullptr);
+        QCOMPARE(int(found->type), int(SettingDef::Combo));
+        QCOMPARE(found->defaultValue, QString("2"));  // OnMovement (Dolphin's upstream default)
+        QCOMPARE(found->options.size(), 3);
+    }
+
     void testAudioBackendIsCubebDefault() {
         const SettingDef* found = nullptr;
         for (const auto& d : schema_)
