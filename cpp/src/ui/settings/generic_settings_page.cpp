@@ -226,6 +226,25 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         }
     }
 
+    // Helper: build a card for one SettingDef. Returns nullptr for
+    // unsupported types. Centralised so the pair-rendering branch below
+    // can construct two cards at once.
+    auto makeCardFor = [&](const SettingDef& d) -> QWidget* {
+        switch (d.type) {
+            case SettingDef::Combo: return builder.makeComboCard(d.key);
+            case SettingDef::Bool:  return builder.makeToggleCard(d.key);
+            case SettingDef::Int:
+            case SettingDef::Float:
+                if (d.layout == "slider"
+                    || d.layout == "paired" /* paired numeric is rare */)
+                    return builder.makeSliderCard(d.key);
+                // fall through
+                return nullptr;
+            default:
+                return nullptr;
+        }
+    };
+
     for (const QString& group : groupOrder) {
         // Preview-bound group → ALL its cards stack in the topLeft
         // column under one header, even if the column ends up taller
@@ -237,24 +256,38 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         if (!group.isEmpty()) {
             dest->addWidget(new SettingsSectionHeader(group, this));
         }
-        for (const auto& d : m_schema) {
-            if (d.subcategory != subcategory || d.group != group) continue;
-            QWidget* card = nullptr;
-            switch (d.type) {
-                case SettingDef::Combo:
-                    card = builder.makeComboCard(d.key);
-                    break;
-                case SettingDef::Bool:
-                    card = builder.makeToggleCard(d.key);
-                    break;
-                case SettingDef::Int:
-                case SettingDef::Float:
-                    if (d.layout == "slider") card = builder.makeSliderCard(d.key);
-                    break;
-                default:
-                    break;
+
+        // Collect this group's defs in declaration order so we can peek
+        // ahead for the pairing logic.
+        QVector<const SettingDef*> groupDefs;
+        for (const auto& d : m_schema)
+            if (d.subcategory == subcategory && d.group == group)
+                groupDefs.append(&d);
+
+        for (int i = 0; i < groupDefs.size(); ++i) {
+            const SettingDef& d = *groupDefs[i];
+            QWidget* card = makeCardFor(d);
+            if (!card) continue;
+
+            // Pair with the next def when BOTH have layout == "paired".
+            // Renders the two cards side-by-side in a horizontal row,
+            // each taking 50% of the destination width.
+            if (d.layout == "paired"
+                && i + 1 < groupDefs.size()
+                && groupDefs[i + 1]->layout == "paired") {
+                QWidget* card2 = makeCardFor(*groupDefs[i + 1]);
+                if (card2) {
+                    auto* pair = new QHBoxLayout();
+                    pair->setContentsMargins(0, 0, 0, 0);
+                    pair->setSpacing(8);
+                    pair->addWidget(card,  /*stretch=*/1);
+                    pair->addWidget(card2, /*stretch=*/1);
+                    dest->addLayout(pair);
+                    ++i;  // skip the paired sibling — already consumed
+                    continue;
+                }
             }
-            if (card) dest->addWidget(card);
+            dest->addWidget(card);
         }
     }
 

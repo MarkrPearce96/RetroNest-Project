@@ -368,18 +368,25 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Combo, "1",
          { {"None","1"}, {"2x","2"}, {"4x","4"}, {"8x","8"} }}),
 
+        // MaxAnisotropy + ForceTextureFiltering — paired side-by-side in
+        // the Recommended page. layout == "paired" tells GenericSettingsPage
+        // to wrap consecutive paired cards in a 2-column horizontal row.
+        // Trailing positional fields after `options` go: minVal, maxVal,
+        // step, layout, suffix.
         gfx({"Recommended", "", "Visual Quality", "Enhancements", "MaxAnisotropy",
          "Anisotropic Filtering",
          "Sharpens textures viewed at oblique angles.",
          SettingDef::Combo, "-1",
-         { {"Default","-1"}, {"Off (1x)","0"}, {"2x","1"}, {"4x","2"}, {"8x","3"}, {"16x","4"} }}),
+         { {"Default","-1"}, {"Off (1x)","0"}, {"2x","1"}, {"4x","2"}, {"8x","3"}, {"16x","4"} },
+         0, 0, 0, "paired"}),
 
         gfx({"Recommended", "", "Visual Quality", "Enhancements", "ForceTextureFiltering",
          "Force Texture Filtering",
          "Override the game's texture-filtering choice. Default respects "
          "the game; Linear smooths low-res textures.",
          SettingDef::Combo, "0",
-         { {"Default","0"}, {"Nearest","1"}, {"Linear","2"} }}),
+         { {"Default","0"}, {"Nearest","1"}, {"Linear","2"} },
+         0, 0, 0, "paired"}),
 
         // Audio — most-toggled audio knobs
         {"Recommended", "", "Audio", "Core", "DSPHLE",
