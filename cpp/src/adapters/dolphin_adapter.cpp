@@ -191,7 +191,7 @@ AspectRatioOptions DolphinAdapter::aspectRatioOptions() const {
 }
 
 // ============================================================================
-// Settings schema — Dolphin.ini only for v1 (graphics page deferred)
+// Settings schema — Dolphin.ini + GFX.ini (per SettingDef::iniFilePath)
 // ============================================================================
 
 QVector<SettingDef> DolphinAdapter::settingsSchema() const {
@@ -282,7 +282,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Float, "1", {}, 0.5, 4.0, 0.05, "slider", "x"},
 
         // ─── Graphics / Display ──────────────────────────────
-        // AspectRatio, InternalResolution, IntegerScaling, VSync live in
+        // AspectRatio, InternalResolution, VSync live in
         // GFX.ini → wrap in gfx(). Fullscreen lives in Dolphin.ini →
         // omit gfx() so it inherits configFilePath() = Dolphin.ini.
         gfx({"Graphics", "Display", "", "Settings", "AspectRatio",
@@ -298,12 +298,6 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Combo, "1",
          { {"Native (1x)","1"}, {"2x (~720p)","2"}, {"3x (~1080p)","3"},
            {"4x (~1440p)","4"}, {"5x (~1800p)","5"}, {"6x (~4K)","6"} }}),
-
-        gfx({"Graphics", "Display", "", "Settings", "IntegerScaling",
-         "Integer Scaling",
-         "Scales the rendered image by integer multiples only — produces "
-         "crisp pixels at the cost of unused screen area.",
-         SettingDef::Bool, "False"}),
 
         gfx({"Graphics", "Display", "", "Hardware", "VSync",
          "VSync",

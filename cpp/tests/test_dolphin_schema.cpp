@@ -89,7 +89,7 @@ private slots:
 
     void testGraphicsDisplaySubTabExists() {
         const QSet<QString> expectedKeys{
-            "AspectRatio", "InternalResolution", "IntegerScaling", "VSync", "Fullscreen"
+            "AspectRatio", "InternalResolution", "VSync", "Fullscreen"
         };
         QSet<QString> got;
         for (const auto& d : schema_)
