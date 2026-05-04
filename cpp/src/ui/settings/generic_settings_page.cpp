@@ -3,6 +3,7 @@
 #include "settings_page_builder.h"
 #include "widgets/settings_graphics_sub_tab_bar.h"
 #include "widgets/settings_section_header.h"
+#include "widgets/settings_card.h"
 #include "ui/app_controller.h"
 #include "adapters/emulator_adapter.h"
 #include <QVBoxLayout>
@@ -96,8 +97,60 @@ void GenericSettingsPage::buildUi() {
     root->addStretch();
 }
 
-void GenericSettingsPage::buildSubcategory(const QString& /*subcategory*/) {
-    // Implemented in Task 10.
+void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
+    // Identify the parent layout for this subcategory's content.
+    QVBoxLayout* layout = nullptr;
+    if (m_subStack) {
+        const int idx = m_subcategories.indexOf(subcategory);
+        layout = qobject_cast<QVBoxLayout*>(m_subStack->widget(idx)->layout());
+    } else {
+        // Single-subcategory case: append directly to the scroll content
+        // (the QScrollArea's child widget's layout, set up in buildUi()).
+        auto* scroll = findChild<QScrollArea*>();
+        Q_ASSERT(scroll && scroll->widget());
+        layout = qobject_cast<QVBoxLayout*>(scroll->widget()->layout());
+    }
+    Q_ASSERT(layout);
+
+    SettingsPageBuilder builder(this, m_schema,
+        [this](const QString& sec, const QString& k, const QString& v){ saveValue(sec, k, v); },
+        [this](const SettingDef& d){ emit settingFocused(d); });
+
+    // Group entries by SettingDef::group (preserving first-seen order).
+    QStringList groupOrder;
+    QSet<QString> seenGroups;
+    for (const auto& d : m_schema) {
+        if (d.subcategory != subcategory) continue;
+        if (!seenGroups.contains(d.group)) {
+            seenGroups.insert(d.group);
+            groupOrder.append(d.group);
+        }
+    }
+
+    for (const QString& group : groupOrder) {
+        if (!group.isEmpty()) {
+            layout->addWidget(new SettingsSectionHeader(group, this));
+        }
+        for (const auto& d : m_schema) {
+            if (d.subcategory != subcategory || d.group != group) continue;
+            SettingsCard* card = nullptr;
+            switch (d.type) {
+                case SettingDef::Combo:
+                    card = builder.makeComboCard(d.key);
+                    break;
+                case SettingDef::Bool:
+                    card = builder.makeToggleCard(d.key);
+                    break;
+                case SettingDef::Int:
+                case SettingDef::Float:
+                    if (d.layout == "slider") card = builder.makeSliderCard(d.key);
+                    break;
+                default:
+                    break;
+            }
+            if (card) layout->addWidget(card);
+        }
+    }
 }
 
 void GenericSettingsPage::loadValues() {
