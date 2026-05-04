@@ -1460,13 +1460,9 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
 }
 ```
 
-- [ ] **Step 2: Wire `buildSubcategory()` into `buildUi()`**
+- [ ] **Step 2: Wire `buildSubcategory()` into `buildUi()` (already done in T9)**
 
-In `buildUi()`, replace the empty for-loop with:
-
-```cpp
-    for (const QString& s : m_subcategories) buildSubcategory(s);
-```
+> **Note:** Task 9's skeleton already added `for (const QString& s : m_subcategories) buildSubcategory(s);` to `buildUi()`. No edit needed for this step — confirm the call is present, then proceed to Step 3.
 
 - [ ] **Step 3: Build**
 
