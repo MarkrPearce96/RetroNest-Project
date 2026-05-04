@@ -16,6 +16,9 @@
 #include <QScrollArea>
 #include <QSet>
 #include <QSignalBlocker>
+#include <QGraphicsOpacityEffect>
+#include <QHash>
+#include <QSlider>
 
 GenericSettingsPage::GenericSettingsPage(EmulatorSettingsDialogBase* dlg,
                                          QVector<SettingDef> categorySchema,
@@ -207,18 +210,48 @@ void GenericSettingsPage::saveValue(const QString& section,
         app->saveSettings(emuId, m);
     };
 
+    bool transformed = false;
     for (const auto& d : m_schema) {
         if (d.section == section && d.key == key && d.saveTransform) {
             d.saveTransform(value, defaultSave);
-            return;
+            transformed = true;
+            break;
         }
     }
+    if (!transformed) defaultSave(section, key, value);
 
-    defaultSave(section, key, value);
+    // A toggle change may flip a dependent slider's active state.
+    // Cheap to re-evaluate every save — refreshDependencies is O(rows).
+    refreshDependencies();
 }
 
 void GenericSettingsPage::refreshDependencies() {
-    // Implemented in Task 13.
+    // Master state map: which dependsOn-target keys are currently 'on'.
+    QHash<QString, bool> masterStates;
+    for (auto* tog : findChildren<SettingsToggleRow*>())
+        masterStates.insert(tog->settingDef().key, tog->isChecked());
+
+    // Apply to dependent slider rows (same pattern as duckstation page).
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
+        const SettingDef& d = slider->settingDef();
+        if (d.dependsOn.isEmpty()) continue;
+        const bool active = masterStates.value(d.dependsOn, true);
+        slider->setProperty("dependencyActive", active);
+        // Disable the inner QSlider so the user can't drag the track while
+        // the master toggle is off — the row itself stays focusable so
+        // arrow-key spatial nav still passes through it.
+        if (auto* inner = slider->findChild<QSlider*>())
+            inner->setEnabled(active);
+        if (!active) {
+            if (!slider->graphicsEffect()) {
+                auto* eff = new QGraphicsOpacityEffect(slider);
+                eff->setOpacity(0.4);
+                slider->setGraphicsEffect(eff);
+            }
+        } else {
+            slider->setGraphicsEffect(nullptr);
+        }
+    }
 }
 
 bool GenericSettingsPage::eventFilter(QObject* obj, QEvent* e) {
