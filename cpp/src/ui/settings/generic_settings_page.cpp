@@ -184,10 +184,15 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         topLeftLayout->setSpacing(10);
         topRow->addWidget(leftHost, /*stretch=*/1);
 
-        // Right column: preview card (label + preview + bottom stretch).
+        // Right column: preview card. Sized to content (label + preview)
+        // and top-aligned in the row so it doesn't stretch to match the
+        // left column's height — that produces a tall empty dark band
+        // below the preview which the user explicitly disliked
+        // (smoke 2026-05-04).
         auto* card = new SettingsCard(this);
         card->setFocusPolicy(Qt::NoFocus);
         card->setPreviewStyle(true);
+        card->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         v->setSpacing(10);
@@ -199,8 +204,11 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         v->addWidget(lbl);
         preview = mountPreviewWidget(spec.previewType, card);
         if (preview) v->addWidget(preview);
-        v->addStretch();
-        topRow->addWidget(card, /*stretch=*/1);
+        // Qt::AlignTop pins the card to the top of the row; combined with
+        // the QSizePolicy::Maximum above the card sizes to its content.
+        // Empty space below the card is now ordinary page background, not
+        // a tall dark card-coloured rectangle.
+        topRow->addWidget(card, /*stretch=*/1, Qt::AlignTop);
 
         layout->addLayout(topRow);
         m_currentPreview = preview;
