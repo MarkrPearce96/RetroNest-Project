@@ -148,22 +148,26 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         ? m_adapter->previewSpec(m_category, subcategory)
         : PreviewSpec{};
 
-    // When a preview is active, the top row gets a split layout:
-    //   left column  = SettingDef::group blocks containing preview-bound
-    //                  keys (i.e. groups that "belong with" the preview)
-    //   right column = preview card
-    // Everything else (groups with no preview-bound keys) flows into the
-    // full-width `layout` BELOW the top row. Mirrors PCSX2's display page
-    // pattern (pcsx2_graphics_display_page.cpp:79-83 — buildLeftCompoundCard
-    // + buildRightPreviewCard inside topRow, then buildBottomToggleGrid
-    // below).
-    QVBoxLayout* topLeftLayout = nullptr;     // only set when a preview exists
+    // When a preview is active, the top row gets a TWO-COLUMN layout:
+    //   leftStack  = preview-bound group cards 0..N-1 (beside the preview),
+    //                then more cards alternating with rightStack once we
+    //                pass the preview's vertical span.
+    //   rightStack = preview card at the top (top-aligned), then the
+    //                alternating overflow cards under the preview.
+    // Non-preview-bound groups still flow into the full-width `layout`
+    // BELOW the topRow.
+    //
+    // The alternating fill produces the user's desired pattern: a paired
+    // `[Anisotropic | Force Texture]` row beyond the preview-bound cap
+    // ends up with one card in each column at the same y-level — without
+    // any explicit pair-detection logic.
+    QVBoxLayout* leftStack = nullptr;
+    QVBoxLayout* rightStack = nullptr;
     QWidget* preview = nullptr;
-    QSet<QString> previewBoundGroups;          // groups whose entries feed the preview
+    QSet<QString> previewBoundGroups;
 
     if (!spec.previewType.isEmpty()) {
-        // Identify which groups in this subcategory hold preview-bound keys.
-        // Those groups go in the top-row left column next to the preview.
+        // Identify which schema groups feed the preview.
         for (auto it = spec.keyToProperty.constBegin();
              it != spec.keyToProperty.constEnd(); ++it) {
             for (const auto& d : m_schema) {
@@ -177,19 +181,21 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         auto* topRow = new QHBoxLayout();
         topRow->setSpacing(14);
 
-        // leftHost — its layout takes preview-bound group(s).
         auto* leftHost = new QWidget(this);
-        topLeftLayout = new QVBoxLayout(leftHost);
-        topLeftLayout->setContentsMargins(0, 0, 0, 0);
-        topLeftLayout->setSpacing(8);
+        leftStack = new QVBoxLayout(leftHost);
+        leftStack->setContentsMargins(0, 0, 0, 0);
+        leftStack->setSpacing(8);
         topRow->addWidget(leftHost, /*stretch=*/1);
 
-        // Right column: preview card. Sized to content (label + preview)
-        // and centered vertically in the row, so the preview always sits
-        // beside the middle of the left column regardless of how many
-        // settings the preview-bound group contains. Future emulators
-        // with shorter or longer preview-bound groups get the same
-        // visual rhythm — preview floats at the row's midline.
+        auto* rightHost = new QWidget(this);
+        rightStack = new QVBoxLayout(rightHost);
+        rightStack->setContentsMargins(0, 0, 0, 0);
+        rightStack->setSpacing(8);
+        topRow->addWidget(rightHost, /*stretch=*/1);
+
+        // Preview card sits at the top of rightStack — sized to content
+        // (label + preview at heightForWidth) so the cards below it land
+        // immediately under the preview, not floating in empty space.
         auto* card = new SettingsCard(this);
         card->setFocusPolicy(Qt::NoFocus);
         card->setPreviewStyle(true);
@@ -205,7 +211,7 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         v->addWidget(lbl);
         preview = mountPreviewWidget(spec.previewType, card);
         if (preview) v->addWidget(preview);
-        topRow->addWidget(card, /*stretch=*/1, Qt::AlignTop);
+        rightStack->addWidget(card);
 
         layout->addLayout(topRow);
         m_currentPreview = preview;
@@ -226,8 +232,6 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         }
     }
 
-    // Helper: build a card for one SettingDef. Centralised so the pair
-    // branch can construct two cards in one step.
     auto makeCardFor = [&](const SettingDef& d) -> QWidget* {
         switch (d.type) {
             case SettingDef::Combo: return builder.makeComboCard(d.key);
@@ -242,79 +246,85 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         }
     };
 
-    // Preview-bound group cards beyond this index spill out of the
-    // topLeft column and into the full-width layout below the topRow.
-    // The 'beside-preview' cap roughly equals (preview heightForWidth +
-    // chrome) / slim-card height ≈ 4. Future emulators automatically
-    // get the same wrap point.
+    // Approximate number of preview-bound cards that fit beside the preview
+    // in leftStack before the right column becomes free. After this point,
+    // overflow cards alternate left/right so paired siblings naturally land
+    // as a [left | right] row at the same y-level.
     const int kCardsBesidePreview = 4;
 
     for (const QString& group : groupOrder) {
-        const bool isPreviewBound = topLeftLayout
+        const bool isPreviewBound = leftStack
             && previewBoundGroups.contains(group);
 
-        // Section header lands where the FIRST card of the group lands.
-        // No duplicate header in the bottom area when the group spills —
-        // visual continuity comes from spatial proximity (cards just
-        // beneath the topRow continue the same group; the next group's
-        // header appears after the spill cards).
+        // Section header lands at the top of the leftStack for preview-
+        // bound groups, or in the full-width bottom layout otherwise.
+        // No duplicate header — once a group's header is placed, all of
+        // its cards belong to it regardless of which stack/column they
+        // ultimately land in.
         if (!group.isEmpty()) {
-            QVBoxLayout* headerDest = isPreviewBound ? topLeftLayout : layout;
+            QVBoxLayout* headerDest = isPreviewBound ? leftStack : layout;
             headerDest->addWidget(new SettingsSectionHeader(group, this));
         }
 
-        // Collect this group's defs in declaration order so the pair
-        // branch can peek ahead.
         QVector<const SettingDef*> groupDefs;
         for (const auto& d : m_schema)
             if (d.subcategory == subcategory && d.group == group)
                 groupDefs.append(&d);
 
-        int cardIndex = 0;  // counts cards added (pairs count as 2)
+        int cardIndex = 0;
         for (int i = 0; i < groupDefs.size(); ++i) {
             const SettingDef& d = *groupDefs[i];
             QWidget* card = makeCardFor(d);
             if (!card) continue;
 
-            // Destination: cards beyond kCardsBesidePreview in a
-            // preview-bound group spill into the bottom full-width layout.
-            // Once spilled, we can use the full row width — paired cards
-            // there get the natural 2-column treatment.
-            QVBoxLayout* dest = layout;
-            if (isPreviewBound && cardIndex < kCardsBesidePreview)
-                dest = topLeftLayout;
-
-            // Pair with the next def when BOTH have layout == "paired".
-            // The pair counts as 2 toward cardIndex so the wrap point
-            // moves correctly.
-            if (d.layout == "paired"
-                && i + 1 < groupDefs.size()
-                && groupDefs[i + 1]->layout == "paired") {
-                QWidget* card2 = makeCardFor(*groupDefs[i + 1]);
-                if (card2) {
-                    auto* pair = new QHBoxLayout();
-                    pair->setContentsMargins(0, 0, 0, 0);
-                    pair->setSpacing(8);
-                    pair->addWidget(card,  /*stretch=*/1);
-                    pair->addWidget(card2, /*stretch=*/1);
-                    dest->addLayout(pair);
-                    ++i;            // consume the paired sibling
-                    cardIndex += 2;
-                    continue;
+            if (isPreviewBound) {
+                // Two-column flow inside the topRow:
+                //   - Cards 0..N-1 fill leftStack (under the preview's
+                //     vertical span; right column is occupied by the
+                //     preview card).
+                //   - Cards N+ alternate left/right so a paired pair
+                //     lands as [left | right] at the same y-level
+                //     under the preview.
+                QVBoxLayout* dest;
+                if (cardIndex < kCardsBesidePreview) {
+                    dest = leftStack;
+                } else {
+                    const int afterN = cardIndex - kCardsBesidePreview;
+                    dest = (afterN % 2 == 0) ? leftStack : rightStack;
                 }
+                dest->addWidget(card);
+                ++cardIndex;
+            } else {
+                // Non-preview-bound groups: full-width below the topRow,
+                // with explicit pair handling so layout == "paired" pairs
+                // render as side-by-side rows there too.
+                if (d.layout == "paired"
+                    && i + 1 < groupDefs.size()
+                    && groupDefs[i + 1]->layout == "paired") {
+                    QWidget* card2 = makeCardFor(*groupDefs[i + 1]);
+                    if (card2) {
+                        auto* pair = new QHBoxLayout();
+                        pair->setContentsMargins(0, 0, 0, 0);
+                        pair->setSpacing(8);
+                        pair->addWidget(card,  /*stretch=*/1);
+                        pair->addWidget(card2, /*stretch=*/1);
+                        layout->addLayout(pair);
+                        ++i;  // consume sibling
+                        continue;
+                    }
+                }
+                layout->addWidget(card);
             }
-            dest->addWidget(card);
-            ++cardIndex;
         }
     }
 
     if (preview && !spec.keyToProperty.isEmpty())
         wirePreviewBinding(spec, preview);
 
-    // Top-align cards in both layouts. The left column especially needs it
-    // — without a stretch its cards get vertically centered next to the
-    // taller preview card.
-    if (topLeftLayout) topLeftLayout->addStretch();
+    // Top-align cards in every column-stack so each shrinks to its
+    // content height instead of inflating to match its sibling.
+    if (leftStack)  leftStack->addStretch();
+    if (rightStack) rightStack->addStretch();
     layout->addStretch();
 }
 
