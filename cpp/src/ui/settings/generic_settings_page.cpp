@@ -25,6 +25,7 @@
 #include <QComboBox>
 #include <QAbstractItemView>
 #include <QKeyEvent>
+#include <QLabel>
 #include <limits>
 
 GenericSettingsPage::GenericSettingsPage(EmulatorSettingsDialogBase* dlg,
@@ -167,11 +168,30 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         topRow->addWidget(leftHost, /*stretch=*/1);
 
         auto* card = new SettingsCard(this);
+        card->setFocusPolicy(Qt::NoFocus);  // not arrow-key navigable; not interactive
         card->setPreviewStyle(true);
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
+        v->setSpacing(10);
+
+        // Small uppercase header — matches the cosmetic rhythm PCSX2's
+        // bespoke Display/OSD pages use (pcsx2_graphics_display_page.cpp:157).
+        auto* lbl = new QLabel(spec.previewType == "osd"
+                                   ? QStringLiteral("OSD PREVIEW")
+                                   : QStringLiteral("ASPECT RATIO PREVIEW"), card);
+        lbl->setStyleSheet("color:#9a9690;font-size:11px;font-weight:600;"
+                           "letter-spacing:0.8px;");
+        v->addWidget(lbl);
+
         preview = mountPreviewWidget(spec.previewType, card);
         if (preview) v->addWidget(preview);
+        // Stretch below so the preview sits at its natural 16:9 height at
+        // the top of the card. Without this, the QVBoxLayout assigns the
+        // single child the full card height and AspectRatioPreview's
+        // heightForWidth ends up bottom-aligned with a large empty band
+        // above it (issue caught in user smoke 2026-05-04).
+        v->addStretch();
+
         topRow->addWidget(card, /*stretch=*/1);
 
         layout->addLayout(topRow);
