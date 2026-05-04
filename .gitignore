@@ -23,3 +23,7 @@ Thumbs.db
 # Reference emulator source trees (extracted for investigation; never committed)
 references/*/
 
+
+# clangd index cache + compile_commands symlink (LSP artifacts)
+cpp/.cache/
+/compile_commands.json
