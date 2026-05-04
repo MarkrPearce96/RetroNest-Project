@@ -85,6 +85,14 @@ void AspectRatioPreview::setIntegerScaling(bool on) {
 
 AspectRatioPreview::AspectRatio
 AspectRatioPreview::fromSchemaValue(const QString& v) {
+    // Numeric values used by Dolphin's GFX.ini (AspectMode enum).
+    // Source: references/dolphin-master/Source/Core/Core/Config/GraphicsSettings.cpp:22.
+    if (v == "0") return AspectRatio::Auto4_3_3_2;
+    if (v == "1") return AspectRatio::R16_9;
+    if (v == "2") return AspectRatio::R4_3;
+    if (v == "3") return AspectRatio::Stretch;
+
+    // String values used by PCSX2's settings schema.
     if (v == "Stretch")        return AspectRatio::Stretch;
     if (v == "Auto 4:3/3:2")   return AspectRatio::Auto4_3_3_2;
     if (v == "4:3")            return AspectRatio::R4_3;

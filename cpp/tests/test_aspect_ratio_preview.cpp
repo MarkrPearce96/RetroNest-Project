@@ -48,6 +48,12 @@ private slots:
         QCOMPARE(AspectRatioPreview::fromSchemaValue("16:9"),         AR::R16_9);
         QCOMPARE(AspectRatioPreview::fromSchemaValue("10:7"),         AR::R10_7);
         QCOMPARE(AspectRatioPreview::fromSchemaValue("garbage"),      AR::R4_3);
+
+        // Dolphin numeric values (GFX.ini AspectMode enum)
+        QCOMPARE(AspectRatioPreview::fromSchemaValue("0"), AR::Auto4_3_3_2);
+        QCOMPARE(AspectRatioPreview::fromSchemaValue("1"), AR::R16_9);
+        QCOMPARE(AspectRatioPreview::fromSchemaValue("2"), AR::R4_3);
+        QCOMPARE(AspectRatioPreview::fromSchemaValue("3"), AR::Stretch);
     }
 
     void testTinyClientDoesNotDivideByZero() {
