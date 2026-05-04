@@ -231,7 +231,21 @@ void GenericSettingsPage::refreshDependencies() {
     for (auto* tog : findChildren<SettingsToggleRow*>())
         masterStates.insert(tog->settingDef().key, tog->isChecked());
 
+    // Combos can also act as masters (per setting_def.h:39-42): a combo is
+    // 'active' when its value is not in {"", "0", "false", "Disabled", "None"}.
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
+        const QString v = combo->value();
+        const bool active = !v.isEmpty()
+            && v != "0"
+            && v.compare("false",    Qt::CaseInsensitive) != 0
+            && v.compare("Disabled", Qt::CaseInsensitive) != 0
+            && v.compare("None",     Qt::CaseInsensitive) != 0;
+        masterStates.insert(combo->settingDef().key, active);
+    }
+
     // Apply to dependent slider rows (same pattern as duckstation page).
+    // Toggle and combo dependents are not yet handled — no current schema
+    // declares dependsOn on a non-slider row. See plan T13 follow-up.
     for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         if (d.dependsOn.isEmpty()) continue;
