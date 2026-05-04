@@ -15,6 +15,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSet>
+#include <QSignalBlocker>
 
 GenericSettingsPage::GenericSettingsPage(EmulatorSettingsDialogBase* dlg,
                                          QVector<SettingDef> categorySchema,
@@ -165,22 +166,30 @@ void GenericSettingsPage::loadValues() {
     auto* app = m_dlg->appController();
     const QString emuId = m_dlg->emuId();
 
+    // Block each row's signals during the programmatic seed — otherwise
+    // setValue/setChecked emit valueChanged/toggled which the builder's
+    // save lambda is connected to, which calls saveValue(), which writes
+    // every non-Qt-default value back to disk on every page open. The
+    // round-trip is harmless for the default save path but can fire
+    // unwanted side effects for SettingDef::saveTransform consumers.
     for (auto* combo : findChildren<SettingsComboRow*>()) {
         const SettingDef& d = combo->settingDef();
         const QString cur = app->settingValue(emuId, d.section, d.key);
+        const QSignalBlocker blocker(combo);
         combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
     }
     for (auto* toggle : findChildren<SettingsToggleRow*>()) {
         const SettingDef& d = toggle->settingDef();
         const QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
-        toggle->setChecked(v.compare("true", Qt::CaseInsensitive) == 0
-                       || v.compare("True", Qt::CaseInsensitive) == 0);
+        const QSignalBlocker blocker(toggle);
+        toggle->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
     }
     for (auto* slider : findChildren<SettingsSliderRow*>()) {
         const SettingDef& d = slider->settingDef();
         const QString cur = app->settingValue(emuId, d.section, d.key);
         const QString v = cur.isEmpty() ? d.defaultValue : cur;
+        const QSignalBlocker blocker(slider);
         slider->setValue(v.toInt());
     }
 }
