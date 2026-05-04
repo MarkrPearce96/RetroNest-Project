@@ -20,7 +20,8 @@ private slots:
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
         QCOMPARE(categories, QSet<QString>({
-            "Interface", "Audio", "General", "Graphics", "GameCube", "Wii"
+            "Recommended", "Interface", "Audio", "General", "Graphics",
+            "GameCube", "Wii"
         }));
     }
 
@@ -199,6 +200,46 @@ private slots:
         const auto spec = a.previewSpec("Graphics", "General");
         QCOMPARE(spec.previewType, QString("aspect"));
         QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
+    }
+
+    void testRecommendedCategoryHasMinimumSet() {
+        // Curated subset of the most-tweaked Dolphin settings (per the
+        // official performance guide + community consensus). Each entry
+        // also exists under its primary category — Recommended is a
+        // VIEW for fast access. Headline keys must all be present.
+        QSet<QString> recommendedKeys;
+        for (const auto& d : schema_)
+            if (d.category == "Recommended") recommendedKeys.insert(d.key);
+
+        const QStringList headline{
+            // Performance
+            "GFXBackend", "CPUThread", "ShaderCompilationMode",
+            "WaitForShadersBeforeStarting",
+            // Performance hacks
+            "EFBToTextureEnable", "XFBToTextureEnable", "EFBAccessEnable",
+            "SafeTextureCacheColorSamples",
+            // Visual quality
+            "InternalResolution", "AspectRatio", "wideScreenHack",
+            "MSAA", "MaxAnisotropy", "ForceTextureFiltering",
+            // Audio
+            "DSPHLE", "Volume",
+            // Convenience
+            "SkipIPL", "EnableCheats",
+        };
+        for (const QString& k : headline)
+            QVERIFY2(recommendedKeys.contains(k),
+                     qPrintable("Recommended missing key: " + k));
+    }
+
+    void testRecommendedDuplicatesUnderlyingKeys() {
+        // The Recommended category duplicates schema entries — both write
+        // the same INI section/key as the primary category. Verify a
+        // sample: AspectRatio appears under both Recommended and Graphics.
+        int aspectCount = 0;
+        for (const auto& d : schema_)
+            if (d.key == "AspectRatio") aspectCount++;
+        QVERIFY2(aspectCount >= 2,
+                 "AspectRatio expected under Recommended AND Graphics");
     }
 
     void testWiiCategoryFullCatalog() {

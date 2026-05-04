@@ -269,6 +269,141 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
     };
 
     return {
+        // ═══ Recommended ═══════════════════════════════════════════
+        // Curated short list of the settings users most commonly change,
+        // sourced from Dolphin's official performance guide
+        // (https://dolphin-emu.org/docs/guides/performance-guide/) plus
+        // community consensus (Reddit / XDA / Quora 2026 guides).
+        //
+        // These entries DUPLICATE keys that also appear under their
+        // primary category (Graphics, General, Audio, etc.) — both write
+        // to the same INI section/key, so editing here and editing in
+        // the full pane produce the same result. The Recommended card
+        // is a curated VIEW for users who don't want to hunt through
+        // every sub-tab to find the dozen settings that actually
+        // matter for most games.
+
+        // Performance — biggest impact for getting games playable
+        {"Recommended", "", "Performance", "Core", "GFXBackend",
+         "Graphics Backend",
+         "Renderer used to draw frames. Switching backends often produces "
+         "the single biggest performance change. Metal is the macOS default; "
+         "Vulkan via MoltenVK is also fast.",
+         SettingDef::Combo, "Metal",
+         { {"Metal","Metal"}, {"Vulkan","Vulkan"}, {"OpenGL","OGL"},
+           {"Software Renderer","Software Renderer"}, {"Null","Null"} }},
+
+        {"Recommended", "", "Performance", "Core", "CPUThread",
+         "Dual Core Mode",
+         "Splits CPU and GPU emulation across two threads. Significant "
+         "speed gain for most games; a few may glitch with it on.",
+         SettingDef::Bool, "False"},
+
+        gfx({"Recommended", "", "Performance", "Settings", "ShaderCompilationMode",
+         "Shader Compilation",
+         "Asynchronous Ubershaders (Hybrid) avoids long pauses for shader "
+         "compilation at the cost of brief texture pop-in.",
+         SettingDef::Combo, "0",
+         { {"Specialized (Default)","0"}, {"Exclusive Ubershaders","1"},
+           {"Hybrid Ubershaders","2"}, {"Skip Drawing","3"} }}),
+
+        gfx({"Recommended", "", "Performance", "Settings", "WaitForShadersBeforeStarting",
+         "Compile Shaders Before Starting",
+         "Pre-compile the shader pipeline at boot. Slower start, smoother "
+         "first few minutes of gameplay.",
+         SettingDef::Bool, "False"}),
+
+        // Performance hacks — big speed-ups, occasional visual regressions
+        gfx({"Recommended", "", "Performance Hacks", "Hacks", "EFBToTextureEnable",
+         "Skip EFB Copy to RAM",
+         "Skip the slow EFB→RAM copy and use a GPU texture instead. "
+         "Big speed boost; can break a few games that read EFB on the CPU.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Recommended", "", "Performance Hacks", "Hacks", "XFBToTextureEnable",
+         "Skip XFB Copy to RAM",
+         "Skip the slow XFB→RAM copy. Big speed boost; required disabled "
+         "for games that decode the XFB on the CPU.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Recommended", "", "Performance Hacks", "Hacks", "EFBAccessEnable",
+         "Allow EFB CPU Access",
+         "Lets games read back the EFB on the CPU. Required for accurate "
+         "behavior in some games; disable for the speed boost when possible.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Recommended", "", "Performance Hacks", "Settings", "SafeTextureCacheColorSamples",
+         "Texture Cache Accuracy",
+         "Fast = best performance with risk of visual glitches; Safe = full "
+         "accuracy. Default 128 is a balanced middle ground.",
+         SettingDef::Combo, "128",
+         { {"Safe (0)","0"}, {"Default (128)","128"}, {"Fast (512)","512"} }}),
+
+        // Visual quality — the most-tweaked image settings
+        gfx({"Recommended", "", "Visual Quality", "Settings", "InternalResolution",
+         "Internal Resolution",
+         "Render scale relative to native. Higher = sharper but slower. "
+         "Single biggest knob for visual fidelity.",
+         SettingDef::Combo, "1",
+         { {"Native (1x)","1"}, {"2x (~720p)","2"}, {"3x (~1080p)","3"},
+           {"4x (~1440p)","4"}, {"5x (~1800p)","5"}, {"6x (~4K)","6"} }}),
+
+        gfx({"Recommended", "", "Visual Quality", "Settings", "AspectRatio",
+         "Aspect Ratio",
+         "Display aspect ratio. Auto matches the game; force 16:9 / 4:3 "
+         "for stretching choices.",
+         SettingDef::Combo, "0",
+         { {"Auto","0"}, {"Force 16:9","1"}, {"Force 4:3","2"},
+           {"Stretch","3"}, {"Custom","4"} }}),
+
+        gfx({"Recommended", "", "Visual Quality", "Settings", "wideScreenHack",
+         "Widescreen Hack",
+         "Force 4:3 games to render in widescreen by altering the projection "
+         "matrix. May produce artifacts; useful for 4:3-only titles.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Recommended", "", "Visual Quality", "Settings", "MSAA",
+         "Anti-Aliasing (MSAA)",
+         "Multi-sample anti-aliasing. Smoother edges, slower.",
+         SettingDef::Combo, "1",
+         { {"None","1"}, {"2x","2"}, {"4x","4"}, {"8x","8"} }}),
+
+        gfx({"Recommended", "", "Visual Quality", "Enhancements", "MaxAnisotropy",
+         "Anisotropic Filtering",
+         "Sharpens textures viewed at oblique angles.",
+         SettingDef::Combo, "-1",
+         { {"Default","-1"}, {"Off (1x)","0"}, {"2x","1"}, {"4x","2"}, {"8x","3"}, {"16x","4"} }}),
+
+        gfx({"Recommended", "", "Visual Quality", "Enhancements", "ForceTextureFiltering",
+         "Force Texture Filtering",
+         "Override the game's texture-filtering choice. Default respects "
+         "the game; Linear smooths low-res textures.",
+         SettingDef::Combo, "0",
+         { {"Default","0"}, {"Nearest","1"}, {"Linear","2"} }}),
+
+        // Audio — most-toggled audio knobs
+        {"Recommended", "", "Audio", "Core", "DSPHLE",
+         "DSP HLE (Audio)",
+         "High-Level Emulation of the audio DSP — fast and compatible. "
+         "Disable to use LLE only when a specific game needs it.",
+         SettingDef::Bool, "True"},
+
+        {"Recommended", "", "Audio", "DSP", "Volume",
+         "Volume",
+         "Master output volume.",
+         SettingDef::Int, "100", {}, 0, 100, 1, "slider", "%"},
+
+        // Convenience — common quality-of-life toggles
+        {"Recommended", "", "Convenience", "Core", "SkipIPL",
+         "Skip GameCube Boot Animation",
+         "Skip the GC IPL boot sequence and start the game directly.",
+         SettingDef::Bool, "True"},
+
+        {"Recommended", "", "Convenience", "Core", "EnableCheats",
+         "Enable Cheats",
+         "Process AR/Gecko cheat codes. Off by default for safety.",
+         SettingDef::Bool, "False"},
+
         // ─── Interface / Window ──────────────────────────────
         {"Interface", "", "Window", "Interface", "PauseOnFocusLost",
          "Pause When Window Loses Focus",
