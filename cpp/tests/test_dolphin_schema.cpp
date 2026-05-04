@@ -109,6 +109,20 @@ private slots:
                 got.insert(d.key);
         QCOMPARE(got, expectedKeys);
     }
+
+    void testGraphicsDisplayHasAspectPreview() {
+        DolphinAdapter a;
+        const auto spec = a.previewSpec("Graphics", "Display");
+        QCOMPARE(spec.previewType, QString("aspect"));
+        QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
+        // Dolphin doesn't expose stretch/crop/integer-scaling as separate
+        // GFX.ini keys; AspectRatio is the only binding for now.
+    }
+
+    void testGraphicsRenderingHasNoPreview() {
+        DolphinAdapter a;
+        QVERIFY(a.previewSpec("Graphics", "Rendering").previewType.isEmpty());
+    }
 };
 
 QTEST_MAIN(TestDolphinSchema)

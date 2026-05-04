@@ -621,3 +621,22 @@ void DolphinAdapter::patchRetroAchievements(const QString& /*username*/, const Q
     if (patchIniKeys(content, patches))
         writeConfigFile(path, content, "Dolphin");
 }
+
+// ============================================================================
+// Preview spec
+// ============================================================================
+
+PreviewSpec DolphinAdapter::previewSpec(const QString& category,
+                                        const QString& subcategory) const {
+    if (category == "Graphics" && subcategory == "Display") {
+        // Dolphin only exposes aspect ratio in a way that maps to the shared
+        // AspectRatioPreview. Stretch / crop / integer-scaling are not
+        // GFX.ini keys in Dolphin, so the preview shows just the aspect
+        // rectangle and leaves the other Q_PROPERTYs at their feature-absent
+        // defaults.
+        return {"aspect", {
+            {"AspectRatio", "aspectMode"},
+        }};
+    }
+    return {};
+}
