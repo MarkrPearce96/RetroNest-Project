@@ -190,11 +190,11 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         auto* leftHost = new QWidget(this);
         leftStack = new QVBoxLayout(leftHost);
         leftStack->setContentsMargins(0, 0, 0, 0);
-        // 22px spacing brings the leftStack's bottom roughly in line with
-        // the rightStack's bottom (preview + FTF) for the typical case
-        // of ~5 cards beside the preview at maxWidth=400. Future schemas
-        // with wildly different counts may need a different tuning.
-        leftStack->setSpacing(22);
+        // 12px between cards in the left column. Tighter than rightStack
+        // (which has only one inter-card gap, header→preview→FTF) so the
+        // 5-card stack's bottom lines up with FTF's bottom on the right —
+        // each saved gap multiplies across the 5 inter-card gaps.
+        leftStack->setSpacing(12);
         topRow->addWidget(leftHost, /*stretch=*/1);
 
         auto* rightHost = new QWidget(this);
