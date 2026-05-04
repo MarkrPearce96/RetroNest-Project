@@ -372,40 +372,144 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "leave on unless debugging.",
          SettingDef::Bool, "True"},
 
-        // ─── Core ────────────────────────────────────────────
-        {"General", "", "", "Core", "CPUCore",
+        // ─── General / CPU ───────────────────────────────────
+        {"General", "", "CPU", "Core", "CPUCore",
          "CPU Core",
          "The CPU emulation backend. JIT is required for full-speed gameplay.",
          SettingDef::Combo, "1", cpuCores},
 
-        {"General", "", "", "Core", "SkipIPL",
+        {"General", "", "CPU", "Core", "CPUThread",
+         "Dual Core Mode",
+         "Splits CPU and GPU emulation across two threads. Significant speed "
+         "gain; some games rely on tight CPU/GPU sync and may glitch with it on.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "CPU", "Core", "MMU",
+         "Enable MMU",
+         "Emulates the memory management unit. Slower but required for a small "
+         "set of games (typically Virtual Console / homebrew).",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "CPU", "Core", "AccurateCPUCache",
+         "Accurate CPU Instruction Cache",
+         "Emulate the CPU's L1 instruction cache. Slower but more accurate; "
+         "needed for a handful of games that self-modify code.",
+         SettingDef::Bool, "False"},
+
+        // ─── General / Boot & Cheats ─────────────────────────
+        {"General", "", "Boot & Cheats", "Core", "SkipIPL",
          "Skip GameCube Boot Animation",
          "Skips the GameCube IPL boot sequence and starts the game directly. "
          "When disabled, requires IPL.bin in the BIOS folder.",
          SettingDef::Bool, "True"},
 
-        {"General", "", "", "Core", "EnableCheats",
+        {"General", "", "Boot & Cheats", "Core", "EnableCheats",
          "Enable Cheats",
          "Enables AR/Gecko cheat code processing. Off by default for safety.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "", "Core", "OverclockEnable",
+        {"General", "", "Boot & Cheats", "Core", "AutoDiscChange",
+         "Auto Disc Change",
+         "Switch discs automatically for multi-disc games (M3U). RetroNest's "
+         "M3U handling is independent and runs at launch time.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "Boot & Cheats", "Core", "OverrideRegionSettings",
+         "Override Region Settings",
+         "Force a region's settings (language, video mode) regardless of disc region.",
+         SettingDef::Bool, "False"},
+
+        // ─── General / Speed ─────────────────────────────────
+        {"General", "", "Speed", "Core", "EmulationSpeed",
+         "Emulation Speed",
+         "Cap on emulated speed relative to native. Unlimited = no throttle. "
+         "Stored as a float multiplier; combo offers common breakpoints.",
+         SettingDef::Combo, "1.000000",
+         { {"Unlimited",  "0.000000"},
+           {"25%",        "0.250000"},
+           {"50%",        "0.500000"},
+           {"75%",        "0.750000"},
+           {"100%",       "1.000000"},
+           {"125%",       "1.250000"},
+           {"150%",       "1.500000"},
+           {"200%",       "2.000000"},
+           {"300%",       "3.000000"} }},
+
+        {"General", "", "Speed", "Core", "CorrectTimeDrift",
+         "Correct Time Drift",
+         "Compensate for accumulated frame-pacing drift over long sessions. "
+         "Smooths long-term sync at the cost of micro-stutter.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "Speed", "Core", "RushFramePresentation",
+         "Rush Frame Presentation",
+         "Aggressively present frames as soon as they're ready. Lower latency, "
+         "more tearing without VSync.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "Speed", "Core", "SmoothEarlyPresentation",
+         "Smooth Early Presentation",
+         "Smooth pacing for frames that finish ahead of schedule.",
+         SettingDef::Bool, "False"},
+
+        // ─── General / Overclock ─────────────────────────────
+        {"General", "", "Overclock", "Core", "OverclockEnable",
          "Enable CPU Overclocking",
-         "Allows the slider below to scale the emulated CPU's clock rate. "
+         "Allow the slider below to scale the emulated CPU's clock rate. "
          "Some games run smoother with overclocking; others crash.",
          SettingDef::Bool, "False"},
 
-        // Overclock multiplier — the slider widget is integer-only (range
-        // values get cast via int(d->minVal)/int(d->maxVal) inside
-        // makeSliderCard), so use whole-number bounds. minVal=1 keeps the
-        // emulated CPU at native or above; below that Dolphin reads the
-        // float as 0.0 and the emulator stalls. dependsOn gates the slider
-        // on the OverclockEnable toggle above.
-        {"General", "", "", "Core", "Overclock",
-         "Overclock Multiplier",
+        // Overclock multiplier — slider widget is integer-only (cast via
+        // int(minVal)/int(maxVal)), so whole-number bounds. minVal=1
+        // keeps the emulated CPU at native or above; below that Dolphin
+        // reads the float as 0.0 and stalls. dependsOn gates on enable.
+        {"General", "", "Overclock", "Core", "Overclock",
+         "CPU Overclock Multiplier",
          "Multiplier applied to the emulated CPU's clock when overclocking is enabled. "
          "1 = native, 2 = +100%, 4 = +300%.",
          SettingDef::Int, "1", {}, 1, 4, 1, "slider", "x", "OverclockEnable"},
+
+        {"General", "", "Overclock", "Core", "VIOverclockEnable",
+         "Enable VI (Video Interface) Overclocking",
+         "Allow scaling the video-interface clock independently of the CPU. "
+         "Affects refresh-rate timing for some games.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "Overclock", "Core", "VIOverclock",
+         "VI Overclock Multiplier",
+         "Multiplier applied to the VI clock when VI overclocking is enabled.",
+         SettingDef::Int, "1", {}, 1, 4, 1, "slider", "x", "VIOverclockEnable"},
+
+        // ─── General / Memory (Advanced) ─────────────────────
+        {"General", "", "Memory (Advanced)", "Core", "RAMOverrideEnable",
+         "Override RAM Sizes",
+         "Allow using non-retail RAM sizes (MEM1/MEM2). Required for some "
+         "homebrew. Most games will not boot with non-retail sizes.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "Memory (Advanced)", "Core", "LoadGameIntoMemory",
+         "Load Game Into Memory",
+         "Pre-loads the entire game image into RAM at boot. Eliminates disc "
+         "I/O stutter; uses more host memory.",
+         SettingDef::Bool, "False"},
+
+        // ─── General / Misc ──────────────────────────────────
+        {"General", "", "Misc", "Core", "PauseOnPanic",
+         "Pause On Panic",
+         "Pause emulation when Dolphin reports a non-fatal error.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "Misc", "Core", "EnableCustomRTC",
+         "Enable Custom Real-Time Clock",
+         "Override the emulated system clock with a fixed date/time. "
+         "Set the value via Dolphin's native UI — RetroNest doesn't yet expose "
+         "a date picker.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "Misc", "General", "UseDiscordPresence",
+         "Discord Rich Presence",
+         "Publish currently-playing game to Discord status when Dolphin runs.",
+         SettingDef::Bool, "True"},
 
         // ─── Graphics / Display ──────────────────────────────
         // AspectRatio, InternalResolution, VSync live in

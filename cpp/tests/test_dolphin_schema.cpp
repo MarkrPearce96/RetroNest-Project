@@ -83,6 +83,30 @@ private slots:
         QVERIFY(found->options.size() >= 3);
     }
 
+    void testGeneralCategoryFullCatalog() {
+        // Mirrors DolphinQt GeneralPane + AdvancedPane consolidated.
+        // Source: Source/Core/DolphinQt/Settings/{General,Advanced}Pane.cpp.
+        const QSet<QString> expectedKeys{
+            // CPU
+            "CPUCore", "CPUThread", "MMU", "AccurateCPUCache",
+            // Boot & Cheats
+            "SkipIPL", "EnableCheats", "AutoDiscChange", "OverrideRegionSettings",
+            // Speed
+            "EmulationSpeed", "CorrectTimeDrift", "RushFramePresentation",
+            "SmoothEarlyPresentation",
+            // Overclock
+            "OverclockEnable", "Overclock", "VIOverclockEnable", "VIOverclock",
+            // Memory (Advanced)
+            "RAMOverrideEnable", "LoadGameIntoMemory",
+            // Misc
+            "PauseOnPanic", "EnableCustomRTC", "UseDiscordPresence",
+        };
+        QSet<QString> got;
+        for (const auto& d : schema_)
+            if (d.category == "General") got.insert(d.key);
+        QCOMPARE(got, expectedKeys);
+    }
+
     void testBoolValuesAreCapitalized() {
         // Dolphin writes True/False (Common/StringUtil.cpp:289-292), not true/false.
         for (const auto& d : schema_) {
