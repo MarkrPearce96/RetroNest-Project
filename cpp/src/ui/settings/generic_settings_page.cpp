@@ -199,9 +199,16 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         rightStack->setSpacing(14);
         topRow->addWidget(rightHost, /*stretch=*/1);
 
-        // Preview card sits at the top of rightStack — sized to content
-        // (label + preview at heightForWidth) so the cards below it land
-        // immediately under the preview, not floating in empty space.
+        // Preview card sits at the top of rightStack. Both the card and
+        // the inner preview widget are size-capped so the column doesn't
+        // grow huge when the dialog is wide:
+        //   - preview widget width capped at 400 → heightForWidth ≈ 225
+        //   - card height capped at sizeHint via Maximum policy
+        // The card's height naturally tracks the widget's heightForWidth
+        // through the inner QVBoxLayout, so capping the widget caps the
+        // card. Combined with rightStack->addStretch() at the end, any
+        // remaining row height is absorbed below the FTF card, NOT
+        // between preview and FTF.
         auto* card = new SettingsCard(this);
         card->setFocusPolicy(Qt::NoFocus);
         card->setPreviewStyle(true);
@@ -216,8 +223,11 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
                            "letter-spacing:0.8px;");
         v->addWidget(lbl);
         preview = mountPreviewWidget(spec.previewType, card);
-        if (preview) v->addWidget(preview);
-        rightStack->addWidget(card);
+        if (preview) {
+            preview->setMaximumWidth(400);
+            v->addWidget(preview);
+        }
+        rightStack->addWidget(card, /*stretch=*/0, Qt::AlignTop);
 
         layout->addLayout(topRow);
         m_currentPreview = preview;
@@ -298,7 +308,12 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
                     const int afterN = cardIndex - kCardsBesidePreview;
                     dest = (afterN % 2 == 0) ? leftStack : rightStack;
                 }
-                dest->addWidget(card);
+                // Pin every card with Qt::AlignTop so the layout doesn't
+                // distribute extra column height into card-sized stretch
+                // bands between widgets — extra height belongs to the
+                // addStretch() at the bottom of the column, not between
+                // siblings.
+                dest->addWidget(card, /*stretch=*/0, Qt::AlignTop);
                 ++cardIndex;
             } else {
                 // Non-preview-bound groups: full-width below the topRow,
