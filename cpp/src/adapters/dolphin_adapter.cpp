@@ -1060,6 +1060,54 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
            {"Broadband Adapter (Built-In)","12"},
            {"Broadband Adapter (XLink Kai)","10"},
            {"Modem Adapter (TAP)","13"} }},
+
+        // ═══ Wii ════════════════════════════════════════════
+        // Mirrors DolphinQt WiiPane (Source/Core/DolphinQt/Settings/
+        // WiiPane.cpp) — but limited to the MAIN_* keys that live in
+        // Dolphin.ini's [Core] section.
+        //
+        // SKIPPED: SYSCONF_* keys (Language, Widescreen, PAL60,
+        // SoundMode, SensorBarPosition/Sensitivity, SpeakerVolume,
+        // WiimoteMotor, Screensaver) — those persist in the Wii's
+        // emulated SYSCONF binary file rather than an INI, and our
+        // schema-driven page only routes to text INI files. The user
+        // reaches these via the "Open Native Settings" button.
+        {"Wii", "", "SD Card", "Core", "WiiSDCard",
+         "Insert Wii SD Card",
+         "Make a virtual SD card visible to Wii software. Required for "
+         "save imports, channel installs, and homebrew that uses the slot.",
+         SettingDef::Bool, "True"},
+
+        {"Wii", "", "SD Card", "Core", "WiiSDCardAllowWrites",
+         "Allow SD Card Writes",
+         "When off, the SD card is read-only — useful for protecting a "
+         "shared image from accidental modification.",
+         SettingDef::Bool, "True"},
+
+        {"Wii", "", "SD Card", "Core", "WiiSDCardEnableFolderSync",
+         "Enable SD Card Folder Sync",
+         "Mirror the SD card image from a host folder. Lets you drop "
+         "files in/out of the SD without booting the Wii system menu.",
+         SettingDef::Bool, "False"},
+
+        {"Wii", "", "SD Card", "Core", "WiiSDCardFilesize",
+         "SD Card Capacity (MiB)",
+         "Capacity of the virtual SD card. 0 = use the image file as-is "
+         "(don't resize). Slider range matches DolphinQt's combo.",
+         SettingDef::Int, "0", {}, 0, 8192, 128, "slider", "MiB"},
+
+        {"Wii", "", "Input & Misc", "Core", "WiiKeyboard",
+         "Connect USB Keyboard",
+         "Make a USB keyboard visible to Wii software (e.g. for chat-aware "
+         "homebrew).",
+         SettingDef::Bool, "False"},
+
+        {"Wii", "", "Online", "Core", "EnableWiiLink",
+         "Enable WiiLink",
+         "Patch the Wii Shop / Wii Channels to use community-run "
+         "replacement servers (WiiLink). Off by default to avoid surprising "
+         "users with third-party network calls.",
+         SettingDef::Bool, "False"},
     };
 }
 

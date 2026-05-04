@@ -20,7 +20,7 @@ private slots:
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
         QCOMPARE(categories, QSet<QString>({
-            "Interface", "Audio", "General", "Graphics", "GameCube"
+            "Interface", "Audio", "General", "Graphics", "GameCube", "Wii"
         }));
     }
 
@@ -199,6 +199,22 @@ private slots:
         const auto spec = a.previewSpec("Graphics", "General");
         QCOMPARE(spec.previewType, QString("aspect"));
         QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
+    }
+
+    void testWiiCategoryFullCatalog() {
+        // Mirrors DolphinQt WiiPane (Source/Core/DolphinQt/Settings/
+        // WiiPane.cpp) — limited to Dolphin.ini-routed keys; SYSCONF_*
+        // keys (system menu language, widescreen, PAL60, sensor bar,
+        // etc.) are deliberately skipped because they live in the Wii's
+        // SYSCONF binary, not a text INI.
+        const QSet<QString> expectedKeys{
+            "WiiSDCard", "WiiSDCardAllowWrites", "WiiSDCardEnableFolderSync",
+            "WiiSDCardFilesize", "WiiKeyboard", "EnableWiiLink",
+        };
+        QSet<QString> got;
+        for (const auto& d : schema_)
+            if (d.category == "Wii") got.insert(d.key);
+        QCOMPARE(got, expectedKeys);
     }
 
     void testGameCubeCategoryFullCatalog() {
