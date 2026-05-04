@@ -226,52 +226,67 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         }
     }
 
-    // Helper: build a card for one SettingDef. Returns nullptr for
-    // unsupported types. Centralised so the pair-rendering branch below
-    // can construct two cards at once.
+    // Helper: build a card for one SettingDef. Centralised so the pair
+    // branch can construct two cards in one step.
     auto makeCardFor = [&](const SettingDef& d) -> QWidget* {
         switch (d.type) {
             case SettingDef::Combo: return builder.makeComboCard(d.key);
             case SettingDef::Bool:  return builder.makeToggleCard(d.key);
             case SettingDef::Int:
             case SettingDef::Float:
-                if (d.layout == "slider"
-                    || d.layout == "paired" /* paired numeric is rare */)
+                if (d.layout == "slider" || d.layout == "paired")
                     return builder.makeSliderCard(d.key);
-                // fall through
                 return nullptr;
             default:
                 return nullptr;
         }
     };
 
-    for (const QString& group : groupOrder) {
-        // Preview-bound group → ALL its cards stack in the topLeft
-        // column under one header, even if the column ends up taller
-        // than the preview. Non-preview-bound groups → full-width below.
-        QVBoxLayout* dest = (topLeftLayout && previewBoundGroups.contains(group))
-            ? topLeftLayout
-            : layout;
+    // Preview-bound group cards beyond this index spill out of the
+    // topLeft column and into the full-width layout below the topRow.
+    // The 'beside-preview' cap roughly equals (preview heightForWidth +
+    // chrome) / slim-card height ≈ 4. Future emulators automatically
+    // get the same wrap point.
+    const int kCardsBesidePreview = 4;
 
+    for (const QString& group : groupOrder) {
+        const bool isPreviewBound = topLeftLayout
+            && previewBoundGroups.contains(group);
+
+        // Section header lands where the FIRST card of the group lands.
+        // No duplicate header in the bottom area when the group spills —
+        // visual continuity comes from spatial proximity (cards just
+        // beneath the topRow continue the same group; the next group's
+        // header appears after the spill cards).
         if (!group.isEmpty()) {
-            dest->addWidget(new SettingsSectionHeader(group, this));
+            QVBoxLayout* headerDest = isPreviewBound ? topLeftLayout : layout;
+            headerDest->addWidget(new SettingsSectionHeader(group, this));
         }
 
-        // Collect this group's defs in declaration order so we can peek
-        // ahead for the pairing logic.
+        // Collect this group's defs in declaration order so the pair
+        // branch can peek ahead.
         QVector<const SettingDef*> groupDefs;
         for (const auto& d : m_schema)
             if (d.subcategory == subcategory && d.group == group)
                 groupDefs.append(&d);
 
+        int cardIndex = 0;  // counts cards added (pairs count as 2)
         for (int i = 0; i < groupDefs.size(); ++i) {
             const SettingDef& d = *groupDefs[i];
             QWidget* card = makeCardFor(d);
             if (!card) continue;
 
+            // Destination: cards beyond kCardsBesidePreview in a
+            // preview-bound group spill into the bottom full-width layout.
+            // Once spilled, we can use the full row width — paired cards
+            // there get the natural 2-column treatment.
+            QVBoxLayout* dest = layout;
+            if (isPreviewBound && cardIndex < kCardsBesidePreview)
+                dest = topLeftLayout;
+
             // Pair with the next def when BOTH have layout == "paired".
-            // Renders the two cards side-by-side in a horizontal row,
-            // each taking 50% of the destination width.
+            // The pair counts as 2 toward cardIndex so the wrap point
+            // moves correctly.
             if (d.layout == "paired"
                 && i + 1 < groupDefs.size()
                 && groupDefs[i + 1]->layout == "paired") {
@@ -283,11 +298,13 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
                     pair->addWidget(card,  /*stretch=*/1);
                     pair->addWidget(card2, /*stretch=*/1);
                     dest->addLayout(pair);
-                    ++i;  // skip the paired sibling — already consumed
+                    ++i;            // consume the paired sibling
+                    cardIndex += 2;
                     continue;
                 }
             }
             dest->addWidget(card);
+            ++cardIndex;
         }
     }
 
