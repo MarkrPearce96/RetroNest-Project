@@ -133,7 +133,7 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         }
         for (const auto& d : m_schema) {
             if (d.subcategory != subcategory || d.group != group) continue;
-            SettingsCard* card = nullptr;
+            QWidget* card = nullptr;
             switch (d.type) {
                 case SettingDef::Combo:
                     card = builder.makeComboCard(d.key);
@@ -151,6 +151,11 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
             if (card) layout->addWidget(card);
         }
     }
+    // Push content to the top so sparse subcategory pages don't end up
+    // vertically centered inside the QStackedWidget. (Single-subcategory
+    // pages also benefit — buildUi() adds its own stretch on the outer
+    // root layout below this one.)
+    layout->addStretch();
 }
 
 void GenericSettingsPage::loadValues() {
