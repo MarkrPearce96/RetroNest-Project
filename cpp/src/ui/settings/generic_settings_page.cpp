@@ -141,7 +141,10 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         auto* topRow = new QHBoxLayout();
         topRow->setSpacing(14);
 
-        auto* leftHost = new QWidget();
+        // Parent both columns to `this` immediately — addLayout doesn't
+        // happen until a few statements later, and a parent-less QWidget
+        // would leak if anything between here and there ever throws.
+        auto* leftHost = new QWidget(this);
         settingsLayout = new QVBoxLayout(leftHost);
         settingsLayout->setContentsMargins(0, 0, 0, 0);
         settingsLayout->setSpacing(10);
@@ -156,6 +159,7 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         topRow->addWidget(card, /*stretch=*/1);
 
         layout->addLayout(topRow);
+        m_currentPreview = preview;  // expose to future sub-tab refresh hooks
     }
 
     SettingsPageBuilder builder(this, m_schema,
@@ -438,8 +442,10 @@ void GenericSettingsPage::wirePreviewBinding(const PreviewSpec& spec,
         // For non-Combo numeric types the int form is the right shape;
         // Combo values may be either numeric (e.g. Dolphin AspectRatio "0".."3")
         // or string (e.g. PCSX2 AspectRatio "16:9"), so we pass them through
-        // as-is and let the preview widget's WRITE accessor parse.
-        if (ok && type != SettingDef::Combo) {
+        // as-is and let the preview widget's WRITE accessor parse. Bools
+        // are routed via the True/False branches below — explicit guard
+        // here in case any future schema stores a bool as "0"/"1".
+        if (ok && type != SettingDef::Combo && type != SettingDef::Bool) {
             preview->setProperty(propName.toUtf8().constData(), asInt);
         } else if (val.compare("true", Qt::CaseInsensitive) == 0) {
             preview->setProperty(propName.toUtf8().constData(), true);
