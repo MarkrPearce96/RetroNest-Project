@@ -275,11 +275,17 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Some games run smoother with overclocking; others crash.",
          SettingDef::Bool, "False"},
 
+        // Overclock multiplier — the slider widget is integer-only (range
+        // values get cast via int(d->minVal)/int(d->maxVal) inside
+        // makeSliderCard), so use whole-number bounds. minVal=1 keeps the
+        // emulated CPU at native or above; below that Dolphin reads the
+        // float as 0.0 and the emulator stalls. dependsOn gates the slider
+        // on the OverclockEnable toggle above.
         {"Core", "", "", "Core", "Overclock",
          "Overclock Multiplier",
          "Multiplier applied to the emulated CPU's clock when overclocking is enabled. "
-         "1.0 = native, 1.5 = +50%.",
-         SettingDef::Float, "1", {}, 0.5, 4.0, 0.05, "slider", "x"},
+         "1 = native, 2 = +100%, 4 = +300%.",
+         SettingDef::Int, "1", {}, 1, 4, 1, "slider", "x", "OverclockEnable"},
 
         // ─── Graphics / Display ──────────────────────────────
         // AspectRatio, InternalResolution, VSync live in
