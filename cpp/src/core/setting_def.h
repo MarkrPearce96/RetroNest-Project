@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <QString>
 #include <QVector>
 #include <QPair>
@@ -50,4 +51,18 @@ struct SettingDef {
     // Optional recommended value shown in the new PCSX2 dialog description bar.
     // When empty, UI falls back to displaying defaultValue.
     QString recommendedValue;
+
+    // Optional. If set, GenericSettingsPage invokes this instead of the
+    // default AppController::saveSettings() call when the widget value
+    // changes. Used for settings whose stored format diverges from the
+    // widget value (e.g. percent slider → numerator/denominator pair).
+    // Default unset → standard save path.
+    //
+    // Signature avoids depending on AppController in this header by
+    // taking a generic save callback the page passes through.
+    using SaveCallback = std::function<void(const QString& section,
+                                            const QString& key,
+                                            const QString& value)>;
+    std::function<void(const QString& widgetValue,
+                       const SaveCallback& defaultSave)> saveTransform;
 };
