@@ -88,7 +88,7 @@ set(SOURCES
     src/ui/settings/widgets/settings_slider_row.cpp
     src/ui/settings/widgets/settings_description_bar.cpp
     src/ui/settings/widgets/settings_graphics_sub_tab_bar.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.cpp
+    src/ui/settings/widgets/preview/aspect_ratio_preview.cpp
     src/ui/settings/pcsx2/widgets/pcsx2_osd_preview.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
     src/ui/settings/pcsx2/pcsx2_category_hub.cpp
@@ -209,7 +209,7 @@ set(HEADERS
     src/ui/settings/widgets/settings_slider_row.h
     src/ui/settings/widgets/settings_description_bar.h
     src/ui/settings/widgets/settings_graphics_sub_tab_bar.h
-    src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.h
+    src/ui/settings/widgets/preview/aspect_ratio_preview.h
     src/ui/settings/pcsx2/widgets/pcsx2_osd_preview.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
@@ -580,14 +580,14 @@ target_include_directories(test_pcsx2_description_bar PRIVATE ${CMAKE_CURRENT_SO
 target_link_libraries(test_pcsx2_description_bar PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 add_test(NAME Pcsx2DescriptionBar COMMAND test_pcsx2_description_bar)
 
-add_executable(test_pcsx2_aspect_ratio_preview
-    tests/test_pcsx2_aspect_ratio_preview.cpp
-    src/ui/settings/pcsx2/widgets/pcsx2_aspect_ratio_preview.cpp
+add_executable(test_aspect_ratio_preview
+    tests/test_aspect_ratio_preview.cpp
+    src/ui/settings/widgets/preview/aspect_ratio_preview.cpp
 )
-set_target_properties(test_pcsx2_aspect_ratio_preview PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_aspect_ratio_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_pcsx2_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
-add_test(NAME Pcsx2AspectRatioPreview COMMAND test_pcsx2_aspect_ratio_preview)
+set_target_properties(test_aspect_ratio_preview PROPERTIES AUTOMOC ON)
+target_include_directories(test_aspect_ratio_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME AspectRatioPreview COMMAND test_aspect_ratio_preview)
 
 add_executable(test_duckstation_aspect_ratio_preview
     tests/test_duckstation_aspect_ratio_preview.cpp

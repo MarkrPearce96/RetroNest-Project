@@ -5,7 +5,7 @@
 #include "ui/settings/widgets/settings_combo_row.h"
 #include "ui/settings/widgets/settings_toggle_row.h"
 #include "ui/settings/widgets/settings_slider_row.h"
-#include "../widgets/pcsx2_aspect_ratio_preview.h"
+#include "ui/settings/widgets/preview/aspect_ratio_preview.h"
 #include "ui/settings/widgets/settings_toggle.h"
 #include "ui/app_controller.h"
 #include "ui/settings/settings_page_builder.h"
@@ -133,7 +133,7 @@ void Pcsx2GraphicsDisplayPage::buildLeftCompoundCard(QHBoxLayout* topRow) {
     if (m_aspectCombo) {
         connect(m_aspectCombo, &SettingsComboRow::valueChanged, this, [this](const QString& val) {
             if (m_preview) {
-                m_preview->setAspectRatio(Pcsx2AspectRatioPreview::fromSchemaValue(val));
+                m_preview->setAspectRatio(AspectRatioPreview::fromSchemaValue(val));
             }
         });
     }
@@ -159,7 +159,7 @@ void Pcsx2GraphicsDisplayPage::buildRightPreviewCard(QHBoxLayout* topRow) {
                        "letter-spacing:0.8px;");
     v->addWidget(lbl);
 
-    m_preview = new Pcsx2AspectRatioPreview(card);
+    m_preview = new AspectRatioPreview(card);
     // No explicit sizePolicy — the widget's own constructor sets a 16:9
     // heightForWidth policy so the layout automatically sizes it to
     // width * 9/16.
@@ -326,7 +326,7 @@ void Pcsx2GraphicsDisplayPage::syncPreview() {
 
     if (m_aspectCombo) {
         m_preview->setAspectRatio(
-            Pcsx2AspectRatioPreview::fromSchemaValue(m_aspectCombo->value()));
+            AspectRatioPreview::fromSchemaValue(m_aspectCombo->value()));
     }
     if (m_stretchSlider) {
         m_preview->setStretchY(m_stretchSlider->value());

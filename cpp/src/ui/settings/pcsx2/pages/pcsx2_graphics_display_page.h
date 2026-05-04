@@ -6,7 +6,7 @@
 
 class Pcsx2SettingsDialog;
 class SettingsCard;
-class Pcsx2AspectRatioPreview;
+class AspectRatioPreview;
 class SettingsComboRow;
 class SettingsToggleRow;
 class SettingsSliderRow;
@@ -44,7 +44,7 @@ private:
     Pcsx2SettingsDialog* m_dialog;
     QVector<SettingDef>  m_schema;
 
-    Pcsx2AspectRatioPreview* m_preview = nullptr;
+    AspectRatioPreview* m_preview = nullptr;
     SettingsComboRow*  m_aspectCombo = nullptr;
     SettingsSliderRow* m_stretchSlider = nullptr;
     QSpinBox* m_cropL = nullptr;

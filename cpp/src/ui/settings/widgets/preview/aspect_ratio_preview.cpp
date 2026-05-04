@@ -1,4 +1,4 @@
-#include "pcsx2_aspect_ratio_preview.h"
+#include "ui/settings/widgets/preview/aspect_ratio_preview.h"
 #include "ui/settings/settings_dialog_theme.h"
 #include <QPainter>
 #include <QPaintEvent>
@@ -46,7 +46,7 @@ constexpr double kSrcW = 640.0;
 constexpr double kSrcH = 448.0;
 }
 
-Pcsx2AspectRatioPreview::Pcsx2AspectRatioPreview(QWidget* parent)
+AspectRatioPreview::AspectRatioPreview(QWidget* parent)
     : QWidget(parent) {
     setAttribute(Qt::WA_StyledBackground, false);
     setMinimumSize(minimumSizeHint());
@@ -55,13 +55,13 @@ Pcsx2AspectRatioPreview::Pcsx2AspectRatioPreview(QWidget* parent)
     setSizePolicy(sp);
 }
 
-void Pcsx2AspectRatioPreview::setAspectRatio(AspectRatio ratio) {
+void AspectRatioPreview::setAspectRatio(AspectRatio ratio) {
     if (m_ratio == ratio) return;
     m_ratio = ratio;
     update();
 }
 
-void Pcsx2AspectRatioPreview::setStretchY(int percent) {
+void AspectRatioPreview::setStretchY(int percent) {
     if (percent < 10)  percent = 10;
     if (percent > 300) percent = 300;
     if (m_stretchY == percent) return;
@@ -69,7 +69,7 @@ void Pcsx2AspectRatioPreview::setStretchY(int percent) {
     update();
 }
 
-void Pcsx2AspectRatioPreview::setCrop(int left, int top, int right, int bottom) {
+void AspectRatioPreview::setCrop(int left, int top, int right, int bottom) {
     m_cropL = qBound(0, left,   100);
     m_cropT = qBound(0, top,    100);
     m_cropR = qBound(0, right,  100);
@@ -77,14 +77,14 @@ void Pcsx2AspectRatioPreview::setCrop(int left, int top, int right, int bottom) 
     update();
 }
 
-void Pcsx2AspectRatioPreview::setIntegerScaling(bool on) {
+void AspectRatioPreview::setIntegerScaling(bool on) {
     if (m_integerScaling == on) return;
     m_integerScaling = on;
     update();
 }
 
-Pcsx2AspectRatioPreview::AspectRatio
-Pcsx2AspectRatioPreview::fromSchemaValue(const QString& v) {
+AspectRatioPreview::AspectRatio
+AspectRatioPreview::fromSchemaValue(const QString& v) {
     if (v == "Stretch")        return AspectRatio::Stretch;
     if (v == "Auto 4:3/3:2")   return AspectRatio::Auto4_3_3_2;
     if (v == "4:3")            return AspectRatio::R4_3;
@@ -93,7 +93,7 @@ Pcsx2AspectRatioPreview::fromSchemaValue(const QString& v) {
     return AspectRatio::R4_3;
 }
 
-QString Pcsx2AspectRatioPreview::labelForCurrentRatio() const {
+QString AspectRatioPreview::labelForCurrentRatio() const {
     switch (m_ratio) {
         case AspectRatio::Stretch:     return QStringLiteral("Stretch");
         case AspectRatio::Auto4_3_3_2: return QStringLiteral("Auto 4 : 3");
@@ -104,7 +104,7 @@ QString Pcsx2AspectRatioPreview::labelForCurrentRatio() const {
     return {};
 }
 
-QRectF Pcsx2AspectRatioPreview::computeDrawRect(const QRectF& client) const {
+QRectF AspectRatioPreview::computeDrawRect(const QRectF& client) const {
     if (client.width() <= 1.0 || client.height() <= 1.0)
         return client;
 
@@ -177,7 +177,7 @@ QRectF Pcsx2AspectRatioPreview::computeDrawRect(const QRectF& client) const {
     return QRectF(x, y, w, h);
 }
 
-void Pcsx2AspectRatioPreview::paintEvent(QPaintEvent*) {
+void AspectRatioPreview::paintEvent(QPaintEvent*) {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing, true);
 
@@ -239,4 +239,35 @@ void Pcsx2AspectRatioPreview::paintEvent(QPaintEvent*) {
         p.setPen(SettingsDialogTheme::textPrimary());
         p.drawText(dst, Qt::AlignCenter, labelForCurrentRatio());
     }
+}
+
+void AspectRatioPreview::setAspectModeString(const QString& v) {
+    setAspectRatio(fromSchemaValue(v));
+}
+
+QString AspectRatioPreview::aspectModeString() const {
+    switch (m_ratio) {
+        case AspectRatio::Stretch:     return "Stretch";
+        case AspectRatio::Auto4_3_3_2: return "Auto 4:3/3:2";
+        case AspectRatio::R4_3:        return "4:3";
+        case AspectRatio::R16_9:       return "16:9";
+        case AspectRatio::R10_7:       return "10:7";
+    }
+    return "4:3";
+}
+
+void AspectRatioPreview::setFmvAspectModeString(const QString& v) {
+    m_fmvRatio = fromSchemaValue(v);
+    update();
+}
+
+QString AspectRatioPreview::fmvAspectModeString() const {
+    switch (m_fmvRatio) {
+        case AspectRatio::Stretch:     return "Stretch";
+        case AspectRatio::Auto4_3_3_2: return "Auto 4:3/3:2";
+        case AspectRatio::R4_3:        return "4:3";
+        case AspectRatio::R16_9:       return "16:9";
+        case AspectRatio::R10_7:       return "10:7";
+    }
+    return "4:3";
 }
