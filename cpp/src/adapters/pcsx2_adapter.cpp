@@ -1194,6 +1194,10 @@ QString PCSX2Adapter::findResumeFile(const QString& serial) const {
     return {};
 }
 
+// ============================================================================
+// Preview spec
+// ============================================================================
+
 PreviewSpec PCSX2Adapter::previewSpec(const QString& category,
                                        const QString& subcategory) const {
     if (category == "Graphics" && subcategory == "Display") {

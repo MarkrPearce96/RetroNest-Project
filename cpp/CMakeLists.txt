@@ -529,7 +529,6 @@ add_executable(test_pcsx2_preview_spec
     src/adapters/emulator_adapter.cpp
     src/core/ini_file.cpp
     src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
     src/core/paths.cpp
 )
 set_target_properties(test_pcsx2_preview_spec PROPERTIES AUTOMOC ON)
