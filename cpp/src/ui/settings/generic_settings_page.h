@@ -7,6 +7,7 @@ class EmulatorSettingsDialogBase;
 class EmulatorAdapter;
 class QStackedWidget;
 class SettingsGraphicsSubTabBar;
+class SettingsCard;
 
 /**
  * Schema-driven settings page used by every emulator's in-app dialog.
@@ -50,6 +51,7 @@ private:
     void loadValues();
     void saveValue(const QString& section, const QString& key, const QString& value);
     void refreshDependencies();
+    SettingsCard* findNextCardSpatial(SettingsCard* current, int key) const;
 
     EmulatorSettingsDialogBase* m_dlg = nullptr;
     EmulatorAdapter* m_adapter = nullptr;
