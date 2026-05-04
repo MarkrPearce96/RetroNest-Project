@@ -1,8 +1,6 @@
 #pragma once
 #include "ui/settings/emulator_settings_dialog_base.h"
 
-class DolphinCategoryHub;
-
 class DolphinSettingsDialog : public EmulatorSettingsDialogBase {
     Q_OBJECT
 public:

@@ -20,7 +20,7 @@ DolphinSettingsDialog::DolphinSettingsDialog(AppController* app,
 }
 
 void DolphinSettingsDialog::onCategoryActivated(const QString& category) {
-    static DolphinAdapter adapter;  // stateless, reused across calls
+    DolphinAdapter adapter;  // stateless; matches DolphinCategoryHub::countSettings's stack-local form
 
     QVector<SettingDef> slice;
     for (const auto& d : adapter.settingsSchema())
