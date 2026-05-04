@@ -6,6 +6,7 @@
 class EmulatorSettingsDialogBase;
 class EmulatorAdapter;
 class QStackedWidget;
+class QHBoxLayout;
 class SettingsGraphicsSubTabBar;
 class SettingsCard;
 
@@ -70,4 +71,10 @@ private:
     SettingsGraphicsSubTabBar* m_subTabBar = nullptr;
     QStackedWidget* m_subStack = nullptr;     // one page per subcategory
     QWidget* m_currentPreview = nullptr;      // active preview widget, if any
+    // Top-row HBox holding the leftStack/rightStack when a preview is
+    // active. Created in buildSubcategory() and kept here transiently
+    // so the group loop can attach it to `layout` AFTER the
+    // preview-bound group's section header has been emitted, which
+    // lets both columns begin at the same y.
+    QHBoxLayout* m_pendingTopRow = nullptr;
 };
