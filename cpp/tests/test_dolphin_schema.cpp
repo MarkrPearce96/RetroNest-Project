@@ -19,7 +19,9 @@ private slots:
     void testTopLevelCategories() {
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
-        QCOMPARE(categories, QSet<QString>({"Interface", "Audio", "General", "Graphics"}));
+        QCOMPARE(categories, QSet<QString>({
+            "Interface", "Audio", "General", "Graphics", "GameCube"
+        }));
     }
 
     void testPauseOnFocusLostExists() {
@@ -197,6 +199,18 @@ private slots:
         const auto spec = a.previewSpec("Graphics", "General");
         QCOMPARE(spec.previewType, QString("aspect"));
         QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
+    }
+
+    void testGameCubeCategoryFullCatalog() {
+        // Mirrors DolphinQt GameCubePane (Source/Core/DolphinQt/Settings/
+        // GameCubePane.cpp). 4 user-facing keys.
+        const QSet<QString> expectedKeys{
+            "SelectedLanguage", "SlotA", "SlotB", "SerialPort1",
+        };
+        QSet<QString> got;
+        for (const auto& d : schema_)
+            if (d.category == "GameCube") got.insert(d.key);
+        QCOMPARE(got, expectedKeys);
     }
 
     void testGraphicsOtherSubTabsHaveNoPreview() {

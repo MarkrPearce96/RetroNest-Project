@@ -1014,6 +1014,52 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Show Lag Counter",
          "Display the per-frame input-lag counter (movie/replay tooling).",
          SettingDef::Bool, "False"},
+
+        // ═══ GameCube ═══════════════════════════════════════
+        // Mirrors DolphinQt GameCubePane (Source/Core/DolphinQt/Settings/
+        // GameCubePane.cpp). Keys live in Dolphin.ini's [Core] section.
+        {"GameCube", "", "System", "Core", "SelectedLanguage",
+         "GC System Language",
+         "System language used by GameCube games that respect it. "
+         "Indices 0..5 mirror upstream's combo (English/German/French/"
+         "Spanish/Italian/Dutch).",
+         SettingDef::Combo, "0",
+         { {"English","0"}, {"German","1"}, {"French","2"},
+           {"Spanish","3"}, {"Italian","4"}, {"Dutch","5"} }},
+
+        // EXIDeviceType enum — Source/Core/Core/HW/EXI/EXI_Device.h:25-45.
+        // Default for Slot A is MemoryCardFolder (8); Slot B None (0xFF=255).
+        // Subset of the enum exposed (the full set has debug/dev devices
+        // and ethernet variants — included here for the sake of parity
+        // with native UI).
+        {"GameCube", "", "Slot A", "Core", "SlotA",
+         "Slot A Device",
+         "Device plugged into the GameCube's left memory-card / EXI slot. "
+         "MemoryCardFolder = per-game folders under the GC data dir; "
+         "MemoryCard = single .raw image; AGP = Game Boy Player.",
+         SettingDef::Combo, "8",
+         { {"None","255"}, {"Memory Card","1"}, {"Memory Card Folder","8"},
+           {"AGP (Game Boy Player)","9"}, {"Microphone","4"},
+           {"Gecko Debugger","7"}, {"AD16","3"} }},
+
+        {"GameCube", "", "Slot B", "Core", "SlotB",
+         "Slot B Device",
+         "Device plugged into the GameCube's right memory-card / EXI slot. "
+         "Microphone is most common here for games like Mario Party.",
+         SettingDef::Combo, "255",
+         { {"None","255"}, {"Memory Card","1"}, {"Memory Card Folder","8"},
+           {"AGP (Game Boy Player)","9"}, {"Microphone","4"},
+           {"Gecko Debugger","7"}, {"AD16","3"} }},
+
+        {"GameCube", "", "Serial Port 1", "Core", "SerialPort1",
+         "Serial Port 1 Device",
+         "Device plugged into the GameCube's serial port — typically used "
+         "for network adapters in compatible games.",
+         SettingDef::Combo, "255",
+         { {"None","255"}, {"Broadband Adapter (TAP)","11"},
+           {"Broadband Adapter (Built-In)","12"},
+           {"Broadband Adapter (XLink Kai)","10"},
+           {"Modem Adapter (TAP)","13"} }},
     };
 }
 
