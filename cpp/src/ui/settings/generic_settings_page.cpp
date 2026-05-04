@@ -5,6 +5,8 @@
 #include "widgets/settings_section_header.h"
 #include "widgets/settings_card.h"
 #include "widgets/settings_combo_row.h"
+#include "widgets/preview/aspect_ratio_preview.h"
+#include "widgets/preview/osd_preview.h"
 #include "widgets/settings_toggle_row.h"
 #include "widgets/settings_slider_row.h"
 #include "ui/app_controller.h"
@@ -119,13 +121,42 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         const int idx = m_subcategories.indexOf(subcategory);
         layout = qobject_cast<QVBoxLayout*>(m_subStack->widget(idx)->layout());
     } else {
-        // Single-subcategory case: append directly to the scroll content
-        // (the QScrollArea's child widget's layout, set up in buildUi()).
         auto* scroll = findChild<QScrollArea*>();
         Q_ASSERT(scroll && scroll->widget());
         layout = qobject_cast<QVBoxLayout*>(scroll->widget()->layout());
     }
     Q_ASSERT(layout);
+
+    const PreviewSpec spec = m_adapter
+        ? m_adapter->previewSpec(m_category, subcategory)
+        : PreviewSpec{};
+
+    QVBoxLayout* settingsLayout = layout;       // default: cards stack in the main column
+    QWidget* preview = nullptr;
+
+    if (!spec.previewType.isEmpty()) {
+        // Preview layout: top row is split — cards left, preview card right.
+        // Use a SettingsCard with previewStyle for the preview container so
+        // the visual treatment matches existing PCSX2 pages.
+        auto* topRow = new QHBoxLayout();
+        topRow->setSpacing(14);
+
+        auto* leftHost = new QWidget();
+        settingsLayout = new QVBoxLayout(leftHost);
+        settingsLayout->setContentsMargins(0, 0, 0, 0);
+        settingsLayout->setSpacing(10);
+        topRow->addWidget(leftHost, /*stretch=*/1);
+
+        auto* card = new SettingsCard(this);
+        card->setPreviewStyle(true);
+        auto* v = new QVBoxLayout(card);
+        v->setContentsMargins(14, 12, 14, 12);
+        preview = mountPreviewWidget(spec.previewType, card);
+        if (preview) v->addWidget(preview);
+        topRow->addWidget(card, /*stretch=*/1);
+
+        layout->addLayout(topRow);
+    }
 
     SettingsPageBuilder builder(this, m_schema,
         [this](const QString& sec, const QString& k, const QString& v){ saveValue(sec, k, v); },
@@ -144,7 +175,7 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
 
     for (const QString& group : groupOrder) {
         if (!group.isEmpty()) {
-            layout->addWidget(new SettingsSectionHeader(group, this));
+            settingsLayout->addWidget(new SettingsSectionHeader(group, this));
         }
         for (const auto& d : m_schema) {
             if (d.subcategory != subcategory || d.group != group) continue;
@@ -163,14 +194,17 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
                 default:
                     break;
             }
-            if (card) layout->addWidget(card);
+            if (card) settingsLayout->addWidget(card);
         }
     }
-    // Push content to the top so sparse subcategory pages don't end up
-    // vertically centered inside the QStackedWidget. (Single-subcategory
-    // pages also benefit — buildUi() adds its own stretch on the outer
-    // root layout below this one.)
-    layout->addStretch();
+
+    if (preview && !spec.keyToProperty.isEmpty())
+        wirePreviewBinding(spec, preview);
+
+    // settingsLayout gets the stretch (it's where the cards live, and we
+    // want them top-aligned within their column even when the preview card
+    // on the right is shorter than the settings list).
+    settingsLayout->addStretch();
 }
 
 void GenericSettingsPage::loadValues() {
@@ -381,4 +415,81 @@ SettingsCard* GenericSettingsPage::findNextCardSpatial(SettingsCard* current, in
         if (c.secondary < bestSecondary) { bestSecondary = c.secondary; best = c.card; }
     }
     return best;
+}
+
+QWidget* GenericSettingsPage::mountPreviewWidget(const QString& previewType,
+                                                  QWidget* parent) {
+    if (previewType == "aspect") return new AspectRatioPreview(parent);
+    if (previewType == "osd")    return new OsdPreview(parent);
+    return nullptr;
+}
+
+void GenericSettingsPage::wirePreviewBinding(const PreviewSpec& spec,
+                                              QWidget* preview) {
+    auto* app = m_dlg->appController();
+    const QString emuId = m_dlg->emuId();
+
+    // Initial sync: read each bound setting's current value and seed the
+    // matching preview Q_PROPERTY.
+    auto seed = [&](const QString& propName, const QString& val,
+                    SettingDef::Type type) {
+        bool ok = false;
+        const int asInt = val.toInt(&ok);
+        // For non-Combo numeric types the int form is the right shape;
+        // Combo values may be either numeric (e.g. Dolphin AspectRatio "0".."3")
+        // or string (e.g. PCSX2 AspectRatio "16:9"), so we pass them through
+        // as-is and let the preview widget's WRITE accessor parse.
+        if (ok && type != SettingDef::Combo) {
+            preview->setProperty(propName.toUtf8().constData(), asInt);
+        } else if (val.compare("true", Qt::CaseInsensitive) == 0) {
+            preview->setProperty(propName.toUtf8().constData(), true);
+        } else if (val.compare("false", Qt::CaseInsensitive) == 0) {
+            preview->setProperty(propName.toUtf8().constData(), false);
+        } else {
+            preview->setProperty(propName.toUtf8().constData(), val);
+        }
+    };
+
+    for (auto it = spec.keyToProperty.constBegin();
+         it != spec.keyToProperty.constEnd(); ++it) {
+        const QString& key = it.key();
+        const QString& propName = it.value();
+        for (const auto& d : m_schema) {
+            if (d.key != key) continue;
+            const QString cur = app->settingValue(emuId, d.section, d.key);
+            const QString val = cur.isEmpty() ? d.defaultValue : cur;
+            seed(propName, val, d.type);
+            break;
+        }
+    }
+
+    // Live updates: connect change signals from each bound widget to a
+    // setProperty() call on the preview.
+    for (auto* combo : findChildren<SettingsComboRow*>()) {
+        const QString key = combo->settingDef().key;
+        if (!spec.keyToProperty.contains(key)) continue;
+        const QString prop = spec.keyToProperty.value(key);
+        connect(combo, &SettingsComboRow::valueChanged, preview,
+                [preview, prop](const QString& v) {
+                    preview->setProperty(prop.toUtf8().constData(), v);
+                });
+    }
+    for (auto* tog : findChildren<SettingsToggleRow*>()) {
+        const QString key = tog->settingDef().key;
+        if (!spec.keyToProperty.contains(key)) continue;
+        const QString prop = spec.keyToProperty.value(key);
+        connect(tog, &SettingsToggleRow::toggled, preview,
+                [preview, prop](bool on) {
+                    preview->setProperty(prop.toUtf8().constData(), on);
+                });
+    }
+    for (auto* slider : findChildren<SettingsSliderRow*>()) {
+        const QString key = slider->settingDef().key;
+        if (!spec.keyToProperty.contains(key)) continue;
+        const QString prop = spec.keyToProperty.value(key);
+        connect(slider, &SettingsSliderRow::valueChanged, preview,
+                [preview, prop](int v) {
+                    preview->setProperty(prop.toUtf8().constData(), v);
+                });
+    }
 }

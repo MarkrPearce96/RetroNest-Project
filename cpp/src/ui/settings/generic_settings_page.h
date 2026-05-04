@@ -52,6 +52,8 @@ private:
     void saveValue(const QString& section, const QString& key, const QString& value);
     void refreshDependencies();
     SettingsCard* findNextCardSpatial(SettingsCard* current, int key) const;
+    QWidget* mountPreviewWidget(const QString& previewType, QWidget* parent);
+    void wirePreviewBinding(const PreviewSpec& spec, QWidget* preview);
 
     EmulatorSettingsDialogBase* m_dlg = nullptr;
     EmulatorAdapter* m_adapter = nullptr;
