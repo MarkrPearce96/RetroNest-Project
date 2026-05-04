@@ -215,22 +215,28 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
                                        : "Aspect Ratio Preview",
             this));
 
-        // Preview card. Width-capped at 400 (via setMaximumWidth on the
-        // inner widget below) so heightForWidth ≈ 225 and the card stays
-        // a reasonable size regardless of dialog width.
+        // Preview card. Width-capped at 450 with NO horizontal margins
+        // inside the card, so the preview widget fills the card edge-to-
+        // edge with no letterbox-style padding. Card is centered in
+        // rightHost so the empty space on either side is plain page
+        // background (matching the leftStack's appearance), not card-
+        // coloured padding.
+        //
+        // 450px width → heightForWidth ≈ 253 → card height ≈ 277, which
+        // (with the 22px column spacings) brings the rightStack content
+        // (~402px) close to the leftStack content (~399px with 5 cards
+        // × 52 + 4 × 22 spacing). Bottoms align ~within a few pixels.
         auto* card = new SettingsCard(this);
         card->setFocusPolicy(Qt::NoFocus);
         card->setPreviewStyle(true);
         card->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+        card->setMaximumWidth(450);
         auto* v = new QVBoxLayout(card);
-        v->setContentsMargins(14, 12, 14, 12);
+        v->setContentsMargins(0, 12, 0, 12);  // no horizontal padding
         v->setSpacing(10);
         preview = mountPreviewWidget(spec.previewType, card);
-        if (preview) {
-            preview->setMaximumWidth(400);
-            v->addWidget(preview);
-        }
-        rightStack->addWidget(card, /*stretch=*/0, Qt::AlignTop);
+        if (preview) v->addWidget(preview);
+        rightStack->addWidget(card, /*stretch=*/0, Qt::AlignHCenter | Qt::AlignTop);
 
         layout->addLayout(topRow);
         m_currentPreview = preview;
