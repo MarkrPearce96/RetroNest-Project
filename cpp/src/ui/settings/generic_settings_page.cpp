@@ -74,7 +74,10 @@ void GenericSettingsPage::buildUi() {
         root->addWidget(m_subTabBar);
 
         m_subStack = new QStackedWidget(content);
-        for (const auto& s : m_subcategories) {
+        // One QStackedWidget page per subcategory — index in the stack
+        // matches the index in m_subcategories. Subcategory name itself
+        // is not needed here (buildSubcategory looks it up by index).
+        for (int i = 0; i < m_subcategories.size(); ++i) {
             auto* sub = new QWidget(m_subStack);
             auto* subLayout = new QVBoxLayout(sub);  // populated by buildSubcategory
             subLayout->setContentsMargins(0, 0, 0, 0);
