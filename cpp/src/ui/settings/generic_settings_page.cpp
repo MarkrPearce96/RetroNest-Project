@@ -200,19 +200,24 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         auto* rightHost = new QWidget(this);
         rightStack = new QVBoxLayout(rightHost);
         rightStack->setContentsMargins(0, 0, 0, 0);
-        rightStack->setSpacing(14);
+        // Match leftStack's spacing so both columns share the same
+        // header-then-card vertical rhythm and their first cards align.
+        rightStack->setSpacing(22);
         topRow->addWidget(rightHost, /*stretch=*/1);
 
-        // Preview card sits at the top of rightStack. Both the card and
-        // the inner preview widget are size-capped so the column doesn't
-        // grow huge when the dialog is wide:
-        //   - preview widget width capped at 400 → heightForWidth ≈ 225
-        //   - card height capped at sizeHint via Maximum policy
-        // The card's height naturally tracks the widget's heightForWidth
-        // through the inner QVBoxLayout, so capping the widget caps the
-        // card. Combined with rightStack->addStretch() at the end, any
-        // remaining row height is absorbed below the FTF card, NOT
-        // between preview and FTF.
+        // Section-header at the top of rightStack mirrors leftStack's
+        // own group header — same SettingsSectionHeader styling and
+        // spacing rules — so the preview card sits at the same y-level
+        // as leftStack's first setting card. Replaces the small inline
+        // label that used to live inside the preview card.
+        rightStack->addWidget(new SettingsSectionHeader(
+            spec.previewType == "osd" ? "OSD Preview"
+                                       : "Aspect Ratio Preview",
+            this));
+
+        // Preview card. Width-capped at 400 (via setMaximumWidth on the
+        // inner widget below) so heightForWidth ≈ 225 and the card stays
+        // a reasonable size regardless of dialog width.
         auto* card = new SettingsCard(this);
         card->setFocusPolicy(Qt::NoFocus);
         card->setPreviewStyle(true);
@@ -220,12 +225,6 @@ void GenericSettingsPage::buildSubcategory(const QString& subcategory) {
         auto* v = new QVBoxLayout(card);
         v->setContentsMargins(14, 12, 14, 12);
         v->setSpacing(10);
-        auto* lbl = new QLabel(spec.previewType == "osd"
-                                   ? QStringLiteral("OSD PREVIEW")
-                                   : QStringLiteral("ASPECT RATIO PREVIEW"), card);
-        lbl->setStyleSheet("color:#9a9690;font-size:11px;font-weight:600;"
-                           "letter-spacing:0.8px;");
-        v->addWidget(lbl);
         preview = mountPreviewWidget(spec.previewType, card);
         if (preview) {
             preview->setMaximumWidth(400);
