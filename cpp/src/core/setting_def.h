@@ -40,6 +40,16 @@ struct SettingDef {
     // value is not in {"", "0", "false", "Disabled", "None"}, case-insensitive).
     // When the master transitions to inactive, dependent rows dim, their inner
     // controls are disabled, and their values reset to schema defaults.
+    //
+    // Also accepts a small boolean expression for multi-master gates:
+    //   - "Foo"             — Foo is truthy (existing behavior)
+    //   - "!Foo"            — Foo is falsy
+    //   - "Foo=Bar"         — Foo's current value equals "Bar"
+    //   - "Foo!=Bar"        — Foo's current value does not equal "Bar"
+    //   - "A && B"          — all terms true
+    //   - "A || B"          — any term true
+    // No parentheses; '&&' and '||' may not mix in one expression. See
+    // setting_dependency.h::evaluateDependencyExpression.
     QString dependsOn;
 
     // Optional: if non-empty, the dependent is active only when the master's
@@ -55,6 +65,18 @@ struct SettingDef {
     // bit is set/cleared in the existing int and the full int is written
     // back. Used by PPSSPP for iShowStatusFlags. Default 0 = normal Bool.
     int bitmask = 0;
+
+    // If true, the displayed checkbox state is the inverse of the stored
+    // INI value. The label phrases the setting in the negative — e.g.
+    // upstream Dolphin's "Disable Bounding Box" is `inverted=true` over
+    // `BBoxEnable`: checked = stored False = bounding-box disabled.
+    // Mirrors Dolphin's `ConfigBool(label, key, layer, /*inverted=*/true)`
+    // four-arg constructor (Source/Core/DolphinQt/Config/ConfigControls/
+    // ConfigBool.cpp). The underlying INI value is unchanged — only load
+    // (`setChecked`) and save (`save("true"/"false")`) flip. Dependency
+    // expressions still reason about the stored INI value, not the
+    // displayed inverse.
+    bool inverted = false;
 
     // Optional recommended value shown in the new PCSX2 dialog description bar.
     // When empty, UI falls back to displaying defaultValue.

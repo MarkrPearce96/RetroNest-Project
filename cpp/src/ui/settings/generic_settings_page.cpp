@@ -1,5 +1,6 @@
 #include "generic_settings_page.h"
 #include "adapters/emulator_adapter.h"
+#include "core/setting_dependency.h"
 #include "emulator_settings_dialog_base.h"
 #include "settings_page_builder.h"
 #include "ui/app_controller.h"
@@ -541,12 +542,18 @@ void GenericSettingsPage::loadValues() {
     const SettingDef &d = toggle->settingDef();
     const QString cur = app->settingValue(emuId, d.section, d.key);
     const QString v = cur.isEmpty() ? d.defaultValue : cur;
+    const bool stored = v.compare("true", Qt::CaseInsensitive) == 0;
     const QSignalBlocker blocker(toggle);
-    toggle->setChecked(v.compare("true", Qt::CaseInsensitive) == 0);
+    toggle->setChecked(d.inverted ? !stored : stored);
   }
   for (auto *slider : findChildren<SettingsSliderRow *>()) {
     const SettingDef &d = slider->settingDef();
-    const QString cur = app->settingValue(emuId, d.section, d.key);
+    // Sliders may declare a loadTransform when the displayed unit
+    // differs from the stored unit (e.g. Dolphin's MEM1/MEM2 sliders
+    // display MB but Dolphin stores bytes via a 0x100000 multiplier).
+    const QString cur = d.loadTransform
+        ? d.loadTransform(readKey)
+        : app->settingValue(emuId, d.section, d.key);
     const QString v = cur.isEmpty() ? d.defaultValue : cur;
     const QSignalBlocker blocker(slider);
     slider->setValue(v.toInt());
@@ -588,10 +595,17 @@ void GenericSettingsPage::refreshDependencies() {
   //                       against SettingDef::dependsOnValue strings).
   QHash<QString, bool> masterStates;
   QHash<QString, QString> masterValues;
+  // For inverted toggles, the displayed `isChecked()` is the OPPOSITE of
+  // the stored INI value. Dependency expressions reason about the stored
+  // value (so e.g. `dependsOn = "BBoxEnable"` means "true when BBox is
+  // enabled in the INI"), so we un-invert here before populating the
+  // master maps.
   for (auto *tog : findChildren<SettingsToggleRow *>()) {
-    masterStates.insert(tog->settingDef().key, tog->isChecked());
+    const bool stored = tog->settingDef().inverted ? !tog->isChecked()
+                                                   : tog->isChecked();
+    masterStates.insert(tog->settingDef().key, stored);
     masterValues.insert(tog->settingDef().key,
-                        tog->isChecked() ? "true" : "false");
+                        stored ? "true" : "false");
   }
 
   // Combos can also act as masters (per setting_def.h:39-42): a combo is
@@ -606,9 +620,13 @@ void GenericSettingsPage::refreshDependencies() {
     masterValues.insert(combo->settingDef().key, v);
   }
 
-  // Compute whether a dependent's master gate is active. dependsOnValue
-  // (semicolon-separated allow-list) takes precedence over the truthy
-  // check when it's non-empty.
+  // Compute whether a dependent's master gate is active.
+  //   1. dependsOnValue (semicolon-separated allow-list) — legacy single-master
+  //      value-equality form. Takes precedence when set so old schema entries
+  //      keep their exact previous behavior.
+  //   2. dependsOn — single bare key (legacy truthy check) OR a small boolean
+  //      expression (key, !key, key=val, key!=val, joined by '&&'/'||').
+  //      See evaluateDependencyExpression in setting_dependency.h.
   auto isDependencyActive = [&](const SettingDef &d) -> bool {
     if (d.dependsOn.isEmpty())
       return true;
@@ -622,7 +640,8 @@ void GenericSettingsPage::refreshDependencies() {
       }
       return false;
     }
-    return masterStates.value(d.dependsOn, true);
+    return evaluateDependencyExpression(d.dependsOn, masterStates,
+                                         masterValues);
   };
 
   // Apply opacity + inner-control disable to a row, regardless of widget

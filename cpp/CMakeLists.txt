@@ -502,6 +502,14 @@ target_include_directories(test_bitmask_helpers PRIVATE ${CMAKE_CURRENT_SOURCE_D
 target_link_libraries(test_bitmask_helpers PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME BitmaskHelpers COMMAND test_bitmask_helpers)
 
+add_executable(test_setting_dependency
+    tests/test_setting_dependency.cpp
+)
+set_target_properties(test_setting_dependency PROPERTIES AUTOMOC ON)
+target_include_directories(test_setting_dependency PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_setting_dependency PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME SettingDependency COMMAND test_setting_dependency)
+
 add_executable(test_ppsspp_schema
     tests/test_ppsspp_schema.cpp
     src/adapters/ppsspp_adapter.cpp

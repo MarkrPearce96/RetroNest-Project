@@ -100,10 +100,12 @@ SettingsCard* SettingsPageBuilder::makeToggleCard(const QString& key) {
     QObject::connect(row,  &SettingsToggleRow::focused, m_parent, focus);
     QString section = d->section;
     QString defKey = d->key;
+    const bool inverted = d->inverted;
     auto save = m_save;
     QObject::connect(row, &SettingsToggleRow::toggled, m_parent,
-                     [section, defKey, save](bool on){
-                         save(section, defKey, on ? "true" : "false");
+                     [section, defKey, inverted, save](bool on){
+                         const bool stored = inverted ? !on : on;
+                         save(section, defKey, stored ? "true" : "false");
                      });
     v->addWidget(row);
     return card;
