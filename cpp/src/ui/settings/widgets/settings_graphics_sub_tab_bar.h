@@ -2,9 +2,10 @@
 #include <QWidget>
 #include <QVector>
 
-// Four-box sub-tab bar used by Pcsx2GraphicsPage. Each tab is a
-// vertical icon-over-label stack rendered inside a rounded box.
-// Keyboard-focusable; Left/Right changes selection, Enter activates.
+// Sub-tab bar used by GenericSettingsPage and emulator-specific pages
+// (DuckStation, PPSSPP). Each tab is a vertical icon-over-label stack
+// rendered inside a rounded box. Keyboard-focusable; Left/Right changes
+// selection, Enter activates.
 class SettingsGraphicsSubTabBar : public QWidget {
     Q_OBJECT
 public:

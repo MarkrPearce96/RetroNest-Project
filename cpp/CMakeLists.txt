@@ -107,14 +107,6 @@ set(SOURCES
     src/ui/settings/duckstation/pages/duckstation_memory_cards_page.cpp
     src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.cpp
     src/ui/settings/duckstation/widgets/duckstation_osd_preview.cpp
-    src/ui/settings/pcsx2/pages/pcsx2_emulation_page.cpp
-    src/ui/settings/pcsx2/pages/pcsx2_audio_page.cpp
-    src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.cpp
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.cpp
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.cpp
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.cpp
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_osd_page.cpp
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_page.cpp
     # PPSSPP settings
     src/ui/settings/ppsspp/ppsspp_category_hub.cpp
     src/ui/settings/ppsspp/ppsspp_settings_dialog.cpp
@@ -220,14 +212,6 @@ set(HEADERS
     src/ui/settings/widgets/preview/osd_preview.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
-    src/ui/settings/pcsx2/pages/pcsx2_emulation_page.h
-    src/ui/settings/pcsx2/pages/pcsx2_audio_page.h
-    src/ui/settings/pcsx2/pages/pcsx2_memory_cards_page.h
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_rendering_page.h
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_post_processing_page.h
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_display_page.h
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_osd_page.h
-    src/ui/settings/pcsx2/pages/pcsx2_graphics_page.h
     # PPSSPP settings
     src/ui/settings/ppsspp/ppsspp_category_hub.h
     src/ui/settings/ppsspp/ppsspp_settings_dialog.h
