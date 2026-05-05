@@ -34,23 +34,16 @@ Pcsx2CategoryHub::Pcsx2CategoryHub(QWidget* parent)
                              "Backend, latency, volume",
                              countSettings("Audio"), "Audio"),               1, 2);
 
-    // Row 2: Memory Cards · Network & HDD · Achievements
+    // Row 2: Memory Cards · Achievements · Advanced
     grid->addWidget(makeCard(QStringLiteral("\U0001F4BE"), "Memory Cards",
                              "Slot enables, multitap",
                              countSettings("Memory Cards"), "Memory Cards"), 2, 0);
-    grid->addWidget(makeCard(QStringLiteral("\U0001F310"), "Network & HDD",
-                             "Ethernet, DHCP, DNS, internal HDD",
-                             countSettings("Network & HDD"),
-                             "Network & HDD"),                               2, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3C6"), "Achievements",
                              "Hardcore, notifications, overlays",
-                             countSettings("Achievements"), "Achievements"), 2, 2);
-
-    // Row 3: Advanced — full-width
+                             countSettings("Achievements"), "Achievements"), 2, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F527"), "Advanced",
                              "EE/VU/IOP, savestates, PINE",
-                             countSettings("Advanced"), "Advanced"),
-                    3, 0, 1, 3);
+                             countSettings("Advanced"), "Advanced"),         2, 2);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
