@@ -20,7 +20,42 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     QVector<SettingDef> s;
     // Field order: category, subcategory, group, section, key, label, tooltip, type, defaultValue, options, min, max, step
 
-    // Interface tab removed — UI settings are controlled by the frontend, not exposed to users.
+    // The schema below mirrors PCSX2 standalone's Settings dialog category-by-
+    // category, group-by-group, in the same order the panes appear in
+    // pcsx2-qt/Settings/SettingsWindow.cpp (top-level categories) and the
+    // matching *Widget.cpp / *.ui files for each pane. See
+    // docs/new-adapter-checklist.md "Mirroring the upstream UI verbatim".
+    //
+    // Categories we deliberately omit from the visible schema:
+    //   - Interface  : controls PCSX2's own UI which RetroNest hides; the
+    //                  embedding-critical UI keys are force-patched in
+    //                  patchExistingConfig.
+    //   - Game List  : RetroNest manages ROM scanning.
+    //   - Patches    : per-game-only upstream — out of scope.
+    //   - Cheats     : per-game-only upstream — out of scope.
+    //   - Game Fixes : per-game-only upstream — out of scope.
+    //   - Folders    : RetroNest manages every emulator's data layout.
+    //
+    // Settings deferred (need infrastructure we don't have yet) are documented
+    // in user memory file pcsx2-schema-alignment.md.
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // BIOS  (mirrors BIOSSettingsWidget — only the boot-behaviour toggles;
+    // the BIOS-file picker + folder are RetroNest-managed via the wizard.)
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"BIOS", "", "Options", "EmuCore", "EnableFastBoot", "Fast Boot",
+                     "Skips the PS2 BIOS splash screen when booting a game.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"BIOS", "", "Options", "EmuCore", "EnableFastBootFastForward", "Fast Forward Boot",
+                     "Force-fast-forwards through the BIOS boot sequence after Fast Boot.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "EnableFastBoot";
+        s.append(d);
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Emulation (single page with grouped sections — no sub-tabs)
@@ -66,6 +101,8 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     }
 
     // ── System Settings ─────────────────────────────────────────────────
+    // Upstream order: EECycleRate, EECycleSkip, vuThread, EnableThreadPinning,
+    // EnableCheats, HostFs, CdvdPrecache. Per-game-only fastCDVD is omitted.
     {
         SettingDef d{"Emulation", "", "System Settings", "EmuCore/Speedhacks", "EECycleRate", "EE Cycle Rate",
                   "Underclocks or overclocks the emulated Emotion Engine CPU.",
@@ -95,8 +132,8 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         s.append(d);
     }
     {
-        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "CdvdPrecache", "Enable CDVD Precaching",
-                  "Loads the disc image into RAM before starting. Can reduce stutter but uses more memory.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableCheats", "Enable Cheats",
+                  "Enables loading cheats from pnach files.", SettingDef::Bool, "false", {}, 0, 0, 0};
         s.append(d);
     }
     {
@@ -105,13 +142,8 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         s.append(d);
     }
     {
-        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableCheats", "Enable Cheats",
-                  "Enables loading cheats from pnach files.", SettingDef::Bool, "false", {}, 0, 0, 0};
-        s.append(d);
-    }
-    {
-        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableFastBoot", "Fast Boot",
-                  "Skips the PS2 BIOS splash screen when booting a game.", SettingDef::Bool, "true", {}, 0, 0, 0};
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "CdvdPrecache", "Enable CDVD Precaching",
+                  "Loads the disc image into RAM before starting. Can reduce stutter but uses more memory.", SettingDef::Bool, "false", {}, 0, 0, 0};
         s.append(d);
     }
 
@@ -137,6 +169,7 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     {
         SettingDef d{"Emulation", "", "Frame Pacing / Latency Control", "EmuCore/GS", "UseVSyncForTiming", "Use Host VSync Timing",
                   "Uses the host's VSync timing instead of the emulated console's timing.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "VsyncEnable && SyncToHostRefreshRate";
         s.append(d);
     }
     {
@@ -280,11 +313,16 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                       {"10x Native (~3600px/6K UHD)", "10"}, {"11x Native (~3960px)", "11"}, {"12x Native (~4320px/8K UHD)", "12"}}, 0, 0, 0};
         s.append(d);
     }
+    // Internal Resolution / blending / dithering / filtering — used by both
+    // HW and SW renderers; no per-renderer gate.
     {
         SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "filter", "Texture Filtering",
                      "Controls how textures are sampled when rendered. Bilinear (PS2) matches the original hardware behavior; Forced options ignore the game's preference.",
                      SettingDef::Combo, "2",
                      {{"Nearest", "0"}, {"Bilinear (Forced)", "1"}, {"Bilinear (PS2)", "2"}, {"Bilinear (Forced excluding sprite)", "3"}}, 0, 0, 0};
+        // Disabled when trilinear filtering forces a value (PS2 trilinear or
+        // Forced trilinear) — mirrors GraphicsSettingsWidget::onTrilinearChanged.
+        d.dependsOn = "TriFilter!=2 && TriFilter!=3";
         s.append(d);
     }
     {
@@ -299,6 +337,9 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      "Improves texture clarity at oblique viewing angles. Low cost on modern GPUs and generally safe to raise.",
                      SettingDef::Combo, "0",
                      {{"Off", "0"}, {"2x", "2"}, {"4x", "4"}, {"8x", "8"}, {"16x", "16"}}, 0, 0, 0};
+        // Upstream disables anisotropic filtering when GPU palette conversion
+        // is on (paltex), since palette-mode textures bypass HW filtering.
+        d.dependsOn = "!paltex";
         s.append(d);
     }
     {
@@ -315,10 +356,335 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      {{"Minimum", "0"}, {"Basic (Default)", "1"}, {"Medium", "2"}, {"High", "3"}, {"Full", "4"}, {"Maximum", "5"}}, 0, 0, 0};
         s.append(d);
     }
+
+    // ── Hardware Rendering Options (Renderer != Software) ─────────────
+    // Mirrors upstream's "Hardware Rendering Options" grid in
+    // GraphicsHardwareRenderingSettingsTab.ui. Manual Hardware Renderer Fixes
+    // (UserHacks) is upstream-gated to per-game/dev — omitted globally.
     {
-        SettingDef d{"Graphics", "Rendering", "", "EmuCore/GS", "hw_mipmap", "Mipmapping",
+        SettingDef d{"Graphics", "Rendering", "Hardware Rendering Options", "EmuCore/GS", "hw_mipmap", "Mipmapping",
                      "Enables mipmapping which improves texture quality at the cost of performance.",
                      SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "Hardware Rendering Options", "EmuCore/GS", "HWAccurateAlphaTest", "Accurate Alpha Test",
+                     "Emulates the PS2's alpha test more accurately. Fixes some games that have transparent geometry artifacts.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "Hardware Rendering Options", "EmuCore/GS", "HWAA1", "AA1",
+                     "Enables PS2 Anti-Aliasing (AA1). Fixes anti-aliased lines and triangles in some games.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+
+    // ── Software Renderer (Renderer == Software) ─────────────────────
+    // Mirrors GraphicsSoftwareRenderingSettingsTab.ui. Texture Filtering is
+    // shared with the HW combo above (same INI key) — no separate entry.
+    {
+        SettingDef d{"Graphics", "Rendering", "Software Renderer", "EmuCore/GS", "extrathreads", "Software Rendering Threads",
+                     "Number of additional worker threads used by the software renderer. Higher counts can improve framerate on multi-core CPUs.",
+                     SettingDef::Int, "2", {}, 0, 32, 1};
+        d.dependsOn = "Renderer=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "Software Renderer", "EmuCore/GS", "autoflush_sw", "Auto Flush",
+                     "Forces the software renderer to flush after every draw call. Slightly improves accuracy at the cost of performance.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "Renderer=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Rendering", "Software Renderer", "EmuCore/GS", "mipmap", "Mipmapping",
+                     "Enables mipmapping for the software renderer.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "Renderer=13";
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Graphics > Hardware Fixes  (Renderer != Software)
+    // Mirrors GraphicsHardwareFixesSettingsTab.ui — verbatim group + order.
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "", "EmuCore/GS", "UserHacks_CPUSpriteRenderBW", "CPU Sprite Render Size",
+                     "Forces the CPU to render sprites whose width is below this threshold. Helps with depth/colour issues in some games.",
+                     SettingDef::Combo, "0",
+                     {{"0 (Disabled)", "0"}, {"1 (64 Max Width)", "1"}, {"2 (128 Max Width)", "2"},
+                      {"3 (192 Max Width)", "3"}, {"4 (256 Max Width)", "4"}, {"5 (320 Max Width)", "5"},
+                      {"6 (384 Max Width)", "6"}, {"7 (448 Max Width)", "7"}, {"8 (512 Max Width)", "8"},
+                      {"9 (576 Max Width)", "9"}, {"10 (640 Max Width)", "10"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "", "EmuCore/GS", "UserHacks_CPUSpriteRenderLevel", "CPU Sprite Render Level",
+                     "Selects which primitive types the CPU sprite render fix applies to.",
+                     SettingDef::Combo, "0",
+                     {{"Sprites Only", "0"}, {"Sprites/Triangles", "1"}, {"Blended Sprites/Triangles", "2"}}, 0, 0, 0};
+        d.dependsOn = "UserHacks_CPUSpriteRenderBW!=0 && Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "", "EmuCore/GS", "UserHacks_CPUCLUTRender", "Software CLUT Render",
+                     "Enables CPU rendering of CLUT (palette) effects. Fixes specific palette-based effects in some games.",
+                     SettingDef::Combo, "0",
+                     {{"0 (Disabled)", "0"}, {"1 (Normal)", "1"}, {"2 (Aggressive)", "2"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "", "EmuCore/GS", "UserHacks_GPUTargetCLUTMode", "GPU Target CLUT",
+                     "Reads CLUT values from a render target on the GPU. Fixes palette-based effects in some games.",
+                     SettingDef::Combo, "0",
+                     {{"Disabled (Default)", "0"}, {"Enabled (Exact Match)", "1"}, {"Enabled (Check Inside Target)", "2"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "", "EmuCore/GS", "UserHacks_AutoFlushLevel", "Auto Flush",
+                     "Forces a GS flush at the start of every primitive. Improves accuracy at a performance cost.",
+                     SettingDef::Combo, "0",
+                     {{"Disabled (Default)", "0"}, {"Enabled (Sprites Only)", "1"}, {"Enabled (All Primitives)", "2"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "", "EmuCore/GS", "UserHacks_TextureInsideRt", "Texture Inside RT",
+                     "Allows textures to be sampled from inside an active render target. Fixes effects that rely on render-target sampling.",
+                     SettingDef::Combo, "0",
+                     {{"Disabled (Default)", "0"}, {"Inside Target", "1"}, {"Merge Targets", "2"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "", "EmuCore/GS", "UserHacks_Limit24BitDepth", "Limit Depth to 24 Bits",
+                     "Limits 32-bit depth buffer reads to 24 bits. Fixes some games that misuse 32-bit depth values.",
+                     SettingDef::Combo, "0",
+                     {{"Disabled (Default)", "0"}, {"Prioritize Upper Bits", "1"}, {"Prioritize Lower Bits", "2"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "", "EmuCore/GS", "UserHacks_SkipDraw_Start", "Skip Draw Range Start",
+                     "First draw call to skip when the Skip Draw Range hack is active.",
+                     SettingDef::Int, "0", {}, 0, 10000, 1, "paired", ""};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "", "EmuCore/GS", "UserHacks_SkipDraw_End", "Skip Draw Range End",
+                     "Last draw call to skip when the Skip Draw Range hack is active.",
+                     SettingDef::Int, "0", {}, 0, 10000, 1, "paired", ""};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    // Hardware Fixes grid (10 boolean toggles per upstream's HW fixes pane).
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "UserHacks_DisableDepthSupport", "Disable Depth Conversion",
+                     "Disables depth-buffer conversion. Improves performance on weak GPUs at the cost of accuracy.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "UserHacks_CPU_FB_Conversion", "Framebuffer Conversion",
+                     "Converts frame buffers on the CPU. Fixes specific games that misuse frame-buffer formats.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "UserHacks_DisablePartialInvalidation", "Disable Partial Source Invalidation",
+                     "Skips partial texture-cache invalidation. May fix specific texture corruption.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "paltex", "GPU Palette Conversion",
+                     "Performs palette texture conversion on the GPU instead of the CPU.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "UserHacks_Disable_Safe_Features", "Disable Safe Features",
+                     "Disables several safety features in the renderer. Faster but may cause graphical glitches.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "preload_frame_with_gs_data", "Preload Frame Data",
+                     "Preloads frame data so games that read from previous frames render correctly.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "UserHacks_DisableRenderFixes", "Disable Render Fixes",
+                     "Disables built-in render fixes that work around hardware quirks.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "UserHacks_ReadTCOnClose", "Read Targets When Closing",
+                     "Reads back render targets to system memory when closed. Helps games that rely on previous frame contents.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "UserHacks_EstimateTextureRegion", "Estimate Texture Region",
+                     "Estimates the active texture region from primitive bounds. Reduces over-fetch in some games.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Hardware Fixes", "Hardware Fixes", "EmuCore/GS", "UserHacks_DrawBuffering", "Draw Buffering",
+                     "Buffers draw calls to reduce GPU state changes.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Graphics > Upscaling Fixes  (Renderer != Software)
+    // Mirrors GraphicsUpscalingFixesSettingsTab.ui.
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "", "EmuCore/GS", "UserHacks_HalfPixelOffset", "Half Pixel Offset",
+                     "Adjusts texture sampling by half a pixel. Fixes blurry textures in upscaled rendering.",
+                     SettingDef::Combo, "0",
+                     {{"Off (Default)", "0"}, {"Normal (Vertex)", "1"}, {"Special (Texture)", "2"},
+                      {"Special (Texture - Aggressive)", "3"}, {"Align to Native", "4"},
+                      {"Align to Native - with Texture Offset", "5"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "", "EmuCore/GS", "UserHacks_native_scaling", "Native Scaling",
+                     "Renders at native resolution where the game expects it.",
+                     SettingDef::Combo, "0",
+                     {{"Off", "0"}, {"Normal", "1"}, {"Aggressive", "2"},
+                      {"Normal (Maintain Upscale)", "3"}, {"Aggressive (Maintain Upscale)", "4"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "", "EmuCore/GS", "UserHacks_round_sprite_offset", "Round Sprite",
+                     "Rounds sprite vertex coordinates to fix sprite alignment when upscaling.",
+                     SettingDef::Combo, "0",
+                     {{"Off (Default)", "0"}, {"Half", "1"}, {"Full", "2"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "", "EmuCore/GS", "UserHacks_BilinearHack", "Bilinear Dirty Upscale",
+                     "Forces bilinear or nearest filtering on upscaled dirty regions.",
+                     SettingDef::Combo, "0",
+                     {{"Automatic (Default)", "0"}, {"Force Bilinear", "1"}, {"Force Nearest", "2"}}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "", "EmuCore/GS", "UserHacks_TCOffsetX", "Texture Offsets X",
+                     "Manually shifts the texture sample position horizontally.",
+                     SettingDef::Int, "0", {}, 0, 1000, 1, "paired", ""};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "", "EmuCore/GS", "UserHacks_TCOffsetY", "Texture Offsets Y",
+                     "Manually shifts the texture sample position vertically.",
+                     SettingDef::Int, "0", {}, 0, 1000, 1, "paired", ""};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    // Upscaling Fixes grid (4 toggles).
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "Upscaling Fixes", "EmuCore/GS", "UserHacks_align_sprite_X", "Align Sprite",
+                     "Aligns sprite X coordinates to fix vertical line artifacts in some games.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "Upscaling Fixes", "EmuCore/GS", "UserHacks_NativePaletteDraw", "Unscaled Palette Texture Draws",
+                     "Renders palette-mode draws at native resolution. Fixes upscaling artefacts on palette textures.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "Upscaling Fixes", "EmuCore/GS", "UserHacks_merge_pp_sprite", "Merge Sprite",
+                     "Merges co-located sprite passes into one upscaled draw.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Upscaling Fixes", "Upscaling Fixes", "EmuCore/GS", "UserHacks_forceEvenSpritePosition", "Force Even Sprite Position",
+                     "Snaps sprite positions to even pixel boundaries.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Graphics > Texture Replacement  (Renderer != Software)
+    // Mirrors GraphicsTextureReplacementSettingsTab.ui Options group. The
+    // texture-search-directory picker is RetroNest-managed.
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"Graphics", "Texture Replacement", "Options", "EmuCore/GS", "LoadTextureReplacements", "Load Textures",
+                     "Loads replacement textures from the textures folder when launching a game.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Texture Replacement", "Options", "EmuCore/GS", "DumpReplaceableTextures", "Dump Textures",
+                     "Dumps the game's textures to disk so they can be edited and reused as replacements.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Texture Replacement", "Options", "EmuCore/GS", "LoadTextureReplacementsAsync", "Asynchronous Texture Loading",
+                     "Loads replacement textures off the main render thread.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "LoadTextureReplacements && Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Texture Replacement", "Options", "EmuCore/GS", "DumpReplaceableMipmaps", "Dump Mipmaps",
+                     "Also dumps each mip level along with the base texture.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "DumpReplaceableTextures && Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Texture Replacement", "Options", "EmuCore/GS", "PrecacheTextureReplacements", "Precache Textures",
+                     "Loads every replacement texture into memory at game start.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "LoadTextureReplacements && Renderer!=13";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Texture Replacement", "Options", "EmuCore/GS", "DumpTexturesWithFMVActive", "Dump FMV Textures",
+                     "Includes textures used by FMV playback in the texture dump output.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "DumpReplaceableTextures && Renderer!=13";
         s.append(d);
     }
 
@@ -338,7 +704,8 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     {
         SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASSharpness", "Sharpness",
                      "Strength of the CAS sharpening effect. Higher values produce sharper but potentially noisier images.",
-                     SettingDef::Int, "50", {}, 0, 100, 1, "", "%"};
+                     SettingDef::Int, "50", {}, 1, 100, 1, "", "%"};
+        d.dependsOn = "CASMode!=0";
         s.append(d);
     }
     {
@@ -388,102 +755,224 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Graphics > OSD
+    // Graphics > Media Capture
+    // Mirrors GraphicsMediaCaptureSettingsTab.ui Screenshot Capture Setup
+    // group. Video Recording Setup is deferred — its codec/format combos are
+    // populated dynamically from FFmpeg at runtime, which our schema can't
+    // express today. See pcsx2-schema-alignment.md.
     // ═══════════════════════════════════════════════════════════════════════
-    { SettingDef d{"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdScale", "OSD Scale",
+    {
+        SettingDef d{"Graphics", "Media Capture", "Screenshot Capture Setup", "EmuCore/GS", "ScreenshotSize", "Resolution",
+                     "Resolution at which screenshots are saved.",
+                     SettingDef::Combo, "0",
+                     {{"Display Resolution (Aspect Corrected)", "0"},
+                      {"Internal Resolution (Aspect Corrected)", "1"},
+                      {"Internal Resolution (No Aspect Correction)", "2"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Screenshot Capture Setup", "EmuCore/GS", "ScreenshotFormat", "Format",
+                     "Image format used when saving screenshots.",
+                     SettingDef::Combo, "0",
+                     {{"PNG", "0"}, {"JPEG", "1"}, {"WebP", "2"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Screenshot Capture Setup", "EmuCore/GS", "ScreenshotQuality", "Quality",
+                     "Compression quality for lossy screenshot formats. Higher = larger files / better quality.",
+                     SettingDef::Int, "90", {}, 1, 100, 1, "", "%"};
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Graphics > Advanced
+    // Mirrors GraphicsAdvancedSettingsTab.ui (gated upstream on
+    // ShouldShowAdvancedSettings — RetroNest exposes them unconditionally).
+    // Windows-only entries (UseBlitSwapChain, ExclusiveFullscreenControl) are
+    // omitted; FrameRateNTSC/PAL float spinboxes are deferred (see
+    // pcsx2-schema-alignment.md).
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"Graphics", "Advanced", "Advanced Options", "EmuCore/GS", "HWDownloadMode", "Hardware Download Mode",
+                     "Controls how render-target readbacks are handled. Disabling readbacks improves performance but breaks games that read the GS output.",
+                     SettingDef::Combo, "0",
+                     {{"Accurate (Recommended)", "0"},
+                      {"Disable Readbacks (Synchronize GS Thread)", "1"},
+                      {"Unsynchronized (Non-Deterministic)", "2"},
+                      {"Disabled (Ignore Transfers)", "3"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Advanced Options", "EmuCore/GS", "GSDumpCompression", "GS Dump Compression",
+                     "Compression algorithm for GS dump files.",
+                     SettingDef::Combo, "2",
+                     {{"Uncompressed", "0"}, {"LZMA (xz)", "1"}, {"Zstandard (zst)", "2"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Advanced Options", "EmuCore/GS", "texture_preloading", "Texture Preloading",
+                     "Controls how aggressively textures are uploaded to the GPU.",
+                     SettingDef::Combo, "0",
+                     {{"None", "0"}, {"Partial", "1"}, {"Full (Hash Cache)", "2"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Advanced Options", "EmuCore/GS", "OverrideTextureBarriers", "Override Texture Barriers",
+                     "Forces the renderer to use or skip texture barriers regardless of GPU capability detection.",
+                     SettingDef::Combo, "-1",
+                     {{"Automatic (Default)", "-1"}, {"Force Disabled", "0"}, {"Force Enabled", "1"}}, 0, 0, 0};
+        // Upstream disables when SW (13) or Metal (17) — both renderers don't support barriers.
+        d.dependsOn = "Renderer!=13 && Renderer!=17";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Advanced Options", "EmuCore/GS", "ExtendedUpscalingMultipliers", "Extended Upscaling Multipliers",
+                     "Adds Internal Resolution multipliers above 12x. Requires a powerful GPU.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Advanced Options", "EmuCore/GS", "DisableMailboxPresentation", "Disable Mailbox Presentation",
+                     "Forces FIFO present mode in Vulkan. Use only if you have presentation issues.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Advanced Options", "EmuCore/GS", "HWSpinCPUForReadbacks", "Spin CPU During Readbacks",
+                     "Spins the CPU while waiting for GPU readbacks to complete. Reduces input latency at the cost of power use.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Advanced Options", "EmuCore/GS", "HWSpinGPUForReadbacks", "Spin GPU During Readbacks",
+                     "Issues GPU spin draws while waiting for readbacks to complete.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Debugging Options", "EmuCore/GS", "UseDebugDevice", "Use Debug Device",
+                     "Creates the graphics device with debug validation enabled. Useful for graphics-driver bug reports.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Debugging Options", "EmuCore/GS", "DisableShaderCache", "Disable Shader Cache",
+                     "Skips reading the on-disk shader cache. Forces shaders to be recompiled at startup.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Advanced", "Debugging Options", "EmuCore/GS", "DisableVertexShaderExpand", "Disable Vertex Shader Expand",
+                     "Disables vertex shader sprite expansion. Forces sprite expansion on the CPU instead.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // On-Screen Display  (top-level category, mirrors OSDSettingsWidget.ui)
+    // ═══════════════════════════════════════════════════════════════════════
+    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdScale", "OSD Scale",
                    "Global multiplier applied to every OSD overlay. 100% matches PCSX2 upstream's default size.",
                    SettingDef::Int, "100", {}, 25, 500, 25, "", "%"};
       s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdMessagesPos", "OSD Messages Position",
+    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdMargin", "OSD Margin",
+                   "Pixel offset between the OSD elements and the screen edge.",
+                   SettingDef::Int, "10", {}, 0, 100, 1, "", "px"};
+      s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdMessagesPos", "OSD Messages Position",
                    "Corner where transient messages (save-state loaded, shader reload, etc.) are drawn.",
                    SettingDef::Combo, "1",
                    {{"None", "0"}, {"Top Left (Default)", "1"}, {"Top Center", "2"}, {"Top Right", "3"},
                     {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
                     {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "On-Screen Display", "EmuCore/GS", "OsdPerformancePos", "OSD Performance Position",
+    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdPerformancePos", "OSD Performance Position",
                    "Corner where the performance stats column (FPS/Speed/CPU/GPU/etc.) is drawn.",
                    SettingDef::Combo, "3",
                    {{"None", "0"}, {"Top Left", "1"}, {"Top Center", "2"}, {"Top Right (Default)", "3"},
                     {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
                     {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0};
       s.append(d); }
-    // ── Performance Stats ─────────────────────────────────────────────
-    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowSpeed", "Show Speed Percentages",
-                   "Displays the emulation speed as a percentage. Red below 95%, green above 105%.",
-                   SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowFPS", "Show FPS",
-                   "Displays the current frame rate reported by the GS. Useful for spotting performance issues.",
-                   SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowVPS", "Show VPS",
-                   "Displays vertical syncs per second — the PS2 display refresh reported by the GS.",
-                   SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowResolution", "Show Resolution",
-                   "Displays the PS2 internal render resolution and interlacing mode.",
-                   SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowGSStats", "Show GS Statistics",
-                   "Displays per-frame GS statistics: draw-call count, VRAM use, and a frame-time summary.",
-                   SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowCPU", "Show CPU Usage",
-                   "Displays per-component CPU usage (EE, GS, VU).",
-                   SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowGPU", "Show GPU Usage",
-                   "Displays GPU usage percentage and frame time in milliseconds.",
-                   SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowIndicators", "Show Status Indicators",
-                   "Displays icons for pause, fast-forward, slow-motion, and turbo modes in the top-right corner.",
+    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdBoldText", "OSD Text Style (Bold)",
+                   "Renders OSD text in bold. Easier to read on bright scenes.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Performance Stats", "EmuCore/GS", "OsdShowFrameTimes", "Show Frame Times",
+    // ── Performance Stats (greyed out when OSD Performance Position = None) ──
+    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowSpeed", "Show Speed Percentages",
+                   "Displays the emulation speed as a percentage. Red below 95%, green above 105%.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowFPS", "Show FPS",
+                   "Displays the current frame rate reported by the GS. Useful for spotting performance issues.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowVPS", "Show VPS",
+                   "Displays vertical syncs per second — the PS2 display refresh reported by the GS.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowResolution", "Show Resolution",
+                   "Displays the PS2 internal render resolution and interlacing mode.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowGSStats", "Show GS Statistics",
+                   "Displays per-frame GS statistics: draw-call count, VRAM use, and a frame-time summary.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowCPU", "Show CPU Usage",
+                   "Displays per-component CPU usage (EE, GS, VU).",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowGPU", "Show GPU Usage",
+                   "Displays GPU usage percentage and frame time in milliseconds.",
+                   SettingDef::Bool, "false", {}, 0, 0, 0};
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowIndicators", "Show Status Indicators",
+                   "Displays icons for pause, fast-forward, slow-motion, and turbo modes in the top-right corner.",
+                   SettingDef::Bool, "true", {}, 0, 0, 0};
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowFrameTimes", "Show Frame Times",
                    "Displays a rolling graph of recent frame times to visualise stutter.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    // ── System Information ───────────────────────────────────────────
-    { SettingDef d{"Graphics", "OSD", "System Information", "EmuCore/GS", "OsdShowHardwareInfo", "Show Hardware Info",
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    // ── System Information (greyed out when OSD Performance Position = None) ──
+    { SettingDef d{"On-Screen Display", "", "System Information", "EmuCore/GS", "OsdShowHardwareInfo", "Show Hardware Info",
                    "Displays the CPU and GPU model names as two lines in the performance column.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "System Information", "EmuCore/GS", "OsdShowVersion", "Show PCSX2 Version",
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "System Information", "EmuCore/GS", "OsdShowVersion", "Show PCSX2 Version",
                    "Displays the PCSX2 version string in the performance column.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
+      d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
     // ── Settings & Inputs ────────────────────────────────────────────
-    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowSettings", "Show Settings",
+    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowSettings", "Show Settings",
                    "Displays a compact summary of active emulation settings in the bottom-right corner.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdshowPatches", "Show Patches",
+      d.dependsOn = "OsdMessagesPos!=0"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdshowPatches", "Show Patches",
                    "Appends active patches (widescreen, no-interlacing, etc.) to the settings line.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
-      s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowInputs", "Show Inputs",
+      d.dependsOn = "OsdShowSettings"; s.append(d); }
+    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowInputs", "Show Inputs",
                    "Displays the current controller input state at the bottom-left corner.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowVideoCapture", "Show Video Capture Status",
+    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowVideoCapture", "Show Video Capture Status",
                    "Displays a recording indicator while video capture is active.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowInputRec", "Show Input Recording Status",
+    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowInputRec", "Show Input Recording Status",
                    "Displays an indicator while input recording is active.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"Graphics", "OSD", "Settings & Inputs", "EmuCore/GS", "OsdShowTextureReplacements", "Show Texture Replacement Status",
+    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowTextureReplacements", "Show Texture Replacement Status",
                    "Displays an indicator when replacement textures are loaded for the current game.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       s.append(d); }
-    // ── Messages ─────────────────────────────────────────────────────
-    { SettingDef d{"Graphics", "OSD", "Messages", "EmuCore", "WarnAboutUnsafeSettings", "Warn About Unsafe Settings",
+    // ── Messages (greyed out when OSD Messages Position = None) ───────
+    { SettingDef d{"On-Screen Display", "", "Messages", "EmuCore", "WarnAboutUnsafeSettings", "Warn About Unsafe Settings",
                    "Shows a startup warning if any unsafe settings are enabled.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
-      s.append(d); }
+      d.dependsOn = "OsdMessagesPos!=0"; s.append(d); }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Audio
@@ -566,33 +1055,591 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
 
     // ═══════════════════════════════════════════════════════════════════════
     // Memory Cards
+    // Mirrors MemoryCardSettingsWidget upstream — Slot 1/2 enable + filename
+    // entries, plus the Multitap toggles. The card-creation/conversion/delete
+    // dialogs and drag-drop card management are deferred (modal sub-dialogs
+    // and a custom QListWidget). See pcsx2-schema-alignment.md.
     // ═══════════════════════════════════════════════════════════════════════
     {
-        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot1_Enable", "Slot 1", "", SettingDef::Bool, "true", {}, 0, 0, 0};
+        SettingDef d{"Memory Cards", "", "Memory Card Slots", "MemoryCards", "Slot1_Enable", "Slot 1 Enable",
+                     "Inserts a virtual memory card into Slot 1.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
         s.append(d);
     }
     {
-        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot1_Filename", "Slot 1 Filename", "", SettingDef::String, "Mcd001.ps2", {}, 0, 0, 0};
+        SettingDef d{"Memory Cards", "", "Memory Card Slots", "MemoryCards", "Slot1_Filename", "Slot 1 Filename",
+                     "Filename of the memory card image used in Slot 1 (relative to the memcards folder).",
+                     SettingDef::String, "Mcd001.ps2", {}, 0, 0, 0};
+        d.dependsOn = "Slot1_Enable";
         s.append(d);
     }
     {
-        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot2_Enable", "Slot 2", "", SettingDef::Bool, "true", {}, 0, 0, 0};
+        SettingDef d{"Memory Cards", "", "Memory Card Slots", "MemoryCards", "Slot2_Enable", "Slot 2 Enable",
+                     "Inserts a virtual memory card into Slot 2.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
         s.append(d);
     }
     {
-        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Slot2_Filename", "Slot 2 Filename", "", SettingDef::String, "Mcd002.ps2", {}, 0, 0, 0};
+        SettingDef d{"Memory Cards", "", "Memory Card Slots", "MemoryCards", "Slot2_Filename", "Slot 2 Filename",
+                     "Filename of the memory card image used in Slot 2 (relative to the memcards folder).",
+                     SettingDef::String, "Mcd002.ps2", {}, 0, 0, 0};
+        d.dependsOn = "Slot2_Enable";
         s.append(d);
     }
     {
-        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot2_Enable", "Multitap 1 - Slot 2", "", SettingDef::Bool, "false", {}, 0, 0, 0};
+        SettingDef d{"Memory Cards", "", "Multitap", "MemoryCards", "Multitap1_Slot2_Enable", "Multitap 1 - Slot 2",
+                     "Enables the second memory-card slot of Multitap 1.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
         s.append(d);
     }
     {
-        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot3_Enable", "Multitap 1 - Slot 3", "", SettingDef::Bool, "false", {}, 0, 0, 0};
+        SettingDef d{"Memory Cards", "", "Multitap", "MemoryCards", "Multitap1_Slot3_Enable", "Multitap 1 - Slot 3",
+                     "Enables the third memory-card slot of Multitap 1.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
         s.append(d);
     }
     {
-        SettingDef d{"Memory Cards", "", "", "MemoryCards", "Multitap1_Slot4_Enable", "Multitap 1 - Slot 4", "", SettingDef::Bool, "false", {}, 0, 0, 0};
+        SettingDef d{"Memory Cards", "", "Multitap", "MemoryCards", "Multitap1_Slot4_Enable", "Multitap 1 - Slot 4",
+                     "Enables the fourth memory-card slot of Multitap 1.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Network & HDD  (mirrors DEV9SettingsWidget — Ethernet + HDD basics)
+    //
+    // Deferred (see pcsx2-schema-alignment.md):
+    //   - Ethernet Device Type / Device combos: dynamically populated from
+    //     the OS network adapter list at runtime.
+    //   - DNS host table (custom QTableView with row editor).
+    //   - HDD "Create Image" button (modal HddCreateQt dialog).
+    //   - HDD Size slider — paired with the Create button; surfaced as Int.
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"Network & HDD", "", "Ethernet", "DEV9/Eth", "EthEnable", "Ethernet Enabled",
+                     "Enables the emulated Network Adapter so the game can access network features.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "InterceptDHCP", "Intercept DHCP",
+                     "Intercepts DHCP requests so PCSX2 can supply a static address to the emulated PS2.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "EthEnable";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "PS2IP", "PS2 Address",
+                     "IPv4 address handed to the PS2 over DHCP.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "AutoMask", "Subnet Mask Auto",
+                     "Auto-derives the subnet mask from the host network configuration.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "Mask", "Subnet Mask",
+                     "Manually configured subnet mask.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP && !AutoMask";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "AutoGateway", "Gateway Auto",
+                     "Auto-derives the gateway address from the host network configuration.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "Gateway", "Gateway Address",
+                     "Manually configured gateway address.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP && !AutoGateway";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "ModeDNS1", "DNS1 Mode",
+                     "How DNS server 1 is resolved.",
+                     SettingDef::Combo, "Auto",
+                     {{"Manual", "Manual"}, {"Auto", "Auto"}, {"Internal", "Internal"}}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "DNS1", "DNS1 Address",
+                     "Manually configured DNS server 1.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP && ModeDNS1=Manual";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "ModeDNS2", "DNS2 Mode",
+                     "How DNS server 2 is resolved.",
+                     SettingDef::Combo, "Auto",
+                     {{"Manual", "Manual"}, {"Auto", "Auto"}, {"Internal", "Internal"}}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "DNS2", "DNS2 Address",
+                     "Manually configured DNS server 2.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP && ModeDNS2=Manual";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Hard Disk Drive", "DEV9/Hdd", "HddEnable", "HDD Enabled",
+                     "Enables the internal hard disk drive expansion bay.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Hard Disk Drive", "DEV9/Hdd", "HddLBA48", "Enable 48-Bit LBA",
+                     "Allows HDD images larger than 137 GiB.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "HddEnable";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Hard Disk Drive", "DEV9/Hdd", "HddFile", "HDD File",
+                     "Filename of the HDD image (.raw) inside the DEV9 data folder.",
+                     SettingDef::String, "DEV9hdd.raw", {}, 0, 0, 0};
+        d.dependsOn = "HddEnable";
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Achievements  (mirrors AchievementSettingsWidget — preference toggles
+    // only; user/token, login button, and audio-file pickers are RetroNest-
+    // managed and deferred respectively. See pcsx2-schema-alignment.md.)
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"Achievements", "", "Account", "Achievements", "Enabled", "Enable Achievements",
+                     "Enables the RetroAchievements integration.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Settings", "Achievements", "ChallengeMode", "Enable Hardcore Mode",
+                     "Disables save states, cheats, and slowdown so achievements are earned under stricter conditions.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Settings", "Achievements", "SpectatorMode", "Enable Spectator Mode",
+                     "Allows other players to watch your session via the achievement servers.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Settings", "Achievements", "EncoreMode", "Enable Encore Mode",
+                     "Allows previously-unlocked achievements to be earned again on subsequent playthroughs.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Settings", "Achievements", "UnofficialTestMode", "Test Unofficial Achievements",
+                     "Includes unofficial / WIP achievements when checking for unlocks.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Notifications", "Achievements", "Notifications", "Show Achievement Notifications",
+                     "Pops up an OSD notification when an achievement is earned.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Notifications", "Achievements", "NotificationsDuration", "Achievement Notifications Duration",
+                     "How long achievement notifications stay on screen.",
+                     SettingDef::Int, "5", {}, 3, 30, 1, "slider", "s"};
+        d.dependsOn = "Notifications && Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Notifications", "Achievements", "LeaderboardNotifications", "Show Leaderboard Notifications",
+                     "Pops up an OSD notification when a leaderboard score changes.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Notifications", "Achievements", "LeaderboardsDuration", "Leaderboard Notifications Duration",
+                     "How long leaderboard notifications stay on screen.",
+                     SettingDef::Int, "5", {}, 3, 30, 1, "slider", "s"};
+        d.dependsOn = "LeaderboardNotifications && Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Notifications", "Achievements", "SoundEffects", "Enable Sound Effects",
+                     "Plays a sound effect when an achievement unlocks.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Notifications", "Achievements", "NotificationPosition", "Notification Position",
+                     "Corner where notifications appear.",
+                     SettingDef::Combo, "1",
+                     {{"None", "0"}, {"Top Left (Default)", "1"}, {"Top Center", "2"}, {"Top Right", "3"},
+                      {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
+                      {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Overlay Settings", "Achievements", "Overlays", "Enable In-Game Overlays",
+                     "Renders an in-game overlay listing recent achievement progress.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Overlay Settings", "Achievements", "LBOverlays", "Enable In-Game Leaderboard Overlays",
+                     "Renders an in-game overlay listing leaderboard standings.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Achievements", "", "Overlay Settings", "Achievements", "OverlayPosition", "Overlay Position",
+                     "Corner where the in-game overlays appear.",
+                     SettingDef::Combo, "8",
+                     {{"Top Left", "0"}, {"Top Center", "1"}, {"Top Right", "2"},
+                      {"Center Left", "3"}, {"Center", "4"}, {"Center Right", "5"},
+                      {"Bottom Left", "6"}, {"Bottom Center", "7"}, {"Bottom Right (Default)", "8"}}, 0, 0, 0};
+        d.dependsOn = "Enabled";
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Advanced  (mirrors AdvancedSettingsWidget — CPU/VU/IOP recompiler &
+    // rounding/clamping, Game Settings, Savestate, PINE.)
+    //
+    // Clamping Mode is a single combo writing three boolean keys via
+    // saveTransform, mirroring upstream's setClampingMode helper.
+    // ═══════════════════════════════════════════════════════════════════════
+    const QVector<QPair<QString,QString>> roundingOptions = {
+        {"Nearest", "0"}, {"Negative", "1"}, {"Positive", "2"}, {"Chop/Zero (Default)", "3"}
+    };
+    const QVector<QPair<QString,QString>> divRoundingOptions = {
+        {"Nearest (Default)", "0"}, {"Negative", "1"}, {"Positive", "2"}, {"Chop/Zero", "3"}
+    };
+    // Build the Clamping Mode combo for {fpu, vu0, vu1}. Three INI keys per
+    // unit (full/extra/overflow) collapse into a single 4-state combo. The
+    // saveTransform writes all three; loadTransform synthesises the combo
+    // value from whichever combination of bits is set on disk. Mirrors
+    // AdvancedSettingsWidget::{getGlobalClampingModeIndex,setClampingMode}.
+    auto makeClampingMode = [&](const QString& fullKey,
+                                const QString& extraKey,
+                                const QString& overflowKey) {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)",
+                     "EmuCore/CPU/Recompiler",
+                     fullKey,  // primary key — also used for dependency atoms
+                     "Clamping Mode",
+                     "Controls how out-of-range floating-point values are clamped. Higher levels are more accurate but slower.",
+                     SettingDef::Combo, "Normal (Default)",
+                     {{"None", "None"},
+                      {"Normal (Default)", "Normal (Default)"},
+                      {"Extra + Preserve Sign", "Extra + Preserve Sign"},
+                      {"Full", "Full"}}, 0, 0, 0};
+        d.saveTransform = [extraKey, fullKey, overflowKey](
+            const QString& v, const SettingDef::SaveCallback& save) {
+            const QString section = "EmuCore/CPU/Recompiler";
+            // index: None=0, Normal=1, Extra=2, Full=3
+            //   first  (overflow)  : index >= 1
+            //   second (extra)     : index >= 2
+            //   third  (full/sign) : index >= 3
+            int idx = 1; // default to Normal
+            if (v == "None") idx = 0;
+            else if (v == "Extra + Preserve Sign") idx = 2;
+            else if (v == "Full") idx = 3;
+            save(section, fullKey,     idx >= 3 ? "true" : "false");
+            save(section, extraKey,    idx >= 2 ? "true" : "false");
+            save(section, overflowKey, idx >= 1 ? "true" : "false");
+        };
+        d.loadTransform = [extraKey, fullKey, overflowKey](
+            const SettingDef::LoadCallback& read) -> QString {
+            const QString section = "EmuCore/CPU/Recompiler";
+            const auto truthy = [](const QString& s) {
+                const QString l = s.toLower();
+                return l == "true" || l == "1";
+            };
+            if (truthy(read(section, fullKey)))     return "Full";
+            if (truthy(read(section, extraKey)))    return "Extra + Preserve Sign";
+            if (truthy(read(section, overflowKey))) return "Normal (Default)";
+            return "None";
+        };
+        return d;
+    };
+
+    // EmotionEngine (MIPS-IV)
+    {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)", "EmuCore/CPU", "FPU.Roundmode", "Rounding Mode",
+                     "Floating-point rounding mode used by the Emotion Engine FPU.",
+                     SettingDef::Combo, "3", roundingOptions, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)", "EmuCore/CPU", "FPUDiv.Roundmode", "Division Rounding Mode",
+                     "Floating-point rounding mode used for FPU division.",
+                     SettingDef::Combo, "0", divRoundingOptions, 0, 0, 0};
+        s.append(d);
+    }
+    s.append(makeClampingMode("fpuFullMode", "fpuExtraOverflow", "fpuOverflow"));
+    {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)", "EmuCore/CPU/Recompiler", "EnableEE", "Enable Recompiler",
+                     "Performs JIT translation of EE MIPS code. Required for full speed.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)", "EmuCore/Speedhacks", "WaitLoop", "Wait Loop Detection",
+                     "Detects busy-wait loops and lets the CPU sleep until the next interrupt.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)", "EmuCore/CPU/Recompiler", "EnableFastmem", "Enable Fast Memory Access",
+                     "Uses page-fault-driven fast memory access. Much faster but requires more memory.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)", "EmuCore/CPU/Recompiler", "EnableEECache", "Enable Cache (Slow)",
+                     "Emulates the EE's instruction cache. Required by a few games but very slow.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)", "EmuCore/Speedhacks", "IntcStat", "INTC Spin Detection",
+                     "Detects spin-loops on the INTC interrupt register.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)", "EmuCore/CPU/Recompiler", "PauseOnTLBMiss", "Pause On TLB Miss",
+                     "Pauses emulation when a TLB miss occurs. Useful for debugging.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "EmotionEngine (MIPS-IV)", "EmuCore/CPU", "ExtraMemory", "Enable Extended RAM (Dev Console)",
+                     "Doubles the EE memory to 64 MiB. Required by some homebrew that targets the dev console.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // Vector Units (VU)
+    {
+        SettingDef d{"Advanced", "", "Vector Units (VU)", "EmuCore/CPU", "VU0.Roundmode", "VU0 Rounding Mode",
+                     "Floating-point rounding mode used by VU0.",
+                     SettingDef::Combo, "3", roundingOptions, 0, 0, 0};
+        s.append(d);
+    }
+    s.append([&]{ auto d = makeClampingMode("vu0SignOverflow", "vu0ExtraOverflow", "vu0Overflow");
+                  d.group = "Vector Units (VU)"; d.label = "VU0 Clamping Mode"; return d; }());
+    {
+        SettingDef d{"Advanced", "", "Vector Units (VU)", "EmuCore/CPU", "VU1.Roundmode", "VU1 Rounding Mode",
+                     "Floating-point rounding mode used by VU1.",
+                     SettingDef::Combo, "3", roundingOptions, 0, 0, 0};
+        s.append(d);
+    }
+    s.append([&]{ auto d = makeClampingMode("vu1SignOverflow", "vu1ExtraOverflow", "vu1Overflow");
+                  d.group = "Vector Units (VU)"; d.label = "VU1 Clamping Mode"; return d; }());
+    {
+        SettingDef d{"Advanced", "", "Vector Units (VU)", "EmuCore/CPU/Recompiler", "EnableVU0", "Enable VU0 Recompiler (Micro Mode)",
+                     "Performs JIT translation of VU0 microcode.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "Vector Units (VU)", "EmuCore/CPU/Recompiler", "EnableVU1", "Enable VU1 Recompiler",
+                     "Performs JIT translation of VU1 microcode.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "Vector Units (VU)", "EmuCore/Speedhacks", "vuFlagHack", "mVU Flag Hack",
+                     "Skips redundant VU flag updates. Significant speedup, very high compatibility.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "Vector Units (VU)", "EmuCore/Speedhacks", "vu1Instant", "Enable Instant VU1",
+                     "Runs VU1 micro-instructions instantly instead of emulating their cycle cost.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // I/O Processor (IOP, MIPS-I)
+    {
+        SettingDef d{"Advanced", "", "I/O Processor (IOP, MIPS-I)", "EmuCore/CPU/Recompiler", "EnableIOP", "Enable Recompiler",
+                     "Performs JIT translation of the IOP's MIPS-I machine code.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // Game Settings
+    {
+        SettingDef d{"Advanced", "", "Game Settings", "EmuCore", "EnableGameFixes", "Enable Game Fixes",
+                     "Automatically applies known fixes to games with compatibility quirks.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "Game Settings", "EmuCore", "EnablePatches", "Enable Compatibility Patches",
+                     "Automatically applies community patches to known problematic games.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // Savestate Settings
+    {
+        SettingDef d{"Advanced", "", "Savestate Settings", "EmuCore", "SavestateCompressionType", "Compression Method",
+                     "Compression algorithm used when writing savestates.",
+                     SettingDef::Combo, "2",
+                     {{"Uncompressed", "0"}, {"Deflate64", "1"},
+                      {"Zstandard", "2"}, {"LZMA2", "3"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "Savestate Settings", "EmuCore", "SavestateCompressionRatio", "Compression Level",
+                     "Compression level used when writing savestates.",
+                     SettingDef::Combo, "1",
+                     {{"Low (Fast)", "0"}, {"Medium (Recommended)", "1"},
+                      {"High", "2"}, {"Very High (Slow, Not Recommended)", "3"}}, 0, 0, 0};
+        d.dependsOn = "SavestateCompressionType!=0";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "Savestate Settings", "EmuCore", "BackupSavestate", "Create Save State Backups",
+                     "Backs up the previous save state before overwriting (.backup suffix).",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "Savestate Settings", "EmuCore", "SaveStateOnShutdown", "Save State On Shutdown",
+                     "Automatically saves a state when emulation is stopped, so you can resume next launch.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // PINE Settings (PCSX2's IPC interface)
+    {
+        SettingDef d{"Advanced", "", "PINE Settings", "EmuCore", "EnablePINE", "Enable",
+                     "Enables the PINE IPC interface so external tools can poke PCSX2's memory.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Advanced", "", "PINE Settings", "EmuCore", "PINESlot", "Slot",
+                     "TCP slot used by the PINE interface.",
+                     SettingDef::Int, "28011", {}, 1, 65535, 1};
+        d.dependsOn = "EnablePINE";
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Debug  (mirrors DebugSettingsWidget — Analysis + GS Dump tabs.
+    // Logging tab is upstream-gated to PCSX2_DEVBUILD; debugger UI tab is
+    // window management for the standalone debugger we don't surface.
+    // DebugAnalysisSettingsWidget itself is a custom embedded widget —
+    // deferred. See pcsx2-schema-alignment.md.)
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"Debug", "", "Analysis", "Debugger/Analysis", "RunCondition", "Automatically Analyze Program",
+                     "When the debugger should run static analysis on the loaded program.",
+                     SettingDef::Combo, "If Debugger Is Open",
+                     {{"Always", "Always"},
+                      {"If Debugger Is Open", "If Debugger Is Open"},
+                      {"Never", "Never"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Debug", "", "Analysis", "Debugger/Analysis", "GenerateSymbolsForIRXExports", "Generate Symbols For IRX Exports",
+                     "Builds a symbol table for IRX module exports.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // GS Dump master toggle + every dump-tied bool/int. All dependent rows
+    // grey out when DumpGSData is off. HW/SW dump directories are surfaced
+    // as plain String inputs (no dedicated folder picker yet).
+    {
+        SettingDef d{"Debug", "", "GS (Graphics Synthesizer)", "EmuCore/GS", "DumpGSData", "Dump GS Draws",
+                     "Master switch for the GS dump system. When enabled, draws and frames matching the configured ranges are written to disk.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    const QVector<QPair<QString,QString>> gsDumpBools = {
+        {"SaveRT",            "Save RT"},
+        {"SaveFrame",         "Save Frame"},
+        {"SaveTexture",       "Save Texture"},
+        {"SaveDepth",         "Save Depth"},
+        {"SaveAlpha",         "Save Alpha"},
+        {"SaveInfo",          "Save Info"},
+        {"SaveTransferImages","Save Transfer Image Data"},
+        {"SaveDrawStats",     "Save Draw Stats"},
+        {"SaveFrameStats",    "Save Frame Stats"},
+        {"SaveHWConfig",      "Save HW Config"},
+    };
+    for (const auto& kv : gsDumpBools) {
+        SettingDef d{"Debug", "", "GS (Graphics Synthesizer)", "EmuCore/GS",
+                     kv.first, kv.second, "",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "DumpGSData";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Debug", "", "GS (Graphics Synthesizer)", "EmuCore/GS", "SaveDrawStart", "Save Draw Start",
+                     "First draw index in the dump range.",
+                     SettingDef::Int, "0", {}, 0, 1000000, 1};
+        d.dependsOn = "DumpGSData";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Debug", "", "GS (Graphics Synthesizer)", "EmuCore/GS", "SaveDrawCount", "Save Draw Count",
+                     "How many draws to dump after Save Draw Start.",
+                     SettingDef::Int, "5000", {}, 0, 1000000, 1};
+        d.dependsOn = "DumpGSData";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Debug", "", "GS (Graphics Synthesizer)", "EmuCore/GS", "SaveFrameStart", "Save Frame Start",
+                     "First frame index in the dump range.",
+                     SettingDef::Int, "0", {}, 0, 1000000, 1};
+        d.dependsOn = "DumpGSData";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Debug", "", "GS (Graphics Synthesizer)", "EmuCore/GS", "SaveFrameCount", "Save Frame Count",
+                     "How many frames to dump after Save Frame Start.",
+                     SettingDef::Int, "999999", {}, 0, 9999999, 1};
+        d.dependsOn = "DumpGSData";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Debug", "", "GS (Graphics Synthesizer)", "EmuCore/GS", "HWDumpDirectory", "HW Dump Directory",
+                     "Folder where hardware-renderer GS dumps are written. Empty = the default screenshots folder.",
+                     SettingDef::String, "", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Debug", "", "GS (Graphics Synthesizer)", "EmuCore/GS", "SWDumpDirectory", "SW Dump Directory",
+                     "Folder where software-renderer GS dumps are written. Empty = the default screenshots folder.",
+                     SettingDef::String, "", {}, 0, 0, 0};
         s.append(d);
     }
 
@@ -1212,7 +2259,7 @@ PreviewSpec PCSX2Adapter::previewSpec(const QString& category,
             {"IntegerScaling",       "integerScaling"},
         }};
     }
-    if (category == "Graphics" && subcategory == "OSD") {
+    if (category == "On-Screen Display" && subcategory.isEmpty()) {
         return {"osd", {
             {"OsdShowFPS",                 "showFps"},
             {"OsdShowSpeed",               "showSpeed"},
