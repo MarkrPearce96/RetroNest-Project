@@ -193,6 +193,70 @@ Prior audits live in `docs/superpowers/audits/` (PCSX2 / DuckStation / PPSSPP, a
 
 Section 7 above lists the specific bug classes to look for. The audit reports under `docs/superpowers/audits/` are the canonical examples of what a finished audit looks like.
 
+## Mirroring the upstream UI verbatim (THE rule)
+
+Once round-trip correctness is confirmed, the schema must also **mirror the standalone emulator's settings dialog visually**: same top-level categories, same group order inside each category, same setting order inside each group, same labels, same gating chains. The reference implementation is the Dolphin adapter (`cpp/src/adapters/dolphin_adapter.cpp`) and its alignment memory (`dolphin-schema-alignment.md`). Future emulator migrations follow the same shape.
+
+### Universal audit recipe
+
+For every emulator pane / widget file in `references/<emu>-master/Source/.../Settings/`, walk the constructor and `addWidget` / `addRow` calls in order. For each widget produce a row:
+
+- `(category, subcategory, group, INI section, INI key, label, default, gating)`
+
+Then diff that against your `settingsSchema()`. Every difference is a fix:
+
+- **Wrong group / sub-tab** → MOVE
+- **Wrong position** → REORDER (the schema vector's order IS the display order)
+- **Wrong label** → RELABEL (verbatim from upstream's `tr(...)` strings)
+- **Wrong combo option label or stored value** → RELABEL combo
+- **Missing setting** → ADD
+- **Setting in our schema but not in upstream UI** → check whether it's compile-time gated upstream (`#if defined(...)`); if so, drop it from the visible schema and document why in a memory entry. If it's there but we hid it, restore it.
+- **Wrong gating** → use the `dependsOn` DSL (see below) to mirror upstream's `setEnabled` / `OnXChanged` chains exactly.
+
+### Use the schema-driven `GenericSettingsPage` for new emulators
+
+`cpp/src/ui/settings/generic_settings_page.cpp` is the rendering target. Wire every visible category through it from your dialog (Dolphin-style — see `dolphin_settings_dialog.cpp`). **Do not write bespoke per-emulator C++ pages for new emulators** — those exist for PCSX2/DuckStation only because they predate the schema-driven pipeline, and they're a migration debt, not a model. See `recommended-page-layout-contract.md` for the rendering contract; `previewSpec(category, subcategory)` is usually the only adapter override needed for previews.
+
+### `SettingDef` mechanisms — full toolbox
+
+Every shape upstream uses has a schema mechanism. **Reach for the existing tool before adding a new mechanism**, and only mark a setting deferred when no current mechanism fits.
+
+- **Plain types**: `Bool` / `Int` / `Float` / `String` / `Combo` with `category`, `subcategory`, `group`, `section`, `key`, `label`, `tooltip`, `defaultValue`. Sliders via `layout = "slider"`. Paired side-by-side via `layout = "paired"`.
+
+- **Multi-file routing**: `iniFilePath`. Use a small lambda helper to stamp it onto every entry in a sub-section (Dolphin uses `gfx()` to stamp `GFX.ini`).
+
+- **Dependency gates** (`dependsOn`): a small boolean DSL. Atoms are `Foo` (truthy), `!Foo` (falsy), `Foo=Bar` (combo equality), `Foo!=Bar` (combo inequality). Combine with `&&` or `||` (single top-level operator, no parens, no mixing). Bare-key form (`dependsOn = "Foo"`) is fully backward compatible with pre-DSL adapters. The legacy `dependsOnValue` semicolon-allow-list also still works. See `cpp/src/core/setting_dependency.h`. Examples:
+  - `"Backend=OpenAL && DSPHLE!=HLE"` — Dolphin's DPL2 Decoder gate
+  - `"!EFBToTextureEnable || !XFBToTextureEnable"` — Dolphin's Defer EFB Copies gate
+  - `"!ImmediateXFBEnable && !VISkip"` — Dolphin's Skip Duplicate XFBs gate
+
+- **Inverted booleans**: `SettingDef::inverted = true`. Mirrors upstream `ConfigBool(label, key, layer, /*inverted=*/true)` — checkbox visually flips relative to the stored INI value. Use a tiny `inv()` lambda helper alongside the file-routing helper to keep schema entries terse: `gfx(inv({...}))`. Dolphin uses this for "Disable Bounding Box" (`BBoxEnable` stored, displayed inverted), "Ignore Format Changes" (`EFBEmulateFormatChanges`), "Skip EFB Access from CPU" (`EFBAccessEnable`), "Manual Texture Sampling" (`FastTextureSampling`).
+
+- **Multi-key combos** (synthesized): `saveTransform` + `loadTransform`. A single combo whose entries write to two-or-more INI keys at once. Pattern proven across audio, graphics combos, and sliders. Use this when upstream has a `ConfigComplexChoice` or similar combined widget. Examples:
+  - Dolphin's "DSP Emulation Engine" — three combo states write `Core/DSPHLE` + `DSP/EnableJIT`
+  - Dolphin's "Anti-Aliasing" — seven combo states write `MSAA` + `SSAA`
+  - Dolphin's "Texture Filtering" — twelve combo states write `MaxAnisotropy` + `ForceTextureFiltering`
+
+- **Sliders with unit conversion**: same `saveTransform` / `loadTransform`. A slider can display in MB while storing in bytes (Dolphin's MEM1/MEM2 multiply by `0x100000`), or display in % while storing as a float multiplier, etc. Both load and save paths honour the transforms.
+
+- **Bitmask checkboxes**: `SettingDef::bitmask` for emulators that pack flag bits into one int (PPSSPP's `iShowStatusFlags`). Multiple bitmask checkboxes sharing the same `section`/`key` merge correctly without caching.
+
+### Deferral policy — only defer when infra is genuinely missing
+
+Defer a setting **only** when matching upstream needs infrastructure that doesn't exist yet. The currently-recognised blockers (as of the 2026-05-05 Dolphin pass):
+
+- **Float sliders with sub-integer step** — our slider widget is integer-only. Workaround: `saveTransform` from int slider position to a float string. Direct float sliders are deferred.
+- **Modal sub-dialogs** — upstream "Configure" buttons that open second-level dialogs (Dolphin's Color Correction, Post-Processing per-shader options). Need a button widget type + sub-modal infra.
+- **Filesystem-scanned combos** — combos populated at runtime by reading a directory (Dolphin's Post-Processing Effect picker, scanning `User/Load/Shaders/`). Need dynamic combo population.
+- **Dynamic-visibility widgets** — fields shown only when a sibling has a specific value (Dolphin's Custom Aspect Ratio width/height). Different from greying out (which the DSL handles).
+- **Datetime widgets** — Dolphin's Custom RTC value picker. No `QDateTimeEdit`-equivalent widget type yet.
+
+Every deferral needs a memory entry naming the upstream widget, the blocking infra, and the affected setting keys. **Do not** silently skip an upstream setting because it "looks debug-only" or "users won't touch it" — if it's in the standalone UI, it goes in our UI unless it hits one of these blockers.
+
+### Dolphin's outstanding deferrals
+
+See `dolphin-schema-alignment.md` (in user memory) for the live list. As of 2026-05-05 the deferred set is: Color Correction modal, Post-Processing Effect picker, Custom Aspect Ratio width/height, Stereo Depth/Convergence sliders, CPU Clock Override + VBI Frequency Override fine-grained sliders, Custom RTC datetime picker, backend-capability gates (HDR / GPU texture decoding etc.), and transitive dependency closure.
+
 ## Automatic behaviors (no per-emulator code needed)
 - **Setup Wizard** — new emulators appear automatically in the wizard's emulator
   selection, resolution, aspect ratio, and BIOS pages. Driven by `ManifestLoader`
