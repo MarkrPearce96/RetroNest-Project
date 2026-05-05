@@ -962,11 +962,13 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "User/Load/Textures/<game-id>/.",
          SettingDef::Bool, "False"}),
 
+        // Prefetch is meaningless without custom textures loaded — gate
+        // on HiresTextures (matches AdvancedWidget.cpp).
         gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "CacheHiresTextures",
          "Prefetch Custom Textures",
          "Pre-load all custom textures into VRAM at boot. Eliminates load "
          "stutter; uses more memory.",
-         SettingDef::Bool, "False"}),
+         SettingDef::Bool, "False", {}, 0, 0, 0, "", "", "HiresTextures"}),
 
         gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpTextures",
          "Dump Textures",
@@ -974,15 +976,17 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "texture packs.",
          SettingDef::Bool, "False"}),
 
+        // Base/mip dump options only matter when texture dumping is on
+        // — gate on DumpTextures (matches AdvancedWidget.cpp).
         gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpBaseTextures",
          "Dump Base Textures",
          "Include base mipmaps in the texture dump.",
-         SettingDef::Bool, "True"}),
+         SettingDef::Bool, "True", {}, 0, 0, 0, "", "", "DumpTextures"}),
 
         gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpMipTextures",
          "Dump Mip Maps",
          "Include all mipmap levels in the texture dump.",
-         SettingDef::Bool, "True"}),
+         SettingDef::Bool, "True", {}, 0, 0, 0, "", "", "DumpTextures"}),
 
         gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "DumpEFBTarget",
          "Dump EFB Target",
@@ -1081,10 +1085,12 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Display Dolphin's own status messages (savestates, achievements, etc.)",
          SettingDef::Bool, "True"},
 
+        // Font size only matters when on-screen messages are on.
         {"Graphics", "On-Screen Display", "General", "Settings", "OSDFontSize",
          "OSD Font Size",
          "Point size for on-screen messages.",
-         SettingDef::Int, "13", {}, 8, 32, 1, "slider", "pt"},
+         SettingDef::Int, "13", {}, 8, 32, 1, "slider", "pt",
+         "OnScreenDisplayMessages"},
 
         gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
          "ShowFPS",
