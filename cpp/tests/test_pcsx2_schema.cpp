@@ -431,8 +431,8 @@ private slots:
             // Performance
             "Renderer", "vuThread", "EECycleRate",
             // Visual Quality
-            "upscale_multiplier", "AspectRatio", "accurate_blending_unit",
-            "MaxAnisotropy", "filter",
+            "upscale_multiplier", "AspectRatio", "EnableWideScreenPatches",
+            "accurate_blending_unit", "MaxAnisotropy", "filter",
             // Frame Pacing
             "VsyncEnable", "SyncToHostRefreshRate",
             // Audio

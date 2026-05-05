@@ -98,6 +98,12 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         s.append(d);
     }
     {
+        SettingDef d{"Recommended", "", "Visual Quality", "EmuCore", "EnableWideScreenPatches", "Apply Widescreen Patches",
+                     "Reshapes 4:3 games to render in true 16:9 by applying community widescreen patches. Pair with Aspect Ratio = 16:9 for the best result on a widescreen display.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
         SettingDef d{"Recommended", "", "Visual Quality", "EmuCore/GS", "accurate_blending_unit", "Blending Accuracy",
                      "Controls how accurately PS2 blending operations are emulated. Basic is the right default; raise it only if a game shows colour/transparency glitches.",
                      SettingDef::Combo, "1",
