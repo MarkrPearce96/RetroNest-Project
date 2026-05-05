@@ -503,53 +503,22 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     }
 
     // ── Hardware Rendering Options (Renderer != Software) ─────────────
-    // Mirrors upstream's "Hardware Rendering Options" grid in
-    // GraphicsHardwareRenderingSettingsTab.ui. Manual Hardware Renderer Fixes
-    // (UserHacks) is upstream-gated to per-game/dev — omitted globally.
+    // Just Mipmapping. Accurate Alpha Test (HWAccurateAlphaTest) and AA1
+    // (HWAA1) live in upstream's HW pane but are advanced compatibility
+    // toggles users overwhelmingly tweak per-game via PCSX2's database, not
+    // globally — kept out of our UI to match user expectation. They still
+    // round-trip if touched via the native PCSX2 UI.
+    //
+    // The Software Renderer group (extrathreads, autoflush_sw, mipmap) is
+    // also intentionally not surfaced — upstream renders it as a separate
+    // tab that only appears when Renderer == Software, which is rare for
+    // end users; surfacing it always (greyed out) was visually noisy. See
+    // pcsx2-schema-alignment.md.
     {
         SettingDef d{"Graphics", "Rendering", "Hardware Rendering Options", "EmuCore/GS", "hw_mipmap", "Mipmapping",
                      "Enables mipmapping which improves texture quality at the cost of performance.",
                      SettingDef::Bool, "true", {}, 0, 0, 0};
         d.dependsOn = "Renderer!=13";
-        s.append(d);
-    }
-    {
-        SettingDef d{"Graphics", "Rendering", "Hardware Rendering Options", "EmuCore/GS", "HWAccurateAlphaTest", "Accurate Alpha Test",
-                     "Emulates the PS2's alpha test more accurately. Fixes some games that have transparent geometry artifacts.",
-                     SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.dependsOn = "Renderer!=13";
-        s.append(d);
-    }
-    {
-        SettingDef d{"Graphics", "Rendering", "Hardware Rendering Options", "EmuCore/GS", "HWAA1", "AA1",
-                     "Enables PS2 Anti-Aliasing (AA1). Fixes anti-aliased lines and triangles in some games.",
-                     SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.dependsOn = "Renderer!=13";
-        s.append(d);
-    }
-
-    // ── Software Renderer (Renderer == Software) ─────────────────────
-    // Mirrors GraphicsSoftwareRenderingSettingsTab.ui. Texture Filtering is
-    // shared with the HW combo above (same INI key) — no separate entry.
-    {
-        SettingDef d{"Graphics", "Rendering", "Software Renderer", "EmuCore/GS", "extrathreads", "Software Rendering Threads",
-                     "Number of additional worker threads used by the software renderer. Higher counts can improve framerate on multi-core CPUs.",
-                     SettingDef::Int, "2", {}, 0, 32, 1};
-        d.dependsOn = "Renderer=13";
-        s.append(d);
-    }
-    {
-        SettingDef d{"Graphics", "Rendering", "Software Renderer", "EmuCore/GS", "autoflush_sw", "Auto Flush",
-                     "Forces the software renderer to flush after every draw call. Slightly improves accuracy at the cost of performance.",
-                     SettingDef::Bool, "true", {}, 0, 0, 0};
-        d.dependsOn = "Renderer=13";
-        s.append(d);
-    }
-    {
-        SettingDef d{"Graphics", "Rendering", "Software Renderer", "EmuCore/GS", "mipmap", "Mipmapping",
-                     "Enables mipmapping for the software renderer.",
-                     SettingDef::Bool, "true", {}, 0, 0, 0};
-        d.dependsOn = "Renderer=13";
         s.append(d);
     }
 

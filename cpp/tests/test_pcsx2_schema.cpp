@@ -107,14 +107,16 @@ private slots:
         // GraphicsSoftwareRenderingSettingsTab.ui collapsed into one sub-tab
         // gated by the Renderer combo. Manual Hardware Renderer Fixes is
         // per-game/dev-build only — omitted.
+        // Accurate Alpha Test, AA1, and the entire Software Renderer
+        // group (extrathreads / autoflush_sw / mipmap) are intentionally
+        // dropped — see settingsSchema's Hardware Rendering Options
+        // comment.
         const QSet<QString> expected{
             // Shared
             "upscale_multiplier", "filter", "TriFilter", "MaxAnisotropy",
             "dithering_ps2", "accurate_blending_unit",
             // Hardware Rendering Options
-            "hw_mipmap", "HWAccurateAlphaTest", "HWAA1",
-            // Software Renderer
-            "extrathreads", "autoflush_sw", "mipmap",
+            "hw_mipmap",
         };
         QSet<QString> got;
         for (const auto& d : schema_)
