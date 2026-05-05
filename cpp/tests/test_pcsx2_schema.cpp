@@ -165,10 +165,20 @@ private slots:
     }
 
     void testGraphicsMediaCaptureFullCatalog() {
-        // Video Recording Setup is deferred — dynamically populated codec
-        // and format combos. Only screenshot settings are surfaced.
+        // Screenshot Capture Setup + Video Recording Setup. Codec / Format /
+        // Audio Codec are FFmpeg-runtime-populated upstream — we expose them
+        // as free-form String inputs.
         const QSet<QString> expected{
+            // Screenshot Capture Setup
             "ScreenshotSize", "ScreenshotFormat", "ScreenshotQuality",
+            // Video Recording Setup
+            "CaptureContainer",
+            "EnableVideoCapture", "VideoCaptureCodec", "VideoCaptureFormat",
+            "VideoCaptureBitrate", "VideoCaptureAutoResolution",
+            "VideoCaptureWidth", "VideoCaptureHeight",
+            "EnableVideoCaptureParameters", "VideoCaptureParameters",
+            "EnableAudioCapture", "AudioCaptureCodec", "AudioCaptureBitrate",
+            "EnableAudioCaptureParameters", "AudioCaptureParameters",
         };
         QSet<QString> got;
         for (const auto& d : schema_)

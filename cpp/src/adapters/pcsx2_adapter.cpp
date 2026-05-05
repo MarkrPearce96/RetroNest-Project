@@ -646,10 +646,10 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
 
     // ═══════════════════════════════════════════════════════════════════════
     // Graphics > Media Capture
-    // Mirrors GraphicsMediaCaptureSettingsTab.ui Screenshot Capture Setup
-    // group. Video Recording Setup is deferred — its codec/format combos are
-    // populated dynamically from FFmpeg at runtime, which our schema can't
-    // express today. See pcsx2-schema-alignment.md.
+    // Mirrors GraphicsMediaCaptureSettingsTab.ui — Screenshot Capture Setup
+    // and Video Recording Setup. Codec / Format / Audio Codec combos are
+    // FFmpeg-runtime-populated upstream; we expose them as free-form String
+    // inputs ("" = Default). See pcsx2-schema-alignment.md.
     // ═══════════════════════════════════════════════════════════════════════
     {
         SettingDef d{"Graphics", "Media Capture", "Screenshot Capture Setup", "EmuCore/GS", "ScreenshotSize", "Resolution",
@@ -671,6 +671,117 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         SettingDef d{"Graphics", "Media Capture", "Screenshot Capture Setup", "EmuCore/GS", "ScreenshotQuality", "Quality",
                      "Compression quality for lossy screenshot formats. Higher = larger files / better quality.",
                      SettingDef::Int, "90", {}, 1, 100, 1, "slider", "%"};
+        s.append(d);
+    }
+
+    // ── Video Recording Setup ─────────────────────────────────────────
+    // Container values match upstream's CaptureContainers[] array
+    // (Pcsx2Config.cpp:664). FFmpeg defaults are 6000 kbps video / 192 kbps
+    // audio / 640x480 (defaults from Config.h:735-738).
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "CaptureContainer", "Container",
+                     "Output container format for video recordings.",
+                     SettingDef::Combo, "mp4",
+                     {{"MP4", "mp4"}, {"MKV", "mkv"}, {"MOV", "mov"},
+                      {"AVI", "avi"}, {"WAV", "wav"}, {"MP3", "mp3"}}, 0, 0, 0};
+        s.append(d);
+    }
+    // Capture Video sub-section.
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "EnableVideoCapture", "Capture Video",
+                     "Records video to the output file when capture is started.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "VideoCaptureCodec", "Video Codec",
+                     "FFmpeg codec name (e.g. \"h264\", \"hevc\", \"libx264\"). Empty = container default.",
+                     SettingDef::String, "", {}, 0, 0, 0};
+        d.dependsOn = "EnableVideoCapture";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "VideoCaptureFormat", "Video Format",
+                     "FFmpeg pixel format name (e.g. \"yuv420p\", \"nv12\"). Empty = codec default.",
+                     SettingDef::String, "", {}, 0, 0, 0};
+        d.dependsOn = "EnableVideoCapture";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "VideoCaptureBitrate", "Video Bitrate",
+                     "Target bitrate for video encoding.",
+                     SettingDef::Int, "6000", {}, 100, 200000, 100, "slider", " kbps"};
+        d.dependsOn = "EnableVideoCapture";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "VideoCaptureAutoResolution", "Auto Resolution",
+                     "Match the recording resolution to the live display output.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "EnableVideoCapture";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "VideoCaptureWidth", "Video Width",
+                     "Manually configured recording width (pixels). Disabled when Auto Resolution is on.",
+                     SettingDef::Int, "640", {}, 320, 32768, 16, "slider", "px"};
+        d.dependsOn = "EnableVideoCapture && !VideoCaptureAutoResolution";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "VideoCaptureHeight", "Video Height",
+                     "Manually configured recording height (pixels). Disabled when Auto Resolution is on.",
+                     SettingDef::Int, "480", {}, 240, 32768, 16, "slider", "px"};
+        d.dependsOn = "EnableVideoCapture && !VideoCaptureAutoResolution";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "EnableVideoCaptureParameters", "Extra Video Arguments",
+                     "Pass additional FFmpeg arguments for the video stream.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "EnableVideoCapture";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "VideoCaptureParameters", "Video Arguments",
+                     "Free-form FFmpeg argument string applied to the video encoder.",
+                     SettingDef::String, "", {}, 0, 0, 0};
+        d.dependsOn = "EnableVideoCapture && EnableVideoCaptureParameters";
+        s.append(d);
+    }
+    // Capture Audio sub-section.
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "EnableAudioCapture", "Capture Audio",
+                     "Records the audio stream alongside the video.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "AudioCaptureCodec", "Audio Codec",
+                     "FFmpeg audio codec name (e.g. \"aac\", \"mp3\", \"opus\"). Empty = container default.",
+                     SettingDef::String, "", {}, 0, 0, 0};
+        d.dependsOn = "EnableAudioCapture";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "AudioCaptureBitrate", "Audio Bitrate",
+                     "Target bitrate for audio encoding.",
+                     SettingDef::Int, "192", {}, 16, 2048, 1, "slider", " kbps"};
+        d.dependsOn = "EnableAudioCapture";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "EnableAudioCaptureParameters", "Extra Audio Arguments",
+                     "Pass additional FFmpeg arguments for the audio stream.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "EnableAudioCapture";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Video Recording Setup", "EmuCore/GS", "AudioCaptureParameters", "Audio Arguments",
+                     "Free-form FFmpeg argument string applied to the audio encoder.",
+                     SettingDef::String, "", {}, 0, 0, 0};
+        d.dependsOn = "EnableAudioCapture && EnableAudioCaptureParameters";
         s.append(d);
     }
 
