@@ -10,6 +10,7 @@
 #include "widgets/settings_graphics_sub_tab_bar.h"
 #include "widgets/settings_section_header.h"
 #include "widgets/settings_slider_row.h"
+#include "widgets/settings_toggle.h"
 #include "widgets/settings_toggle_row.h"
 #include <QAbstractItemView>
 #include <QApplication>
@@ -581,10 +582,17 @@ void GenericSettingsPage::saveValue(const QString &section, const QString &key,
 }
 
 void GenericSettingsPage::refreshDependencies() {
-  // Master state map: which dependsOn-target keys are currently 'on'.
+  // Master state maps:
+  //   masterStates[key] = is the master "active"? (truthy/non-disabled)
+  //   masterValues[key] = the master's current raw value (combos compare
+  //                       against SettingDef::dependsOnValue strings).
   QHash<QString, bool> masterStates;
-  for (auto *tog : findChildren<SettingsToggleRow *>())
+  QHash<QString, QString> masterValues;
+  for (auto *tog : findChildren<SettingsToggleRow *>()) {
     masterStates.insert(tog->settingDef().key, tog->isChecked());
+    masterValues.insert(tog->settingDef().key,
+                        tog->isChecked() ? "true" : "false");
+  }
 
   // Combos can also act as masters (per setting_def.h:39-42): a combo is
   // 'active' when its value is not in {"", "0", "false", "Disabled", "None"}.
@@ -595,32 +603,54 @@ void GenericSettingsPage::refreshDependencies() {
                         v.compare("Disabled", Qt::CaseInsensitive) != 0 &&
                         v.compare("None", Qt::CaseInsensitive) != 0;
     masterStates.insert(combo->settingDef().key, active);
+    masterValues.insert(combo->settingDef().key, v);
   }
 
-  // Apply to dependent slider rows (same pattern as duckstation page).
-  // Toggle and combo dependents are not yet handled — no current schema
-  // declares dependsOn on a non-slider row. See plan T13 follow-up.
-  for (auto *slider : findChildren<SettingsSliderRow *>()) {
-    const SettingDef &d = slider->settingDef();
+  // Compute whether a dependent's master gate is active. dependsOnValue
+  // (semicolon-separated allow-list) takes precedence over the truthy
+  // check when it's non-empty.
+  auto isDependencyActive = [&](const SettingDef &d) -> bool {
     if (d.dependsOn.isEmpty())
-      continue;
-    const bool active = masterStates.value(d.dependsOn, true);
-    slider->setProperty("dependencyActive", active);
-    // Disable the inner QSlider so the user can't drag the track while
-    // the master toggle is off — the row itself stays focusable so
-    // arrow-key spatial nav still passes through it.
-    if (auto *inner = slider->findChild<QSlider *>())
-      inner->setEnabled(active);
+      return true;
+    if (!d.dependsOnValue.isEmpty()) {
+      const QString cur = masterValues.value(d.dependsOn);
+      const QStringList allow =
+          d.dependsOnValue.split(QChar(';'), Qt::SkipEmptyParts);
+      for (const QString &allowed : allow) {
+        if (cur == allowed)
+          return true;
+      }
+      return false;
+    }
+    return masterStates.value(d.dependsOn, true);
+  };
+
+  // Apply opacity + inner-control disable to a row, regardless of widget
+  // type. Row stays focusable so arrow-key spatial nav passes through.
+  auto applyActive = [](QWidget *row, bool active, QWidget *innerControl) {
+    row->setProperty("dependencyActive", active);
+    if (innerControl)
+      innerControl->setEnabled(active);
     if (!active) {
-      if (!slider->graphicsEffect()) {
-        auto *eff = new QGraphicsOpacityEffect(slider);
+      if (!row->graphicsEffect()) {
+        auto *eff = new QGraphicsOpacityEffect(row);
         eff->setOpacity(0.4);
-        slider->setGraphicsEffect(eff);
+        row->setGraphicsEffect(eff);
       }
     } else {
-      slider->setGraphicsEffect(nullptr);
+      row->setGraphicsEffect(nullptr);
     }
-  }
+  };
+
+  for (auto *slider : findChildren<SettingsSliderRow *>())
+    applyActive(slider, isDependencyActive(slider->settingDef()),
+                slider->findChild<QSlider *>());
+  for (auto *toggle : findChildren<SettingsToggleRow *>())
+    applyActive(toggle, isDependencyActive(toggle->settingDef()),
+                toggle->findChild<SettingsToggle *>());
+  for (auto *combo : findChildren<SettingsComboRow *>())
+    applyActive(combo, isDependencyActive(combo->settingDef()),
+                combo->findChild<QComboBox *>());
 }
 
 bool GenericSettingsPage::eventFilter(QObject *obj, QEvent *e) {

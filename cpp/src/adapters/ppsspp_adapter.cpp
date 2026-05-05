@@ -332,13 +332,13 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     // default to "0" matches upstream and never silently clobbers user bits.
     s.append({"Overlay", "", "", "Graphics", "iShowStatusFlags", "Show FPS Counter",
               "Display the framerate counter in-game.",
-              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/2});
+              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", "", /*bitmask=*/2});
     s.append({"Overlay", "", "", "Graphics", "iShowStatusFlags", "Show Speed",
               "Display the emulation speed percentage in-game.",
-              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/4});
+              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", "", /*bitmask=*/4});
     s.append({"Overlay", "", "", "Graphics", "iShowStatusFlags", "Show Battery %",
               "Display the host battery percentage in-game.",
-              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/8});
+              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", "", /*bitmask=*/8});
     s.append({"Overlay", "", "", "General", "DebugOverlay", "Debug Overlay",
               "PPSSPP debug overlay. Note: PPSSPP doesn't remember this setting "
               "between runs, so it will reset to Off whenever the emulator is "

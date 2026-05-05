@@ -42,6 +42,14 @@ struct SettingDef {
     // controls are disabled, and their values reset to schema defaults.
     QString dependsOn;
 
+    // Optional: if non-empty, the dependent is active only when the master's
+    // current value matches one of these (semicolon-separated) strings.
+    // Example: dependsOn="Backend", dependsOnValue="OpenAL;XAudio2" — active
+    // only when the audio backend combo is OpenAL or XAudio2 (used to gate
+    // DPL2 controls on backends that support it). When empty, falls back to
+    // the truthy/disabled-string check above.
+    QString dependsOnValue;
+
     // If non-zero, this Bool setting reads/writes a single bit of an
     // int-valued INI key. The widget displays as a checkbox; on save the
     // bit is set/cleared in the existing int and the full int is written

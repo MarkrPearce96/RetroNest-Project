@@ -487,12 +487,20 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "audio dropouts under load. 20 ms is a sensible default.",
          SettingDef::Int, "20", {}, 0, 200, 1, "slider", "ms"},
 
+        // Upstream gates the DPL2 controls on (backend supports DPL2)
+        // AND (DSP is in LLE mode). On macOS only OpenAL of the three
+        // backends we expose supports DPL2 (Cubeb / Null don't), so we
+        // gate on Backend=OpenAL — that matches the visible greying in
+        // upstream's UI. The DSP-LLE half of upstream's gate is not
+        // expressed here because our DSP combo's value space ("HLE",
+        // "LLE Recompiler", "LLE Interpreter") doesn't map to a single
+        // value-equality check; documenting in the tooltip instead.
         {"Audio", "", "Backend Settings", "Core", "DPL2Decoder",
          "Dolby Pro Logic II Decoder",
-         "Decode the emulated stereo mix into 5.1 surround output. Requires a "
-         "backend that supports it — Cubeb on macOS does not, so this is "
-         "effectively a no-op there. Active only when DSP HLE is off.",
-         SettingDef::Bool, "False"},
+         "Decode the emulated stereo mix into 5.1 surround output. Requires "
+         "an audio backend that supports DPL2 (only OpenAL among the "
+         "available backends) AND DSP set to LLE mode. Otherwise inert.",
+         SettingDef::Bool, "False", {}, 0, 0, 0, "", "", "Backend", "OpenAL"},
 
         {"Audio", "", "Backend Settings", "Core", "DPL2Quality",
          "DPL2 Decoder Quality",
