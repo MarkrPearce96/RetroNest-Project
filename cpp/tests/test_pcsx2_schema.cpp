@@ -28,7 +28,7 @@ private slots:
         for (const auto& d : schema_) got.insert(d.category);
         QCOMPARE(got, QSet<QString>({
             "Recommended", "Emulation", "Graphics", "Audio", "Memory Cards",
-            "Achievements", "Advanced",
+            "Achievements",
         }));
     }
 
@@ -273,33 +273,15 @@ private slots:
         QCOMPARE(got, expected);
     }
 
-    void testAdvancedFullCatalog() {
-        // Clamping Mode is a single combo writing three INI keys via
-        // saveTransform — the primary key in the schema is fpuFullMode (and
-        // vu0SignOverflow / vu1SignOverflow for the VU variants).
-        const QSet<QString> expected{
-            // EmotionEngine (MIPS-IV)
-            "FPU.Roundmode", "FPUDiv.Roundmode", "fpuFullMode",
-            "EnableEE", "WaitLoop", "EnableFastmem", "EnableEECache",
-            "IntcStat", "PauseOnTLBMiss", "ExtraMemory",
-            // Vector Units (VU)
-            "VU0.Roundmode", "vu0SignOverflow",
-            "VU1.Roundmode", "vu1SignOverflow",
-            "EnableVU0", "EnableVU1", "vuFlagHack", "vu1Instant",
-            // I/O Processor (IOP, MIPS-I)
-            "EnableIOP",
-            // Game Settings
-            "EnableGameFixes", "EnablePatches",
-            // Savestate Settings
-            "SavestateCompressionType", "SavestateCompressionRatio",
-            "BackupSavestate", "SaveStateOnShutdown",
-            // PINE Settings
-            "EnablePINE", "PINESlot",
-        };
-        QSet<QString> got;
+    void testAdvancedCategoryNotInSchema() {
+        // Top-level Advanced pane (CPU/VU/IOP recompiler + clamping +
+        // savestate + PINE) is upstream-gated on
+        // QtHost::ShouldShowAdvancedSettings() — power-user opt-in toggle
+        // hidden in default standalone install. Dropped on 2026-05-06.
         for (const auto& d : schema_)
-            if (d.category == "Advanced") got.insert(d.key);
-        QCOMPARE(got, expected);
+            QVERIFY2(d.category != "Advanced",
+                qPrintable(QString("Advanced key '%1' should not be in schema")
+                           .arg(d.key)));
     }
 
     void testDebugCategoryNotInSchema() {
@@ -310,116 +292,6 @@ private slots:
             QVERIFY2(d.category != "Debug",
                 qPrintable(QString("Debug key '%1' should not be in schema")
                            .arg(d.key)));
-    }
-
-    void testClampingModeMultiKeyTransforms() {
-        // Clamping Mode (FPU) collapses three INI keys into a single combo.
-        // Verify saveTransform writes all three and loadTransform reverses.
-        const SettingDef* d = nullptr;
-        for (const auto& def : schema_)
-            if (def.category == "Advanced" && def.key == "fpuFullMode") d = &def;
-        QVERIFY(d != nullptr);
-        QCOMPARE(int(d->type), int(SettingDef::Combo));
-        QVERIFY(d->saveTransform != nullptr);
-        QVERIFY(d->loadTransform != nullptr);
-
-        QHash<QPair<QString,QString>, QString> writes;
-        auto save = [&writes](const QString& sec, const QString& k, const QString& v) {
-            writes[qMakePair(sec, k)] = v;
-        };
-        const QString section = "EmuCore/CPU/Recompiler";
-
-        writes.clear();
-        d->saveTransform("None", save);
-        QCOMPARE(writes.value({section, "fpuFullMode"}), QString("false"));
-        QCOMPARE(writes.value({section, "fpuExtraOverflow"}), QString("false"));
-        QCOMPARE(writes.value({section, "fpuOverflow"}), QString("false"));
-
-        writes.clear();
-        d->saveTransform("Normal (Default)", save);
-        QCOMPARE(writes.value({section, "fpuOverflow"}), QString("true"));
-        QCOMPARE(writes.value({section, "fpuExtraOverflow"}), QString("false"));
-        QCOMPARE(writes.value({section, "fpuFullMode"}), QString("false"));
-
-        writes.clear();
-        d->saveTransform("Extra + Preserve Sign", save);
-        QCOMPARE(writes.value({section, "fpuOverflow"}), QString("true"));
-        QCOMPARE(writes.value({section, "fpuExtraOverflow"}), QString("true"));
-        QCOMPARE(writes.value({section, "fpuFullMode"}), QString("false"));
-
-        writes.clear();
-        d->saveTransform("Full", save);
-        QCOMPARE(writes.value({section, "fpuOverflow"}), QString("true"));
-        QCOMPARE(writes.value({section, "fpuExtraOverflow"}), QString("true"));
-        QCOMPARE(writes.value({section, "fpuFullMode"}), QString("true"));
-
-        // loadTransform: synthesize combo value from on-disk bool combinations.
-        QHash<QPair<QString,QString>, QString> store;
-        auto read = [&store](const QString& sec, const QString& k) -> QString {
-            return store.value({sec, k});
-        };
-        store = {{{section, "fpuFullMode"}, "false"},
-                 {{section, "fpuExtraOverflow"}, "false"},
-                 {{section, "fpuOverflow"}, "false"}};
-        QCOMPARE(d->loadTransform(read), QString("None"));
-        store = {{{section, "fpuFullMode"}, "false"},
-                 {{section, "fpuExtraOverflow"}, "false"},
-                 {{section, "fpuOverflow"}, "true"}};
-        QCOMPARE(d->loadTransform(read), QString("Normal (Default)"));
-        store = {{{section, "fpuFullMode"}, "false"},
-                 {{section, "fpuExtraOverflow"}, "true"},
-                 {{section, "fpuOverflow"}, "true"}};
-        QCOMPARE(d->loadTransform(read), QString("Extra + Preserve Sign"));
-        store = {{{section, "fpuFullMode"}, "true"},
-                 {{section, "fpuExtraOverflow"}, "true"},
-                 {{section, "fpuOverflow"}, "true"}};
-        QCOMPARE(d->loadTransform(read), QString("Full"));
-    }
-
-    void testRecommendedHasAspectPreview() {
-        // Aspect preview moved off Graphics > Display onto Recommended —
-        // mirrors Dolphin's split (the AspectRatio combo lives at the top
-        // of Recommended, so the live rectangle is most useful there).
-        PCSX2Adapter a;
-        const auto spec = a.previewSpec("Recommended", "");
-        QCOMPARE(spec.previewType, QString("aspect"));
-        QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
-    }
-
-    void testRecommendedCategoryHasMinimumSet() {
-        // Curated subset of the most-tweaked PCSX2 settings. Each entry
-        // also exists under its primary category — Recommended is a VIEW
-        // for fast access. Headline keys must all be present.
-        QSet<QString> got;
-        for (const auto& d : schema_)
-            if (d.category == "Recommended") got.insert(d.key);
-        const QStringList headline{
-            // Performance
-            "Renderer", "vuThread", "EECycleRate",
-            // Visual Quality
-            "upscale_multiplier", "AspectRatio", "EnableWideScreenPatches",
-            "accurate_blending_unit", "MaxAnisotropy", "filter",
-            // Frame Pacing
-            "VsyncEnable", "SyncToHostRefreshRate",
-            // Audio
-            "Backend", "StandardVolume",
-            // Convenience
-            "NominalScalar", "EnableFastBoot", "EnableCheats",
-        };
-        for (const QString& k : headline)
-            QVERIFY2(got.contains(k),
-                     qPrintable("Recommended missing key: " + k));
-    }
-
-    void testRecommendedDuplicatesUnderlyingKeys() {
-        // The Recommended category duplicates schema entries — both write
-        // the same INI section/key as the primary category. Verify a sample:
-        // AspectRatio appears under both Recommended and Graphics > Display.
-        int aspectCount = 0;
-        for (const auto& d : schema_)
-            if (d.key == "AspectRatio") aspectCount++;
-        QVERIFY2(aspectCount >= 2,
-                 "AspectRatio expected under Recommended AND Graphics");
     }
 
     void testBoolValuesAreLowercaseTrueFalse() {
