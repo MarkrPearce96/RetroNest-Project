@@ -80,7 +80,7 @@ private slots:
             if (d.category == "Graphics") got.insert(d.subcategory);
         QCOMPARE(got, QSet<QString>({
             "Display", "Rendering", "Texture Replacement",
-            "Post-Processing", "Advanced", "On-Screen Display",
+            "Post-Processing", "On-Screen Display",
         }));
     }
 
@@ -173,20 +173,16 @@ private slots:
                                .arg(d.key)));
     }
 
-    void testGraphicsAdvancedFullCatalog() {
-        // Windows-only UseBlitSwapChain + ExclusiveFullscreenControl omitted.
-        // FrameRateNTSC/PAL float spinboxes are deferred.
-        const QSet<QString> expected{
-            "HWDownloadMode", "GSDumpCompression", "texture_preloading",
-            "OverrideTextureBarriers", "ExtendedUpscalingMultipliers",
-            "DisableMailboxPresentation", "HWSpinCPUForReadbacks",
-            "HWSpinGPUForReadbacks",
-            "UseDebugDevice", "DisableShaderCache", "DisableVertexShaderExpand",
-        };
-        QSet<QString> got;
+    void testGraphicsAdvancedNotInSchema() {
+        // Sub-tab dropped — upstream gates it on PCSX2's "Show Advanced
+        // Settings" power-user toggle. Note this is the GRAPHICS Advanced
+        // sub-tab; the top-level Advanced category (CPU/VU/IOP/savestate/
+        // PINE) is a separate thing and stays.
         for (const auto& d : schema_)
-            if (d.category == "Graphics" && d.subcategory == "Advanced") got.insert(d.key);
-        QCOMPARE(got, expected);
+            if (d.category == "Graphics")
+                QVERIFY2(d.subcategory != "Advanced",
+                    qPrintable(QString("Graphics > Advanced key '%1' should not be in schema")
+                               .arg(d.key)));
     }
 
     void testGraphicsOnScreenDisplayFullCatalog() {
