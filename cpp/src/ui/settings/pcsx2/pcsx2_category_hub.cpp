@@ -49,12 +49,6 @@ Pcsx2CategoryHub::Pcsx2CategoryHub(QWidget* parent)
                              "EE/VU/IOP, savestates, PINE",
                              countSettings("Advanced"), "Advanced"),         2, 2);
 
-    // Row 3: Debug — full-width
-    grid->addWidget(makeCard(QStringLiteral("\U0001F41E"), "Debug",
-                             "Static analysis, GS dump",
-                             countSettings("Debug"), "Debug"),
-                    3, 0, 1, 3);
-
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
 }

@@ -29,7 +29,7 @@ private slots:
         QCOMPARE(got, QSet<QString>({
             "BIOS", "Emulation", "Graphics", "On-Screen Display",
             "Audio", "Memory Cards", "Network & HDD", "Achievements",
-            "Advanced", "Debug",
+            "Advanced",
         }));
     }
 
@@ -332,25 +332,14 @@ private slots:
         QCOMPARE(got, expected);
     }
 
-    void testDebugFullCatalog() {
-        // DebugAnalysisSettingsWidget custom embedded widget is deferred.
-        // PCSX2_DEVBUILD-only Logging tab + debugger UI tab are out of
-        // scope for our build.
-        const QSet<QString> expected{
-            // Analysis
-            "RunCondition", "GenerateSymbolsForIRXExports",
-            // GS dump master + dependents
-            "DumpGSData",
-            "SaveRT", "SaveFrame", "SaveTexture", "SaveDepth", "SaveAlpha",
-            "SaveInfo", "SaveTransferImages", "SaveDrawStats", "SaveFrameStats",
-            "SaveHWConfig",
-            "SaveDrawStart", "SaveDrawCount", "SaveFrameStart", "SaveFrameCount",
-            "HWDumpDirectory", "SWDumpDirectory",
-        };
-        QSet<QString> got;
+    void testDebugCategoryNotInSchema() {
+        // Debug pane is intentionally not surfaced — the standalone PCSX2
+        // dialog's Debug tab is targeted at devs writing emulator code, not
+        // end users. Removed 2026-05-05 per Mark.
         for (const auto& d : schema_)
-            if (d.category == "Debug") got.insert(d.key);
-        QCOMPARE(got, expected);
+            QVERIFY2(d.category != "Debug",
+                qPrintable(QString("Debug key '%1' should not be in schema")
+                           .arg(d.key)));
     }
 
     void testClampingModeMultiKeyTransforms() {
