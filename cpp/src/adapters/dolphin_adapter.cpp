@@ -203,17 +203,25 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
     // gfxIniPath() is static, so no capture needed.
     auto gfx = [](SettingDef d) { d.iniFilePath = gfxIniPath(); return d; };
 
+    // Helper: mark an inverted Bool. Mirrors upstream Dolphin's
+    // `ConfigBool(label, key, layer, inverted=true)` — checkbox visual
+    // state is the inverse of the stored INI value (e.g. label "Disable
+    // Bounding Box" stored over BBoxEnable=False/True).
+    auto inv = [](SettingDef d) { d.inverted = true; return d; };
+
     const QVector<QPair<QString,QString>> audioBackends = {
         {"Cubeb",   "Cubeb"},
         {"OpenAL",  "OpenAL"},
         {"Null",    "Null"},
     };
 
+    // CPU cores — labels mirror CPU_CORE_NAMES in AdvancedPane.cpp:43-48.
+    // The numeric values match Dolphin's CPUCore enum (PowerPC.h).
     const QVector<QPair<QString,QString>> cpuCores = {
-        {"Interpreter (slow, accurate)",  "0"},
-        {"Cached Interpreter",             "5"},
-        {"JIT Recompiler (recommended)",   "1"},
-        {"JITARM64 (Apple Silicon)",       "4"},
+        {"Interpreter (slowest)",                       "0"},
+        {"Cached Interpreter (slower)",                 "5"},
+        {"JIT Recompiler for x86-64 (recommended)",     "1"},
+        {"JIT Recompiler for ARM64 (recommended)",      "4"},
     };
 
     // Cursor visibility — written as the int underlying ShowCursor enum
@@ -224,13 +232,16 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         {"On Movement",  "2"},
     };
 
-    // Region fallback — DiscIO::Region enum (Source/Core/DiscIO/Enums.h).
+    // Region fallback — labels + order mirror GeneralPane.cpp:231
+    // (`{tr("NTSC-J"), tr("NTSC-U"), tr("PAL"), tr("NTSC-K")}`). Numeric
+    // values match DiscIO::Region (Source/Core/DiscIO/Enums.h). The
+    // "Unknown" enum value (=3) exists in the enum but isn't exposed in
+    // the upstream combo, so we omit it here too.
     const QVector<QPair<QString,QString>> regions = {
-        {"NTSC-J (Japan)",       "0"},
-        {"NTSC-U (Americas)",    "1"},
-        {"PAL (Europe)",         "2"},
-        {"Unknown / region-free","3"},
-        {"NTSC-K (Korea, Wii)",  "4"},
+        {"NTSC-J",  "0"},
+        {"NTSC-U",  "1"},
+        {"PAL",     "2"},
+        {"NTSC-K",  "4"},
     };
 
     // Language list mirrors DolphinQt MakeLanguageComboBox()
@@ -444,8 +455,8 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
             d.type          = SettingDef::Combo;
             d.defaultValue  = "HLE";
             d.options       = {
-                {"HLE",                       "HLE"},
-                {"LLE Recompiler (slow)",     "LLE Recompiler"},
+                {"HLE (recommended)",           "HLE"},
+                {"LLE Recompiler (slow)",       "LLE Recompiler"},
                 {"LLE Interpreter (very slow)", "LLE Interpreter"},
             };
             d.saveTransform = [](const QString &v,
@@ -487,7 +498,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // only with OpenAL. Cubeb (the default macOS backend) hides/greys
         // it upstream.
         {"Audio", "", "Backend Settings", "Core", "AudioLatency",
-         "Audio Latency",
+         "Latency",
          "Output latency in milliseconds. Lower = tighter sync, more risk of "
          "audio dropouts under load. Only available with backends that "
          "support latency control (OpenAL on macOS).",
@@ -495,36 +506,40 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Backend", "OpenAL"},
 
         // Upstream gates the DPL2 controls on (backend supports DPL2)
-        // AND (DSP is in LLE mode). On macOS only OpenAL of the three
-        // backends we expose supports DPL2 (Cubeb / Null don't), so we
-        // gate on Backend=OpenAL — that matches the visible greying in
-        // upstream's UI. The DSP-LLE half of upstream's gate is not
-        // expressed here because our DSP combo's value space ("HLE",
-        // "LLE Recompiler", "LLE Interpreter") doesn't map to a single
-        // value-equality check; documenting in the tooltip instead.
+        // AND (DSP is in LLE mode) — see AudioPane::OnDspChanged in
+        // references/dolphin-master/Source/Core/DolphinQt/Settings/
+        // AudioPane.cpp:233-241. On macOS only OpenAL of the three
+        // backends we expose supports DPL2 (Cubeb / Null don't). The DSP
+        // half compares against MAIN_DSP_HLE; our DSPHLE combo (whose
+        // saveTransform writes both DSPHLE and EnableJIT) carries the
+        // synthesized values "HLE" / "LLE Recompiler" / "LLE Interpreter",
+        // so we express "DSP != HLE" with `DSPHLE!=HLE`.
         {"Audio", "", "Backend Settings", "Core", "DPL2Decoder",
          "Dolby Pro Logic II Decoder",
          "Decode the emulated stereo mix into 5.1 surround output. Requires "
          "an audio backend that supports DPL2 (only OpenAL among the "
          "available backends) AND DSP set to LLE mode. Otherwise inert.",
-         SettingDef::Bool, "False", {}, 0, 0, 0, "", "", "Backend", "OpenAL"},
+         SettingDef::Bool, "False", {}, 0, 0, 0, "", "",
+         "Backend=OpenAL && DSPHLE!=HLE"},
 
+        // Upstream additionally gates DPL2Quality on DPL2Decoder being
+        // checked (AudioPane.cpp:240 — `enabled && m_dolby_pro_logic->
+        // isChecked()`). Express the full chain so the combo greys
+        // whenever any link breaks, mirroring upstream's behavior.
         {"Audio", "", "Backend Settings", "Core", "DPL2Quality",
-         "DPL2 Decoder Quality",
+         "Decoding Quality",
          "Trade-off between CPU cost and surround-decode accuracy.",
          SettingDef::Combo, "2",
-         { {"Lowest",  "0"}, {"Low",   "1"},
-           {"High",    "2"}, {"Highest","3"} },
-         0, 0, 0, "", "", "DPL2Decoder"},  // gated on DPL2Decoder
+         { {"Lowest (Latency ~10 ms)",  "0"},
+           {"Low (Latency ~20 ms)",     "1"},
+           {"High (Latency ~40 ms)",    "2"},
+           {"Highest (Latency ~80 ms)", "3"} },
+         0, 0, 0, "", "",
+         "DPL2Decoder && Backend=OpenAL && DSPHLE!=HLE"},
 
         // ─── Audio / Audio Playback Settings ─────────────────
-        // Mirrors Dolphin's Audio pane "Audio Playback Settings" group.
-        {"Audio", "", "Audio Playback Settings", "DSP", "MuteOnDisabledSpeedLimit",
-         "Mute When Disabling Speed Limit",
-         "Silence audio while emulation is running unthrottled (e.g. fast-forward). "
-         "Avoids unpleasant pitch/playback artifacts.",
-         SettingDef::Bool, "False"},
-
+        // Order mirrors AudioPane.cpp:197-200 — buffer size, fill gaps,
+        // preserve pitch, then mute-on-disabled-speed-limit at the bottom.
         {"Audio", "", "Audio Playback Settings", "Core", "AudioBufferSize",
          "Audio Buffer Size",
          "Internal mixer buffer in milliseconds. Higher = smoother but more "
@@ -543,6 +558,12 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "faster than 100%. Useful with fast-forward; otherwise leaves pitch unchanged.",
          SettingDef::Bool, "False"},
 
+        {"Audio", "", "Audio Playback Settings", "DSP", "MuteOnDisabledSpeedLimit",
+         "Mute When Disabling Speed Limit",
+         "Silence audio while emulation is running unthrottled (e.g. fast-forward). "
+         "Avoids unpleasant pitch/playback artifacts.",
+         SettingDef::Bool, "False"},
+
         // ─── Audio / Volume ──────────────────────────────────
         // Mirrors Dolphin's Audio pane "Volume" group.
         {"Audio", "", "Volume", "DSP", "Volume",
@@ -551,19 +572,29 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Int, "100", {}, 0, 100, 1, "slider", "%"},
 
         // ─── General / Basic Settings ────────────────────────
-        // Mirrors Dolphin's General pane "Basic Settings" group.
+        // Order mirrors GeneralPane::CreateBasic (GeneralPane.cpp:136-191):
+        // dualcore, cheats, load-whole-game, override-region, auto-disc,
+        // discord, then Speed Limit combo at the bottom.
+        // SkipIPL lives in GameCube > IPL Settings to match upstream
+        // (Source/Core/DolphinQt/Settings/GameCubePane.cpp:75-80).
+        // Auto Update + Usage Statistics groups intentionally omitted —
+        // RetroNest manages emulator binaries itself, and we don't surface
+        // analytics opt-in through the unified shell.
         {"General", "", "Basic Settings", "Core", "CPUThread",
          "Enable Dual Core (speedhack)",
          "Splits CPU and GPU emulation across two threads. Significant speed "
          "gain; some games rely on tight CPU/GPU sync and may glitch with it on.",
          SettingDef::Bool, "False"},
 
-        // SkipIPL lives in GameCube > IPL Settings to match upstream
-        // (Source/Core/DolphinQt/Settings/GameCubePane.cpp:75-80).
-
         {"General", "", "Basic Settings", "Core", "EnableCheats",
          "Enable Cheats",
          "Enables AR/Gecko cheat code processing. Off by default for safety.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "Basic Settings", "Core", "LoadGameIntoMemory",
+         "Load Whole Game Into Memory",
+         "Pre-loads the entire game image into RAM at boot. Eliminates disc "
+         "I/O stutter; uses more host memory.",
          SettingDef::Bool, "False"},
 
         {"General", "", "Basic Settings", "Core", "OverrideRegionSettings",
@@ -577,32 +608,42 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "M3U handling is independent and runs at launch time.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Basic Settings", "Core", "EmulationSpeed",
-         "Emulation Speed",
-         "Cap on emulated speed relative to native. Unlimited = no throttle. "
-         "Stored as a float multiplier; combo offers common breakpoints.",
-         SettingDef::Combo, "1.000000",
-         { {"Unlimited",  "0.000000"},
-           {"25%",        "0.250000"},
-           {"50%",        "0.500000"},
-           {"75%",        "0.750000"},
-           {"100%",       "1.000000"},
-           {"125%",       "1.250000"},
-           {"150%",       "1.500000"},
-           {"200%",       "2.000000"},
-           {"300%",       "3.000000"} }},
-
-        {"General", "", "Basic Settings", "Core", "LoadGameIntoMemory",
-         "Load Whole Game Into Memory",
-         "Pre-loads the entire game image into RAM at boot. Eliminates disc "
-         "I/O stutter; uses more host memory.",
-         SettingDef::Bool, "False"},
-
         {"General", "", "Basic Settings", "General", "UseDiscordPresence",
          "Show Current Game on Discord",
          "Publishes currently-playing game to Discord status when Dolphin runs. "
          "Requires a Dolphin build with Discord-RPC support compiled in.",
          SettingDef::Bool, "True"},
+
+        // Upstream's Speed Limit combo: Unlimited + 10..200% in 10%
+        // steps, with 100% suffixed "(Normal Speed)" — see
+        // GeneralPane.cpp:178-188. Stored as float multiplier (index *
+        // 0.1f).
+        {"General", "", "Basic Settings", "Core", "EmulationSpeed",
+         "Speed Limit",
+         "Cap on emulated speed relative to native. Unlimited = no throttle. "
+         "Stored as a float multiplier; combo offers common breakpoints.",
+         SettingDef::Combo, "1.000000",
+         { {"Unlimited",            "0.000000"},
+           {"10%",                  "0.100000"},
+           {"20%",                  "0.200000"},
+           {"30%",                  "0.300000"},
+           {"40%",                  "0.400000"},
+           {"50%",                  "0.500000"},
+           {"60%",                  "0.600000"},
+           {"70%",                  "0.700000"},
+           {"80%",                  "0.800000"},
+           {"90%",                  "0.900000"},
+           {"100% (Normal Speed)",  "1.000000"},
+           {"110%",                 "1.100000"},
+           {"120%",                 "1.200000"},
+           {"130%",                 "1.300000"},
+           {"140%",                 "1.400000"},
+           {"150%",                 "1.500000"},
+           {"160%",                 "1.600000"},
+           {"170%",                 "1.700000"},
+           {"180%",                 "1.800000"},
+           {"190%",                 "1.900000"},
+           {"200%",                 "2.000000"} }},
 
         // ─── General / Fallback Region ───────────────────────
         // Mirrors Dolphin's General pane "Fallback Region" group.
@@ -618,8 +659,11 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // tab to match upstream's organization.
 
         // ─── Advanced / CPU Options ──────────────────────────
+        // Order mirrors AdvancedPane::CreateLayout (AdvancedPane.cpp:65-101):
+        // CPU Emulation Engine, Enable MMU, Pause on Panic, Enable Write-
+        // Back Cache.
         {"Advanced", "", "CPU Options", "Core", "CPUCore",
-         "CPU Core",
+         "CPU Emulation Engine",
          "The CPU emulation backend. JIT is required for full-speed gameplay.",
          SettingDef::Combo, "1", cpuCores},
 
@@ -629,15 +673,35 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "set of games (typically Virtual Console / homebrew).",
          SettingDef::Bool, "False"},
 
+        {"Advanced", "", "CPU Options", "Core", "PauseOnPanic",
+         "Pause on Panic",
+         "Pause emulation when Dolphin reports a non-fatal error.",
+         SettingDef::Bool, "False"},
+
         {"Advanced", "", "CPU Options", "Core", "AccurateCPUCache",
          "Enable Write-Back Cache (slow)",
          "Emulate the CPU's L1 instruction cache. Slower but more accurate; "
          "needed for a handful of games that self-modify code.",
          SettingDef::Bool, "False"},
 
-        {"Advanced", "", "CPU Options", "Core", "PauseOnPanic",
-         "Pause On Panic",
-         "Pause emulation when Dolphin reports a non-fatal error.",
+        // ─── Advanced / Timing ───────────────────────────────
+        // Mirrors AdvancedPane.cpp:103-139 — Timing comes BEFORE Clock
+        // Override / VBI / Memory / RTC blocks.
+        {"Advanced", "", "Timing", "Core", "CorrectTimeDrift",
+         "Correct Time Drift",
+         "Compensate for accumulated frame-pacing drift over long sessions. "
+         "Smooths long-term sync at the cost of micro-stutter.",
+         SettingDef::Bool, "False"},
+
+        {"Advanced", "", "Timing", "Core", "RushFramePresentation",
+         "Rush Frame Presentation",
+         "Aggressively present frames as soon as they're ready. Lower latency, "
+         "more tearing without VSync.",
+         SettingDef::Bool, "False"},
+
+        {"Advanced", "", "Timing", "Core", "SmoothEarlyPresentation",
+         "Smooth Early Presentation",
+         "Smooth pacing for frames that finish ahead of schedule.",
          SettingDef::Bool, "False"},
 
         // ─── Advanced / Clock Override ───────────────────────
@@ -650,7 +714,10 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // Overclock multiplier — slider widget is integer-only (cast via
         // int(minVal)/int(maxVal)), so whole-number bounds. minVal=1
         // keeps the emulated CPU at native or above; below that Dolphin
-        // reads the float as 0.0 and stalls. dependsOn gates on enable.
+        // reads the float as 0.0 and stalls. Upstream uses a float slider
+        // 0.01-5.00 in 0.01 steps; our coarser int-multiplier mapping
+        // covers the common 100/200/300/400% steps until we add a
+        // dedicated float-slider widget. dependsOn gates on enable.
         {"Advanced", "", "Clock Override", "Core", "Overclock",
          "CPU Overclock Multiplier",
          "Multiplier applied to the emulated CPU's clock when overclocking is enabled. "
@@ -670,31 +737,83 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Int, "1", {}, 1, 4, 1, "slider", "x", "VIOverclockEnable"},
 
         // ─── Advanced / Memory Override ──────────────────────
+        // Mirrors AdvancedPane::CreateLayout (AdvancedPane.cpp:236-283).
+        // MEM1/MEM2 sliders display in MB; Dolphin stores the byte count
+        // (slider position * 0x100000 = 1 MiB). saveTransform / load
+        // Transform handle the conversion both ways.
         {"Advanced", "", "Memory Override", "Core", "RAMOverrideEnable",
-         "Override RAM Sizes",
+         "Enable Emulated Memory Size Override",
          "Allow using non-retail RAM sizes (MEM1/MEM2). Required for some "
          "homebrew. Most games will not boot with non-retail sizes.",
          SettingDef::Bool, "False"},
 
-        // ─── Advanced / Timing ───────────────────────────────
-        {"Advanced", "", "Timing", "Core", "CorrectTimeDrift",
-         "Correct Time Drift",
-         "Compensate for accumulated frame-pacing drift over long sessions. "
-         "Smooths long-term sync at the cost of micro-stutter.",
-         SettingDef::Bool, "False"},
+        []() {
+            SettingDef d;
+            d.category    = "Advanced";
+            d.subcategory = "";
+            d.group       = "Memory Override";
+            d.section     = "Core";
+            d.key         = "MEM1Size";
+            d.label       = "MEM1";
+            d.tooltip     = "Size of the emulated console's main RAM. Default 24 MB.";
+            d.type        = SettingDef::Int;
+            d.defaultValue = "24";
+            d.minVal      = 24;
+            d.maxVal      = 64;
+            d.step        = 1;
+            d.layout      = "slider";
+            d.suffix      = " MB (MEM1)";
+            d.dependsOn   = "RAMOverrideEnable";
+            // Stored value is bytes (slider_pos * 0x100000). Slider
+            // displays MB.
+            d.saveTransform = [](const QString &v,
+                                 const SettingDef::SaveCallback &save) {
+                const qint64 bytes = qint64(v.toInt()) * 0x100000;
+                save("Core", "MEM1Size", QString::number(bytes));
+            };
+            d.loadTransform = [](const SettingDef::LoadCallback &read) {
+                const QString cur = read("Core", "MEM1Size");
+                if (cur.isEmpty()) return QString("24");
+                return QString::number(cur.toLongLong() / 0x100000);
+            };
+            return d;
+        }(),
 
-        {"Advanced", "", "Timing", "Core", "RushFramePresentation",
-         "Rush Frame Presentation",
-         "Aggressively present frames as soon as they're ready. Lower latency, "
-         "more tearing without VSync.",
-         SettingDef::Bool, "False"},
-
-        {"Advanced", "", "Timing", "Core", "SmoothEarlyPresentation",
-         "Smooth Early Presentation",
-         "Smooth pacing for frames that finish ahead of schedule.",
-         SettingDef::Bool, "False"},
+        []() {
+            SettingDef d;
+            d.category    = "Advanced";
+            d.subcategory = "";
+            d.group       = "Memory Override";
+            d.section     = "Core";
+            d.key         = "MEM2Size";
+            d.label       = "MEM2";
+            d.tooltip     = "Size of the emulated Wii's external RAM. Default 64 MB.";
+            d.type        = SettingDef::Int;
+            d.defaultValue = "64";
+            d.minVal      = 64;
+            d.maxVal      = 128;
+            d.step        = 1;
+            d.layout      = "slider";
+            d.suffix      = " MB (MEM2)";
+            d.dependsOn   = "RAMOverrideEnable";
+            d.saveTransform = [](const QString &v,
+                                 const SettingDef::SaveCallback &save) {
+                const qint64 bytes = qint64(v.toInt()) * 0x100000;
+                save("Core", "MEM2Size", QString::number(bytes));
+            };
+            d.loadTransform = [](const SettingDef::LoadCallback &read) {
+                const QString cur = read("Core", "MEM2Size");
+                if (cur.isEmpty()) return QString("64");
+                return QString::number(cur.toLongLong() / 0x100000);
+            };
+            return d;
+        }(),
 
         // ─── Advanced / Custom RTC Options ───────────────────
+        // Upstream also exposes a `QDateTimeEdit` gated on
+        // EnableCustomRTC. We don't have a datetime widget type yet —
+        // users set the underlying CustomRTCValue via Dolphin's native
+        // UI when they need a fixed clock.
         {"Advanced", "", "Custom RTC Options", "Core", "EnableCustomRTC",
          "Enable Custom RTC",
          "Override the emulated system clock with a fixed date/time. "
@@ -707,323 +826,570 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // General / Enhancements / Hacks / Advanced / On-Screen Display.
 
         // ─── Graphics / General ──────────────────────────────
-        // GFXBackend lives in Dolphin.ini's [Core] section, NOT GFX.ini.
-        // Backend names from Source/Core/VideoBackends/*/VideoBackend.h
-        // CONFIG_NAME constants. macOS default is Metal.
-        {"Graphics", "General", "Backend", "Core", "GFXBackend",
-         "Graphics Backend",
+        // Mirrors GeneralWidget (Source/Core/DolphinQt/Config/Graphics/
+        // GeneralWidget.cpp). Three groups: Basic, Other, Shader Compilation.
+        //
+        // Skipped (intentionally):
+        //  - Adapter combo: empty on macOS (g_backend_info.Adapters).
+        //  - Custom Aspect Ratio width/height: shown only when AspectRatio
+        //    is Custom or Custom (Stretch); needs dynamic visibility infra.
+        //  - Borderless Fullscreen: upstream gates this Windows-only
+        //    (AdvancedWidget.cpp:177-182) — skipped on macOS for parity.
+
+        // GFXBackend lives in Dolphin.ini's [Core] section, not GFX.ini.
+        {"Graphics", "General", "Basic", "Core", "GFXBackend",
+         "Backend",
          "Renderer used to draw frames. Metal is the macOS default; Vulkan "
          "uses MoltenVK; OGL is OpenGL; Software/Null are reference/silent.",
          SettingDef::Combo, "Metal",
          { {"Metal","Metal"}, {"Vulkan","Vulkan"}, {"OpenGL","OGL"},
            {"Software Renderer","Software Renderer"}, {"Null","Null"} }},
 
-        gfx({"Graphics", "General", "Backend", "Settings", "BackendMultithreading",
-         "Backend Multithreading",
-         "Distribute video-backend work across multiple threads. "
-         "Default-on is the recommended setting upstream.",
-         SettingDef::Bool, "True"}),
-
-        gfx({"Graphics", "General", "Aspect & Window", "Settings", "AspectRatio",
+        // AspectMode enum (Source/Core/VideoCommon/VideoConfig.h):
+        // Auto=0, ForceWide=1, ForceStandard=2, Stretch=3, Custom=4,
+        // CustomStretch=5. Order + labels mirror GeneralWidget.cpp:65-67.
+        gfx({"Graphics", "General", "Basic", "Settings", "AspectRatio",
          "Aspect Ratio",
          "Display aspect ratio. Auto matches the game's native aspect; "
-         "Stretch fills the screen.",
+         "Stretch fills the screen; Custom uses the configured ratio.",
          SettingDef::Combo, "0",
-         { {"Auto","0"}, {"Force 16:9","1"}, {"Force 4:3","2"},
-           {"Stretch","3"}, {"Custom","4"} }}),
+         { {"Auto",                "0"},
+           {"Force 16:9",           "1"},
+           {"Force 4:3",            "2"},
+           {"Stretch to Window",    "3"},
+           {"Custom",               "4"},
+           {"Custom (Stretch)",     "5"} }}),
 
-        gfx({"Graphics", "General", "Aspect & Window", "Settings", "wideScreenHack",
-         "Widescreen Hack",
-         "Force 4:3 games to render in widescreen by hacking the projection "
-         "matrix. Can produce visual artifacts; useful for 4:3-only titles.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "General", "Aspect & Window", "Settings", "InternalResolution",
-         "Internal Resolution",
-         "Render scale relative to native (1x = original, 6x ≈ 4K).",
-         SettingDef::Combo, "1",
-         { {"Native (1x)","1"}, {"2x (~720p)","2"}, {"3x (~1080p)","3"},
-           {"4x (~1440p)","4"}, {"5x (~1800p)","5"}, {"6x (~4K)","6"} }}),
-
-        gfx({"Graphics", "General", "Aspect & Window", "Hardware", "VSync",
+        gfx({"Graphics", "General", "Basic", "Hardware", "VSync",
          "V-Sync",
          "Synchronizes output to the display refresh rate. Reduces tearing.",
          SettingDef::Bool, "True"}),
 
-        gfx({"Graphics", "General", "Aspect & Window", "Settings", "BorderlessFullscreen",
-         "Borderless Fullscreen",
-         "Use a borderless window instead of exclusive fullscreen. Smoother "
-         "task-switching, slight latency cost on some setups.",
-         SettingDef::Bool, "False"}),
-
-        // No gfx() wrapper — Fullscreen is in Dolphin.ini's [Display] section.
-        {"Graphics", "General", "Aspect & Window", "Display", "Fullscreen",
+        // Fullscreen lives in Dolphin.ini's [Display] section, not GFX.ini.
+        {"Graphics", "General", "Basic", "Display", "Fullscreen",
          "Start in Fullscreen",
          "Render in fullscreen mode. RetroNest already runs Dolphin "
          "embedded in our window, so this is True by default.",
          SettingDef::Bool, "True"},
 
+        {"Graphics", "General", "Basic", "Core", "PrecisionFrameTiming",
+         "Precision Frame Timing",
+         "Uses high-resolution timers and busy-waiting for improved frame "
+         "pacing. Marginally increases power usage.",
+         SettingDef::Bool, "True"},
+
+        // "Other" group — render-target settings. Both keys live in
+        // Dolphin.ini's [Display] section (not GFX.ini).
+        {"Graphics", "General", "Other", "Display", "RenderToMain",
+         "Render to Main Window",
+         "Embed the render output in the main window instead of opening a "
+         "separate render window.",
+         SettingDef::Bool, "False"},
+
+        {"Graphics", "General", "Other", "Display", "RenderWindowAutoSize",
+         "Auto-Adjust Window Size",
+         "Resize the render window to match the internal resolution.",
+         SettingDef::Bool, "False"},
+
         gfx({"Graphics", "General", "Shader Compilation", "Settings", "ShaderCompilationMode",
          "Shader Compilation",
-         "How shaders are compiled. Asynchronous reduces stutter at the "
-         "cost of brief texture/lighting pop-in on first encounter.",
+         "How shaders are compiled. Asynchronous variants reduce stutter at "
+         "the cost of brief pop-in on first encounter.",
          SettingDef::Combo, "0",
-         { {"Specialized (Default)","0"}, {"Exclusive Ubershaders","1"},
-           {"Hybrid Ubershaders","2"}, {"Skip Drawing","3"} }}),
+         { {"Specialized (Default)",    "0"},
+           {"Exclusive Ubershaders",    "1"},
+           {"Hybrid Ubershaders",       "2"},
+           {"Skip Drawing",             "3"} }}),
 
         gfx({"Graphics", "General", "Shader Compilation", "Settings", "WaitForShadersBeforeStarting",
          "Compile Shaders Before Starting",
-         "Pre-compiles the shader pipeline before launching a game. "
+         "Pre-compile the shader pipeline before launching a game. "
          "Slower start, smoother gameplay.",
          SettingDef::Bool, "False"}),
 
         // ─── Graphics / Enhancements ─────────────────────────
-        gfx({"Graphics", "Enhancements", "Anti-Aliasing", "Settings", "MSAA",
-         "Multi-Sample Anti-Aliasing (MSAA)",
-         "Higher = smoother edges, slower. Effectiveness depends on backend.",
+        // Mirrors EnhancementsWidget (EnhancementsWidget.cpp:60-255). Two
+        // groups: Enhancements + Stereoscopy.
+        //
+        // Skipped (intentionally):
+        //  - Anti-Aliasing combo: upstream is a ConfigComplexChoice over
+        //    MSAA + SSAA. Without a synthesized 2-key combo it's safer to
+        //    keep MSAA + SSAA as separate settings.
+        //  - Texture Filtering combo: same — upstream combines
+        //    MaxAnisotropy + ForceTextureFiltering. Kept as two settings.
+        //  - Color Correction modal + Post-Processing Effect combo —
+        //    need dialog/dynamic-shader-list infra.
+        //  - Stereoscopy Depth/Convergence sliders — upstream uses float
+        //    sliders; our slider widget is integer-only.
+
+        gfx({"Graphics", "Enhancements", "Enhancements", "Settings", "InternalResolution",
+         "Internal Resolution",
+         "Render scale relative to native (1x = original, 6x ≈ 4K).",
          SettingDef::Combo, "1",
-         { {"None","1"}, {"2x","2"}, {"4x","4"}, {"8x","8"} }}),
+         { {"Auto (Multiple of 640x528)", "0"},
+           {"Native (640x528)",            "1"},
+           {"2x Native (1280x1056) for 720p",  "2"},
+           {"3x Native (1920x1584) for 1080p", "3"},
+           {"4x Native (2560x2112) for 1440p", "4"},
+           {"5x Native (3200x2640)",           "5"},
+           {"6x Native (3840x3168) for 4K",    "6"},
+           {"7x Native (4480x3696)",           "7"},
+           {"8x Native (5120x4224) for 5K",    "8"} }}),
 
-        gfx({"Graphics", "Enhancements", "Anti-Aliasing", "Settings", "SSAA",
-         "Super-Sample Anti-Aliasing (SSAA)",
-         "Renders at MSAA's sample count and downsamples. Highest quality, "
-         "highest cost. Only takes effect with MSAA enabled.",
-         SettingDef::Bool, "False"}),
+        // Anti-Aliasing — upstream synthesizes a single ConfigComplexChoice
+        // over MSAA + SSAA (EnhancementsWidget.cpp:110-111 + Update
+        // AntialiasingOptions:408-440). Entries are populated dynamically
+        // from `g_backend_info.AAModes` (the backend's supported MSAA
+        // sample counts) plus mirrored "{N}x SSAA" entries when SSAA is
+        // supported. We hard-code the {1, 2, 4, 8} sample set, which
+        // every macOS-supported backend (Metal, Vulkan via MoltenVK, OGL)
+        // honors; if the user picks a value the active backend doesn't
+        // support, Dolphin clamps internally.
+        []() {
+            SettingDef d;
+            d.category    = "Graphics";
+            d.subcategory = "Enhancements";
+            d.group       = "Enhancements";
+            d.section     = "Settings";   // primary (MSAA) for the
+            d.key         = "MSAA";       // dependsOn / focus-bar lookup
+            d.label       = "Anti-Aliasing";
+            d.tooltip     = "Reduces aliasing on object edges. SSAA is "
+                            "significantly more demanding than MSAA but "
+                            "applies anti-aliasing to lighting and shader "
+                            "effects too.";
+            d.iniFilePath = gfxIniPath();
+            d.type          = SettingDef::Combo;
+            d.defaultValue  = "None";
+            d.options       = {
+                {"None",     "None"},
+                {"2x MSAA",  "2x MSAA"},
+                {"4x MSAA",  "4x MSAA"},
+                {"8x MSAA",  "8x MSAA"},
+                {"2x SSAA",  "2x SSAA"},
+                {"4x SSAA",  "4x SSAA"},
+                {"8x SSAA",  "8x SSAA"},
+            };
+            d.saveTransform = [](const QString &v,
+                                 const SettingDef::SaveCallback &save) {
+                // SSAA half is a bool; MSAA half is the sample count
+                // (1 means none — upstream's ConfigComplexChoice writes
+                // (u32)1, false for "None").
+                if (v == "None") {
+                    save("Settings", "MSAA", "1");
+                    save("Settings", "SSAA", "False");
+                } else if (v == "2x MSAA") {
+                    save("Settings", "MSAA", "2");
+                    save("Settings", "SSAA", "False");
+                } else if (v == "4x MSAA") {
+                    save("Settings", "MSAA", "4");
+                    save("Settings", "SSAA", "False");
+                } else if (v == "8x MSAA") {
+                    save("Settings", "MSAA", "8");
+                    save("Settings", "SSAA", "False");
+                } else if (v == "2x SSAA") {
+                    save("Settings", "MSAA", "2");
+                    save("Settings", "SSAA", "True");
+                } else if (v == "4x SSAA") {
+                    save("Settings", "MSAA", "4");
+                    save("Settings", "SSAA", "True");
+                } else { // 8x SSAA
+                    save("Settings", "MSAA", "8");
+                    save("Settings", "SSAA", "True");
+                }
+            };
+            d.loadTransform = [](const SettingDef::LoadCallback &read) {
+                const QString msaa  = read("Settings", "MSAA");
+                const QString ssaaR = read("Settings", "SSAA");
+                const bool    ssaa  = ssaaR.compare("true", Qt::CaseInsensitive) == 0;
+                const int     n     = msaa.isEmpty() ? 1 : msaa.toInt();
+                if (n <= 1) return QString("None");
+                const QString suffix = ssaa ? " SSAA" : " MSAA";
+                return QString::number(n) + "x" + suffix;
+            };
+            return d;
+        }(),
 
-        gfx({"Graphics", "Enhancements", "Texture Filtering", "Enhancements", "MaxAnisotropy",
-         "Anisotropic Filtering",
-         "Sharpens textures viewed at oblique angles.",
-         SettingDef::Combo, "-1",
-         { {"Default","-1"}, {"Off (1x)","0"}, {"2x","1"}, {"4x","2"}, {"8x","3"}, {"16x","4"} }}),
+        // Texture Filtering — upstream's ConfigComplexChoice over
+        // MaxAnisotropy + ForceTextureFiltering (EnhancementsWidget.cpp:
+        // 113-131). 12 entries cover the cross-product of:
+        //   - 5 anisotropic levels (1x..16x) at default sampling
+        //   - "Default" entry that uses the game's choice
+        //   - "Force Nearest and 1x Anisotropic" (only one combination)
+        //   - "Force Linear and {1,2,4,8,16}x Anisotropic"
+        // Upstream gates the combo on FastTextureSampling being true
+        // (manual sampling at EnhancementsWidget.cpp:132 disables this
+        // combo since the texture sampler is then driven by shader code).
+        // AnisotropicFilteringMode enum: Default=-1, Force1x=0, Force2x=1,
+        // Force4x=2, Force8x=3, Force16x=4. TextureFilteringMode enum:
+        // Default=0, Nearest=1, Linear=2.
+        []() {
+            SettingDef d;
+            d.category    = "Graphics";
+            d.subcategory = "Enhancements";
+            d.group       = "Enhancements";
+            d.section     = "Enhancements"; // primary (MaxAnisotropy)
+            d.key         = "MaxAnisotropy";
+            d.label       = "Texture Filtering";
+            d.tooltip     = "Sharpens distant textures (anisotropic) and "
+                            "optionally forces a fixed magnification filter "
+                            "(nearest/linear) regardless of what the game "
+                            "requests. Disabled when Manual Texture Sampling "
+                            "is on.";
+            d.iniFilePath = gfxIniPath();
+            d.type          = SettingDef::Combo;
+            d.defaultValue  = "Default";
+            d.options       = {
+                {"Default",                            "Default"},
+                {"1x Anisotropic",                     "1x Anisotropic"},
+                {"2x Anisotropic",                     "2x Anisotropic"},
+                {"4x Anisotropic",                     "4x Anisotropic"},
+                {"8x Anisotropic",                     "8x Anisotropic"},
+                {"16x Anisotropic",                    "16x Anisotropic"},
+                {"Force Nearest and 1x Anisotropic",   "Force Nearest and 1x Anisotropic"},
+                {"Force Linear and 1x Anisotropic",    "Force Linear and 1x Anisotropic"},
+                {"Force Linear and 2x Anisotropic",    "Force Linear and 2x Anisotropic"},
+                {"Force Linear and 4x Anisotropic",    "Force Linear and 4x Anisotropic"},
+                {"Force Linear and 8x Anisotropic",    "Force Linear and 8x Anisotropic"},
+                {"Force Linear and 16x Anisotropic",   "Force Linear and 16x Anisotropic"},
+            };
+            d.dependsOn   = "FastTextureSampling";
+            d.saveTransform = [](const QString &v,
+                                 const SettingDef::SaveCallback &save) {
+                // (anisoLevel, forceFilter)
+                struct Pair { const char* aniso; const char* filter; };
+                static const std::map<QString, Pair> table = {
+                    {"Default",                          {"-1", "0"}},
+                    {"1x Anisotropic",                   {"0",  "0"}},
+                    {"2x Anisotropic",                   {"1",  "0"}},
+                    {"4x Anisotropic",                   {"2",  "0"}},
+                    {"8x Anisotropic",                   {"3",  "0"}},
+                    {"16x Anisotropic",                  {"4",  "0"}},
+                    {"Force Nearest and 1x Anisotropic", {"0",  "1"}},
+                    {"Force Linear and 1x Anisotropic",  {"0",  "2"}},
+                    {"Force Linear and 2x Anisotropic",  {"1",  "2"}},
+                    {"Force Linear and 4x Anisotropic",  {"2",  "2"}},
+                    {"Force Linear and 8x Anisotropic",  {"3",  "2"}},
+                    {"Force Linear and 16x Anisotropic", {"4",  "2"}},
+                };
+                auto it = table.find(v);
+                if (it == table.end()) it = table.find("Default");
+                save("Enhancements", "MaxAnisotropy",         it->second.aniso);
+                save("Enhancements", "ForceTextureFiltering", it->second.filter);
+            };
+            d.loadTransform = [](const SettingDef::LoadCallback &read) {
+                const QString anisoR = read("Enhancements", "MaxAnisotropy");
+                const QString filtR  = read("Enhancements", "ForceTextureFiltering");
+                const int aniso = anisoR.isEmpty() ? -1 : anisoR.toInt();
+                const int filt  = filtR.isEmpty()  ? 0  : filtR.toInt();
+                // aniso==-1 → Default (regardless of filt; upstream's
+                // "Default" entry pairs (-1, 0)).
+                if (aniso == -1) return QString("Default");
+                static const char* anisoLabel[] = {
+                    "1x", "2x", "4x", "8x", "16x"
+                };
+                if (aniso < 0 || aniso > 4) return QString("Default");
+                const QString lvl = QString::fromLatin1(anisoLabel[aniso]);
+                if (filt == 1) return QString("Force Nearest and 1x Anisotropic");
+                if (filt == 2) return QString("Force Linear and ") + lvl + " Anisotropic";
+                return lvl + " Anisotropic";
+            };
+            return d;
+        }(),
 
-        gfx({"Graphics", "Enhancements", "Texture Filtering", "Enhancements", "ForceTextureFiltering",
-         "Force Texture Filtering",
-         "Override the game's texture-filtering choice. Default respects the "
-         "game; Nearest = pixelated, Linear = smooth.",
-         SettingDef::Combo, "0",
-         { {"Default","0"}, {"Nearest","1"}, {"Linear","2"} }}),
-
-        gfx({"Graphics", "Enhancements", "Texture Filtering", "Enhancements", "OutputResampling",
+        // Output Resampling enum (Source/Core/VideoCommon/VideoConfig.h
+        // OutputResamplingMode). Labels mirror EnhancementsWidget.cpp:
+        // 134-137 verbatim — including the "Bicubic:" prefix.
+        gfx({"Graphics", "Enhancements", "Enhancements", "Enhancements", "OutputResampling",
          "Output Resampling",
          "Algorithm used to resample the rendered image to the window size.",
          SettingDef::Combo, "0",
-         { {"Default","0"}, {"Bilinear","1"}, {"B-Spline","2"},
-           {"Mitchell-Netravali","3"}, {"Catmull-Rom","4"} }}),
+         { {"Default",                       "0"},
+           {"Bilinear",                       "1"},
+           {"Bicubic: B-Spline",              "2"},
+           {"Bicubic: Mitchell-Netravali",    "3"},
+           {"Bicubic: Catmull-Rom",           "4"},
+           {"Sharp Bilinear",                 "5"},
+           {"Area Sampling",                  "6"} }}),
 
-        gfx({"Graphics", "Enhancements", "Color & Lighting", "Enhancements", "ForceTrueColor",
-         "Force 24-Bit Color",
-         "Force higher-precision color output. Reduces banding on gradients.",
+        gfx({"Graphics", "Enhancements", "Enhancements", "Hacks", "EFBScaledCopy",
+         "Scaled EFB Copy",
+         "Resize EFB copies to match the rendering scale. Required for "
+         "high internal resolutions to look right.",
          SettingDef::Bool, "True"}),
 
-        gfx({"Graphics", "Enhancements", "Color & Lighting", "Settings", "EnablePixelLighting",
+        gfx({"Graphics", "Enhancements", "Enhancements", "Settings", "EnablePixelLighting",
          "Per-Pixel Lighting",
          "Higher-quality lighting. Slight performance cost; some games "
          "look noticeably better with it on.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Enhancements", "Color & Lighting", "Enhancements", "DisableCopyFilter",
-         "Disable Copy Filter",
-         "Disable the post-process copy-filter pass. Reduces blur some games "
-         "apply but may break intended visual effects.",
+        gfx({"Graphics", "Enhancements", "Enhancements", "Settings", "wideScreenHack",
+         "Widescreen Hack",
+         "Force 4:3 games to render in widescreen by hacking the projection "
+         "matrix. Can produce visual artifacts; useful for 4:3-only titles.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Enhancements", "Color & Lighting", "Settings", "DisableFog",
+        gfx({"Graphics", "Enhancements", "Enhancements", "Enhancements", "ForceTrueColor",
+         "Force 24-Bit Color",
+         "Force higher-precision color output. Reduces banding on gradients.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Enhancements", "Enhancements", "Settings", "DisableFog",
          "Disable Fog",
          "Skip rendering fog effects. Improves visibility in foggy games at "
          "the cost of intended atmosphere.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Enhancements", "Color & Lighting", "Enhancements", "ArbitraryMipmapDetection",
-         "Detect Arbitrary Mipmaps",
+        gfx({"Graphics", "Enhancements", "Enhancements", "Enhancements", "ArbitraryMipmapDetection",
+         "Arbitrary Mipmap Detection",
          "Detect when a game uses mipmaps as separate images rather than "
          "true LODs, and treat them appropriately.",
          SettingDef::Bool, "True"}),
 
-        gfx({"Graphics", "Enhancements", "Color & Lighting", "Enhancements", "HDROutput",
+        gfx({"Graphics", "Enhancements", "Enhancements", "Enhancements", "DisableCopyFilter",
+         "Disable Copy Filter",
+         "Disable the post-process copy-filter pass. Reduces blur some games "
+         "apply but may break intended visual effects.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Enhancements", "Enhancements", "Enhancements", "HDROutput",
          "HDR Post-Processing",
          "Output in HDR (high-dynamic-range) when the display supports it.",
          SettingDef::Bool, "False"}),
 
+        // StereoMode enum: Off=0, SBS=1, TAB=2, Anaglyph=3, QuadBuffer=4,
+        // Passive=5. Upstream label "Quad Buffer" → "HDMI 3D" mismatch
+        // is a recent rename in Dolphin's source — combo follows the
+        // upstream display name.
         gfx({"Graphics", "Enhancements", "Stereoscopy", "Stereoscopy", "StereoMode",
-         "Stereo Mode",
+         "Stereoscopic 3D Mode",
          "3D-stereoscopic rendering mode. Off disables stereo entirely.",
          SettingDef::Combo, "0",
-         { {"Off","0"}, {"Side-by-Side","1"}, {"Top-and-Bottom","2"},
-           {"Anaglyph","3"}, {"Quad Buffer","4"} }}),
+         { {"Off",             "0"},
+           {"Side-by-Side",    "1"},
+           {"Top-and-Bottom",  "2"},
+           {"Anaglyph",        "3"},
+           {"HDMI 3D",         "4"},
+           {"Passive",         "5"} }}),
 
         gfx({"Graphics", "Enhancements", "Stereoscopy", "Stereoscopy", "StereoSwapEyes",
          "Swap Eyes",
          "Swap the left and right eye images.",
          SettingDef::Bool, "False"}),
 
+        // Upstream hides "Use Full Resolution Per Eye" except when the
+        // stereo mode is Side-by-Side or Top-and-Bottom (EnhancementsWidget
+        // .cpp:243-248 + 263-271). Express that with a value-equality OR.
         gfx({"Graphics", "Enhancements", "Stereoscopy", "Stereoscopy", "StereoPerEyeResolutionFull",
          "Use Full Resolution Per Eye",
          "Render each eye at the full internal resolution instead of half. "
          "Doubles GPU cost.",
-         SettingDef::Bool, "False"}),
+         SettingDef::Bool, "False", {}, 0, 0, 0, "", "",
+         "StereoMode=1 || StereoMode=2"}),
 
         // ─── Graphics / Hacks ────────────────────────────────
-        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBAccessEnable",
-         "Allow EFB CPU Access",
-         "Lets games read back the EFB on the CPU. Required for accurate "
-         "behavior in some games; slower when enabled.",
+        // Mirrors HacksWidget (HacksWidget.cpp:34-124). Four groups in
+        // order: Embedded Frame Buffer (EFB), Texture Cache, External
+        // Frame Buffer (XFB), Other. Three settings are upstream-inverted
+        // (`ConfigBool(..., inverted=true)`) — wrapped here with `inv()`.
+        //
+        // Settings that previously lived in this sub-tab moved to match
+        // upstream: EFBAccessDeferInvalidation + FastTextureSampling →
+        // Advanced/Experimental, EFBScaledCopy → Enhancements,
+        // DisableCopyToVRAM + CPUCull + EnableGPUTextureDecoding move
+        // (DCV → Advanced/Utility, CPUCull → Advanced/Misc, GPUTexDecoding
+        // → Hacks/Texture Cache where upstream actually places it).
+
+        gfx(inv({"Graphics", "Hacks", "Embedded Frame Buffer (EFB)", "Hacks", "EFBAccessEnable",
+         "Skip EFB Access from CPU",
+         "Ignores any requests from the CPU to read from or write to the "
+         "EFB. Speed boost; disables EFB-based effects in some games.",
+         SettingDef::Bool, "True"})),
+
+        gfx(inv({"Graphics", "Hacks", "Embedded Frame Buffer (EFB)", "Hacks", "EFBEmulateFormatChanges",
+         "Ignore Format Changes",
+         "Ignores any changes to the EFB format. Speed win for many games; "
+         "graphical defects in a small number of others.",
+         SettingDef::Bool, "True"})),
+
+        gfx({"Graphics", "Hacks", "Embedded Frame Buffer (EFB)", "Hacks", "EFBToTextureEnable",
+         "Store EFB Copies to Texture Only",
+         "Stores EFB copies exclusively on the GPU, bypassing system "
+         "memory. Big speed boost; can cause graphical defects in a small "
+         "number of games.",
+         SettingDef::Bool, "True"}),
+
+        // Upstream disables Defer EFB Copies when both Store EFB Copies
+        // AND Store XFB Copies are enabled — see HacksWidget::
+        // UpdateDeferEFBCopiesEnabled (HacksWidget.cpp:271-277). Equivalent
+        // enabled-when expression: "either EFB or XFB texture-only copy
+        // is OFF".
+        gfx({"Graphics", "Hacks", "Embedded Frame Buffer (EFB)", "Hacks", "DeferEFBCopies",
+         "Defer EFB Copies to RAM",
+         "Waits until the game synchronizes with the GPU before writing "
+         "EFB copies to RAM. Speed boost.",
+         SettingDef::Bool, "True", {}, 0, 0, 0, "", "",
+         "!EFBToTextureEnable || !XFBToTextureEnable"}),
+
+        gfx({"Graphics", "Hacks", "Texture Cache", "Settings", "SafeTextureCacheColorSamples",
+         "Accuracy",
+         "How many color samples Dolphin checks to decide if a cached "
+         "texture is still valid. Safe = fewest misses, Fast = highest perf.",
+         SettingDef::Combo, "128",
+         { {"Safe",     "0"},
+           {"Default",  "128"},
+           {"Fast",     "512"} }}),
+
+        gfx({"Graphics", "Hacks", "Texture Cache", "Settings", "EnableGPUTextureDecoding",
+         "GPU Texture Decoding",
+         "Decode textures on the GPU instead of the CPU. Speed win on "
+         "most setups; disabled when Arbitrary Mipmap Detection is on.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBAccessDeferInvalidation",
-         "Defer EFB Cache Invalidation",
-         "Reduces overhead by deferring EFB-cache invalidations. Speed win "
-         "for many games; can cause visual glitches in a few.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBEmulateFormatChanges",
-         "Emulate EFB Format Changes",
-         "Accurately emulates EFB pixel-format changes. Slower but more correct.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBToTextureEnable",
-         "Skip EFB Copy to RAM",
-         "Skip the slow EFB→RAM copy and use a GPU texture instead. "
-         "Big speed boost; can break a few games that read the EFB.",
+        gfx({"Graphics", "Hacks", "External Frame Buffer (XFB)", "Hacks", "XFBToTextureEnable",
+         "Store XFB Copies to Texture Only",
+         "Stores XFB copies exclusively on the GPU. Big speed boost; "
+         "graphical defects in a small number of games.",
          SettingDef::Bool, "True"}),
 
-        gfx({"Graphics", "Hacks", "EFB", "Hacks", "DeferEFBCopies",
-         "Defer EFB Copies",
-         "Delay flushing EFB copies until needed. Speed win for most games.",
-         SettingDef::Bool, "True"}),
-
-        gfx({"Graphics", "Hacks", "EFB", "Hacks", "EFBScaledCopy",
-         "Scaled EFB Copy",
-         "Resize EFB copies to match the rendering scale. Required for "
-         "high internal resolutions to look right.",
-         SettingDef::Bool, "True"}),
-
-        gfx({"Graphics", "Hacks", "XFB", "Hacks", "XFBToTextureEnable",
-         "Skip XFB Copy to RAM",
-         "Skip the slow XFB→RAM copy. Big speed boost; required disabled "
-         "for games that decode the XFB on the CPU.",
-         SettingDef::Bool, "True"}),
-
-        gfx({"Graphics", "Hacks", "XFB", "Hacks", "ImmediateXFBEnable",
+        gfx({"Graphics", "Hacks", "External Frame Buffer (XFB)", "Hacks", "ImmediateXFBEnable",
          "Immediately Present XFB",
          "Display the XFB as soon as it's drawn instead of on next vblank. "
          "Lower latency, slight tearing risk.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Hacks", "XFB", "Hacks", "SkipDuplicateXFBs",
-         "Skip Duplicate XFBs",
+        // Upstream disables Skip Presenting Duplicate Frames when
+        // Immediate XFB or VBI Skip is on (HacksWidget.cpp:279-284).
+        gfx({"Graphics", "Hacks", "External Frame Buffer (XFB)", "Hacks", "SkipDuplicateXFBs",
+         "Skip Presenting Duplicate Frames",
          "Detect and skip identical consecutive XFBs to save GPU work.",
-         SettingDef::Bool, "True"}),
-
-        gfx({"Graphics", "Hacks", "XFB", "Hacks", "DisableCopyToVRAM",
-         "Disable Copy To VRAM",
-         "Disable the GPU-side path for EFB/XFB copies. Forces a slower CPU "
-         "path; debug-only.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Hacks", "Texture Cache", "Settings", "SafeTextureCacheColorSamples",
-         "Texture Cache Accuracy",
-         "How many color samples Dolphin checks to decide if a cached "
-         "texture is still valid. Lower = faster but may miss updates.",
-         SettingDef::Combo, "128",
-         { {"Safe (0)","0"}, {"Default (128)","128"}, {"Fast (512)","512"} }}),
-
-        gfx({"Graphics", "Hacks", "Texture Cache", "Hacks", "FastTextureSampling",
-         "Manual Texture Sampling",
-         "Trade some accuracy for speed in the texture sampler.",
-         SettingDef::Bool, "True"}),
-
-        gfx({"Graphics", "Hacks", "Texture Cache", "Settings", "SaveTextureCacheToState",
-         "Save Texture Cache to State",
-         "Save the texture cache contents in save states. Larger states, "
-         "smoother resume.",
-         SettingDef::Bool, "True"}),
-
-        gfx({"Graphics", "Hacks", "Other", "Hacks", "BBoxEnable",
-         "Bounding Box Emulation",
-         "Emulate the GameCube/Wii bounding-box hardware. Slower but required "
-         "for a small set of games (e.g. Paper Mario).",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Hacks", "Other", "Hacks", "VertexRounding",
-         "Vertex Rounding",
-         "Round vertex coordinates to integers. Fixes seams in some games.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Hacks", "Other", "Hacks", "VISkip",
-         "VI Skip",
-         "Skip Video-Interface processing on duplicate frames.",
-         SettingDef::Bool, "False"}),
+         SettingDef::Bool, "True", {}, 0, 0, 0, "", "",
+         "!ImmediateXFBEnable && !VISkip"}),
 
         gfx({"Graphics", "Hacks", "Other", "Settings", "FastDepthCalc",
          "Fast Depth Calculation",
          "Use a faster GPU-friendly depth-calculation path. Default-on.",
          SettingDef::Bool, "True"}),
 
-        gfx({"Graphics", "Hacks", "Other", "Settings", "CPUCull",
-         "Cull Vertices on the CPU",
-         "Cull invisible geometry on the CPU before sending to the GPU. "
-         "Speeds up some games.",
+        gfx(inv({"Graphics", "Hacks", "Other", "Hacks", "BBoxEnable",
+         "Disable Bounding Box",
+         "Disables bounding-box emulation. Significant GPU speed-up; some "
+         "games (e.g. Paper Mario) require BBox to render correctly.",
+         SettingDef::Bool, "True"})),
+
+        gfx({"Graphics", "Hacks", "Other", "Hacks", "VertexRounding",
+         "Vertex Rounding",
+         "Round vertex coordinates to integers. Fixes seams in some games "
+         "at higher internal resolutions.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Hacks", "Other", "Settings", "EnableGPUTextureDecoding",
-         "GPU Texture Decoding",
-         "Decode textures on the GPU instead of the CPU. Speed win on most setups.",
+        gfx({"Graphics", "Hacks", "Other", "Settings", "SaveTextureCacheToState",
+         "Save Texture Cache to State",
+         "Save the texture cache contents in save states. Larger states, "
+         "smoother resume.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Hacks", "Other", "Hacks", "VISkip",
+         "VBI Skip",
+         "Skips Vertical Blank Interrupts when lag is detected. Smoother "
+         "audio at non-100%% emulation speed; can cause freezes.",
          SettingDef::Bool, "False"}),
 
         // ─── Graphics / Advanced ─────────────────────────────
-        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "HiresTextures",
+        // Mirrors AdvancedWidget (AdvancedWidget.cpp:43-206). Group
+        // order: Debugging, Utility, Texture Dumping, Frame Dumping,
+        // Misc, Experimental.
+        //
+        // Skipped: ProgressiveScan (SYSCONF_PROGRESSIVE_SCAN — SYSCONF
+        // file, not text INI) and BorderlessFullscreen (Windows-only).
+
+        gfx({"Graphics", "Advanced", "Debugging", "Settings", "WireFrame",
+         "Enable Wireframe",
+         "Render geometry as wireframe lines. Debug only.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debugging", "Settings", "TexFmtOverlayEnable",
+         "Texture Format Overlay",
+         "Tag each texture with its format. May require an emulation reset.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debugging", "Settings", "EnableValidationLayer",
+         "Enable API Validation Layers",
+         "Enable graphics-API validation (Vulkan/D3D). Massive slowdown; "
+         "useful for debugging shaders or backend issues.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Debugging", "Settings", "LogRenderTimeToFile",
+         "Log Render Time to File",
+         "Append per-frame GPU timing data to User/Logs/render_time.txt.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Utility", "Settings", "HiresTextures",
          "Load Custom Textures",
          "Load high-resolution texture replacements from "
          "User/Load/Textures/<game-id>/.",
          SettingDef::Bool, "False"}),
 
         // Prefetch is meaningless without custom textures loaded — gate
-        // on HiresTextures (matches AdvancedWidget.cpp).
-        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "CacheHiresTextures",
+        // on HiresTextures (matches AdvancedWidget.cpp:210-211).
+        gfx({"Graphics", "Advanced", "Utility", "Settings", "CacheHiresTextures",
          "Prefetch Custom Textures",
          "Pre-load all custom textures into VRAM at boot. Eliminates load "
          "stutter; uses more memory.",
          SettingDef::Bool, "False", {}, 0, 0, 0, "", "", "HiresTextures"}),
 
-        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpTextures",
-         "Dump Textures",
-         "Save every texture the game uses to disk. Used to create custom "
-         "texture packs.",
+        gfx({"Graphics", "Advanced", "Utility", "Hacks", "DisableCopyToVRAM",
+         "Disable EFB VRAM Copies",
+         "Disable the GPU-side path for EFB/XFB copies. Forces a slower "
+         "CPU path; debug-only.",
          SettingDef::Bool, "False"}),
 
-        // Base/mip dump options only matter when texture dumping is on
-        // — gate on DumpTextures (matches AdvancedWidget.cpp).
-        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpBaseTextures",
-         "Dump Base Textures",
-         "Include base mipmaps in the texture dump.",
-         SettingDef::Bool, "True", {}, 0, 0, 0, "", "", "DumpTextures"}),
+        gfx({"Graphics", "Advanced", "Utility", "Settings", "EnableMods",
+         "Enable Graphics Mods",
+         "Load graphics mods from User/Load/GraphicMods/<game-id>/.",
+         SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpMipTextures",
-         "Dump Mip Maps",
-         "Include all mipmap levels in the texture dump.",
-         SettingDef::Bool, "True", {}, 0, 0, 0, "", "", "DumpTextures"}),
-
-        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "DumpEFBTarget",
+        gfx({"Graphics", "Advanced", "Utility", "Settings", "DumpEFBTarget",
          "Dump EFB Target",
          "Dump the EFB contents to disk each frame. Debug only.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "DumpXFBTarget",
+        gfx({"Graphics", "Advanced", "Utility", "Settings", "DumpXFBTarget",
          "Dump XFB Target",
          "Dump the XFB contents to disk each frame. Debug only.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "BitrateKbps",
-         "Frame Dump Bitrate",
-         "Encoded video bitrate (kilobits per second) when dumping frames "
-         "to a video file.",
-         SettingDef::Int, "25000", {}, 1000, 100000, 1000, "slider", "kbps"}),
+        // Texture Dumping group — DumpBaseTextures + DumpMipTextures gate
+        // on DumpTextures (AdvancedWidget.cpp:212-215).
+        gfx({"Graphics", "Advanced", "Texture Dumping", "Settings", "DumpTextures",
+         "Enable",
+         "Save every texture the game uses to disk. Used to create custom "
+         "texture packs.",
+         SettingDef::Bool, "False"}),
 
+        gfx({"Graphics", "Advanced", "Texture Dumping", "Settings", "DumpBaseTextures",
+         "Dump Base Textures",
+         "Include base mipmaps in the texture dump.",
+         SettingDef::Bool, "True", {}, 0, 0, 0, "", "", "DumpTextures"}),
+
+        gfx({"Graphics", "Advanced", "Texture Dumping", "Settings", "DumpMipTextures",
+         "Dump Mip Maps",
+         "Include all mipmap levels in the texture dump.",
+         SettingDef::Bool, "True", {}, 0, 0, 0, "", "", "DumpTextures"}),
+
+        // Frame Dumping group — order mirrors AdvancedWidget.cpp:127-154.
+        // UseLossless + BitrateKbps are skipped — they're wrapped in
+        // `#if defined(HAVE_FFMPEG)` upstream and the macOS Dolphin build
+        // ships without FFmpeg, so they're invisible in the standalone
+        // UI. Dolphin still dumps frames as PNG without FFmpeg; only
+        // video-codec settings are gated.
         gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "FrameDumpsResolutionType",
-         "Frame Dump Resolution",
+         "Resolution Type",
          "Source for the dumped frame's resolution.",
          SettingDef::Combo, "0",
-         { {"Window","0"}, {"XFB Aspect-Corrected","1"}, {"Raw XFB","2"} }}),
+         { {"Window Resolution",                          "0"},
+           {"Aspect Ratio Corrected Internal Resolution", "1"},
+           {"Raw Internal Resolution",                    "2"} }}),
 
         gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "PNGCompressionLevel",
          "PNG Compression Level",
@@ -1031,67 +1397,49 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "9 = maximum.",
          SettingDef::Int, "6", {}, 0, 9, 1, "slider", ""}),
 
-        gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "UseLossless",
-         "Use Lossless Codec (Ut Video)",
-         "Encode frame dumps with a lossless codec. Larger files, no quality loss.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Advanced", "Debug", "Settings", "WireFrame",
-         "Enable Wireframe",
-         "Render geometry as wireframe lines. Debug only.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Advanced", "Debug", "Settings", "OverlayStats",
-         "Show Statistics Overlay",
-         "Render a per-frame statistics overlay. Debug only.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Advanced", "Debug", "Settings", "OverlayProjStats",
-         "Show Projection Statistics",
-         "Render a projection-matrix statistics overlay. Debug only.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Advanced", "Debug", "Settings", "TexFmtOverlayEnable",
-         "Texture Format Overlay",
-         "Tag each texture with its format. Debug only.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Advanced", "Debug", "Settings", "EnableValidationLayer",
-         "Enable Validation Layer",
-         "Enable the graphics-API validation layer (Vulkan/D3D). Massive "
-         "slowdown; debug only.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Advanced", "Debug", "Settings", "LogRenderTimeToFile",
-         "Log Render Time To File",
-         "Append per-frame GPU timing data to a log file. Debug only.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Advanced", "Debug", "Settings", "PerfSampWindowMS",
-         "Performance Sample Window",
-         "Sliding window (in milliseconds) for perf-stat averaging.",
-         SettingDef::Int, "1000", {}, 100, 10000, 100, "slider", "ms"}),
-
-        gfx({"Graphics", "Advanced", "Misc", "Settings", "PreferVSForLinePointExpansion",
-         "Prefer VS for Point/Line Expansion",
-         "Expand line/point primitives in the vertex shader instead of "
-         "geometry. Workaround for some drivers.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "Advanced", "Misc", "Settings", "EnableMods",
-         "Enable Graphics Mods",
-         "Load graphics mods from User/Load/GraphicMods/<game-id>/.",
-         SettingDef::Bool, "False"}),
-
+        // Misc group — order mirrors AdvancedWidget.cpp:172-176. ProgressiveScan
+        // and BorderlessFullscreen omitted (SYSCONF / Windows-only).
         gfx({"Graphics", "Advanced", "Misc", "Settings", "Crop",
          "Crop",
          "Crop overscan/black borders from the rendered image.",
          SettingDef::Bool, "False"}),
 
+        gfx({"Graphics", "Advanced", "Misc", "Settings", "BackendMultithreading",
+         "Backend Multithreading",
+         "Distribute video-backend work across multiple threads. Default-on "
+         "is recommended upstream.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "Advanced", "Misc", "Settings", "PreferVSForLinePointExpansion",
+         "Prefer VS for Point/Line Expansion",
+         "Expand line/point primitives in the vertex shader instead of the "
+         "geometry shader. Workaround for some drivers.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "Advanced", "Misc", "Settings", "CPUCull",
+         "Cull Vertices on the CPU",
+         "Cull invisible geometry on the CPU before sending to the GPU. "
+         "Speeds up some games.",
+         SettingDef::Bool, "False"}),
+
+        // Experimental group — order mirrors AdvancedWidget.cpp:189-195.
+        // FastTextureSampling is upstream-inverted: the upstream label is
+        // "Manual Texture Sampling", so checked = stored False = manual.
+        gfx({"Graphics", "Advanced", "Experimental", "Hacks", "EFBAccessDeferInvalidation",
+         "Defer EFB Cache Invalidation",
+         "Reduces overhead by deferring EFB-cache invalidations. Speed win "
+         "for many games; can cause visual glitches in a few.",
+         SettingDef::Bool, "False"}),
+
+        gfx(inv({"Graphics", "Advanced", "Experimental", "Hacks", "FastTextureSampling",
+         "Manual Texture Sampling",
+         "Trade some accuracy for speed in the texture sampler.",
+         SettingDef::Bool, "False"})),
+
         // ─── Graphics / On-Screen Display ────────────────────
-        // Group names mirror Dolphin's OnScreenDisplayPane (Source/Core/
-        // DolphinQt/Settings/OnScreenDisplayPane.cpp): General,
-        // Performance Statistics, Movie Window, Netplay.
+        // Mirrors OnScreenDisplayPane (Source/Core/DolphinQt/Settings/
+        // OnScreenDisplayPane.cpp). Five groups in upstream order:
+        // General, Performance Statistics, Movie Window, Netplay, Debug.
 
         // OSD messages + font size live in Dolphin.ini, not GFX.ini.
         {"Graphics", "On-Screen Display", "General", "Interface",
@@ -1102,15 +1450,23 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 
         // Font size only matters when on-screen messages are on.
         {"Graphics", "On-Screen Display", "General", "Settings", "OSDFontSize",
-         "OSD Font Size",
+         "Font Size",
          "Point size for on-screen messages.",
-         SettingDef::Int, "13", {}, 8, 32, 1, "slider", "pt",
+         SettingDef::Int, "13", {}, 12, 40, 1, "slider", "pt",
          "OnScreenDisplayMessages"},
 
+        // Performance Statistics group — order mirrors
+        // OnScreenDisplayPane.cpp:54-63.
         gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
          "ShowFPS",
          "Show FPS",
          "Frames per second the GPU is drawing.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowFTimes",
+         "Show Frame Times",
+         "Per-frame GPU time graph.",
          SettingDef::Bool, "False"}),
 
         gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
@@ -1120,28 +1476,15 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "False"}),
 
         gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
-         "ShowSpeed",
-         "Show % Speed",
-         "Emulation speed as a percentage of native.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
-         "ShowSpeedColors",
-         "Show Speed Colors",
-         "Tint the Show Speed indicator green/yellow/red based on how close "
-         "to native it is.",
-         SettingDef::Bool, "True"}),
-
-        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
-         "ShowFTimes",
-         "Show Frame Times",
-         "Per-frame GPU time graph.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
          "ShowVTimes",
          "Show VBlank Times",
          "Per-vblank time graph.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowSpeed",
+         "Show % Speed",
+         "Emulation speed as a percentage of native.",
          SettingDef::Bool, "False"}),
 
         gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
@@ -1150,20 +1493,61 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Render the FPS/VPS history as a graph instead of a single number.",
          SettingDef::Bool, "False"}),
 
-        // Frame count + lag are part of the upstream "Movie Window" group
-        // (debugging / TAS-style overlays). Keys live in Dolphin.ini
-        // [General].
-        {"Graphics", "On-Screen Display", "Movie Window", "General",
-         "ShowFrameCount",
-         "Show Frame Counter",
-         "Display the running frame number.",
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowSpeedColors",
+         "Show Speed Colors",
+         "Tint the speed indicator green/yellow/red based on how close "
+         "to native it is.",
+         SettingDef::Bool, "True"}),
+
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "PerfSampWindowMS",
+         "Performance Sample Window (ms)",
+         "Sliding window (in milliseconds) for FPS/VPS averaging. Higher = "
+         "more stable, slower to update.",
+         SettingDef::Int, "1000", {}, 0, 10000, 100, "slider", "ms"}),
+
+        // Movie Window group — order mirrors OnScreenDisplayPane.cpp:
+        // 78-83. The five sub-options gate on the Movie Window toggle
+        // itself (OnScreenDisplayPane.cpp:122-133).
+        {"Graphics", "On-Screen Display", "Movie Window", "Movie",
+         "ShowOSD",
+         "Show Movie Window",
+         "Show a window that can be filled with movie-recording info "
+         "(rerecord/lag/frame counters, input display, system clock).",
          SettingDef::Bool, "False"},
+
+        {"Graphics", "On-Screen Display", "Movie Window", "Movie",
+         "ShowRerecord",
+         "Show Rerecord Counter",
+         "How many times the input recording has been overwritten by "
+         "loading savestates.",
+         SettingDef::Bool, "False", {}, 0, 0, 0, "", "", "ShowOSD"},
 
         {"Graphics", "On-Screen Display", "Movie Window", "General", "ShowLag",
          "Show Lag Counter",
          "Display the per-frame input-lag counter (movie/replay tooling).",
-         SettingDef::Bool, "False"},
+         SettingDef::Bool, "False", {}, 0, 0, 0, "", "", "ShowOSD"},
 
+        {"Graphics", "On-Screen Display", "Movie Window", "General",
+         "ShowFrameCount",
+         "Show Frame Counter",
+         "Display the running frame number.",
+         SettingDef::Bool, "False", {}, 0, 0, 0, "", "", "ShowOSD"},
+
+        {"Graphics", "On-Screen Display", "Movie Window", "Movie",
+         "ShowInputDisplay",
+         "Show Input Display",
+         "Display the controls currently being input.",
+         SettingDef::Bool, "False", {}, 0, 0, 0, "", "", "ShowOSD"},
+
+        {"Graphics", "On-Screen Display", "Movie Window", "Movie",
+         "ShowRTC",
+         "Show System Clock",
+         "Display the current system time.",
+         SettingDef::Bool, "False", {}, 0, 0, 0, "", "", "ShowOSD"},
+
+        // Netplay group.
         gfx({"Graphics", "On-Screen Display", "Netplay", "Settings",
          "ShowNetPlayPing",
          "Show NetPlay Ping",
@@ -1174,6 +1558,21 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "ShowNetPlayMessages",
          "Show NetPlay Chat",
          "Display NetPlay chat/event messages on screen.",
+         SettingDef::Bool, "False"}),
+
+        // Debug group — moved from Graphics/Advanced/Debug to match
+        // upstream's OnScreenDisplayPane::CreateLayout (OnScreenDisplay
+        // Pane.cpp:97-106).
+        gfx({"Graphics", "On-Screen Display", "Debug", "Settings",
+         "OverlayStats",
+         "Show Statistics",
+         "Render various rendering statistics.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "Debug", "Settings",
+         "OverlayProjStats",
+         "Show Projection Statistics",
+         "Render projection-matrix statistics.",
          SettingDef::Bool, "False"}),
 
         // ═══ GameCube ═══════════════════════════════════════
@@ -1198,42 +1597,52 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
            {"Spanish","3"}, {"Italian","4"}, {"Dutch","5"} }},
 
         // ─── GameCube / Device Settings ──────────────────────
-        // Slot A, Slot B, and SP1 (Serial Port 1) all live in one
-        // "Device Settings" group upstream (GameCubePane.cpp:94-200).
-        //
-        // EXIDeviceType enum — Source/Core/Core/HW/EXI/EXI_Device.h:25-45.
-        // Default for Slot A is MemoryCardFolder (8); Slot B None (0xFF=255).
-        // Subset of the enum exposed (the full set has debug/dev devices
-        // and ethernet variants — included here for the sake of parity
-        // with native UI).
+        // Slot A, Slot B, and SP1 (Serial Port 1) live in one "Device
+        // Settings" group upstream (GameCubePane.cpp:94-198). Row labels
+        // upstream are "Slot A:" / "Slot B:" / "SP1:" — our schema-driven
+        // UI strips the trailing colon convention, so we use the bare
+        // names. Combo entries + their order come from
+        // GameCubePane.cpp:136-163; printable names come from the
+        // EnumFormatter at EXI_Device.h:88-136. Numeric values match
+        // EXIDeviceType (None = 0xFF/255).
         {"GameCube", "", "Device Settings", "Core", "SlotA",
-         "Slot A Device",
-         "Device plugged into the GameCube's left memory-card / EXI slot. "
-         "MemoryCardFolder = per-game folders under the GC data dir; "
-         "MemoryCard = single .raw image; AGP = Game Boy Player.",
+         "Slot A",
+         "Device plugged into the GameCube's left memory-card / EXI slot.",
          SettingDef::Combo, "8",
-         { {"None","255"}, {"Memory Card","1"}, {"Memory Card Folder","8"},
-           {"AGP (Game Boy Player)","9"}, {"Microphone","4"},
-           {"Gecko Debugger","7"}, {"AD16","3"} }},
+         { {"<Nothing>",                "255"},
+           {"Dummy",                    "0"},
+           {"Memory Card",              "1"},
+           {"GCI Folder",               "8"},
+           {"USB Gecko",                "7"},
+           {"Advance Game Port",        "9"},
+           {"Microphone",               "4"} }},
 
         {"GameCube", "", "Device Settings", "Core", "SlotB",
-         "Slot B Device",
+         "Slot B",
          "Device plugged into the GameCube's right memory-card / EXI slot. "
          "Microphone is most common here for games like Mario Party.",
          SettingDef::Combo, "255",
-         { {"None","255"}, {"Memory Card","1"}, {"Memory Card Folder","8"},
-           {"AGP (Game Boy Player)","9"}, {"Microphone","4"},
-           {"Gecko Debugger","7"}, {"AD16","3"} }},
+         { {"<Nothing>",                "255"},
+           {"Dummy",                    "0"},
+           {"Memory Card",              "1"},
+           {"GCI Folder",               "8"},
+           {"USB Gecko",                "7"},
+           {"Advance Game Port",        "9"},
+           {"Microphone",               "4"} }},
 
         {"GameCube", "", "Device Settings", "Core", "SerialPort1",
-         "SP1 Device",
+         "SP1",
          "Device plugged into the GameCube's serial port — typically used "
          "for network adapters in compatible games.",
          SettingDef::Combo, "255",
-         { {"None","255"}, {"Broadband Adapter (TAP)","11"},
-           {"Broadband Adapter (Built-In)","12"},
-           {"Broadband Adapter (XLink Kai)","10"},
-           {"Modem Adapter (TAP)","13"} }},
+         { {"<Nothing>",                       "255"},
+           {"Dummy",                           "0"},
+           {"Broadband Adapter (TAP)",         "5"},
+           {"Broadband Adapter (XLink Kai)",   "10"},
+           {"Broadband Adapter (tapserver)",   "11"},
+           {"Broadband Adapter (HLE)",         "12"},
+           {"Modem Adapter (tapserver)",       "13"},
+           {"Triforce Baseboard",              "6"} }},
 
         // ═══ Wii ════════════════════════════════════════════
         // Mirrors DolphinQt WiiPane (Source/Core/DolphinQt/Settings/
@@ -1246,42 +1655,68 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // emulated SYSCONF binary file rather than an INI, and our
         // schema-driven page only routes to text INI files. The user
         // reaches these via the "Open Native Settings" button.
-        {"Wii", "", "SD Card", "Core", "WiiSDCard",
-         "Insert SD Card",
-         "Make a virtual SD card visible to Wii software. Required for "
-         "save imports, channel installs, and homebrew that uses the slot.",
-         SettingDef::Bool, "True"},
-
-        {"Wii", "", "SD Card", "Core", "WiiSDCardAllowWrites",
-         "Allow Writes to SD Card",
-         "When off, the SD card is read-only — useful for protecting a "
-         "shared image from accidental modification.",
-         SettingDef::Bool, "True"},
-
-        {"Wii", "", "SD Card", "Core", "WiiSDCardEnableFolderSync",
-         "Enable SD Card Folder Sync",
-         "Mirror the SD card image from a host folder. Lets you drop "
-         "files in/out of the SD without booting the Wii system menu.",
-         SettingDef::Bool, "False"},
-
-        {"Wii", "", "SD Card", "Core", "WiiSDCardFilesize",
-         "SD Card Capacity (MiB)",
-         "Capacity of the virtual SD card. 0 = use the image file as-is "
-         "(don't resize). Slider range matches DolphinQt's combo.",
-         SettingDef::Int, "0", {}, 0, 8192, 128, "slider", "MiB"},
-
-        {"Wii", "", "Input & Misc", "Core", "WiiKeyboard",
+        // ─── Wii / Misc Settings ─────────────────────────────
+        // Order mirrors WiiPane::CreateMisc grid (WiiPane.cpp:153-162).
+        // After dropping SYSCONF rows (PAL60, Screen Saver, Aspect Ratio,
+        // System Language, Sound), the only INI-backed Misc settings are
+        // Connect USB Keyboard (row 0 col 1) and Enable WiiConnect24 via
+        // WiiLink (row 1 col 1).
+        {"Wii", "", "Misc Settings", "Core", "WiiKeyboard",
          "Connect USB Keyboard",
          "Make a USB keyboard visible to Wii software (e.g. for chat-aware "
          "homebrew).",
          SettingDef::Bool, "False"},
 
-        {"Wii", "", "Online", "Core", "EnableWiiLink",
+        {"Wii", "", "Misc Settings", "Core", "EnableWiiLink",
          "Enable WiiConnect24 via WiiLink",
          "Patch the Wii Shop / Wii Channels to use community-run "
          "replacement servers (WiiLink). Off by default to avoid surprising "
          "users with third-party network calls.",
          SettingDef::Bool, "False"},
+
+        // ─── Wii / SD Card Settings ──────────────────────────
+        // Order mirrors WiiPane::CreateSDCard (WiiPane.cpp:165-277).
+        // SD Card Path / SD Sync Folder text fields are skipped — we
+        // don't have a path/file-picker widget type yet; users set those
+        // via Dolphin's native UI when needed. Pack/Unpack buttons are
+        // skipped (actions, not settings).
+        {"Wii", "", "SD Card Settings", "Core", "WiiSDCard",
+         "Insert SD Card",
+         "Make a virtual SD card visible to Wii software. Required for "
+         "save imports, channel installs, and homebrew that uses the slot.",
+         SettingDef::Bool, "True"},
+
+        {"Wii", "", "SD Card Settings", "Core", "WiiSDCardAllowWrites",
+         "Allow Writes to SD Card",
+         "When off, the SD card is read-only — useful for protecting a "
+         "shared image from accidental modification.",
+         SettingDef::Bool, "True"},
+
+        {"Wii", "", "SD Card Settings", "Core", "WiiSDCardEnableFolderSync",
+         "Automatically Sync with Folder",
+         "Mirror the SD card image from a host folder. Lets you drop "
+         "files in/out of the SD without booting the Wii system menu.",
+         SettingDef::Bool, "False"},
+
+        // Capacity stored in BYTES, matching the SDSizeComboEntry table at
+        // WiiPane.cpp:58-70. Combo values are exact byte counts so the
+        // INI round-trips with what Dolphin writes.
+        {"Wii", "", "SD Card Settings", "Core", "WiiSDCardFilesize",
+         "SD Card File Size",
+         "Capacity of the virtual SD card. Auto = use the image file as-is "
+         "(don't resize).",
+         SettingDef::Combo, "0",
+         { {"Auto",            "0"},
+           {"64 MiB",           "67108864"},
+           {"128 MiB",          "134217728"},
+           {"256 MiB",          "268435456"},
+           {"512 MiB",          "536870912"},
+           {"1 GiB",            "1073741824"},
+           {"2 GiB",            "2147483648"},
+           {"4 GiB (SDHC)",     "4294967296"},
+           {"8 GiB (SDHC)",     "8589934592"},
+           {"16 GiB (SDHC)",    "17179869184"},
+           {"32 GiB (SDHC)",    "34359738368"} }},
     };
 }
 

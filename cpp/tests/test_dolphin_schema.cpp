@@ -147,7 +147,7 @@ private slots:
             // VBI Frequency Override
             "VIOverclockEnable", "VIOverclock",
             // Memory Override
-            "RAMOverrideEnable",
+            "RAMOverrideEnable", "MEM1Size", "MEM2Size",
             // Timing
             "CorrectTimeDrift", "RushFramePresentation", "SmoothEarlyPresentation",
             // Custom RTC Options
@@ -211,14 +211,18 @@ private slots:
         for (const auto& d : schema_)
             if (d.category == "Graphics") graphicsKeys.insert(d.key);
 
+        // SSAA and ForceTextureFiltering are NOT standalone schema entries
+        // anymore — they're written by the synthesized "Anti-Aliasing"
+        // (MSAA+SSAA) and "Texture Filtering" (MaxAnisotropy+
+        // ForceTextureFiltering) combos via `saveTransform`. The combos'
+        // primary keys (MSAA, MaxAnisotropy) cover them in this check.
         const QStringList headline{
             "GFXBackend", "AspectRatio", "InternalResolution", "VSync",
             "Fullscreen", "ShaderCompilationMode",
-            "MSAA", "SSAA", "MaxAnisotropy", "EnablePixelLighting",
-            "ForceTextureFiltering", "StereoMode",
+            "MSAA", "MaxAnisotropy", "EnablePixelLighting", "StereoMode",
             "EFBToTextureEnable", "XFBToTextureEnable", "BBoxEnable",
             "VertexRounding", "FastDepthCalc",
-            "HiresTextures", "DumpTextures", "BitrateKbps",
+            "HiresTextures", "DumpTextures",
             "ShowFPS", "ShowSpeed", "OnScreenDisplayMessages",
         };
         for (const QString& k : headline)
