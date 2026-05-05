@@ -80,8 +80,7 @@ private slots:
             if (d.category == "Graphics") got.insert(d.subcategory);
         QCOMPARE(got, QSet<QString>({
             "Display", "Rendering", "Texture Replacement",
-            "Post-Processing", "Media Capture", "Advanced",
-            "On-Screen Display",
+            "Post-Processing", "Advanced", "On-Screen Display",
         }));
     }
 
@@ -165,16 +164,13 @@ private slots:
         QCOMPARE(got, expected);
     }
 
-    void testGraphicsMediaCaptureFullCatalog() {
-        // Video Recording Setup is deferred — dynamically populated codec
-        // and format combos. Only screenshot settings are surfaced.
-        const QSet<QString> expected{
-            "ScreenshotSize", "ScreenshotFormat", "ScreenshotQuality",
-        };
-        QSet<QString> got;
+    void testGraphicsMediaCaptureNotInSchema() {
+        // Whole pane intentionally not surfaced.
         for (const auto& d : schema_)
-            if (d.category == "Graphics" && d.subcategory == "Media Capture") got.insert(d.key);
-        QCOMPARE(got, expected);
+            if (d.category == "Graphics")
+                QVERIFY2(d.subcategory != "Media Capture",
+                    qPrintable(QString("Media Capture key '%1' should not be in schema")
+                               .arg(d.key)));
     }
 
     void testGraphicsAdvancedFullCatalog() {
