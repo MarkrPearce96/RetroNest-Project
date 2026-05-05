@@ -6,6 +6,8 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QKeyEvent>
+#include <QScrollArea>
+#include <QScrollBar>
 
 EmulatorCategoryHubBase::EmulatorCategoryHubBase(QWidget* parent) : QWidget(parent) {}
 
@@ -18,9 +20,34 @@ void EmulatorCategoryHubBase::setupChrome(const QString& title) {
     titleLabel->setStyleSheet("color:#f2efe8;font-size:20px;font-weight:600;");
     root->addWidget(titleLabel);
 
-    m_contentLayout = new QVBoxLayout();
+    // Scroll area wraps the content layout so the hub copes with hubs that
+    // exceed the dialog viewport (e.g. PCSX2's 8-card grid). Transparent
+    // chrome to keep the existing flat look — the scrollbar is the only
+    // visible chrome and only when needed.
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scroll->setStyleSheet(
+        "QScrollArea { background: transparent; border: 0; }"
+        "QScrollArea > QWidget > QWidget { background: transparent; }"
+        "QScrollBar:vertical {"
+        "  background: transparent; width: 8px; margin: 0; }"
+        "QScrollBar::handle:vertical {"
+        "  background: #585450; border-radius: 4px; min-height: 30px; }"
+        "QScrollBar::handle:vertical:hover { background: #706c66; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
+        "  height: 0; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {"
+        "  background: transparent; }");
+
+    auto* scrollContent = new QWidget(scroll);
+    m_contentLayout = new QVBoxLayout(scrollContent);
+    m_contentLayout->setContentsMargins(0, 0, 0, 0);
     m_contentLayout->setSpacing(14);
-    root->addLayout(m_contentLayout, 1);
+    scroll->setWidget(scrollContent);
+    root->addWidget(scroll, 1);
 
     m_nativeBtn = new QPushButton("Open Native Settings", this);
     m_nativeBtn->setCursor(Qt::PointingHandCursor);
