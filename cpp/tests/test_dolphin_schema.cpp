@@ -83,7 +83,8 @@ private slots:
             // Basic Settings
             "CPUThread", "SkipIPL", "EnableCheats", "OverrideRegionSettings",
             "AutoDiscChange", "EmulationSpeed", "LoadGameIntoMemory",
-            "UseDiscordPresence",
+            // (UseDiscordPresence intentionally omitted: wrapped in
+            // #ifdef USE_DISCORD_PRESENCE upstream, not built on macOS.)
             // Fallback Region
             "FallbackRegion",
         };

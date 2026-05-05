@@ -546,10 +546,12 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "I/O stutter; uses more host memory.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Basic Settings", "General", "UseDiscordPresence",
-         "Discord Rich Presence",
-         "Publish currently-playing game to Discord status when Dolphin runs.",
-         SettingDef::Bool, "True"},
+        // UseDiscordPresence intentionally NOT exposed: in upstream
+        // Dolphin's GeneralPane the checkbox is wrapped in
+        // `#ifdef USE_DISCORD_PRESENCE`, a compile-time flag. macOS
+        // builds typically ship without it, so the setting would be
+        // inert (Dolphin reads MAIN_USE_DISCORD_PRESENCE but the
+        // Discord-RPC code isn't linked in) and confusing to expose.
 
         // ─── General / Fallback Region ───────────────────────
         // Mirrors Dolphin's General pane "Fallback Region" group.
