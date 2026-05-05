@@ -27,9 +27,8 @@ private slots:
         QSet<QString> got;
         for (const auto& d : schema_) got.insert(d.category);
         QCOMPARE(got, QSet<QString>({
-            "BIOS", "Emulation", "Graphics", "On-Screen Display",
-            "Audio", "Memory Cards", "Network & HDD", "Achievements",
-            "Advanced",
+            "Emulation", "Graphics", "Audio", "Memory Cards",
+            "Network & HDD", "Achievements", "Advanced",
         }));
     }
 
@@ -42,25 +41,28 @@ private slots:
                                    "(force-patched by adapter instead)").arg(d.key)));
     }
 
-    void testBiosCategoryFullCatalog() {
-        // Mirrors BIOSSettingsWidget Boot Options group. The BIOS-file
-        // picker is RetroNest-managed via the wizard and so is omitted.
-        const QSet<QString> expected{"EnableFastBoot", "EnableFastBootFastForward"};
-        QSet<QString> got;
+    void testBiosCategoryNotInSchema() {
+        // BIOS pane is collapsed into Emulation > System Settings — there's
+        // no separate top-level BIOS category. The BIOS-file picker itself
+        // is RetroNest-managed via the wizard.
         for (const auto& d : schema_)
-            if (d.category == "BIOS") got.insert(d.key);
-        QCOMPARE(got, expected);
+            QVERIFY2(d.category != "BIOS",
+                qPrintable(QString("BIOS key '%1' should not be in schema")
+                           .arg(d.key)));
     }
 
     void testEmulationCategoryFullCatalog() {
-        // Mirrors EmulationSettingsWidget. Per-game-only fastCDVD is omitted.
-        // The Real-Time Clock group is per-game-only and omitted too.
+        // Mirrors EmulationSettingsWidget plus BIOS pane's two Fast Boot
+        // toggles (folded in here under System Settings — see settingsSchema's
+        // Emulation comment). Per-game-only fastCDVD + Real-Time Clock group
+        // are omitted.
         const QSet<QString> expected{
             // Speed Control
             "NominalScalar", "TurboScalar", "SlomoScalar",
             // System Settings
             "EECycleRate", "EECycleSkip", "vuThread", "EnableThreadPinning",
             "EnableCheats", "HostFs", "CdvdPrecache",
+            "EnableFastBoot", "EnableFastBootFastForward",
             // Frame Pacing
             "VsyncQueueSize", "SyncToHostRefreshRate", "VsyncEnable",
             "UseVSyncForTiming", "SkipDuplicateFrames",
@@ -78,7 +80,8 @@ private slots:
             if (d.category == "Graphics") got.insert(d.subcategory);
         QCOMPARE(got, QSet<QString>({
             "Display", "Rendering", "Hardware Fixes", "Upscaling Fixes",
-            "Texture Replacement", "Post-Processing", "Media Capture", "Advanced",
+            "Texture Replacement", "Post-Processing", "Media Capture",
+            "Advanced", "On-Screen Display",
         }));
     }
 
@@ -205,9 +208,9 @@ private slots:
         QCOMPARE(got, expected);
     }
 
-    void testOnScreenDisplayFullCatalog() {
-        // Mirrors OSDSettingsWidget. OsdFontPath is deferred (modal sub-
-        // dialog OsdFontPickerDialog).
+    void testGraphicsOnScreenDisplayFullCatalog() {
+        // Mirrors OSDSettingsWidget — kept as a Graphics sub-tab. OsdFontPath
+        // is deferred (modal sub-dialog OsdFontPickerDialog).
         const QSet<QString> expected{
             // On-Screen Display group
             "OsdScale", "OsdMargin", "OsdMessagesPos", "OsdPerformancePos",
@@ -227,7 +230,8 @@ private slots:
         };
         QSet<QString> got;
         for (const auto& d : schema_)
-            if (d.category == "On-Screen Display") got.insert(d.key);
+            if (d.category == "Graphics" && d.subcategory == "On-Screen Display")
+                got.insert(d.key);
         QCOMPARE(got, expected);
     }
 

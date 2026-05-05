@@ -40,25 +40,12 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // in user memory file pcsx2-schema-alignment.md.
 
     // ═══════════════════════════════════════════════════════════════════════
-    // BIOS  (mirrors BIOSSettingsWidget — only the boot-behaviour toggles;
-    // the BIOS-file picker + folder are RetroNest-managed via the wizard.)
-    // ═══════════════════════════════════════════════════════════════════════
-    {
-        SettingDef d{"BIOS", "", "Options", "EmuCore", "EnableFastBoot", "Fast Boot",
-                     "Skips the PS2 BIOS splash screen when booting a game.",
-                     SettingDef::Bool, "true", {}, 0, 0, 0};
-        s.append(d);
-    }
-    {
-        SettingDef d{"BIOS", "", "Options", "EmuCore", "EnableFastBootFastForward", "Fast Forward Boot",
-                     "Force-fast-forwards through the BIOS boot sequence after Fast Boot.",
-                     SettingDef::Bool, "false", {}, 0, 0, 0};
-        d.dependsOn = "EnableFastBoot";
-        s.append(d);
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
     // Emulation (single page with grouped sections — no sub-tabs)
+    //
+    // BIOSSettingsWidget's two boot-behaviour toggles (EnableFastBoot,
+    // EnableFastBootFastForward) live here under System Settings — the
+    // BIOS-file picker + folder are RetroNest-managed via the wizard, so
+    // there's no separate BIOS pane.
     // ═══════════════════════════════════════════════════════════════════════
 
     // ── Speed Control ───────────────────────────────────────────────────
@@ -144,6 +131,19 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     {
         SettingDef d{"Emulation", "", "System Settings", "EmuCore", "CdvdPrecache", "Enable CDVD Precaching",
                   "Loads the disc image into RAM before starting. Can reduce stutter but uses more memory.", SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableFastBoot", "Fast Boot",
+                  "Skips the PS2 BIOS splash screen when booting a game.",
+                  SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Emulation", "", "System Settings", "EmuCore", "EnableFastBootFastForward", "Fast Forward Boot",
+                  "Force-fast-forwards through the BIOS boot sequence after Fast Boot.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "EnableFastBoot";
         s.append(d);
     }
 
@@ -869,107 +869,110 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // On-Screen Display  (top-level category, mirrors OSDSettingsWidget.ui)
+    // Graphics > On-Screen Display  (mirrors OSDSettingsWidget.ui — kept as
+    // a Graphics sub-tab so the dialog doesn't grow a tenth top-level card.
+    // Standalone PCSX2 makes it a top-level pane; Dolphin's standalone makes
+    // it a Graphics sub-tab — we follow Dolphin's shape here.)
     // ═══════════════════════════════════════════════════════════════════════
-    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdScale", "OSD Scale",
+    { SettingDef d{"Graphics", "On-Screen Display", "On-Screen Display", "EmuCore/GS", "OsdScale", "OSD Scale",
                    "Global multiplier applied to every OSD overlay. 100% matches PCSX2 upstream's default size.",
                    SettingDef::Int, "100", {}, 25, 500, 25, "", "%"};
       s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdMargin", "OSD Margin",
+    { SettingDef d{"Graphics", "On-Screen Display", "On-Screen Display", "EmuCore/GS", "OsdMargin", "OSD Margin",
                    "Pixel offset between the OSD elements and the screen edge.",
                    SettingDef::Int, "10", {}, 0, 100, 1, "", "px"};
       s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdMessagesPos", "OSD Messages Position",
+    { SettingDef d{"Graphics", "On-Screen Display", "On-Screen Display", "EmuCore/GS", "OsdMessagesPos", "OSD Messages Position",
                    "Corner where transient messages (save-state loaded, shader reload, etc.) are drawn.",
                    SettingDef::Combo, "1",
                    {{"None", "0"}, {"Top Left (Default)", "1"}, {"Top Center", "2"}, {"Top Right", "3"},
                     {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
                     {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdPerformancePos", "OSD Performance Position",
+    { SettingDef d{"Graphics", "On-Screen Display", "On-Screen Display", "EmuCore/GS", "OsdPerformancePos", "OSD Performance Position",
                    "Corner where the performance stats column (FPS/Speed/CPU/GPU/etc.) is drawn.",
                    SettingDef::Combo, "3",
                    {{"None", "0"}, {"Top Left", "1"}, {"Top Center", "2"}, {"Top Right (Default)", "3"},
                     {"Center Left", "4"}, {"Center", "5"}, {"Center Right", "6"},
                     {"Bottom Left", "7"}, {"Bottom Center", "8"}, {"Bottom Right", "9"}}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "On-Screen Display", "EmuCore/GS", "OsdBoldText", "OSD Text Style (Bold)",
+    { SettingDef d{"Graphics", "On-Screen Display", "On-Screen Display", "EmuCore/GS", "OsdBoldText", "OSD Text Style (Bold)",
                    "Renders OSD text in bold. Easier to read on bright scenes.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
       s.append(d); }
     // ── Performance Stats (greyed out when OSD Performance Position = None) ──
-    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowSpeed", "Show Speed Percentages",
+    { SettingDef d{"Graphics", "On-Screen Display", "Performance Stats", "EmuCore/GS", "OsdShowSpeed", "Show Speed Percentages",
                    "Displays the emulation speed as a percentage. Red below 95%, green above 105%.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowFPS", "Show FPS",
+    { SettingDef d{"Graphics", "On-Screen Display", "Performance Stats", "EmuCore/GS", "OsdShowFPS", "Show FPS",
                    "Displays the current frame rate reported by the GS. Useful for spotting performance issues.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowVPS", "Show VPS",
+    { SettingDef d{"Graphics", "On-Screen Display", "Performance Stats", "EmuCore/GS", "OsdShowVPS", "Show VPS",
                    "Displays vertical syncs per second — the PS2 display refresh reported by the GS.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowResolution", "Show Resolution",
+    { SettingDef d{"Graphics", "On-Screen Display", "Performance Stats", "EmuCore/GS", "OsdShowResolution", "Show Resolution",
                    "Displays the PS2 internal render resolution and interlacing mode.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowGSStats", "Show GS Statistics",
+    { SettingDef d{"Graphics", "On-Screen Display", "Performance Stats", "EmuCore/GS", "OsdShowGSStats", "Show GS Statistics",
                    "Displays per-frame GS statistics: draw-call count, VRAM use, and a frame-time summary.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowCPU", "Show CPU Usage",
+    { SettingDef d{"Graphics", "On-Screen Display", "Performance Stats", "EmuCore/GS", "OsdShowCPU", "Show CPU Usage",
                    "Displays per-component CPU usage (EE, GS, VU).",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowGPU", "Show GPU Usage",
+    { SettingDef d{"Graphics", "On-Screen Display", "Performance Stats", "EmuCore/GS", "OsdShowGPU", "Show GPU Usage",
                    "Displays GPU usage percentage and frame time in milliseconds.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowIndicators", "Show Status Indicators",
+    { SettingDef d{"Graphics", "On-Screen Display", "Performance Stats", "EmuCore/GS", "OsdShowIndicators", "Show Status Indicators",
                    "Displays icons for pause, fast-forward, slow-motion, and turbo modes in the top-right corner.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Performance Stats", "EmuCore/GS", "OsdShowFrameTimes", "Show Frame Times",
+    { SettingDef d{"Graphics", "On-Screen Display", "Performance Stats", "EmuCore/GS", "OsdShowFrameTimes", "Show Frame Times",
                    "Displays a rolling graph of recent frame times to visualise stutter.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
     // ── System Information (greyed out when OSD Performance Position = None) ──
-    { SettingDef d{"On-Screen Display", "", "System Information", "EmuCore/GS", "OsdShowHardwareInfo", "Show Hardware Info",
+    { SettingDef d{"Graphics", "On-Screen Display", "System Information", "EmuCore/GS", "OsdShowHardwareInfo", "Show Hardware Info",
                    "Displays the CPU and GPU model names as two lines in the performance column.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "System Information", "EmuCore/GS", "OsdShowVersion", "Show PCSX2 Version",
+    { SettingDef d{"Graphics", "On-Screen Display", "System Information", "EmuCore/GS", "OsdShowVersion", "Show PCSX2 Version",
                    "Displays the PCSX2 version string in the performance column.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdPerformancePos!=0"; s.append(d); }
     // ── Settings & Inputs ────────────────────────────────────────────
-    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowSettings", "Show Settings",
+    { SettingDef d{"Graphics", "On-Screen Display", "Settings & Inputs", "EmuCore/GS", "OsdShowSettings", "Show Settings",
                    "Displays a compact summary of active emulation settings in the bottom-right corner.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdMessagesPos!=0"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdshowPatches", "Show Patches",
+    { SettingDef d{"Graphics", "On-Screen Display", "Settings & Inputs", "EmuCore/GS", "OsdshowPatches", "Show Patches",
                    "Appends active patches (widescreen, no-interlacing, etc.) to the settings line.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       d.dependsOn = "OsdShowSettings"; s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowInputs", "Show Inputs",
+    { SettingDef d{"Graphics", "On-Screen Display", "Settings & Inputs", "EmuCore/GS", "OsdShowInputs", "Show Inputs",
                    "Displays the current controller input state at the bottom-left corner.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowVideoCapture", "Show Video Capture Status",
+    { SettingDef d{"Graphics", "On-Screen Display", "Settings & Inputs", "EmuCore/GS", "OsdShowVideoCapture", "Show Video Capture Status",
                    "Displays a recording indicator while video capture is active.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowInputRec", "Show Input Recording Status",
+    { SettingDef d{"Graphics", "On-Screen Display", "Settings & Inputs", "EmuCore/GS", "OsdShowInputRec", "Show Input Recording Status",
                    "Displays an indicator while input recording is active.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
       s.append(d); }
-    { SettingDef d{"On-Screen Display", "", "Settings & Inputs", "EmuCore/GS", "OsdShowTextureReplacements", "Show Texture Replacement Status",
+    { SettingDef d{"Graphics", "On-Screen Display", "Settings & Inputs", "EmuCore/GS", "OsdShowTextureReplacements", "Show Texture Replacement Status",
                    "Displays an indicator when replacement textures are loaded for the current game.",
                    SettingDef::Bool, "false", {}, 0, 0, 0};
       s.append(d); }
     // ── Messages (greyed out when OSD Messages Position = None) ───────
-    { SettingDef d{"On-Screen Display", "", "Messages", "EmuCore", "WarnAboutUnsafeSettings", "Warn About Unsafe Settings",
+    { SettingDef d{"Graphics", "On-Screen Display", "Messages", "EmuCore", "WarnAboutUnsafeSettings", "Warn About Unsafe Settings",
                    "Shows a startup warning if any unsafe settings are enabled.",
                    SettingDef::Bool, "true", {}, 0, 0, 0};
       d.dependsOn = "OsdMessagesPos!=0"; s.append(d); }
@@ -2169,7 +2172,7 @@ PreviewSpec PCSX2Adapter::previewSpec(const QString& category,
             {"IntegerScaling",       "integerScaling"},
         }};
     }
-    if (category == "On-Screen Display" && subcategory.isEmpty()) {
+    if (category == "Graphics" && subcategory == "On-Screen Display") {
         return {"osd", {
             {"OsdShowFPS",                 "showFps"},
             {"OsdShowSpeed",               "showSpeed"},
