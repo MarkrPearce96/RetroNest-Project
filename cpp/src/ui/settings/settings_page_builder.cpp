@@ -35,6 +35,7 @@ SettingsCard* SettingsPageBuilder::makeComboCard(const QString& key) {
     const SettingDef* d = findDef(key);
     if (!d) return nullptr;
     auto* card = new SettingsCard(m_parent);
+    card->pinToReferenceHeight();
     card->setSettingDef(*d);
     auto* v = new QVBoxLayout(card);
     v->setContentsMargins(14, 6, 14, 6);
@@ -60,6 +61,7 @@ SettingsCard* SettingsPageBuilder::makeSliderCard(const QString& key) {
     const SettingDef* d = findDef(key);
     if (!d) return nullptr;
     auto* card = new SettingsCard(m_parent);
+    card->pinToReferenceHeight();
     card->setSettingDef(*d);
     auto* v = new QVBoxLayout(card);
     v->setContentsMargins(14, 6, 14, 6);
@@ -86,6 +88,7 @@ SettingsCard* SettingsPageBuilder::makeToggleCard(const QString& key) {
     const SettingDef* d = findDef(key);
     if (!d) return nullptr;
     auto* card = new SettingsCard(m_parent);
+    card->pinToReferenceHeight();
     card->setSettingDef(*d);
     auto* v = new QVBoxLayout(card);
     v->setContentsMargins(14, 6, 14, 6);

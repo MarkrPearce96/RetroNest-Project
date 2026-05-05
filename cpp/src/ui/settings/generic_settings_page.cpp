@@ -68,6 +68,11 @@ void GenericSettingsPage::buildUi() {
   outer->addWidget(scroll);
 
   auto *content = new QWidget(scroll);
+  // Cap the scroll content widget at its layout sizeHint. Without this,
+  // QScrollArea::widgetResizable(true) stretches the widget to viewport
+  // height, and the trailing addStretch absorbs the gap — visible as an
+  // empty area below the last setting on shorter pages.
+  content->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
   scroll->setWidget(content);
 
   auto *root = new QVBoxLayout(content);
@@ -114,6 +119,26 @@ void GenericSettingsPage::buildUi() {
     }
     root->addWidget(m_subStack);
 
+    // QStackedWidget sizeHint is the max of all pages by default — that
+    // means a short sub-tab (Advanced, OSD) gets allocated the height
+    // of the tallest sub-tab (General), opening a big empty area below
+    // its last setting. Setting non-current pages to vertical Ignored
+    // policy makes m_subStack adopt the *current* page's sizeHint, so
+    // each sub-tab is sized to its own content.
+    auto syncSubPagePolicies = [this]() {
+      for (int i = 0; i < m_subStack->count(); ++i) {
+        QWidget *page = m_subStack->widget(i);
+        QSizePolicy policy = page->sizePolicy();
+        policy.setVerticalPolicy(i == m_subStack->currentIndex()
+                                     ? QSizePolicy::Preferred
+                                     : QSizePolicy::Ignored);
+        page->setSizePolicy(policy);
+      }
+      m_subStack->updateGeometry();
+    };
+    connect(m_subStack, &QStackedWidget::currentChanged, this,
+            [syncSubPagePolicies](int) { syncSubPagePolicies(); });
+
     // Sub-tab activation: swap the stack page, clear the description
     // bar (the previously-focused setting is no longer visible), and
     // shift focus to the first card on the new tab so spatial nav
@@ -124,6 +149,10 @@ void GenericSettingsPage::buildUi() {
               m_dlg->clearFocusedSetting();
               focusFirstSettingOnCurrentSubTab();
             });
+
+    // Apply initial policies so the first-shown sub-tab adopts its own
+    // sizeHint instead of the max-of-all default.
+    syncSubPagePolicies();
   }
 
   // Per-subcategory build happens here — populated in Task 10.
@@ -207,24 +236,33 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     // dependence on header height matching exactly.
     auto *headerRow = new QHBoxLayout();
     headerRow->setSpacing(kColumnSpacing);
-    headerRow->addWidget(
-        new SettingsSectionHeader(firstPreviewGroup, this), /*stretch=*/1);
-    headerRow->addWidget(new SettingsSectionHeader(
-                             spec.previewType == "osd" ? "OSD Preview"
-                                                       : "Aspect Ratio Preview",
-                             this),
-                         /*stretch=*/1);
+    auto *leftHeader = new SettingsSectionHeader(firstPreviewGroup, this);
+    auto *rightHeader = new SettingsSectionHeader(
+        spec.previewType == "osd" ? "OSD Preview" : "Aspect Ratio Preview",
+        this);
+    // Ignored width so headers split 50/50 — same as topRow / bottomGrid.
+    leftHeader->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    rightHeader->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    headerRow->addWidget(leftHeader, /*stretch=*/1);
+    headerRow->addWidget(rightHeader, /*stretch=*/1);
 
     auto *topRow = new QHBoxLayout();
     topRow->setSpacing(kColumnSpacing);
 
     leftHost = new QWidget(this);
+    // Ignore sizeHint width so QHBoxLayout splits the row purely by
+    // stretch — without this, the preview card's larger natural width
+    // gives the right column more base width than the left, shifting
+    // the column boundary and making the bottomGrid's pair-row gap
+    // (Aniso↔FTF) sit at a different x than the preview's center.
+    leftHost->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     leftStack = new QVBoxLayout(leftHost);
     leftStack->setContentsMargins(0, 0, 0, 0);
     leftStack->setSpacing(kStackSpacing);
     topRow->addWidget(leftHost, /*stretch=*/1);
 
     auto *rightHost = new QWidget(this);
+    rightHost->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     auto *rightStack = new QVBoxLayout(rightHost);
     rightStack->setContentsMargins(0, 0, 0, 0);
     rightStack->setSpacing(kStackSpacing);
@@ -257,10 +295,15 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     rightStack->addWidget(card, /*stretch=*/0, Qt::AlignTop);
     rightStack->addStretch();
 
-    // Group headerRow + topRow + bottomGrid into a wrapper with
-    // kStackSpacing between them — bottomGrid's first row visually
-    // continues the leftStack's vertical rhythm.
-    auto *previewBlock = new QVBoxLayout();
+    // Group headerRow + topRow + bottomGrid into a QWidget container
+    // with Maximum vertical sizePolicy. The wrapper's sizeHint is the
+    // sum of children — and Maximum policy prevents the parent layout
+    // from growing it beyond that. Extra page height stays in
+    // subLayout's trailing addStretch where it belongs.
+    auto *previewBlockHost = new QWidget(this);
+    previewBlockHost->setSizePolicy(QSizePolicy::Preferred,
+                                     QSizePolicy::Maximum);
+    auto *previewBlock = new QVBoxLayout(previewBlockHost);
     previewBlock->setContentsMargins(0, 0, 0, 0);
     previewBlock->setSpacing(kStackSpacing);
     previewBlock->addLayout(headerRow);
@@ -274,7 +317,7 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     bottomGrid->setColumnStretch(1, 1);
     previewBlock->addLayout(bottomGrid);
 
-    layout->addLayout(previewBlock);
+    layout->addWidget(previewBlockHost);
     m_currentPreview = preview;
   }
 
@@ -398,6 +441,18 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     const int previewWidth = previewHeight * 16 / 9;
     preview->setFixedSize(previewWidth, previewHeight);
     previewBox->setFixedSize(previewWidth, previewHeight);
+    // Cap both columns at exactly leftStackH so topRow can't stretch
+    // past the natural leftStack bottom — this guarantees bottomGrid
+    // sits 12px below leftStack's last card on every page, regardless
+    // of how Qt distributes any vertical space coming from above.
+    leftHost->setMaximumHeight(leftStackH);
+    if (auto *box = previewBox->parentWidget()) {
+      if (auto *outerCard = qobject_cast<SettingsCard *>(box)) {
+        if (auto *rightHost = outerCard->parentWidget()) {
+          rightHost->setMaximumHeight(leftStackH);
+        }
+      }
+    }
   }
 
   // Lone overflow card on the last row: re-add with columnSpan=2 so it

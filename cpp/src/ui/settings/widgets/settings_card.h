@@ -12,6 +12,12 @@ public:
     explicit SettingsCard(QWidget* parent = nullptr);
     void setSettingDef(const SettingDef& def) { m_settingDef = def; }
     void setPreviewStyle(bool preview);
+    // Pin this card to the uniform reference height (computed once at
+    // runtime from a SettingsComboRow's natural rendered size). Page-
+    // builder calls this for combo/slider/toggle cards so they line up
+    // across pages with mixed content. Hub category cards and preview
+    // cards skip this and set their own heights.
+    void pinToReferenceHeight();
     const SettingDef& settingDef() const { return m_settingDef; }
 
 signals:

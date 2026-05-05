@@ -45,11 +45,15 @@ SettingsCard::SettingsCard(QWidget* parent) : QFrame(parent) {
     setFrameStyle(QFrame::NoFrame);                // disable QFrame's default frame
     setStyleSheet(SettingsDialogTheme::cardQss());
     setProperty("focused", false);
-    // Match the natural rendered height of a combo card so toggle and
-    // slider cards line up with combo cards on the same page. Computed
-    // once at runtime by measuring an actual SettingsComboRow — no
-    // hardcoded magic numbers, no platform-style guessing.
-    setMinimumHeight(referenceCardHeight());
+    // No height enforcement here — different consumers (page builder
+    // for setting cards, hub for tall category cards, preview cards)
+    // pick the right height for their context. The page builder calls
+    // SettingsCard::pinToReferenceHeight() on combo/slider/toggle cards
+    // to lock them at uniform height for column alignment.
+}
+
+void SettingsCard::pinToReferenceHeight() {
+    setFixedHeight(referenceCardHeight());
 }
 
 void SettingsCard::setPreviewStyle(bool preview) {
