@@ -28,7 +28,7 @@ private slots:
         for (const auto& d : schema_) got.insert(d.category);
         QCOMPARE(got, QSet<QString>({
             "Recommended", "Emulation", "Graphics", "Audio", "Memory Cards",
-            "Achievements",
+            "Network & HDD", "Achievements",
         }));
     }
 
@@ -243,13 +243,24 @@ private slots:
         QCOMPARE(got, expected);
     }
 
-    void testNetworkAndHddNotInSchema() {
-        // Pane intentionally not surfaced — DEV9 emulation (Ethernet adapter +
-        // internal HDD) is a niche advanced feature most users don't touch.
+    void testNetworkAndHddFullCatalog() {
+        // Ethernet Device Type / Device combos are deferred (dynamic OS
+        // adapter list). DNS host table editor + HDD "Create Image" modal
+        // are deferred too — only the static toggles + addresses surface.
+        const QSet<QString> expected{
+            // Ethernet
+            "EthEnable",
+            // Intercept DHCP
+            "InterceptDHCP", "PS2IP", "AutoMask", "Mask",
+            "AutoGateway", "Gateway",
+            "ModeDNS1", "DNS1", "ModeDNS2", "DNS2",
+            // Hard Disk Drive
+            "HddEnable", "HddLBA48", "HddFile",
+        };
+        QSet<QString> got;
         for (const auto& d : schema_)
-            QVERIFY2(d.category != "Network & HDD",
-                qPrintable(QString("Network & HDD key '%1' should not be in schema")
-                           .arg(d.key)));
+            if (d.category == "Network & HDD") got.insert(d.key);
+        QCOMPARE(got, expected);
     }
 
     void testAchievementsFullCatalog() {

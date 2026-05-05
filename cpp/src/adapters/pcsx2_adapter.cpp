@@ -890,8 +890,114 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         s.append(d);
     }
 
-    // Network & HDD pane is intentionally not surfaced — see
-    // pcsx2-schema-alignment.md.
+    // ═══════════════════════════════════════════════════════════════════════
+    // Network & HDD  (mirrors DEV9SettingsWidget — Ethernet + HDD basics)
+    //
+    // Deferred (see pcsx2-schema-alignment.md):
+    //   - Ethernet Device Type / Device combos: dynamically populated from
+    //     the OS network adapter list at runtime.
+    //   - DNS host table (custom QTableView with row editor).
+    //   - HDD "Create Image" button (modal HddCreateQt dialog).
+    //   - HDD Size slider — paired with the Create button; surfaced as Int.
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"Network & HDD", "", "Ethernet", "DEV9/Eth", "EthEnable", "Ethernet Enabled",
+                     "Enables the emulated Network Adapter so the game can access network features.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "InterceptDHCP", "Intercept DHCP",
+                     "Intercepts DHCP requests so PCSX2 can supply a static address to the emulated PS2.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "EthEnable";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "PS2IP", "PS2 Address",
+                     "IPv4 address handed to the PS2 over DHCP.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "AutoMask", "Subnet Mask Auto",
+                     "Auto-derives the subnet mask from the host network configuration.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "Mask", "Subnet Mask",
+                     "Manually configured subnet mask.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP && !AutoMask";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "AutoGateway", "Gateway Auto",
+                     "Auto-derives the gateway address from the host network configuration.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "Gateway", "Gateway Address",
+                     "Manually configured gateway address.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP && !AutoGateway";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "ModeDNS1", "DNS1 Mode",
+                     "How DNS server 1 is resolved.",
+                     SettingDef::Combo, "Auto",
+                     {{"Manual", "Manual"}, {"Auto", "Auto"}, {"Internal", "Internal"}}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "DNS1", "DNS1 Address",
+                     "Manually configured DNS server 1.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP && ModeDNS1=Manual";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "ModeDNS2", "DNS2 Mode",
+                     "How DNS server 2 is resolved.",
+                     SettingDef::Combo, "Auto",
+                     {{"Manual", "Manual"}, {"Auto", "Auto"}, {"Internal", "Internal"}}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Intercept DHCP", "DEV9/Eth", "DNS2", "DNS2 Address",
+                     "Manually configured DNS server 2.",
+                     SettingDef::String, "0.0.0.0", {}, 0, 0, 0};
+        d.dependsOn = "InterceptDHCP && ModeDNS2=Manual";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Hard Disk Drive", "DEV9/Hdd", "HddEnable", "HDD Enabled",
+                     "Enables the internal hard disk drive expansion bay.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Hard Disk Drive", "DEV9/Hdd", "HddLBA48", "Enable 48-Bit LBA",
+                     "Allows HDD images larger than 137 GiB.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        d.dependsOn = "HddEnable";
+        s.append(d);
+    }
+    {
+        SettingDef d{"Network & HDD", "", "Hard Disk Drive", "DEV9/Hdd", "HddFile", "HDD File",
+                     "Filename of the HDD image (.raw) inside the DEV9 data folder.",
+                     SettingDef::String, "DEV9hdd.raw", {}, 0, 0, 0};
+        d.dependsOn = "HddEnable";
+        s.append(d);
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // Achievements  (mirrors AchievementSettingsWidget — preference toggles

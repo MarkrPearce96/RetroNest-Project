@@ -34,14 +34,17 @@ Pcsx2CategoryHub::Pcsx2CategoryHub(QWidget* parent)
                              "Backend, latency, volume",
                              countSettings("Audio"), "Audio"),               1, 2);
 
-    // Row 2: Memory Cards · Achievements (only 6 categories total — leave
-    // col 2 empty rather than stretching either card to 2x width).
+    // Row 2: Memory Cards · Network & HDD · Achievements
     grid->addWidget(makeCard(QStringLiteral("\U0001F4BE"), "Memory Cards",
                              "Slot enables, multitap",
                              countSettings("Memory Cards"), "Memory Cards"), 2, 0);
+    grid->addWidget(makeCard(QStringLiteral("\U0001F310"), "Network & HDD",
+                             "Ethernet, DHCP, DNS, internal HDD",
+                             countSettings("Network & HDD"),
+                             "Network & HDD"),                               2, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3C6"), "Achievements",
                              "Hardcore, notifications, overlays",
-                             countSettings("Achievements"), "Achievements"), 2, 1);
+                             countSettings("Achievements"), "Achievements"), 2, 2);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
