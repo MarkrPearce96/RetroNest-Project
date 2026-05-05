@@ -1021,11 +1021,11 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // ═══════════════════════════════════════════════════════════════════════
     { SettingDef d{"Graphics", "On-Screen Display", "On-Screen Display", "EmuCore/GS", "OsdScale", "OSD Scale",
                    "Global multiplier applied to every OSD overlay. 100% matches PCSX2 upstream's default size.",
-                   SettingDef::Int, "100", {}, 25, 500, 25, "", "%"};
+                   SettingDef::Int, "100", {}, 25, 500, 25, "slider", "%"};
       s.append(d); }
     { SettingDef d{"Graphics", "On-Screen Display", "On-Screen Display", "EmuCore/GS", "OsdMargin", "OSD Margin",
                    "Pixel offset between the OSD elements and the screen edge.",
-                   SettingDef::Int, "10", {}, 0, 100, 1, "", "px"};
+                   SettingDef::Int, "10", {}, 0, 100, 1, "slider", "px"};
       s.append(d); }
     { SettingDef d{"Graphics", "On-Screen Display", "On-Screen Display", "EmuCore/GS", "OsdMessagesPos", "OSD Messages Position",
                    "Corner where transient messages (save-state loaded, shader reload, etc.) are drawn.",

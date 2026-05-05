@@ -227,31 +227,33 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
   QGridLayout *bottomGrid = nullptr;
   QWidget *preview = nullptr;
   QWidget *previewBox = nullptr;
-  QSet<QString> previewBoundGroups;
+  // Only the FIRST encountered preview-bound group is "primary" — its cards
+  // share the topRow with the preview and overflow into bottomGrid below.
+  // Later preview-bound groups render full-width below the preview block,
+  // same shape as non-preview-bound groups; their show* widgets are still
+  // live-bound to the preview by wirePreviewBinding (which walks the whole
+  // page tree, not just the leftStack/bottomGrid). Without this rule a
+  // second preview-bound group's HEADER would land in leftStack while its
+  // CARDS landed in bottomGrid — visually disconnected.
+  QString primaryPreviewGroup;
 
   // kColumnSpacing, kStackSpacing, kCardsBesidePreview defined in the
   // anonymous namespace at the top of this file.
   if (!spec.previewType.isEmpty()) {
+    QSet<QString> previewKeys;
     for (auto it = spec.keyToProperty.constBegin();
          it != spec.keyToProperty.constEnd(); ++it) {
-      for (const auto &d : m_schema) {
-        if (d.subcategory == subcategory && d.key == it.key()) {
-          previewBoundGroups.insert(d.group);
-          break;
-        }
-      }
+      previewKeys.insert(it.key());
     }
-
-    // Find the first preview-bound group name (used as the left-column
-    // section header above the cards).
+    // First group (in schema order) that owns at least one spec-mapped key.
     QString firstPreviewGroup;
     for (const auto &d : m_schema) {
-      if (d.subcategory == subcategory &&
-          previewBoundGroups.contains(d.group)) {
+      if (d.subcategory == subcategory && previewKeys.contains(d.key)) {
         firstPreviewGroup = d.group;
         break;
       }
     }
+    primaryPreviewGroup = firstPreviewGroup;
 
     // Header row above topRow — both section headers ("VISUAL QUALITY" /
     // "ASPECT RATIO PREVIEW", or whatever) sit at the same y. With the
@@ -390,20 +392,17 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
   int overflowIndex = 0;
 
   for (const QString &group : groupOrder) {
-    const bool isPreviewBound = leftStack && previewBoundGroups.contains(group);
+    const bool isPreviewBound = leftStack && group == primaryPreviewGroup;
 
-    // Section header for the FIRST preview-bound group is already in
+    // Section header for the primary preview-bound group is already in
     // the headerRow above topRow (so its top aligns with the right
-    // column's preview header). Subsequent preview-bound groups (rare)
-    // get an inline header in leftStack. Non-preview-bound groups always
-    // get a full-width header in the bottom layout.
+    // column's preview header). All other groups get a full-width header
+    // in the bottom layout.
     if (!group.isEmpty()) {
-      const bool firstPreviewGroupAlreadyInHeaderRow =
+      const bool primaryHeaderAlreadyInHeaderRow =
           isPreviewBound && previewBoundCardIndex == 0;
-      if (!firstPreviewGroupAlreadyInHeaderRow) {
-        QVBoxLayout *headerDest = isPreviewBound ? leftStack : layout;
-        headerDest->addWidget(new SettingsSectionHeader(group, this));
-      }
+      if (!primaryHeaderAlreadyInHeaderRow)
+        layout->addWidget(new SettingsSectionHeader(group, this));
     }
 
     QVector<const SettingDef *> groupDefs;
