@@ -644,8 +644,35 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
         s.append(d);
     }
 
-    // Media Capture sub-tab is intentionally not surfaced — see
-    // pcsx2-schema-alignment.md.
+    // ═══════════════════════════════════════════════════════════════════════
+    // Graphics > Media Capture
+    // Mirrors GraphicsMediaCaptureSettingsTab.ui Screenshot Capture Setup
+    // group. Video Recording Setup is deferred — its codec/format combos are
+    // populated dynamically from FFmpeg at runtime, which our schema can't
+    // express today. See pcsx2-schema-alignment.md.
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+        SettingDef d{"Graphics", "Media Capture", "Screenshot Capture Setup", "EmuCore/GS", "ScreenshotSize", "Resolution",
+                     "Resolution at which screenshots are saved.",
+                     SettingDef::Combo, "0",
+                     {{"Display Resolution (Aspect Corrected)", "0"},
+                      {"Internal Resolution (Aspect Corrected)", "1"},
+                      {"Internal Resolution (No Aspect Correction)", "2"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Screenshot Capture Setup", "EmuCore/GS", "ScreenshotFormat", "Format",
+                     "Image format used when saving screenshots.",
+                     SettingDef::Combo, "0",
+                     {{"PNG", "0"}, {"JPEG", "1"}, {"WebP", "2"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Graphics", "Media Capture", "Screenshot Capture Setup", "EmuCore/GS", "ScreenshotQuality", "Quality",
+                     "Compression quality for lossy screenshot formats. Higher = larger files / better quality.",
+                     SettingDef::Int, "90", {}, 1, 100, 1, "slider", "%"};
+        s.append(d);
+    }
 
     // Graphics > Advanced sub-tab is intentionally not surfaced — see
     // pcsx2-schema-alignment.md.
