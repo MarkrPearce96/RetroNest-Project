@@ -20,8 +20,8 @@ private slots:
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
         QCOMPARE(categories, QSet<QString>({
-            "Recommended", "Interface", "Audio", "General", "Graphics",
-            "GameCube", "Wii"
+            "Recommended", "Interface", "Audio", "General", "Advanced",
+            "Graphics", "GameCube", "Wii"
         }));
     }
 
@@ -38,12 +38,12 @@ private slots:
 
     void testInterfaceCategoryFullCatalog() {
         // Mirrors DolphinQt InterfacePane (Source/Core/DolphinQt/Settings/
-        // InterfacePane.cpp). 14 user-facing keys spread across the
-        // [Interface], [Display], [General], [Core] sections.
+        // InterfacePane.cpp). FallbackRegion moved to General (matching
+        // upstream's General pane Fallback Region group).
         const QSet<QString> expectedKeys{
             "PauseOnFocusLost", "ConfirmStop", "KeepWindowOnTop", "DisableScreenSaver",
             "CursorVisibility", "LockCursor",
-            "LanguageCode", "FallbackRegion",
+            "LanguageCode",
             "ShowActiveTitle", "UseBuiltinTitleDatabase", "UseGameCovers",
             "UsePanicHandlers", "HotkeysRequireFocus", "EnablePlayTimeTracking",
         };
@@ -99,32 +99,50 @@ private slots:
         for (const auto& d : schema_)
             if (d.section == "Core" && d.key == "CPUCore") found = &d;
         QVERIFY(found != nullptr);
-        QCOMPARE(found->category, QString("General"));
+        QCOMPARE(found->category, QString("Advanced"));
         QCOMPARE(int(found->type), int(SettingDef::Combo));
         QVERIFY(found->options.size() >= 3);
     }
 
     void testGeneralCategoryFullCatalog() {
-        // Mirrors DolphinQt GeneralPane + AdvancedPane consolidated.
-        // Source: Source/Core/DolphinQt/Settings/{General,Advanced}Pane.cpp.
+        // Mirrors DolphinQt GeneralPane (Source/Core/DolphinQt/Settings/
+        // GeneralPane.cpp). Power-user knobs from upstream's Advanced
+        // pane live in our top-level Advanced category — see
+        // testAdvancedCategoryFullCatalog.
         const QSet<QString> expectedKeys{
-            // CPU
-            "CPUCore", "CPUThread", "MMU", "AccurateCPUCache",
-            // Boot & Cheats
-            "SkipIPL", "EnableCheats", "AutoDiscChange", "OverrideRegionSettings",
-            // Speed
-            "EmulationSpeed", "CorrectTimeDrift", "RushFramePresentation",
-            "SmoothEarlyPresentation",
-            // Overclock
-            "OverclockEnable", "Overclock", "VIOverclockEnable", "VIOverclock",
-            // Memory (Advanced)
-            "RAMOverrideEnable", "LoadGameIntoMemory",
-            // Misc
-            "PauseOnPanic", "EnableCustomRTC", "UseDiscordPresence",
+            // Basic Settings
+            "CPUThread", "SkipIPL", "EnableCheats", "OverrideRegionSettings",
+            "AutoDiscChange", "EmulationSpeed", "LoadGameIntoMemory",
+            "UseDiscordPresence",
+            // Fallback Region
+            "FallbackRegion",
         };
         QSet<QString> got;
         for (const auto& d : schema_)
             if (d.category == "General") got.insert(d.key);
+        QCOMPARE(got, expectedKeys);
+    }
+
+    void testAdvancedCategoryFullCatalog() {
+        // Mirrors DolphinQt AdvancedPane (Source/Core/DolphinQt/Settings/
+        // AdvancedPane.cpp).
+        const QSet<QString> expectedKeys{
+            // CPU Options
+            "CPUCore", "MMU", "AccurateCPUCache", "PauseOnPanic",
+            // Clock Override
+            "OverclockEnable", "Overclock",
+            // VBI Frequency Override
+            "VIOverclockEnable", "VIOverclock",
+            // Memory Override
+            "RAMOverrideEnable",
+            // Timing
+            "CorrectTimeDrift", "RushFramePresentation", "SmoothEarlyPresentation",
+            // Custom RTC Options
+            "EnableCustomRTC",
+        };
+        QSet<QString> got;
+        for (const auto& d : schema_)
+            if (d.category == "Advanced") got.insert(d.key);
         QCOMPARE(got, expectedKeys);
     }
 

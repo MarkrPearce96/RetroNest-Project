@@ -411,156 +411,123 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Process AR/Gecko cheat codes. Off by default for safety.",
          SettingDef::Bool, "False"},
 
-        // ─── Interface / Window ──────────────────────────────
-        {"Interface", "", "Window", "Interface", "PauseOnFocusLost",
+        // ─── Interface / User Interface ──────────────────────
+        // Mirrors Dolphin's Interface pane "User Interface" group.
+        {"Interface", "", "User Interface", "Interface", "PauseOnFocusLost",
          "Pause When Window Loses Focus",
          "Pauses emulation automatically when the RetroNest window loses focus. "
          "Required for the in-game overlay to work cleanly.",
          SettingDef::Bool, "True"},
 
-        {"Interface", "", "Window", "Interface", "ConfirmStop",
+        {"Interface", "", "User Interface", "Interface", "ConfirmStop",
          "Confirm Before Stopping Emulation",
          "Show a confirmation dialog when stopping a game from Dolphin's UI. "
          "Disabled by default so RetroNest's own exit flow is uninterrupted.",
          SettingDef::Bool, "False"},
 
-        {"Interface", "", "Window", "Display", "KeepWindowOnTop",
+        {"Interface", "", "User Interface", "Interface", "LanguageCode",
+         "Dolphin UI Language",
+         "Language used by Dolphin's own UI (when you open native settings). "
+         "Does not change RetroNest's language. \"System Language\" matches the OS.",
+         SettingDef::Combo, "", languages},
+
+        {"Interface", "", "User Interface", "Interface", "ShowActiveTitle",
+         "Show Active Title In Window Title",
+         "Appends the running game's title to the window-title bar.",
+         SettingDef::Bool, "True"},
+
+        {"Interface", "", "User Interface", "Interface", "UseBuiltinTitleDatabase",
+         "Use Built-In Title Database",
+         "Use Dolphin's bundled game-name database to display friendly titles "
+         "in the game list.",
+         SettingDef::Bool, "True"},
+
+        {"Interface", "", "User Interface", "General", "UseGameCovers",
+         "Download Game Covers",
+         "When enabled, Dolphin downloads cover art for known games to display "
+         "in its native game list. RetroNest scrapes its own art separately.",
+         SettingDef::Bool, "False"},
+
+        {"Interface", "", "User Interface", "Interface", "UsePanicHandlers",
+         "Use Panic Handlers",
+         "Show pop-up dialogs for non-fatal emulation errors. Disable for "
+         "kiosk-style play; enable for debugging.",
+         SettingDef::Bool, "True"},
+
+        {"Interface", "", "User Interface", "General", "HotkeysRequireFocus",
+         "Hotkeys Require Window Focus",
+         "When on, Dolphin's native hotkeys only fire while its window has focus. "
+         "RetroNest's overlay hotkeys are not affected.",
+         SettingDef::Bool, "True"},
+
+        {"Interface", "", "User Interface", "General", "EnablePlayTimeTracking",
+         "Track Play Time",
+         "Record per-game playtime in Dolphin's title database.",
+         SettingDef::Bool, "True"},
+
+        // ─── Interface / Render Window ───────────────────────
+        // Mirrors Dolphin's Interface pane "Render Window" group.
+        {"Interface", "", "Render Window", "Display", "KeepWindowOnTop",
          "Keep Window On Top",
          "Forces the Dolphin window to stay above other windows during play.",
          SettingDef::Bool, "False"},
 
-        {"Interface", "", "Window", "Display", "DisableScreenSaver",
+        {"Interface", "", "Render Window", "Display", "DisableScreenSaver",
          "Disable Screensaver During Play",
          "Prevents the system screensaver from kicking in while a game is running.",
          SettingDef::Bool, "True"},
 
-        // ─── Interface / Cursor ──────────────────────────────
-        {"Interface", "", "Cursor", "Interface", "CursorVisibility",
+        // ─── Interface / Mouse Cursor Visibility ─────────────
+        // Mirrors Dolphin's Interface pane "Mouse Cursor Visibility" group.
+        {"Interface", "", "Mouse Cursor Visibility", "Interface",
+         "CursorVisibility",
          "Mouse Cursor",
          "When the mouse cursor is shown over the render area. "
          "Never = always hidden; Always = always shown; On Movement = "
          "auto-hide after a short idle period.",
          SettingDef::Combo, "2", cursorModes},
 
-        {"Interface", "", "Cursor", "Interface", "LockCursor",
+        {"Interface", "", "Mouse Cursor Visibility", "Interface", "LockCursor",
          "Lock Cursor To Window",
          "Confines the mouse cursor to the render window. Useful for mouse-driven "
          "Wii-pointer games. Windows-only effect upstream.",
          SettingDef::Bool, "False"},
 
-        // ─── Interface / Language ────────────────────────────
-        {"Interface", "", "Language", "Interface", "LanguageCode",
-         "Dolphin UI Language",
-         "Language used by Dolphin's own UI (when you open native settings). "
-         "Does not change RetroNest's language. \"System Language\" matches the OS.",
-         SettingDef::Combo, "", languages},
-
-        {"Interface", "", "Language", "Core", "FallbackRegion",
-         "Fallback Region",
-         "Region used for games whose region cannot be auto-detected. "
-         "Affects boot timing and the system menu locale.",
-         SettingDef::Combo, "1", regions},
-
-        // ─── Interface / Library ─────────────────────────────
-        {"Interface", "", "Library", "Interface", "ShowActiveTitle",
-         "Show Active Title In Window Title",
-         "Appends the running game's title to the window-title bar.",
-         SettingDef::Bool, "True"},
-
-        {"Interface", "", "Library", "Interface", "UseBuiltinTitleDatabase",
-         "Use Built-In Title Database",
-         "Use Dolphin's bundled game-name database to display friendly titles "
-         "in the game list.",
-         SettingDef::Bool, "True"},
-
-        {"Interface", "", "Library", "General", "UseGameCovers",
-         "Download Game Covers",
-         "When enabled, Dolphin downloads cover art for known games to display "
-         "in its native game list. RetroNest scrapes its own art separately.",
-         SettingDef::Bool, "False"},
-
-        // ─── Interface / Other ───────────────────────────────
-        {"Interface", "", "Other", "Interface", "UsePanicHandlers",
-         "Use Panic Handlers",
-         "Show pop-up dialogs for non-fatal emulation errors. Disable for "
-         "kiosk-style play; enable for debugging.",
-         SettingDef::Bool, "True"},
-
-        {"Interface", "", "Other", "General", "HotkeysRequireFocus",
-         "Hotkeys Require Window Focus",
-         "When on, Dolphin's native hotkeys only fire while its window has focus. "
-         "RetroNest's overlay hotkeys are not affected.",
-         SettingDef::Bool, "True"},
-
-        {"Interface", "", "Other", "General", "EnablePlayTimeTracking",
-         "Track Play Time",
-         "Record per-game playtime in Dolphin's title database.",
-         SettingDef::Bool, "True"},
-
-        // ─── Audio / Output ──────────────────────────────────
-        {"Audio", "", "Output", "DSP", "Backend",
-         "Audio Backend",
-         "Sound output backend. Cubeb is recommended on macOS.",
-         SettingDef::Combo, "Cubeb", audioBackends},
-
-        {"Audio", "", "Output", "DSP", "Volume",
-         "Volume",
-         "Master output volume (0-100).",
-         SettingDef::Int, "100", {}, 0, 100, 1, "slider", "%"},
-
-        {"Audio", "", "Output", "DSP", "MuteOnDisabledSpeedLimit",
-         "Mute When Speed Limit Disabled",
-         "Silence audio while emulation is running unthrottled (e.g. fast-forward). "
-         "Avoids unpleasant pitch/playback artifacts.",
-         SettingDef::Bool, "False"},
-
-        // ─── Audio / DSP Emulation ───────────────────────────
-        {"Audio", "", "DSP Emulation", "Core", "DSPHLE",
+        // ─── Audio / DSP Options ─────────────────────────────
+        // Mirrors Dolphin's Audio pane "DSP Options" group.
+        {"Audio", "", "DSP Options", "Core", "DSPHLE",
          "DSP HLE",
          "High-Level Emulation of the DSP — fast and compatible with most games. "
          "Disable to use LLE (slower, more accurate; required for a small set of titles).",
          SettingDef::Bool, "True"},
 
-        {"Audio", "", "DSP Emulation", "DSP", "EnableJIT",
+        {"Audio", "", "DSP Options", "DSP", "EnableJIT",
          "DSP LLE — Enable JIT",
          "When DSP HLE is off (LLE mode), use the JIT recompiler. "
          "Significant performance improvement; leave on unless debugging.",
          SettingDef::Bool, "True"},
 
-        // ─── Audio / Latency & Quality ───────────────────────
-        {"Audio", "", "Latency & Quality", "Core", "AudioLatency",
+        // ─── Audio / Backend Settings ────────────────────────
+        // Mirrors Dolphin's Audio pane "Backend Settings" group.
+        {"Audio", "", "Backend Settings", "DSP", "Backend",
+         "Audio Backend",
+         "Sound output backend. Cubeb is recommended on macOS.",
+         SettingDef::Combo, "Cubeb", audioBackends},
+
+        {"Audio", "", "Backend Settings", "Core", "AudioLatency",
          "Audio Latency",
          "Output latency in milliseconds. Lower = tighter sync, more risk of "
          "audio dropouts under load. 20 ms is a sensible default.",
          SettingDef::Int, "20", {}, 0, 200, 1, "slider", "ms"},
 
-        {"Audio", "", "Latency & Quality", "Core", "AudioBufferSize",
-         "Audio Buffer Size",
-         "Internal mixer buffer in milliseconds. Higher = smoother but more "
-         "delay between picture and sound.",
-         SettingDef::Int, "80", {}, 16, 512, 1, "slider", "ms"},
-
-        {"Audio", "", "Latency & Quality", "Core", "AudioFillGaps",
-         "Fill Audio Gaps",
-         "Synthesize silence to fill gaps when emulation can't keep up. "
-         "Disable for a more accurate native-hardware behavior; enable for smoothness.",
-         SettingDef::Bool, "True"},
-
-        {"Audio", "", "Latency & Quality", "Core", "AudioPreservePitch",
-         "Preserve Pitch When Speed Changes",
-         "Time-stretch audio to keep pitch constant when emulation runs slower or "
-         "faster than 100%. Useful with fast-forward; otherwise leaves pitch unchanged.",
-         SettingDef::Bool, "False"},
-
-        // ─── Audio / Surround ────────────────────────────────
-        {"Audio", "", "Surround", "Core", "DPL2Decoder",
+        {"Audio", "", "Backend Settings", "Core", "DPL2Decoder",
          "Dolby Pro Logic II Decoder",
          "Decode the emulated stereo mix into 5.1 surround output. Requires a "
          "backend that supports it — Cubeb on macOS does not, so this is "
          "effectively a no-op there. Active only when DSP HLE is off.",
          SettingDef::Bool, "False"},
 
-        {"Audio", "", "Surround", "Core", "DPL2Quality",
+        {"Audio", "", "Backend Settings", "Core", "DPL2Quality",
          "DPL2 Decoder Quality",
          "Trade-off between CPU cost and surround-decode accuracy.",
          SettingDef::Combo, "2",
@@ -568,55 +535,70 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
            {"High",    "2"}, {"Highest","3"} },
          0, 0, 0, "", "", "DPL2Decoder"},  // gated on DPL2Decoder
 
-        // ─── General / CPU ───────────────────────────────────
-        {"General", "", "CPU", "Core", "CPUCore",
-         "CPU Core",
-         "The CPU emulation backend. JIT is required for full-speed gameplay.",
-         SettingDef::Combo, "1", cpuCores},
+        // ─── Audio / Audio Playback Settings ─────────────────
+        // Mirrors Dolphin's Audio pane "Audio Playback Settings" group.
+        {"Audio", "", "Audio Playback Settings", "DSP", "MuteOnDisabledSpeedLimit",
+         "Mute When Speed Limit Disabled",
+         "Silence audio while emulation is running unthrottled (e.g. fast-forward). "
+         "Avoids unpleasant pitch/playback artifacts.",
+         SettingDef::Bool, "False"},
 
-        {"General", "", "CPU", "Core", "CPUThread",
+        {"Audio", "", "Audio Playback Settings", "Core", "AudioBufferSize",
+         "Audio Buffer Size",
+         "Internal mixer buffer in milliseconds. Higher = smoother but more "
+         "delay between picture and sound.",
+         SettingDef::Int, "80", {}, 16, 512, 1, "slider", "ms"},
+
+        {"Audio", "", "Audio Playback Settings", "Core", "AudioFillGaps",
+         "Fill Audio Gaps",
+         "Synthesize silence to fill gaps when emulation can't keep up. "
+         "Disable for a more accurate native-hardware behavior; enable for smoothness.",
+         SettingDef::Bool, "True"},
+
+        {"Audio", "", "Audio Playback Settings", "Core", "AudioPreservePitch",
+         "Preserve Pitch When Speed Changes",
+         "Time-stretch audio to keep pitch constant when emulation runs slower or "
+         "faster than 100%. Useful with fast-forward; otherwise leaves pitch unchanged.",
+         SettingDef::Bool, "False"},
+
+        // ─── Audio / Volume ──────────────────────────────────
+        // Mirrors Dolphin's Audio pane "Volume" group.
+        {"Audio", "", "Volume", "DSP", "Volume",
+         "Volume",
+         "Master output volume (0-100).",
+         SettingDef::Int, "100", {}, 0, 100, 1, "slider", "%"},
+
+        // ─── General / Basic Settings ────────────────────────
+        // Mirrors Dolphin's General pane "Basic Settings" group.
+        {"General", "", "Basic Settings", "Core", "CPUThread",
          "Dual Core Mode",
          "Splits CPU and GPU emulation across two threads. Significant speed "
          "gain; some games rely on tight CPU/GPU sync and may glitch with it on.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "CPU", "Core", "MMU",
-         "Enable MMU",
-         "Emulates the memory management unit. Slower but required for a small "
-         "set of games (typically Virtual Console / homebrew).",
-         SettingDef::Bool, "False"},
-
-        {"General", "", "CPU", "Core", "AccurateCPUCache",
-         "Accurate CPU Instruction Cache",
-         "Emulate the CPU's L1 instruction cache. Slower but more accurate; "
-         "needed for a handful of games that self-modify code.",
-         SettingDef::Bool, "False"},
-
-        // ─── General / Boot & Cheats ─────────────────────────
-        {"General", "", "Boot & Cheats", "Core", "SkipIPL",
+        {"General", "", "Basic Settings", "Core", "SkipIPL",
          "Skip GameCube Boot Animation",
          "Skips the GameCube IPL boot sequence and starts the game directly. "
          "When disabled, requires IPL.bin in the BIOS folder.",
          SettingDef::Bool, "True"},
 
-        {"General", "", "Boot & Cheats", "Core", "EnableCheats",
+        {"General", "", "Basic Settings", "Core", "EnableCheats",
          "Enable Cheats",
          "Enables AR/Gecko cheat code processing. Off by default for safety.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Boot & Cheats", "Core", "AutoDiscChange",
+        {"General", "", "Basic Settings", "Core", "OverrideRegionSettings",
+         "Override Region Settings",
+         "Force a region's settings (language, video mode) regardless of disc region.",
+         SettingDef::Bool, "False"},
+
+        {"General", "", "Basic Settings", "Core", "AutoDiscChange",
          "Auto Disc Change",
          "Switch discs automatically for multi-disc games (M3U). RetroNest's "
          "M3U handling is independent and runs at launch time.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Boot & Cheats", "Core", "OverrideRegionSettings",
-         "Override Region Settings",
-         "Force a region's settings (language, video mode) regardless of disc region.",
-         SettingDef::Bool, "False"},
-
-        // ─── General / Speed ─────────────────────────────────
-        {"General", "", "Speed", "Core", "EmulationSpeed",
+        {"General", "", "Basic Settings", "Core", "EmulationSpeed",
          "Emulation Speed",
          "Cap on emulated speed relative to native. Unlimited = no throttle. "
          "Stored as a float multiplier; combo offers common breakpoints.",
@@ -631,25 +613,55 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
            {"200%",       "2.000000"},
            {"300%",       "3.000000"} }},
 
-        {"General", "", "Speed", "Core", "CorrectTimeDrift",
-         "Correct Time Drift",
-         "Compensate for accumulated frame-pacing drift over long sessions. "
-         "Smooths long-term sync at the cost of micro-stutter.",
+        {"General", "", "Basic Settings", "Core", "LoadGameIntoMemory",
+         "Load Game Into Memory",
+         "Pre-loads the entire game image into RAM at boot. Eliminates disc "
+         "I/O stutter; uses more host memory.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Speed", "Core", "RushFramePresentation",
-         "Rush Frame Presentation",
-         "Aggressively present frames as soon as they're ready. Lower latency, "
-         "more tearing without VSync.",
+        {"General", "", "Basic Settings", "General", "UseDiscordPresence",
+         "Discord Rich Presence",
+         "Publish currently-playing game to Discord status when Dolphin runs.",
+         SettingDef::Bool, "True"},
+
+        // ─── General / Fallback Region ───────────────────────
+        // Mirrors Dolphin's General pane "Fallback Region" group.
+        {"General", "", "Fallback Region", "Core", "FallbackRegion",
+         "Fallback Region",
+         "Region used for games whose region cannot be auto-detected. "
+         "Affects boot timing and the system menu locale.",
+         SettingDef::Combo, "1", regions},
+
+        // ═══ Advanced ═══════════════════════════════════════
+        // Mirrors DolphinQt's AdvancedPane (Source/Core/DolphinQt/Settings/
+        // AdvancedPane.cpp). Power-user knobs split out from the General
+        // tab to match upstream's organization.
+
+        // ─── Advanced / CPU Options ──────────────────────────
+        {"Advanced", "", "CPU Options", "Core", "CPUCore",
+         "CPU Core",
+         "The CPU emulation backend. JIT is required for full-speed gameplay.",
+         SettingDef::Combo, "1", cpuCores},
+
+        {"Advanced", "", "CPU Options", "Core", "MMU",
+         "Enable MMU",
+         "Emulates the memory management unit. Slower but required for a small "
+         "set of games (typically Virtual Console / homebrew).",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Speed", "Core", "SmoothEarlyPresentation",
-         "Smooth Early Presentation",
-         "Smooth pacing for frames that finish ahead of schedule.",
+        {"Advanced", "", "CPU Options", "Core", "AccurateCPUCache",
+         "Accurate CPU Instruction Cache",
+         "Emulate the CPU's L1 instruction cache. Slower but more accurate; "
+         "needed for a handful of games that self-modify code.",
          SettingDef::Bool, "False"},
 
-        // ─── General / Overclock ─────────────────────────────
-        {"General", "", "Overclock", "Core", "OverclockEnable",
+        {"Advanced", "", "CPU Options", "Core", "PauseOnPanic",
+         "Pause On Panic",
+         "Pause emulation when Dolphin reports a non-fatal error.",
+         SettingDef::Bool, "False"},
+
+        // ─── Advanced / Clock Override ───────────────────────
+        {"Advanced", "", "Clock Override", "Core", "OverclockEnable",
          "Enable CPU Overclocking",
          "Allow the slider below to scale the emulated CPU's clock rate. "
          "Some games run smoother with overclocking; others crash.",
@@ -659,53 +671,56 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // int(minVal)/int(maxVal)), so whole-number bounds. minVal=1
         // keeps the emulated CPU at native or above; below that Dolphin
         // reads the float as 0.0 and stalls. dependsOn gates on enable.
-        {"General", "", "Overclock", "Core", "Overclock",
+        {"Advanced", "", "Clock Override", "Core", "Overclock",
          "CPU Overclock Multiplier",
          "Multiplier applied to the emulated CPU's clock when overclocking is enabled. "
          "1 = native, 2 = +100%, 4 = +300%.",
          SettingDef::Int, "1", {}, 1, 4, 1, "slider", "x", "OverclockEnable"},
 
-        {"General", "", "Overclock", "Core", "VIOverclockEnable",
+        // ─── Advanced / VBI Frequency Override ───────────────
+        {"Advanced", "", "VBI Frequency Override", "Core", "VIOverclockEnable",
          "Enable VI (Video Interface) Overclocking",
          "Allow scaling the video-interface clock independently of the CPU. "
          "Affects refresh-rate timing for some games.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Overclock", "Core", "VIOverclock",
+        {"Advanced", "", "VBI Frequency Override", "Core", "VIOverclock",
          "VI Overclock Multiplier",
          "Multiplier applied to the VI clock when VI overclocking is enabled.",
          SettingDef::Int, "1", {}, 1, 4, 1, "slider", "x", "VIOverclockEnable"},
 
-        // ─── General / Memory (Advanced) ─────────────────────
-        {"General", "", "Memory (Advanced)", "Core", "RAMOverrideEnable",
+        // ─── Advanced / Memory Override ──────────────────────
+        {"Advanced", "", "Memory Override", "Core", "RAMOverrideEnable",
          "Override RAM Sizes",
          "Allow using non-retail RAM sizes (MEM1/MEM2). Required for some "
          "homebrew. Most games will not boot with non-retail sizes.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Memory (Advanced)", "Core", "LoadGameIntoMemory",
-         "Load Game Into Memory",
-         "Pre-loads the entire game image into RAM at boot. Eliminates disc "
-         "I/O stutter; uses more host memory.",
+        // ─── Advanced / Timing ───────────────────────────────
+        {"Advanced", "", "Timing", "Core", "CorrectTimeDrift",
+         "Correct Time Drift",
+         "Compensate for accumulated frame-pacing drift over long sessions. "
+         "Smooths long-term sync at the cost of micro-stutter.",
          SettingDef::Bool, "False"},
 
-        // ─── General / Misc ──────────────────────────────────
-        {"General", "", "Misc", "Core", "PauseOnPanic",
-         "Pause On Panic",
-         "Pause emulation when Dolphin reports a non-fatal error.",
+        {"Advanced", "", "Timing", "Core", "RushFramePresentation",
+         "Rush Frame Presentation",
+         "Aggressively present frames as soon as they're ready. Lower latency, "
+         "more tearing without VSync.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Misc", "Core", "EnableCustomRTC",
+        {"Advanced", "", "Timing", "Core", "SmoothEarlyPresentation",
+         "Smooth Early Presentation",
+         "Smooth pacing for frames that finish ahead of schedule.",
+         SettingDef::Bool, "False"},
+
+        // ─── Advanced / Custom RTC Options ───────────────────
+        {"Advanced", "", "Custom RTC Options", "Core", "EnableCustomRTC",
          "Enable Custom Real-Time Clock",
          "Override the emulated system clock with a fixed date/time. "
          "Set the value via Dolphin's native UI — RetroNest doesn't yet expose "
          "a date picker.",
          SettingDef::Bool, "False"},
-
-        {"General", "", "Misc", "General", "UseDiscordPresence",
-         "Discord Rich Presence",
-         "Publish currently-playing game to Discord status when Dolphin runs.",
-         SettingDef::Bool, "True"},
 
         // ═══ Graphics ═══════════════════════════════════════
         // Five sub-tabs mirror DolphinQt's GraphicsPane structure:
@@ -1090,72 +1105,90 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "False"}),
 
         // ─── Graphics / On-Screen Display ────────────────────
-        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowFPS",
+        // Group names mirror Dolphin's OnScreenDisplayPane (Source/Core/
+        // DolphinQt/Settings/OnScreenDisplayPane.cpp): General,
+        // Performance Statistics, Movie Window, Netplay.
+
+        // OSD messages + font size live in Dolphin.ini, not GFX.ini.
+        {"Graphics", "On-Screen Display", "General", "Interface",
+         "OnScreenDisplayMessages",
+         "Show On-Screen Messages",
+         "Display Dolphin's own status messages (savestates, achievements, etc.)",
+         SettingDef::Bool, "True"},
+
+        {"Graphics", "On-Screen Display", "General", "Settings", "OSDFontSize",
+         "OSD Font Size",
+         "Point size for on-screen messages.",
+         SettingDef::Int, "13", {}, 8, 32, 1, "slider", "pt"},
+
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowFPS",
          "Show FPS",
          "Frames per second the GPU is drawing.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowVPS",
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowVPS",
          "Show VPS",
          "VBlanks per second — the rate the emulated game thinks it's running at.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowSpeed",
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowSpeed",
          "Show Speed",
          "Emulation speed as a percentage of native.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowSpeedColors",
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowSpeedColors",
          "Color-Code Speed",
          "Tint the Show Speed indicator green/yellow/red based on how close "
          "to native it is.",
          SettingDef::Bool, "True"}),
 
-        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowFTimes",
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowFTimes",
          "Show Frame Times",
          "Per-frame GPU time graph.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowVTimes",
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowVTimes",
          "Show VBlank Times",
          "Per-vblank time graph.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "On-Screen Display", "Performance", "Settings", "ShowGraphs",
+        gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
+         "ShowGraphs",
          "Show Performance Graphs",
          "Render the FPS/VPS history as a graph instead of a single number.",
          SettingDef::Bool, "False"}),
 
-        gfx({"Graphics", "On-Screen Display", "NetPlay", "Settings", "ShowNetPlayPing",
-         "Show NetPlay Ping",
-         "Display NetPlay session ping.",
-         SettingDef::Bool, "False"}),
-
-        gfx({"Graphics", "On-Screen Display", "NetPlay", "Settings", "ShowNetPlayMessages",
-         "Show NetPlay Messages",
-         "Display NetPlay chat/event messages on screen.",
-         SettingDef::Bool, "False"}),
-
-        // OSD messages + frame count + lag live in Dolphin.ini, not GFX.ini.
-        {"Graphics", "On-Screen Display", "Messages", "Interface", "OnScreenDisplayMessages",
-         "Show On-Screen Messages",
-         "Display Dolphin's own status messages (savestates, achievements, etc.)",
-         SettingDef::Bool, "True"},
-
-        {"Graphics", "On-Screen Display", "Messages", "Settings", "OSDFontSize",
-         "OSD Font Size",
-         "Point size for on-screen messages.",
-         SettingDef::Int, "13", {}, 8, 32, 1, "slider", "pt"},
-
-        {"Graphics", "On-Screen Display", "Messages", "General", "ShowFrameCount",
+        // Frame count + lag are part of the upstream "Movie Window" group
+        // (debugging / TAS-style overlays). Keys live in Dolphin.ini
+        // [General].
+        {"Graphics", "On-Screen Display", "Movie Window", "General",
+         "ShowFrameCount",
          "Show Frame Count",
          "Display the running frame number.",
          SettingDef::Bool, "False"},
 
-        {"Graphics", "On-Screen Display", "Messages", "General", "ShowLag",
+        {"Graphics", "On-Screen Display", "Movie Window", "General", "ShowLag",
          "Show Lag Counter",
          "Display the per-frame input-lag counter (movie/replay tooling).",
          SettingDef::Bool, "False"},
+
+        gfx({"Graphics", "On-Screen Display", "Netplay", "Settings",
+         "ShowNetPlayPing",
+         "Show NetPlay Ping",
+         "Display NetPlay session ping.",
+         SettingDef::Bool, "False"}),
+
+        gfx({"Graphics", "On-Screen Display", "Netplay", "Settings",
+         "ShowNetPlayMessages",
+         "Show NetPlay Messages",
+         "Display NetPlay chat/event messages on screen.",
+         SettingDef::Bool, "False"}),
 
         // ═══ GameCube ═══════════════════════════════════════
         // Mirrors DolphinQt GameCubePane (Source/Core/DolphinQt/Settings/

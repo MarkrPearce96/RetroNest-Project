@@ -41,6 +41,14 @@ DolphinCategoryHub::DolphinCategoryHub(QWidget* parent)
                              "Wiimote source, BT, NAND, SD",
                              countSettings("Wii"), "Wii"),              2, 2);
 
+    // Row 3: Advanced — full-width stretch card. Mirrors Dolphin's
+    // Settings dialog Advanced tab (CPU options, timing, overclock,
+    // memory override, custom RTC). Power-user knobs.
+    grid->addWidget(makeCard(QStringLiteral("\U0001F527"), "Advanced",
+                             "CPU, timing, overclock, memory, RTC",
+                             countSettings("Advanced"), "Advanced"),
+                    3, 0, 1, 3);
+
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
 }
