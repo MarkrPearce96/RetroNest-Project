@@ -373,7 +373,7 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     {
         SettingDef d{"Graphics", "Display", "", "EmuCore/GS", "StretchY", "Vertical Stretch",
                      "Multiplies the display height after aspect-ratio fitting. Values above 100% make the image taller than its letterbox; values below leave extra vertical space. Default is 100%.",
-                     SettingDef::Int, "100", {}, 10, 300, 1, "", "%"};
+                     SettingDef::Int, "100", {}, 10, 300, 1, "slider", "%"};
         s.append(d);
     }
     {
@@ -594,7 +594,7 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     {
         SettingDef d{"Graphics", "Post-Processing", "Sharpening/Anti-Aliasing", "EmuCore/GS", "CASSharpness", "Sharpness",
                      "Strength of the CAS sharpening effect. Higher values produce sharper but potentially noisier images.",
-                     SettingDef::Int, "50", {}, 1, 100, 1, "", "%"};
+                     SettingDef::Int, "50", {}, 1, 100, 1, "slider", "%"};
         d.dependsOn = "CASMode!=0";
         s.append(d);
     }
@@ -670,7 +670,7 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     {
         SettingDef d{"Graphics", "Media Capture", "Screenshot Capture Setup", "EmuCore/GS", "ScreenshotQuality", "Quality",
                      "Compression quality for lossy screenshot formats. Higher = larger files / better quality.",
-                     SettingDef::Int, "90", {}, 1, 100, 1, "", "%"};
+                     SettingDef::Int, "90", {}, 1, 100, 1, "slider", "%"};
         s.append(d);
     }
 
