@@ -38,20 +38,62 @@ private slots:
 
     void testAudioCategoryFullCatalog() {
         // Mirrors DolphinQt AudioPane (Source/Core/DolphinQt/Settings/AudioPane.cpp).
+        // DSPHLE is the schema's primary key for the "DSP Emulation Engine"
+        // combo; EnableJIT isn't a separate schema entry — the combo's
+        // saveTransform writes both INI keys together.
         const QSet<QString> expectedKeys{
-            // Output
-            "Backend", "Volume", "MuteOnDisabledSpeedLimit",
-            // DSP Emulation
-            "DSPHLE", "EnableJIT",
-            // Latency & Quality
-            "AudioLatency", "AudioBufferSize", "AudioFillGaps", "AudioPreservePitch",
-            // Surround
-            "DPL2Decoder", "DPL2Quality",
+            // DSP Options
+            "DSPHLE",
+            // Backend Settings
+            "Backend", "AudioLatency", "DPL2Decoder", "DPL2Quality",
+            // Audio Playback Settings
+            "MuteOnDisabledSpeedLimit", "AudioBufferSize", "AudioFillGaps",
+            "AudioPreservePitch",
+            // Volume
+            "Volume",
         };
         QSet<QString> got;
         for (const auto& d : schema_)
             if (d.category == "Audio") got.insert(d.key);
         QCOMPARE(got, expectedKeys);
+    }
+
+    void testDspEmulationEngineComboSemantics() {
+        // The DSP Emulation Engine combo's saveTransform should write
+        // both DSPHLE and EnableJIT to express the three upstream states.
+        const SettingDef* found = nullptr;
+        for (const auto& d : schema_)
+            if (d.key == "DSPHLE" && d.category == "Audio") found = &d;
+        QVERIFY(found != nullptr);
+        QCOMPARE(int(found->type), int(SettingDef::Combo));
+        QCOMPARE(found->options.size(), 3);
+        QVERIFY(found->saveTransform != nullptr);
+        QVERIFY(found->loadTransform != nullptr);
+
+        // Check the saveTransform writes both keys for LLE choices.
+        QHash<QPair<QString,QString>, QString> writes;
+        auto saveCb = [&writes](const QString& sec, const QString& k,
+                                const QString& v) {
+            writes[qMakePair(sec, k)] = v;
+        };
+        writes.clear();
+        found->saveTransform("HLE", saveCb);
+        QCOMPARE(writes.value(qMakePair(QString("Core"), QString("DSPHLE"))),
+                 QString("True"));
+
+        writes.clear();
+        found->saveTransform("LLE Recompiler", saveCb);
+        QCOMPARE(writes.value(qMakePair(QString("Core"), QString("DSPHLE"))),
+                 QString("False"));
+        QCOMPARE(writes.value(qMakePair(QString("DSP"), QString("EnableJIT"))),
+                 QString("True"));
+
+        writes.clear();
+        found->saveTransform("LLE Interpreter", saveCb);
+        QCOMPARE(writes.value(qMakePair(QString("Core"), QString("DSPHLE"))),
+                 QString("False"));
+        QCOMPARE(writes.value(qMakePair(QString("DSP"), QString("EnableJIT"))),
+                 QString("False"));
     }
 
     void testAudioBackendIsCubebDefault() {

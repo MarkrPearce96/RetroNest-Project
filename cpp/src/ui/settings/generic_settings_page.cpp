@@ -523,9 +523,16 @@ void GenericSettingsPage::loadValues() {
   // every non-Qt-default value back to disk on every page open. The
   // round-trip is harmless for the default save path but can fire
   // unwanted side effects for SettingDef::saveTransform consumers.
+  // Read helper used by SettingDef::loadTransform consumers — they pass
+  // (section, key) for each underlying INI key they need to inspect.
+  auto readKey = [app, emuId](const QString &sec, const QString &k) {
+    return app->settingValue(emuId, sec, k);
+  };
   for (auto *combo : findChildren<SettingsComboRow *>()) {
     const SettingDef &d = combo->settingDef();
-    const QString cur = app->settingValue(emuId, d.section, d.key);
+    const QString cur = d.loadTransform
+        ? d.loadTransform(readKey)
+        : app->settingValue(emuId, d.section, d.key);
     const QSignalBlocker blocker(combo);
     combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
   }

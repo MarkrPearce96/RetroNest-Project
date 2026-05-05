@@ -66,6 +66,15 @@ struct SettingDef {
     std::function<void(const QString& widgetValue,
                        const SaveCallback& defaultSave)> saveTransform;
 
+    // Optional inverse of saveTransform — synthesizes the widget value
+    // from one or more INI keys when the page first loads. Used when a
+    // single combo represents the state of multiple INI keys (e.g.
+    // Dolphin's "DSP Emulation Engine" combo binds to both DSPHLE and
+    // EnableJIT). Default unset → page reads `section`/`key` directly.
+    using LoadCallback = std::function<QString(const QString& section,
+                                                const QString& key)>;
+    std::function<QString(const LoadCallback& read)> loadTransform;
+
     // Optional per-key INI file override. When non-empty, ConfigService
     // routes reads/writes for this setting to this absolute file path
     // instead of adapter->configFilePath(). Mirrors IniPatch::iniFilePath.

@@ -421,18 +421,58 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // force-set in patchDolphinIni() below, not exposed in the schema.
 
         // ─── Audio / DSP Options ─────────────────────────────
-        // Mirrors Dolphin's Audio pane "DSP Options" group.
-        {"Audio", "", "DSP Options", "Core", "DSPHLE",
-         "DSP HLE",
-         "High-Level Emulation of the DSP — fast and compatible with most games. "
-         "Disable to use LLE (slower, more accurate; required for a small set of titles).",
-         SettingDef::Bool, "True"},
-
-        {"Audio", "", "DSP Options", "DSP", "EnableJIT",
-         "DSP LLE — Enable JIT",
-         "When DSP HLE is off (LLE mode), use the JIT recompiler. "
-         "Significant performance improvement; leave on unless debugging.",
-         SettingDef::Bool, "True"},
+        // Mirrors Dolphin's AudioPane.cpp:55-69 — a single "DSP Emulation
+        // Engine" combo that internally toggles two INI keys
+        // (Core/DSPHLE and DSP/EnableJIT) to express three states:
+        //   HLE                      → DSPHLE=True  (EnableJIT ignored)
+        //   LLE Recompiler (slow)    → DSPHLE=False, EnableJIT=True
+        //   LLE Interpreter (slowest)→ DSPHLE=False, EnableJIT=False
+        // saveTransform writes both keys; loadTransform reads both and
+        // synthesizes the three-way combo value.
+        []() {
+            SettingDef d;
+            d.category    = "Audio";
+            d.subcategory = "";
+            d.group       = "DSP Options";
+            d.section     = "Core";       // primary (DSPHLE) for the
+            d.key         = "DSPHLE";     // dependsOn / focus-bar lookup
+            d.label       = "DSP Emulation Engine";
+            d.tooltip     = "How the audio DSP is emulated. HLE is fast and "
+                            "compatible with most games. LLE is slower but "
+                            "more accurate, and required by a handful of "
+                            "titles.";
+            d.type          = SettingDef::Combo;
+            d.defaultValue  = "HLE";
+            d.options       = {
+                {"HLE",                       "HLE"},
+                {"LLE Recompiler (slow)",     "LLE Recompiler"},
+                {"LLE Interpreter (very slow)", "LLE Interpreter"},
+            };
+            d.saveTransform = [](const QString &v,
+                                 const SettingDef::SaveCallback &save) {
+                if (v == "HLE") {
+                    save("Core", "DSPHLE", "True");
+                } else if (v == "LLE Recompiler") {
+                    save("Core", "DSPHLE", "False");
+                    save("DSP",  "EnableJIT", "True");
+                } else { // LLE Interpreter
+                    save("Core", "DSPHLE", "False");
+                    save("DSP",  "EnableJIT", "False");
+                }
+            };
+            d.loadTransform = [](const SettingDef::LoadCallback &read) {
+                const bool hle = read("Core", "DSPHLE")
+                                     .compare("true", Qt::CaseInsensitive) == 0;
+                if (hle) return QString("HLE");
+                const QString jit = read("DSP", "EnableJIT");
+                // Default-unset EnableJIT means JIT enabled (Dolphin's
+                // upstream default), so unspecified → LLE Recompiler.
+                const bool useJit = jit.isEmpty() ||
+                    jit.compare("true", Qt::CaseInsensitive) == 0;
+                return QString(useJit ? "LLE Recompiler" : "LLE Interpreter");
+            };
+            return d;
+        }(),
 
         // ─── Audio / Backend Settings ────────────────────────
         // Mirrors Dolphin's Audio pane "Backend Settings" group.
