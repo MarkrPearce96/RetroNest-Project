@@ -1,5 +1,6 @@
 #include "settings_card.h"
 #include "ui/settings/settings_dialog_theme.h"
+#include "settings_combo_row.h"
 #include "settings_toggle.h"
 #include "settings_slider_row.h"
 #include <QScrollArea>
@@ -13,7 +14,29 @@
 #include <QWidget>
 #include <QComboBox>
 #include <QTimer>
+#include <QVBoxLayout>
 #include <limits>
+
+namespace {
+// Compute the natural outer height of a SettingsCard wrapping a combo row.
+// The actual rendered height of a Fusion-styled QComboBox depends on Qt
+// style metrics and the system font, which only resolve at runtime — we
+// can't hardcode it. Lazy-static: runs once on the first SettingsCard
+// construction (after QApplication is up), then every subsequent card
+// uses the cached value.
+int referenceCardHeight() {
+    static const int kRef = []() {
+        SettingsComboRow row;
+        row.setLabel(QStringLiteral("Sample"));
+        row.setOptions({{QStringLiteral("Default"), QStringLiteral("0")}});
+        row.ensurePolished();
+        if (auto* l = row.layout()) l->activate();
+        // Card chrome: 12 (contentsMargins 6+6) + 2 (1px QSS border each side).
+        return row.sizeHint().height() + 14;
+    }();
+    return kRef;
+}
+} // namespace
 
 SettingsCard::SettingsCard(QWidget* parent) : QFrame(parent) {
     setObjectName("SettingsCard");
@@ -22,6 +45,11 @@ SettingsCard::SettingsCard(QWidget* parent) : QFrame(parent) {
     setFrameStyle(QFrame::NoFrame);                // disable QFrame's default frame
     setStyleSheet(SettingsDialogTheme::cardQss());
     setProperty("focused", false);
+    // Match the natural rendered height of a combo card so toggle and
+    // slider cards line up with combo cards on the same page. Computed
+    // once at runtime by measuring an actual SettingsComboRow — no
+    // hardcoded magic numbers, no platform-style guessing.
+    setMinimumHeight(referenceCardHeight());
 }
 
 void SettingsCard::setPreviewStyle(bool preview) {

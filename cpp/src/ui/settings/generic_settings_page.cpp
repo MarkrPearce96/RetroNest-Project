@@ -16,6 +16,7 @@
 #include <QComboBox>
 #include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
+#include <QGridLayout>
 #include <QHash>
 #include <QKeyEvent>
 #include <QLabel>
@@ -149,26 +150,34 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
                                ? m_adapter->previewSpec(m_category, subcategory)
                                : PreviewSpec{};
 
-  // When a preview is active, the top row gets a TWO-COLUMN layout:
-  //   leftStack  = preview-bound group cards 0..N-1 (beside the preview),
-  //                then more cards alternating with rightStack once we
-  //                pass the preview's vertical span.
-  //   rightStack = preview card at the top (top-aligned), then the
-  //                alternating overflow cards under the preview.
-  // Non-preview-bound groups still flow into the full-width `layout`
-  // BELOW the topRow.
-  //
-  // The alternating fill produces the user's desired pattern: a paired
-  // `[Anisotropic | Force Texture]` row beyond the preview-bound cap
-  // ends up with one card in each column at the same y-level — without
-  // any explicit pair-detection logic.
+  // Two-column layout when a preview is active:
+  //   topRow     = leftStack (N preview-bound cards beside preview)
+  //                | rightStack (header + preview)
+  //   bottomGrid = QGridLayout (2 cols), preview-bound overflow cards
+  //                pair-fill into row 0 col 0, row 0 col 1, row 1 col 0…
+  //                — siblings in the same grid row align by construction.
+  //   Orphan: a lone overflow card on the last row (odd count) re-spans
+  //           both columns so it stretches full-width.
+  // The preview is sized so its card height matches the natural N-card
+  // leftStack height — keeps both topRow column heights equal (no gap
+  // before bottomGrid). Non-preview-bound groups flow full-width below
+  // bottomGrid.
   QVBoxLayout *leftStack = nullptr;
-  QVBoxLayout *rightStack = nullptr;
+  QWidget *leftHost = nullptr;
+  QGridLayout *bottomGrid = nullptr;
   QWidget *preview = nullptr;
+  QWidget *previewBox = nullptr;
   QSet<QString> previewBoundGroups;
 
+  constexpr int kColumnSpacing = 14;
+  constexpr int kStackSpacing = 12;
+  // Cards beside the preview before alternation kicks in. The preview is
+  // sized at runtime (after leftStack is populated) to make rightStack
+  // natural height match leftStack natural height — see the post-loop
+  // sizing block.
+  constexpr int kCardsBesidePreview = 4;
+
   if (!spec.previewType.isEmpty()) {
-    // Identify which schema groups feed the preview.
     for (auto it = spec.keyToProperty.constBegin();
          it != spec.keyToProperty.constEnd(); ++it) {
       for (const auto &d : m_schema) {
@@ -179,50 +188,48 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
       }
     }
 
-    // Symmetric 14px spacing on every axis of the topRow:
-    //   - between the two columns (topRow spacing)
-    //   - between cards within each column (left/rightStack spacing)
-    // Larger leftStack spacing also stretches the left column closer
-    // to matching the right column's height (preview + first-overflow
-    // card), which the user explicitly asked for.
-    auto *topRow = new QHBoxLayout();
-    topRow->setSpacing(14);
+    // Find the first preview-bound group name (used as the left-column
+    // section header above the cards).
+    QString firstPreviewGroup;
+    for (const auto &d : m_schema) {
+      if (d.subcategory == subcategory &&
+          previewBoundGroups.contains(d.group)) {
+        firstPreviewGroup = d.group;
+        break;
+      }
+    }
 
-    auto *leftHost = new QWidget(this);
+    // Header row above topRow — both section headers ("VISUAL QUALITY" /
+    // "ASPECT RATIO PREVIEW", or whatever) sit at the same y. With the
+    // headers OUTSIDE the columns, the first widget inside each column
+    // (Internal Resolution on the left, preview card on the right) lines
+    // up at exactly the same y — guaranteed by the QHBoxLayout, no
+    // dependence on header height matching exactly.
+    auto *headerRow = new QHBoxLayout();
+    headerRow->setSpacing(kColumnSpacing);
+    headerRow->addWidget(
+        new SettingsSectionHeader(firstPreviewGroup, this), /*stretch=*/1);
+    headerRow->addWidget(new SettingsSectionHeader(
+                             spec.previewType == "osd" ? "OSD Preview"
+                                                       : "Aspect Ratio Preview",
+                             this),
+                         /*stretch=*/1);
+
+    auto *topRow = new QHBoxLayout();
+    topRow->setSpacing(kColumnSpacing);
+
+    leftHost = new QWidget(this);
     leftStack = new QVBoxLayout(leftHost);
     leftStack->setContentsMargins(0, 0, 0, 0);
-    // 12px between cards in the left column. Tighter than rightStack
-    // (which has only one inter-card gap, header→preview→FTF) so the
-    // 5-card stack's bottom lines up with FTF's bottom on the right —
-    // each saved gap multiplies across the 5 inter-card gaps.
-    leftStack->setSpacing(13);
+    leftStack->setSpacing(kStackSpacing);
     topRow->addWidget(leftHost, /*stretch=*/1);
 
     auto *rightHost = new QWidget(this);
-    rightStack = new QVBoxLayout(rightHost);
+    auto *rightStack = new QVBoxLayout(rightHost);
     rightStack->setContentsMargins(0, 0, 0, 0);
-    // Match leftStack's 12px spacing so the section-header → first-
-    // card gap is identical on both columns and the preview card
-    // top aligns with Internal Resolution's top. The preview widget
-    // maxWidth below is bumped just enough that the resulting card
-    // is taller by the same amount the gap shrunk — so FTF below
-    // the preview ends at the same y as before.
-    rightStack->setSpacing(12);
+    rightStack->setSpacing(kStackSpacing);
     topRow->addWidget(rightHost, /*stretch=*/1);
 
-    // Section-header at the top of rightStack mirrors leftStack's
-    // own group header — same SettingsSectionHeader styling and
-    // spacing rules — so the preview card sits at the same y-level
-    // as leftStack's first setting card. Replaces the small inline
-    // label that used to live inside the preview card.
-    rightStack->addWidget(new SettingsSectionHeader(
-        spec.previewType == "osd" ? "OSD Preview" : "Aspect Ratio Preview",
-        this));
-
-    // Preview card. Standard chrome (14/12 margins). Width-cap on
-    // the inner widget tunes the card's heightForWidth so its top
-    // pairs with Internal Resolution and its bottom pairs with
-    // FTF. Wider here = taller card.
     auto *card = new SettingsCard(this);
     card->setFocusPolicy(Qt::NoFocus);
     card->setPreviewStyle(true);
@@ -232,12 +239,42 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     v->setSpacing(10);
     preview = mountPreviewWidget(spec.previewType, card);
     if (preview) {
-      preview->setMaximumWidth(485);
-      v->addWidget(preview);
+      // Wrap in a plain QWidget container so the outer layout doesn't see
+      // the preview's hasHeightForWidth flag (the previews set
+      // sp.setHeightForWidth(true) in their constructors). With the wrapper,
+      // the outer layout treats the wrapper as a normal fixed-size widget.
+      // Size is set later, after the cards loop populates leftStack and we
+      // can measure its actual rendered height — that way the preview
+      // matches whatever leftStack ends up at, regardless of QSS / border /
+      // font tweaks that might shift card heights by a pixel or two.
+      previewBox = new QWidget(card);
+      auto *boxLayout = new QVBoxLayout(previewBox);
+      boxLayout->setContentsMargins(0, 0, 0, 0);
+      boxLayout->setSpacing(0);
+      boxLayout->addWidget(preview);
+      v->addWidget(previewBox, /*stretch=*/0, Qt::AlignHCenter);
     }
     rightStack->addWidget(card, /*stretch=*/0, Qt::AlignTop);
+    rightStack->addStretch();
 
-    layout->addLayout(topRow);
+    // Group headerRow + topRow + bottomGrid into a wrapper with
+    // kStackSpacing between them — bottomGrid's first row visually
+    // continues the leftStack's vertical rhythm.
+    auto *previewBlock = new QVBoxLayout();
+    previewBlock->setContentsMargins(0, 0, 0, 0);
+    previewBlock->setSpacing(kStackSpacing);
+    previewBlock->addLayout(headerRow);
+    previewBlock->addLayout(topRow);
+
+    bottomGrid = new QGridLayout();
+    bottomGrid->setContentsMargins(0, 0, 0, 0);
+    bottomGrid->setHorizontalSpacing(kColumnSpacing);
+    bottomGrid->setVerticalSpacing(kStackSpacing);
+    bottomGrid->setColumnStretch(0, 1);
+    bottomGrid->setColumnStretch(1, 1);
+    previewBlock->addLayout(bottomGrid);
+
+    layout->addLayout(previewBlock);
     m_currentPreview = preview;
   }
 
@@ -276,20 +313,28 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     }
   };
 
-  // Approximate number of preview-bound cards that fit beside the preview
-  // in leftStack before the right column becomes free. After this point,
-  // overflow cards alternate left/right so paired siblings naturally land
-  // as a [left | right] row at the same y-level.
-  const int kCardsBesidePreview = 4;
+  // First kCardsBesidePreview preview-bound cards fill leftStack (beside
+  // the preview). Cards past N pair-fill into bottomGrid: row 0 col 0,
+  // row 0 col 1, row 1 col 0, … — siblings in the same grid row are
+  // aligned by construction (no dependence on exact card-height math).
+  int previewBoundCardIndex = 0;
+  int overflowIndex = 0;
 
   for (const QString &group : groupOrder) {
     const bool isPreviewBound = leftStack && previewBoundGroups.contains(group);
 
-    // Section header lands at the top of leftStack for preview-bound
-    // groups, or in the full-width bottom layout for the rest.
+    // Section header for the FIRST preview-bound group is already in
+    // the headerRow above topRow (so its top aligns with the right
+    // column's preview header). Subsequent preview-bound groups (rare)
+    // get an inline header in leftStack. Non-preview-bound groups always
+    // get a full-width header in the bottom layout.
     if (!group.isEmpty()) {
-      QVBoxLayout *headerDest = isPreviewBound ? leftStack : layout;
-      headerDest->addWidget(new SettingsSectionHeader(group, this));
+      const bool firstPreviewGroupAlreadyInHeaderRow =
+          isPreviewBound && previewBoundCardIndex == 0;
+      if (!firstPreviewGroupAlreadyInHeaderRow) {
+        QVBoxLayout *headerDest = isPreviewBound ? leftStack : layout;
+        headerDest->addWidget(new SettingsSectionHeader(group, this));
+      }
     }
 
     QVector<const SettingDef *> groupDefs;
@@ -297,7 +342,6 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
       if (d.subcategory == subcategory && d.group == group)
         groupDefs.append(&d);
 
-    int cardIndex = 0;
     for (int i = 0; i < groupDefs.size(); ++i) {
       const SettingDef &d = *groupDefs[i];
       QWidget *card = makeCardFor(d);
@@ -305,27 +349,15 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
         continue;
 
       if (isPreviewBound) {
-        // Two-column flow inside the topRow:
-        //   - Cards 0..N-1 fill leftStack (under the preview's
-        //     vertical span; right column is occupied by the
-        //     preview card).
-        //   - Cards N+ alternate left/right so a paired pair
-        //     lands as [left | right] at the same y-level
-        //     under the preview.
-        QVBoxLayout *dest;
-        if (cardIndex < kCardsBesidePreview) {
-          dest = leftStack;
+        if (previewBoundCardIndex < kCardsBesidePreview) {
+          leftStack->addWidget(card, /*stretch=*/0, Qt::AlignTop);
         } else {
-          const int afterN = cardIndex - kCardsBesidePreview;
-          dest = (afterN % 2 == 0) ? leftStack : rightStack;
+          const int row = overflowIndex / 2;
+          const int col = overflowIndex % 2;
+          bottomGrid->addWidget(card, row, col, Qt::AlignTop);
+          ++overflowIndex;
         }
-        // Pin every card with Qt::AlignTop so the layout doesn't
-        // distribute extra column height into card-sized stretch
-        // bands between widgets — extra height belongs to the
-        // addStretch() at the bottom of the column, not between
-        // siblings.
-        dest->addWidget(card, /*stretch=*/0, Qt::AlignTop);
-        ++cardIndex;
+        ++previewBoundCardIndex;
       } else {
         // Non-preview-bound groups: full-width below the topRow,
         // with explicit pair handling so layout == "paired" pairs
@@ -349,15 +381,47 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     }
   }
 
+  // Now that leftStack is populated, measure its actual rendered height
+  // and size the preview card to match. With both section headers now
+  // sitting in a headerRow ABOVE the topRow, leftStack and rightStack
+  // each only contain their first card / preview directly — no header
+  // inside the column to subtract. previewCardH = leftStackH gives
+  // identical column heights, with the first card top aligned with the
+  // preview card top by virtue of the topRow's QHBoxLayout.
+  if (preview && previewBox && leftHost) {
+    leftHost->ensurePolished();
+    if (auto *l = leftHost->layout())
+      l->activate();
+    const int leftStackH = leftHost->minimumSizeHint().height();
+    const int previewCardH = qMax(80, leftStackH);
+    const int previewHeight = qMax(60, previewCardH - 26); // chrome
+    const int previewWidth = previewHeight * 16 / 9;
+    preview->setFixedSize(previewWidth, previewHeight);
+    previewBox->setFixedSize(previewWidth, previewHeight);
+  }
+
+  // Lone overflow card on the last row: re-add with columnSpan=2 so it
+  // stretches to full row width instead of sitting alone in column 0.
+  if (bottomGrid && overflowIndex % 2 == 1) {
+    const int lastRow = overflowIndex / 2;
+    if (auto *item = bottomGrid->itemAtPosition(lastRow, 0)) {
+      if (auto *w = item->widget()) {
+        bottomGrid->removeWidget(w);
+        bottomGrid->addWidget(w, lastRow, 0, /*rowSpan=*/1, /*colSpan=*/2,
+                              Qt::AlignTop);
+      }
+    }
+  }
+
   if (preview && !spec.keyToProperty.isEmpty())
     wirePreviewBinding(spec, preview);
 
-  // Top-align cards in every column-stack so each shrinks to its
-  // content height instead of inflating to match its sibling.
+  // Top-align leftStack so its cards shrink to their natural height
+  // instead of inflating to match the rightStack. Preview is sized so
+  // both columns balance, but the rightStack still owns the addStretch
+  // (added when the preview card was placed) to absorb any 1-2px drift.
   if (leftStack)
     leftStack->addStretch();
-  if (rightStack)
-    rightStack->addStretch();
   layout->addStretch();
 }
 

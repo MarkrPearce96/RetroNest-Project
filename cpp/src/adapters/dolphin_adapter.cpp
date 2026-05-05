@@ -1550,5 +1550,18 @@ PreviewSpec DolphinAdapter::previewSpec(const QString& category,
             {"AspectRatio", "aspectMode"},
         }};
     }
+    // Graphics / On-Screen Display: same preview layout as Recommended's
+    // Visual Quality. Only the show-toggles whose semantics map to
+    // OsdPreview's Q_PROPERTYs are listed — Dolphin's other OSD keys
+    // (NetPlay ping, OSD font size, frame count, etc.) appear as
+    // settings cards but don't drive the preview.
+    if (category == "Graphics" && subcategory == "On-Screen Display") {
+        return {"osd", {
+            {"ShowFPS",     "showFps"},
+            {"ShowVPS",     "showVps"},
+            {"ShowSpeed",   "showSpeed"},
+            {"ShowFTimes",  "showFrameTimes"},
+        }};
+    }
     return {};
 }
