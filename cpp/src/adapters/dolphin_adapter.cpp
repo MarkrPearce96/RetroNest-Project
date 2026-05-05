@@ -481,11 +481,18 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Sound output backend. Cubeb is recommended on macOS.",
          SettingDef::Combo, "Cubeb", audioBackends},
 
+        // Upstream gates this on AudioCommon::SupportsLatencyControl(backend),
+        // which returns true only for OpenAL and WASAPI (AudioCommon.cpp:151).
+        // We expose Cubeb / OpenAL / Null on macOS, so the slider is active
+        // only with OpenAL. Cubeb (the default macOS backend) hides/greys
+        // it upstream.
         {"Audio", "", "Backend Settings", "Core", "AudioLatency",
          "Audio Latency",
          "Output latency in milliseconds. Lower = tighter sync, more risk of "
-         "audio dropouts under load. 20 ms is a sensible default.",
-         SettingDef::Int, "20", {}, 0, 200, 1, "slider", "ms"},
+         "audio dropouts under load. Only available with backends that "
+         "support latency control (OpenAL on macOS).",
+         SettingDef::Int, "20", {}, 0, 200, 1, "slider", "ms",
+         "Backend", "OpenAL"},
 
         // Upstream gates the DPL2 controls on (backend supports DPL2)
         // AND (DSP is in LLE mode). On macOS only OpenAL of the three
