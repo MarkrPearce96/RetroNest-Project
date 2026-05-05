@@ -20,34 +20,32 @@ DolphinCategoryHub::DolphinCategoryHub(QWidget* parent)
                              countSettings("Recommended"), "Recommended"),
                     0, 0, 1, 3);  // spans all 3 columns
 
-    // Row 1: Interface · General · Audio
-    grid->addWidget(makeCard(QStringLiteral("\U0001F39B"),  "Interface",
-                             "Window, cursor, language, focus",
-                             countSettings("Interface"), "Interface"),  1, 0);
+    // Row 1: General · Audio · Graphics
+    // Interface is omitted — Dolphin's Interface settings only affect
+    // Dolphin's own UI (window chrome, language, library covers), which
+    // RetroNest hides entirely. The two embedding-critical Interface
+    // keys (PauseOnFocusLost, ConfirmStop) are force-patched by the
+    // adapter at config time.
     grid->addWidget(makeCard(QStringLiteral("\U0001F3AE"), "General",
-                             "CPU, JIT, fastmem, MMU, clock",
-                             countSettings("General"), "General"),      1, 1);
+                             "Boot, cheats, speed, region, Discord",
+                             countSettings("General"), "General"),      1, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F50A"), "Audio",
                              "DSP, backend, latency, volume",
-                             countSettings("Audio"), "Audio"),          1, 2);
-    // Row 2: Graphics · GameCube · Wii
+                             countSettings("Audio"), "Audio"),          1, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F5BC"),  "Graphics",
                              "Renderer, enhancements, hacks, OSD",
-                             countSettings("Graphics"), "Graphics"),    2, 0);
+                             countSettings("Graphics"), "Graphics"),    1, 2);
+
+    // Row 2: GameCube · Wii · Advanced
     grid->addWidget(makeCard(QStringLiteral("\U0001F4BE"), "GameCube",
                              "Memcards, slot devices, system",
-                             countSettings("GameCube"), "GameCube"),    2, 1);
+                             countSettings("GameCube"), "GameCube"),    2, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3AE"), "Wii",
                              "Wiimote source, BT, NAND, SD",
-                             countSettings("Wii"), "Wii"),              2, 2);
-
-    // Row 3: Advanced — full-width stretch card. Mirrors Dolphin's
-    // Settings dialog Advanced tab (CPU options, timing, overclock,
-    // memory override, custom RTC). Power-user knobs.
+                             countSettings("Wii"), "Wii"),              2, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F527"), "Advanced",
                              "CPU, timing, overclock, memory, RTC",
-                             countSettings("Advanced"), "Advanced"),
-                    3, 0, 1, 3);
+                             countSettings("Advanced"), "Advanced"),    2, 2);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);

@@ -411,87 +411,14 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "Process AR/Gecko cheat codes. Off by default for safety.",
          SettingDef::Bool, "False"},
 
-        // ─── Interface / User Interface ──────────────────────
-        // Mirrors Dolphin's Interface pane "User Interface" group.
-        {"Interface", "", "User Interface", "Interface", "PauseOnFocusLost",
-         "Pause When Window Loses Focus",
-         "Pauses emulation automatically when the RetroNest window loses focus. "
-         "Required for the in-game overlay to work cleanly.",
-         SettingDef::Bool, "True"},
-
-        {"Interface", "", "User Interface", "Interface", "ConfirmStop",
-         "Confirm Before Stopping Emulation",
-         "Show a confirmation dialog when stopping a game from Dolphin's UI. "
-         "Disabled by default so RetroNest's own exit flow is uninterrupted.",
-         SettingDef::Bool, "False"},
-
-        {"Interface", "", "User Interface", "Interface", "LanguageCode",
-         "Dolphin UI Language",
-         "Language used by Dolphin's own UI (when you open native settings). "
-         "Does not change RetroNest's language. \"System Language\" matches the OS.",
-         SettingDef::Combo, "", languages},
-
-        {"Interface", "", "User Interface", "Interface", "ShowActiveTitle",
-         "Show Active Title In Window Title",
-         "Appends the running game's title to the window-title bar.",
-         SettingDef::Bool, "True"},
-
-        {"Interface", "", "User Interface", "Interface", "UseBuiltinTitleDatabase",
-         "Use Built-In Title Database",
-         "Use Dolphin's bundled game-name database to display friendly titles "
-         "in the game list.",
-         SettingDef::Bool, "True"},
-
-        {"Interface", "", "User Interface", "General", "UseGameCovers",
-         "Download Game Covers",
-         "When enabled, Dolphin downloads cover art for known games to display "
-         "in its native game list. RetroNest scrapes its own art separately.",
-         SettingDef::Bool, "False"},
-
-        {"Interface", "", "User Interface", "Interface", "UsePanicHandlers",
-         "Use Panic Handlers",
-         "Show pop-up dialogs for non-fatal emulation errors. Disable for "
-         "kiosk-style play; enable for debugging.",
-         SettingDef::Bool, "True"},
-
-        {"Interface", "", "User Interface", "General", "HotkeysRequireFocus",
-         "Hotkeys Require Window Focus",
-         "When on, Dolphin's native hotkeys only fire while its window has focus. "
-         "RetroNest's overlay hotkeys are not affected.",
-         SettingDef::Bool, "True"},
-
-        {"Interface", "", "User Interface", "General", "EnablePlayTimeTracking",
-         "Track Play Time",
-         "Record per-game playtime in Dolphin's title database.",
-         SettingDef::Bool, "True"},
-
-        // ─── Interface / Render Window ───────────────────────
-        // Mirrors Dolphin's Interface pane "Render Window" group.
-        {"Interface", "", "Render Window", "Display", "KeepWindowOnTop",
-         "Keep Window On Top",
-         "Forces the Dolphin window to stay above other windows during play.",
-         SettingDef::Bool, "False"},
-
-        {"Interface", "", "Render Window", "Display", "DisableScreenSaver",
-         "Disable Screensaver During Play",
-         "Prevents the system screensaver from kicking in while a game is running.",
-         SettingDef::Bool, "True"},
-
-        // ─── Interface / Mouse Cursor Visibility ─────────────
-        // Mirrors Dolphin's Interface pane "Mouse Cursor Visibility" group.
-        {"Interface", "", "Mouse Cursor Visibility", "Interface",
-         "CursorVisibility",
-         "Mouse Cursor",
-         "When the mouse cursor is shown over the render area. "
-         "Never = always hidden; Always = always shown; On Movement = "
-         "auto-hide after a short idle period.",
-         SettingDef::Combo, "2", cursorModes},
-
-        {"Interface", "", "Mouse Cursor Visibility", "Interface", "LockCursor",
-         "Lock Cursor To Window",
-         "Confines the mouse cursor to the render window. Useful for mouse-driven "
-         "Wii-pointer games. Windows-only effect upstream.",
-         SettingDef::Bool, "False"},
+        // ─── Interface settings intentionally NOT exposed ────
+        // Dolphin's Interface pane controls *Dolphin's own UI* (window
+        // title, language, library covers, etc.). RetroNest takes over
+        // the UI entirely — users never see Dolphin's chrome — so these
+        // settings would be inert. The two embedding-critical Interface
+        // keys (PauseOnFocusLost=True for the overlay pause contract,
+        // ConfirmStop=False so our exit flow is uninterrupted) are
+        // force-set in patchDolphinIni() below, not exposed in the schema.
 
         // ─── Audio / DSP Options ─────────────────────────────
         // Mirrors Dolphin's Audio pane "DSP Options" group.

@@ -20,50 +20,20 @@ private slots:
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
         QCOMPARE(categories, QSet<QString>({
-            "Recommended", "Interface", "Audio", "General", "Advanced",
+            "Recommended", "Audio", "General", "Advanced",
             "Graphics", "GameCube", "Wii"
         }));
     }
 
-    void testPauseOnFocusLostExists() {
-        const SettingDef* found = nullptr;
+    void testInterfaceCategoryNotInSchema() {
+        // Dolphin's Interface settings only affect Dolphin's own UI,
+        // which RetroNest hides entirely. The two embedding-critical
+        // keys (PauseOnFocusLost, ConfirmStop) are force-patched by
+        // the adapter — they don't appear in the visible schema.
         for (const auto& d : schema_)
-            if (d.key == "PauseOnFocusLost") found = &d;
-        QVERIFY(found != nullptr);
-        QCOMPARE(found->category, QString("Interface"));
-        QCOMPARE(found->section, QString("Interface"));
-        QCOMPARE(int(found->type), int(SettingDef::Bool));
-        QCOMPARE(found->defaultValue, QString("True"));
-    }
-
-    void testInterfaceCategoryFullCatalog() {
-        // Mirrors DolphinQt InterfacePane (Source/Core/DolphinQt/Settings/
-        // InterfacePane.cpp). FallbackRegion moved to General (matching
-        // upstream's General pane Fallback Region group).
-        const QSet<QString> expectedKeys{
-            "PauseOnFocusLost", "ConfirmStop", "KeepWindowOnTop", "DisableScreenSaver",
-            "CursorVisibility", "LockCursor",
-            "LanguageCode",
-            "ShowActiveTitle", "UseBuiltinTitleDatabase", "UseGameCovers",
-            "UsePanicHandlers", "HotkeysRequireFocus", "EnablePlayTimeTracking",
-        };
-        QSet<QString> got;
-        for (const auto& d : schema_)
-            if (d.category == "Interface") got.insert(d.key);
-        QCOMPARE(got, expectedKeys);
-    }
-
-    void testCursorVisibilityIsCombo() {
-        // Was previously a broken Bool 'HideCursor' (key didn't exist in
-        // Dolphin). Real key is CursorVisibility, written as the int
-        // ShowCursor enum value (0=Never, 1=Always, 2=OnMovement).
-        const SettingDef* found = nullptr;
-        for (const auto& d : schema_)
-            if (d.key == "CursorVisibility") found = &d;
-        QVERIFY(found != nullptr);
-        QCOMPARE(int(found->type), int(SettingDef::Combo));
-        QCOMPARE(found->defaultValue, QString("2"));  // OnMovement (Dolphin's upstream default)
-        QCOMPARE(found->options.size(), 3);
+            QVERIFY2(d.category != "Interface",
+                qPrintable(QString("Interface key '%1' should not be in schema "
+                                   "(force-patched by adapter instead)").arg(d.key)));
     }
 
     void testAudioCategoryFullCatalog() {
