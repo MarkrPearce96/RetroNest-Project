@@ -80,8 +80,9 @@ private slots:
         // pane live in our top-level Advanced category — see
         // testAdvancedCategoryFullCatalog.
         const QSet<QString> expectedKeys{
-            // Basic Settings
-            "CPUThread", "SkipIPL", "EnableCheats", "OverrideRegionSettings",
+            // Basic Settings (SkipIPL belongs to GameCube > IPL Settings
+            // upstream, see testGameCubeCategoryFullCatalog).
+            "CPUThread", "EnableCheats", "OverrideRegionSettings",
             "AutoDiscChange", "EmulationSpeed", "LoadGameIntoMemory",
             // (UseDiscordPresence intentionally omitted: wrapped in
             // #ifdef USE_DISCORD_PRESENCE upstream, not built on macOS.)
@@ -252,9 +253,11 @@ private slots:
 
     void testGameCubeCategoryFullCatalog() {
         // Mirrors DolphinQt GameCubePane (Source/Core/DolphinQt/Settings/
-        // GameCubePane.cpp). 4 user-facing keys.
+        // GameCubePane.cpp). Two groups: IPL Settings (SkipIPL,
+        // SelectedLanguage) + Device Settings (SlotA, SlotB, SerialPort1).
         const QSet<QString> expectedKeys{
-            "SelectedLanguage", "SlotA", "SlotB", "SerialPort1",
+            "SkipIPL", "SelectedLanguage",
+            "SlotA", "SlotB", "SerialPort1",
         };
         QSet<QString> got;
         for (const auto& d : schema_)

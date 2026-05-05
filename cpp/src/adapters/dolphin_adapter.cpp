@@ -503,11 +503,8 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "gain; some games rely on tight CPU/GPU sync and may glitch with it on.",
          SettingDef::Bool, "False"},
 
-        {"General", "", "Basic Settings", "Core", "SkipIPL",
-         "Skip GameCube Boot Animation",
-         "Skips the GameCube IPL boot sequence and starts the game directly. "
-         "When disabled, requires IPL.bin in the BIOS folder.",
-         SettingDef::Bool, "True"},
+        // SkipIPL lives in GameCube > IPL Settings to match upstream
+        // (Source/Core/DolphinQt/Settings/GameCubePane.cpp:75-80).
 
         {"General", "", "Basic Settings", "Core", "EnableCheats",
          "Enable Cheats",
@@ -1121,9 +1118,18 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 
         // ═══ GameCube ═══════════════════════════════════════
         // Mirrors DolphinQt GameCubePane (Source/Core/DolphinQt/Settings/
-        // GameCubePane.cpp). Keys live in Dolphin.ini's [Core] section.
-        {"GameCube", "", "System", "Core", "SelectedLanguage",
-         "GC System Language",
+        // GameCubePane.cpp). Two groups: IPL Settings + Device Settings.
+        // Keys live in Dolphin.ini's [Core] section.
+
+        // ─── GameCube / IPL Settings ─────────────────────────
+        {"GameCube", "", "IPL Settings", "Core", "SkipIPL",
+         "Skip Main Menu",
+         "Skips the GameCube IPL boot sequence and starts the game directly. "
+         "When disabled, requires IPL.bin in the BIOS folder.",
+         SettingDef::Bool, "True"},
+
+        {"GameCube", "", "IPL Settings", "Core", "SelectedLanguage",
+         "System Language",
          "System language used by GameCube games that respect it. "
          "Indices 0..5 mirror upstream's combo (English/German/French/"
          "Spanish/Italian/Dutch).",
@@ -1131,12 +1137,16 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          { {"English","0"}, {"German","1"}, {"French","2"},
            {"Spanish","3"}, {"Italian","4"}, {"Dutch","5"} }},
 
+        // ─── GameCube / Device Settings ──────────────────────
+        // Slot A, Slot B, and SP1 (Serial Port 1) all live in one
+        // "Device Settings" group upstream (GameCubePane.cpp:94-200).
+        //
         // EXIDeviceType enum — Source/Core/Core/HW/EXI/EXI_Device.h:25-45.
         // Default for Slot A is MemoryCardFolder (8); Slot B None (0xFF=255).
         // Subset of the enum exposed (the full set has debug/dev devices
         // and ethernet variants — included here for the sake of parity
         // with native UI).
-        {"GameCube", "", "Slot A", "Core", "SlotA",
+        {"GameCube", "", "Device Settings", "Core", "SlotA",
          "Slot A Device",
          "Device plugged into the GameCube's left memory-card / EXI slot. "
          "MemoryCardFolder = per-game folders under the GC data dir; "
@@ -1146,7 +1156,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
            {"AGP (Game Boy Player)","9"}, {"Microphone","4"},
            {"Gecko Debugger","7"}, {"AD16","3"} }},
 
-        {"GameCube", "", "Slot B", "Core", "SlotB",
+        {"GameCube", "", "Device Settings", "Core", "SlotB",
          "Slot B Device",
          "Device plugged into the GameCube's right memory-card / EXI slot. "
          "Microphone is most common here for games like Mario Party.",
@@ -1155,8 +1165,8 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
            {"AGP (Game Boy Player)","9"}, {"Microphone","4"},
            {"Gecko Debugger","7"}, {"AD16","3"} }},
 
-        {"GameCube", "", "Serial Port 1", "Core", "SerialPort1",
-         "Serial Port 1 Device",
+        {"GameCube", "", "Device Settings", "Core", "SerialPort1",
+         "SP1 Device",
          "Device plugged into the GameCube's serial port — typically used "
          "for network adapters in compatible games.",
          SettingDef::Combo, "255",
