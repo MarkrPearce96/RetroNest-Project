@@ -7,6 +7,8 @@
 #include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QKeyEvent>
+#include <QShowEvent>
+#include <QTimer>
 
 EmulatorSettingsDialogBase::EmulatorSettingsDialogBase(AppController* app,
                                                        const QString& emuId,
@@ -103,6 +105,26 @@ void EmulatorSettingsDialogBase::setFocusedSetting(const SettingDef& def) {
 
 void EmulatorSettingsDialogBase::clearFocusedSetting() {
     m_descBar->clear();
+}
+
+void EmulatorSettingsDialogBase::showEvent(QShowEvent* e) {
+    QDialog::showEvent(e);
+    // Auto-focus the first focusable card on the hub when the dialog opens
+    // so keyboard navigation works without a mouse-click priming. Mirrors
+    // pushPage's per-page auto-focus. Deferred via singleShot(0, ...) so
+    // the focus lands AFTER Qt's own showEvent focus shuffling — without
+    // the defer the dialog itself steals focus back on the same tick.
+    if (m_stack && m_stack->currentWidget() == m_hub && m_hub) {
+        QWidget* hub = m_hub;
+        QTimer::singleShot(0, this, [hub]{
+            for (auto* card : hub->findChildren<SettingsCard*>()) {
+                if (card->focusPolicy() != Qt::NoFocus) {
+                    card->setFocus(Qt::OtherFocusReason);
+                    break;
+                }
+            }
+        });
+    }
 }
 
 void EmulatorSettingsDialogBase::keyPressEvent(QKeyEvent* e) {

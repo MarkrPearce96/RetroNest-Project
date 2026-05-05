@@ -48,6 +48,7 @@ protected:
 
     void applyHintsForCurrentPage();
     void keyPressEvent(QKeyEvent* e) override;
+    void showEvent(QShowEvent* e) override;
 
     AppController* m_app = nullptr;
     QString m_emuId;
