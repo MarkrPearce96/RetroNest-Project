@@ -163,6 +163,19 @@ public:
     }
 
     /**
+     * Return the icon glyph (typically an emoji) shown above each sub-tab
+     * label in GenericSettingsPage's SettingsGraphicsSubTabBar. Default
+     * returns empty — the sub-tab renders label-only. Override per
+     * (category, subcategory) pair.
+     */
+    virtual QString subcategoryIcon(const QString& category,
+                                    const QString& subcategory) const {
+        Q_UNUSED(category);
+        Q_UNUSED(subcategory);
+        return {};
+    }
+
+    /**
      * Return the path to this emulator's main config file.
      */
     virtual QString configFilePath() const { return {}; }

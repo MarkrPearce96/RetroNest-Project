@@ -2013,3 +2013,14 @@ PreviewSpec DolphinAdapter::previewSpec(const QString& category,
     }
     return {};
 }
+
+QString DolphinAdapter::subcategoryIcon(const QString& category,
+                                         const QString& subcategory) const {
+    if (category != "Graphics") return {};
+    if (subcategory == "General")           return QStringLiteral("⚙");      // ⚙
+    if (subcategory == "Enhancements")      return QStringLiteral("✨");      // ✨
+    if (subcategory == "Hacks")             return QStringLiteral("⚡");      // ⚡
+    if (subcategory == "Advanced")          return QStringLiteral("\U0001F527");  // 🔧
+    if (subcategory == "On-Screen Display") return QStringLiteral("\U0001F4CA");  // 📊
+    return {};
+}

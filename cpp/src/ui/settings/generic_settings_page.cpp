@@ -133,8 +133,12 @@ void GenericSettingsPage::buildUi() {
     // the spatial-nav contract that focus always lives on a settings
     // card while the page is interactive.
     m_subTabBar->setFocusPolicy(Qt::NoFocus);
-    for (const auto &s : m_subcategories)
-      m_subTabBar->addTab("", s);
+    for (const auto &s : m_subcategories) {
+      const QString icon = m_adapter
+                               ? m_adapter->subcategoryIcon(m_category, s)
+                               : QString();
+      m_subTabBar->addTab(icon, s);
+    }
     root->addWidget(m_subTabBar);
 
     m_subStack = new QStackedWidget(content);

@@ -1889,3 +1889,15 @@ PreviewSpec PCSX2Adapter::previewSpec(const QString& category,
     }
     return {};
 }
+
+QString PCSX2Adapter::subcategoryIcon(const QString& category,
+                                       const QString& subcategory) const {
+    if (category != "Graphics") return {};
+    if (subcategory == "Display")             return QStringLiteral("\U0001F5A5");  // 🖥
+    if (subcategory == "Rendering")           return QStringLiteral("\U0001F3A8");  // 🎨
+    if (subcategory == "Texture Replacement") return QStringLiteral("\U0001F9F1");  // 🧱
+    if (subcategory == "Post-Processing")     return QStringLiteral("✨");      // ✨
+    if (subcategory == "Media Capture")       return QStringLiteral("\U0001F3AC");  // 🎬
+    if (subcategory == "On-Screen Display")   return QStringLiteral("\U0001F4CA");  // 📊
+    return {};
+}
