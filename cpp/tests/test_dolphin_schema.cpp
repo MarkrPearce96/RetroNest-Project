@@ -273,16 +273,20 @@ private slots:
         QCOMPARE(got, expectedKeys);
     }
 
-    void testGraphicsSubTabsHaveNoPreview() {
+    void testGraphicsSubTabsHaveNoPreviewExceptOsd() {
         // Graphics/General used to host the aspect preview but it moved
-        // to Recommended. Graphics is now a plain 5-sub-tab pane with no
-        // preview anywhere.
+        // to Recommended. The On-Screen Display sub-tab gained an OSD
+        // preview (driven by ShowFPS/ShowVPS/ShowSpeed/ShowFTimes); the
+        // other sub-tabs stay preview-less.
         DolphinAdapter a;
         QVERIFY(a.previewSpec("Graphics", "General").previewType.isEmpty());
         QVERIFY(a.previewSpec("Graphics", "Enhancements").previewType.isEmpty());
         QVERIFY(a.previewSpec("Graphics", "Hacks").previewType.isEmpty());
         QVERIFY(a.previewSpec("Graphics", "Advanced").previewType.isEmpty());
-        QVERIFY(a.previewSpec("Graphics", "On-Screen Display").previewType.isEmpty());
+        const auto osd = a.previewSpec("Graphics", "On-Screen Display");
+        QCOMPARE(osd.previewType, QString("osd"));
+        QVERIFY(osd.keyToProperty.contains("ShowFPS"));
+        QVERIFY(osd.keyToProperty.contains("ShowSpeed"));
     }
 };
 

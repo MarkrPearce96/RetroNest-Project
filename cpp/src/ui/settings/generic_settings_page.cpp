@@ -29,6 +29,34 @@
 #include <QVBoxLayout>
 #include <limits>
 
+namespace {
+// ─── Layout chrome (shared across buildUi and buildSubcategory) ───
+// Centralized so a designer tweaking spacing in one place doesn't
+// silently desync the math elsewhere.
+constexpr int kRootContentMargin = 24;     // root layout left/right
+constexpr int kRootContentMarginV = 16;    // root layout top/bottom
+constexpr int kRootSpacing = 10;           // root layout inter-item spacing
+constexpr int kSubLayoutSpacing = 8;       // sub-stack page inter-item spacing
+constexpr int kColumnSpacing = 14;         // between left/right columns in topRow
+constexpr int kStackSpacing = 12;          // between cards in left/right column
+constexpr int kPreviewCardChromeH = 14;    // preview card contentsMargins L/R
+constexpr int kPreviewCardChromeV = 12;    // preview card contentsMargins T/B
+constexpr int kCardBorderPx = 1;           // QSS border on SettingsCard, each side
+// Outer chrome (vertical) added on top of the inner preview widget to
+// arrive at the preview card's outer height: 12 + 12 (margins) + 1 + 1
+// (1px QSS borders both sides). Used by the runtime measurement in
+// buildSubcategory.
+constexpr int kPreviewCardOuterChromeV =
+    kPreviewCardChromeV * 2 + kCardBorderPx * 2;
+
+// Number of preview-bound cards beside the preview before alternation
+// kicks in. This is a *design choice*, not a per-emulator detail:
+// 4 cards gives a comfortable visual rhythm beside a 16:9 preview at
+// the typical column width. Bumping to 3 or 5 would rebalance the
+// preview-vs-cards ratio across all emulators.
+constexpr int kCardsBesidePreview = 4;
+} // namespace
+
 GenericSettingsPage::GenericSettingsPage(EmulatorSettingsDialogBase *dlg,
                                          QVector<SettingDef> categorySchema,
                                          EmulatorAdapter *adapter,
@@ -76,8 +104,9 @@ void GenericSettingsPage::buildUi() {
   scroll->setWidget(content);
 
   auto *root = new QVBoxLayout(content);
-  root->setContentsMargins(24, 16, 24, 16);
-  root->setSpacing(10);
+  root->setContentsMargins(kRootContentMargin, kRootContentMarginV,
+                           kRootContentMargin, kRootContentMarginV);
+  root->setSpacing(kRootSpacing);
 
   // Back button (matches existing pages — see
   // duckstation_console_page.cpp:76-81). NoFocus so Tab/arrows can't sink focus
@@ -114,7 +143,7 @@ void GenericSettingsPage::buildUi() {
       auto *sub = new QWidget(m_subStack);
       auto *subLayout = new QVBoxLayout(sub); // populated by buildSubcategory
       subLayout->setContentsMargins(0, 0, 0, 0);
-      subLayout->setSpacing(8);
+      subLayout->setSpacing(kSubLayoutSpacing);
       m_subStack->addWidget(sub);
     }
     root->addWidget(m_subStack);
@@ -198,14 +227,8 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
   QWidget *previewBox = nullptr;
   QSet<QString> previewBoundGroups;
 
-  constexpr int kColumnSpacing = 14;
-  constexpr int kStackSpacing = 12;
-  // Cards beside the preview before alternation kicks in. The preview is
-  // sized at runtime (after leftStack is populated) to make rightStack
-  // natural height match leftStack natural height — see the post-loop
-  // sizing block.
-  constexpr int kCardsBesidePreview = 4;
-
+  // kColumnSpacing, kStackSpacing, kCardsBesidePreview defined in the
+  // anonymous namespace at the top of this file.
   if (!spec.previewType.isEmpty()) {
     for (auto it = spec.keyToProperty.constBegin();
          it != spec.keyToProperty.constEnd(); ++it) {
@@ -273,7 +296,8 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     card->setPreviewStyle(true);
     card->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
     auto *v = new QVBoxLayout(card);
-    v->setContentsMargins(14, 12, 14, 12);
+    v->setContentsMargins(kPreviewCardChromeH, kPreviewCardChromeV,
+                          kPreviewCardChromeH, kPreviewCardChromeV);
     v->setSpacing(10);
     preview = mountPreviewWidget(spec.previewType, card);
     if (preview) {
@@ -437,8 +461,17 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
       l->activate();
     const int leftStackH = leftHost->minimumSizeHint().height();
     const int previewCardH = qMax(80, leftStackH);
-    const int previewHeight = qMax(60, previewCardH - 26); // chrome
-    const int previewWidth = previewHeight * 16 / 9;
+    const int previewHeight = qMax(60, previewCardH - kPreviewCardOuterChromeV);
+    // Derive the preview's width from its own heightForWidth function so
+    // future preview types (4:3, 21:9, etc.) work without editing this
+    // file. AspectRatioPreview/OsdPreview are 16:9 today; sampling at a
+    // known width and inverting gives the right answer for any linear
+    // aspect-bound widget.
+    constexpr int kAspectSampleWidth = 160;
+    const int sampledHeight = preview->heightForWidth(kAspectSampleWidth);
+    const int previewWidth = (sampledHeight > 0)
+        ? (previewHeight * kAspectSampleWidth / sampledHeight)
+        : (previewHeight * 16 / 9);
     preview->setFixedSize(previewWidth, previewHeight);
     previewBox->setFixedSize(previewWidth, previewHeight);
     // Cap both columns at exactly leftStackH so topRow can't stretch
