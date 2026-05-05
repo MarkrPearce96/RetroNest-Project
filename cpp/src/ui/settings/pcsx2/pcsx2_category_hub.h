@@ -5,4 +5,7 @@ class Pcsx2CategoryHub : public EmulatorCategoryHubBase {
     Q_OBJECT
 public:
     explicit Pcsx2CategoryHub(QWidget* parent = nullptr);
+
+private:
+    int countSettings(const QString& category) const;
 };

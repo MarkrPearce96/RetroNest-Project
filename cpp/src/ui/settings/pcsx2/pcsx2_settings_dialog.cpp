@@ -1,15 +1,15 @@
 #include "pcsx2_settings_dialog.h"
 #include "pcsx2_category_hub.h"
-#include "pages/pcsx2_emulation_page.h"
-#include "pages/pcsx2_audio_page.h"
-#include "pages/pcsx2_memory_cards_page.h"
-#include "pages/pcsx2_graphics_page.h"
+#include "ui/settings/generic_settings_page.h"
 #include "ui/settings/settings_dialog_theme.h"
 #include "ui/app_controller.h"
+#include "adapters/pcsx2_adapter.h"
 
-Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuId, QWidget* parent)
+Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app,
+                                          const QString& emuId,
+                                          QWidget* parent)
     : EmulatorSettingsDialogBase(app, emuId, parent) {
-    setupChrome("PCSX2 Settings", QSize(950, 550), SettingsDialogTheme::windowBg(), QSize(1000, 700));
+    setupChrome("PCSX2 Settings", QSize(1000, 720), SettingsDialogTheme::windowBg());
 
     auto* hub = new Pcsx2CategoryHub(this);
     connect(hub, &Pcsx2CategoryHub::categoryActivated,
@@ -20,28 +20,18 @@ Pcsx2SettingsDialog::Pcsx2SettingsDialog(AppController* app, const QString& emuI
 }
 
 void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
-    if (category == "Emulation") {
-        auto* page = new Pcsx2EmulationPage(this);
-        connect(page, &Pcsx2EmulationPage::settingFocused, this, &Pcsx2SettingsDialog::setFocusedSetting);
-        pushPage(page);
-        return;
-    }
-    if (category == "Audio") {
-        auto* page = new Pcsx2AudioPage(this);
-        connect(page, &Pcsx2AudioPage::settingFocused, this, &Pcsx2SettingsDialog::setFocusedSetting);
-        pushPage(page);
-        return;
-    }
-    if (category == "Memory Cards") {
-        auto* page = new Pcsx2MemoryCardsPage(this);
-        connect(page, &Pcsx2MemoryCardsPage::settingFocused, this, &Pcsx2SettingsDialog::setFocusedSetting);
-        pushPage(page);
-        return;
-    }
-    if (category == "Graphics") {
-        auto* page = new Pcsx2GraphicsPage(this);
-        connect(page, &Pcsx2GraphicsPage::settingFocused, this, &Pcsx2SettingsDialog::setFocusedSetting);
-        pushPage(page, /*hasSubTabs=*/true);
-        return;
-    }
+    PCSX2Adapter adapter;  // stateless; matches Pcsx2CategoryHub::countSettings.
+
+    QVector<SettingDef> slice;
+    for (const auto& d : adapter.settingsSchema())
+        if (d.category == category) slice.append(d);
+
+    auto* page = new GenericSettingsPage(this, std::move(slice), &adapter);
+    connect(page, &GenericSettingsPage::settingFocused,
+            this, &Pcsx2SettingsDialog::setFocusedSetting);
+
+    // Graphics is the only category with sub-tabs; show the L1/R1 hint on the
+    // dialog chrome there.
+    const bool hasSubTabs = (category == "Graphics");
+    pushPage(page, hasSubTabs);
 }
