@@ -4,16 +4,19 @@
 class TestPcsx2PreviewSpec : public QObject {
     Q_OBJECT
 private slots:
-    void testDisplayReturnsAspectPreview() {
+    void testRecommendedReturnsAspectPreview() {
+        // Aspect preview lives on Recommended now — Graphics > Display has
+        // the full crop/stretch/integer-scaling controls but no preview,
+        // matching Dolphin's split.
         PCSX2Adapter a;
-        const auto spec = a.previewSpec("Graphics", "Display");
+        const auto spec = a.previewSpec("Recommended", "");
         QCOMPARE(spec.previewType, QString("aspect"));
-        QVERIFY(spec.keyToProperty.contains("AspectRatio"));
         QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
-        // Crop edges each map to their own preview property.
-        QCOMPARE(spec.keyToProperty.value("CropLeft"),  QString("cropL"));
-        QCOMPARE(spec.keyToProperty.value("CropRight"), QString("cropR"));
-        QCOMPARE(spec.keyToProperty.value("IntegerScaling"), QString("integerScaling"));
+    }
+
+    void testDisplayHasNoPreview() {
+        PCSX2Adapter a;
+        QVERIFY(a.previewSpec("Graphics", "Display").previewType.isEmpty());
     }
 
     void testOsdReturnsOsdPreview() {

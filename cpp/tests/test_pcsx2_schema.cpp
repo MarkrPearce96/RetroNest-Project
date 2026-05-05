@@ -27,7 +27,7 @@ private slots:
         QSet<QString> got;
         for (const auto& d : schema_) got.insert(d.category);
         QCOMPARE(got, QSet<QString>({
-            "Emulation", "Graphics", "Audio", "Memory Cards",
+            "Recommended", "Emulation", "Graphics", "Audio", "Memory Cards",
             "Network & HDD", "Achievements", "Advanced",
         }));
     }
@@ -408,6 +408,52 @@ private slots:
                  {{section, "fpuExtraOverflow"}, "true"},
                  {{section, "fpuOverflow"}, "true"}};
         QCOMPARE(d->loadTransform(read), QString("Full"));
+    }
+
+    void testRecommendedHasAspectPreview() {
+        // Aspect preview moved off Graphics > Display onto Recommended —
+        // mirrors Dolphin's split (the AspectRatio combo lives at the top
+        // of Recommended, so the live rectangle is most useful there).
+        PCSX2Adapter a;
+        const auto spec = a.previewSpec("Recommended", "");
+        QCOMPARE(spec.previewType, QString("aspect"));
+        QCOMPARE(spec.keyToProperty.value("AspectRatio"), QString("aspectMode"));
+    }
+
+    void testRecommendedCategoryHasMinimumSet() {
+        // Curated subset of the most-tweaked PCSX2 settings. Each entry
+        // also exists under its primary category — Recommended is a VIEW
+        // for fast access. Headline keys must all be present.
+        QSet<QString> got;
+        for (const auto& d : schema_)
+            if (d.category == "Recommended") got.insert(d.key);
+        const QStringList headline{
+            // Performance
+            "Renderer", "vuThread", "EECycleRate",
+            // Visual Quality
+            "upscale_multiplier", "AspectRatio", "accurate_blending_unit",
+            "MaxAnisotropy", "filter",
+            // Frame Pacing
+            "VsyncEnable", "SyncToHostRefreshRate",
+            // Audio
+            "Backend", "StandardVolume",
+            // Convenience
+            "NominalScalar", "EnableFastBoot", "EnableCheats",
+        };
+        for (const QString& k : headline)
+            QVERIFY2(got.contains(k),
+                     qPrintable("Recommended missing key: " + k));
+    }
+
+    void testRecommendedDuplicatesUnderlyingKeys() {
+        // The Recommended category duplicates schema entries — both write
+        // the same INI section/key as the primary category. Verify a sample:
+        // AspectRatio appears under both Recommended and Graphics > Display.
+        int aspectCount = 0;
+        for (const auto& d : schema_)
+            if (d.key == "AspectRatio") aspectCount++;
+        QVERIFY2(aspectCount >= 2,
+                 "AspectRatio expected under Recommended AND Graphics");
     }
 
     void testBoolValuesAreLowercaseTrueFalse() {

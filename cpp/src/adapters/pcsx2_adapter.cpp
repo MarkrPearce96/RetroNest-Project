@@ -40,6 +40,145 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // in user memory file pcsx2-schema-alignment.md.
 
     // ═══════════════════════════════════════════════════════════════════════
+    // Recommended  (curated short list of the settings users most commonly
+    // change — sourced from PCSX2's official wiki guides + community
+    // consensus. These entries DUPLICATE keys that also appear under their
+    // primary category; both write the same INI section/key, so editing
+    // here and editing in the full pane produce the same result. The
+    // Recommended card is a curated VIEW for users who don't want to hunt
+    // through every sub-tab to find the dozen settings that actually
+    // matter for most games. Mirrors dolphin_adapter.cpp's Recommended.)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Performance — biggest impact for getting games playable.
+    {
+        SettingDef d{"Recommended", "", "Performance", "EmuCore/GS", "Renderer", "Renderer",
+                     "Selects which backend PCSX2 uses to render frames. Switching backends often produces the single biggest performance change. Vulkan and Metal are fastest on modern macOS hardware; OpenGL is the most compatible; Software emulates the GS on the CPU for perfect accuracy.",
+                     SettingDef::Combo, "-1",
+                     {{"Auto", "-1"}, {"OpenGL", "12"}, {"Vulkan", "14"},
+#if defined(Q_OS_MACOS)
+                      {"Metal", "17"},
+#endif
+                      {"Software", "13"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Recommended", "", "Performance", "EmuCore/Speedhacks", "vuThread", "Multithreaded VU1 (MTVU)",
+                     "Runs VU1 on a second thread. Substantial speed improvement in most games — leave on unless you hit a glitch.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Recommended", "", "Performance", "EmuCore/Speedhacks", "EECycleRate", "EE Cycle Rate",
+                     "Underclocks or overclocks the emulated Emotion Engine CPU. Lowering the rate is the easiest fix when a game runs above full speed; raising it can rescue games that struggle.",
+                     SettingDef::Combo, "0", {
+                         {"50% (Underclock)", "-3"}, {"60% (Underclock)", "-2"}, {"75% (Underclock)", "-1"},
+                         {"100% (Normal Speed)", "0"},
+                         {"130% (Overclock)", "1"}, {"180% (Overclock)", "2"}, {"300% (Overclock)", "3"}
+                     }, 0, 0, 0};
+        s.append(d);
+    }
+
+    // Visual Quality — the most-tweaked image settings.
+    {
+        SettingDef d{"Recommended", "", "Visual Quality", "EmuCore/GS", "upscale_multiplier", "Internal Resolution",
+                     "Render scale relative to native PS2 resolution. Higher = sharper but slower. Single biggest knob for visual fidelity.",
+                     SettingDef::Combo, "1",
+                     {{"Native (PS2) (Default)", "1"}, {"2x Native (~720px/HD)", "2"}, {"3x Native (~1080px/FHD)", "3"},
+                      {"4x Native (~1440px/QHD)", "4"}, {"5x Native (~1800px/QHD+)", "5"}, {"6x Native (~2160px/4K UHD)", "6"},
+                      {"7x Native (~2520px)", "7"}, {"8x Native (~2880px/5K UHD)", "8"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Recommended", "", "Visual Quality", "EmuCore/GS", "AspectRatio", "Aspect Ratio",
+                     "Display aspect ratio. Auto matches the game; force 16:9 for a widescreen TV; Stretch fills the whole window.",
+                     SettingDef::Combo, "4:3",
+                     {{"Auto 4:3/3:2", "Auto 4:3/3:2"}, {"4:3", "4:3"}, {"16:9", "16:9"},
+                      {"10:7", "10:7"}, {"Stretch", "Stretch"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Recommended", "", "Visual Quality", "EmuCore/GS", "accurate_blending_unit", "Blending Accuracy",
+                     "Controls how accurately PS2 blending operations are emulated. Basic is the right default; raise it only if a game shows colour/transparency glitches.",
+                     SettingDef::Combo, "1",
+                     {{"Minimum", "0"}, {"Basic (Default)", "1"}, {"Medium", "2"}, {"High", "3"}, {"Full", "4"}, {"Maximum", "5"}}, 0, 0, 0};
+        s.append(d);
+    }
+    // MaxAnisotropy + filter — paired side-by-side on the Recommended page.
+    {
+        SettingDef d{"Recommended", "", "Visual Quality", "EmuCore/GS", "MaxAnisotropy", "Anisotropic Filtering",
+                     "Sharpens textures viewed at oblique angles. Cheap on modern GPUs.",
+                     SettingDef::Combo, "0",
+                     {{"Off", "0"}, {"2x", "2"}, {"4x", "4"}, {"8x", "8"}, {"16x", "16"}}, 0, 0, 0,
+                     "paired", ""};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Recommended", "", "Visual Quality", "EmuCore/GS", "filter", "Texture Filtering",
+                     "How textures are sampled. Bilinear (PS2) matches original hardware; Forced options ignore the game's preference.",
+                     SettingDef::Combo, "2",
+                     {{"Nearest", "0"}, {"Bilinear (Forced)", "1"}, {"Bilinear (PS2)", "2"}, {"Bilinear (Forced excluding sprite)", "3"}}, 0, 0, 0,
+                     "paired", ""};
+        s.append(d);
+    }
+
+    // Frame Pacing — common stutter-fix toggles.
+    {
+        SettingDef d{"Recommended", "", "Frame Pacing", "EmuCore/GS", "VsyncEnable", "Vertical Sync (VSync)",
+                     "Synchronises frame output with the monitor to prevent screen tearing.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Recommended", "", "Frame Pacing", "EmuCore/GS", "SyncToHostRefreshRate", "Sync to Host Refresh Rate",
+                     "Adjusts emulation speed slightly to match your monitor's refresh rate. Smoother pacing at the cost of correct game speed.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // Audio — most-toggled audio knobs.
+    {
+        SettingDef d{"Recommended", "", "Audio", "SPU2/Output", "Backend", "Audio Backend",
+                     "Output backend for the SPU2 audio engine. Cubeb is the macOS default; SDL is the cross-platform fallback.",
+                     SettingDef::Combo, "Cubeb",
+                     {{"Cubeb", "Cubeb"}, {"SDL", "SDL"}, {"Null (No Sound)", "Null"}}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Recommended", "", "Audio", "SPU2/Output", "StandardVolume", "Volume",
+                     "Master output volume.",
+                     SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"};
+        s.append(d);
+    }
+
+    // Convenience — common quality-of-life toggles.
+    {
+        SettingDef d{"Recommended", "", "Convenience", "Framerate", "NominalScalar", "Normal Speed",
+                     "Sets the target speed for normal gameplay.",
+                     SettingDef::Combo, "1", {
+                         {"50% [30 FPS (NTSC) / 25 FPS (PAL)]", "0.5"},
+                         {"75% [45 FPS (NTSC) / 37 FPS (PAL)]", "0.75"},
+                         {"100% [60 FPS (NTSC) / 50 FPS (PAL)]", "1"},
+                         {"150% [90 FPS (NTSC) / 75 FPS (PAL)]", "1.5"},
+                         {"200% [120 FPS (NTSC) / 100 FPS (PAL)]", "2"},
+                         {"Unlimited", "0"},
+                     }, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Recommended", "", "Convenience", "EmuCore", "EnableFastBoot", "Fast Boot",
+                     "Skips the PS2 BIOS splash screen when booting a game.",
+                     SettingDef::Bool, "true", {}, 0, 0, 0};
+        s.append(d);
+    }
+    {
+        SettingDef d{"Recommended", "", "Convenience", "EmuCore", "EnableCheats", "Enable Cheats",
+                     "Loads pnach cheat files at game start. Off by default for safety.",
+                     SettingDef::Bool, "false", {}, 0, 0, 0};
+        s.append(d);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // Emulation (single page with grouped sections — no sub-tabs)
     //
     // BIOSSettingsWidget's two boot-behaviour toggles (EnableFastBoot,
@@ -2160,16 +2299,14 @@ QString PCSX2Adapter::findResumeFile(const QString& serial) const {
 
 PreviewSpec PCSX2Adapter::previewSpec(const QString& category,
                                        const QString& subcategory) const {
-    if (category == "Graphics" && subcategory == "Display") {
+    // Aspect-ratio preview lives on the Recommended category — that's the
+    // primary entry point and already has the AspectRatio combo near the
+    // top, so the live preview is most useful there. Graphics > Display has
+    // the full crop/stretch/integer-scaling controls but no preview, matching
+    // Dolphin's split (see dolphin_adapter.cpp::previewSpec).
+    if (category == "Recommended" && subcategory.isEmpty()) {
         return {"aspect", {
-            {"AspectRatio",          "aspectMode"},
-            {"FMVAspectRatioSwitch", "fmvAspectMode"},
-            {"StretchY",             "stretchY"},
-            {"CropLeft",             "cropL"},
-            {"CropTop",              "cropT"},
-            {"CropRight",            "cropR"},
-            {"CropBottom",           "cropB"},
-            {"IntegerScaling",       "integerScaling"},
+            {"AspectRatio", "aspectMode"},
         }};
     }
     if (category == "Graphics" && subcategory == "On-Screen Display") {
