@@ -79,9 +79,9 @@ private slots:
         for (const auto& d : schema_)
             if (d.category == "Graphics") got.insert(d.subcategory);
         QCOMPARE(got, QSet<QString>({
-            "Display", "Rendering", "Hardware Fixes", "Upscaling Fixes",
-            "Texture Replacement", "Post-Processing", "Media Capture",
-            "Advanced", "On-Screen Display",
+            "Display", "Rendering", "Texture Replacement",
+            "Post-Processing", "Media Capture", "Advanced",
+            "On-Screen Display",
         }));
     }
 
@@ -122,37 +122,20 @@ private slots:
         QCOMPARE(got, expected);
     }
 
-    void testGraphicsHardwareFixesFullCatalog() {
-        const QSet<QString> expected{
-            "UserHacks_CPUSpriteRenderBW", "UserHacks_CPUSpriteRenderLevel",
-            "UserHacks_CPUCLUTRender", "UserHacks_GPUTargetCLUTMode",
-            "UserHacks_AutoFlushLevel", "UserHacks_TextureInsideRt",
-            "UserHacks_Limit24BitDepth",
-            "UserHacks_SkipDraw_Start", "UserHacks_SkipDraw_End",
-            "UserHacks_DisableDepthSupport", "UserHacks_CPU_FB_Conversion",
-            "UserHacks_DisablePartialInvalidation", "paltex",
-            "UserHacks_Disable_Safe_Features", "preload_frame_with_gs_data",
-            "UserHacks_DisableRenderFixes", "UserHacks_ReadTCOnClose",
-            "UserHacks_EstimateTextureRegion", "UserHacks_DrawBuffering",
-        };
-        QSet<QString> got;
-        for (const auto& d : schema_)
-            if (d.category == "Graphics" && d.subcategory == "Hardware Fixes") got.insert(d.key);
-        QCOMPARE(got, expected);
-    }
-
-    void testGraphicsUpscalingFixesFullCatalog() {
-        const QSet<QString> expected{
-            "UserHacks_HalfPixelOffset", "UserHacks_native_scaling",
-            "UserHacks_round_sprite_offset", "UserHacks_BilinearHack",
-            "UserHacks_TCOffsetX", "UserHacks_TCOffsetY",
-            "UserHacks_align_sprite_X", "UserHacks_NativePaletteDraw",
-            "UserHacks_merge_pp_sprite", "UserHacks_forceEvenSpritePosition",
-        };
-        QSet<QString> got;
-        for (const auto& d : schema_)
-            if (d.category == "Graphics" && d.subcategory == "Upscaling Fixes") got.insert(d.key);
-        QCOMPARE(got, expected);
+    void testHardwareAndUpscalingFixesNotInSchema() {
+        // Both panes are upstream-gated on the "Manual Hardware Renderer
+        // Fixes" (UserHacks) toggle which is only visible in per-game/
+        // dev-build mode — they're hidden in default standalone PCSX2.
+        // We follow upstream and don't surface them.
+        for (const auto& d : schema_) {
+            if (d.category != "Graphics") continue;
+            QVERIFY2(d.subcategory != "Hardware Fixes",
+                qPrintable(QString("Hardware Fixes key '%1' should not be in schema")
+                           .arg(d.key)));
+            QVERIFY2(d.subcategory != "Upscaling Fixes",
+                qPrintable(QString("Upscaling Fixes key '%1' should not be in schema")
+                           .arg(d.key)));
+        }
     }
 
     void testGraphicsTextureReplacementFullCatalog() {
