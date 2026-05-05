@@ -84,8 +84,7 @@ private slots:
             // upstream, see testGameCubeCategoryFullCatalog).
             "CPUThread", "EnableCheats", "OverrideRegionSettings",
             "AutoDiscChange", "EmulationSpeed", "LoadGameIntoMemory",
-            // (UseDiscordPresence intentionally omitted: wrapped in
-            // #ifdef USE_DISCORD_PRESENCE upstream, not built on macOS.)
+            "UseDiscordPresence",
             // Fallback Region
             "FallbackRegion",
         };

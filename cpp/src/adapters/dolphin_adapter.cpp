@@ -465,7 +465,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // ─── Audio / Audio Playback Settings ─────────────────
         // Mirrors Dolphin's Audio pane "Audio Playback Settings" group.
         {"Audio", "", "Audio Playback Settings", "DSP", "MuteOnDisabledSpeedLimit",
-         "Mute When Speed Limit Disabled",
+         "Mute When Disabling Speed Limit",
          "Silence audio while emulation is running unthrottled (e.g. fast-forward). "
          "Avoids unpleasant pitch/playback artifacts.",
          SettingDef::Bool, "False"},
@@ -483,7 +483,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "True"},
 
         {"Audio", "", "Audio Playback Settings", "Core", "AudioPreservePitch",
-         "Preserve Pitch When Speed Changes",
+         "Preserve Audio Pitch",
          "Time-stretch audio to keep pitch constant when emulation runs slower or "
          "faster than 100%. Useful with fast-forward; otherwise leaves pitch unchanged.",
          SettingDef::Bool, "False"},
@@ -498,7 +498,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // ─── General / Basic Settings ────────────────────────
         // Mirrors Dolphin's General pane "Basic Settings" group.
         {"General", "", "Basic Settings", "Core", "CPUThread",
-         "Dual Core Mode",
+         "Enable Dual Core (speedhack)",
          "Splits CPU and GPU emulation across two threads. Significant speed "
          "gain; some games rely on tight CPU/GPU sync and may glitch with it on.",
          SettingDef::Bool, "False"},
@@ -512,12 +512,12 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "False"},
 
         {"General", "", "Basic Settings", "Core", "OverrideRegionSettings",
-         "Override Region Settings",
+         "Allow Mismatched Region Settings",
          "Force a region's settings (language, video mode) regardless of disc region.",
          SettingDef::Bool, "False"},
 
         {"General", "", "Basic Settings", "Core", "AutoDiscChange",
-         "Auto Disc Change",
+         "Change Discs Automatically",
          "Switch discs automatically for multi-disc games (M3U). RetroNest's "
          "M3U handling is independent and runs at launch time.",
          SettingDef::Bool, "False"},
@@ -538,17 +538,16 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
            {"300%",       "3.000000"} }},
 
         {"General", "", "Basic Settings", "Core", "LoadGameIntoMemory",
-         "Load Game Into Memory",
+         "Load Whole Game Into Memory",
          "Pre-loads the entire game image into RAM at boot. Eliminates disc "
          "I/O stutter; uses more host memory.",
          SettingDef::Bool, "False"},
 
-        // UseDiscordPresence intentionally NOT exposed: in upstream
-        // Dolphin's GeneralPane the checkbox is wrapped in
-        // `#ifdef USE_DISCORD_PRESENCE`, a compile-time flag. macOS
-        // builds typically ship without it, so the setting would be
-        // inert (Dolphin reads MAIN_USE_DISCORD_PRESENCE but the
-        // Discord-RPC code isn't linked in) and confusing to expose.
+        {"General", "", "Basic Settings", "General", "UseDiscordPresence",
+         "Show Current Game on Discord",
+         "Publishes currently-playing game to Discord status when Dolphin runs. "
+         "Requires a Dolphin build with Discord-RPC support compiled in.",
+         SettingDef::Bool, "True"},
 
         // ─── General / Fallback Region ───────────────────────
         // Mirrors Dolphin's General pane "Fallback Region" group.
@@ -576,7 +575,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "False"},
 
         {"Advanced", "", "CPU Options", "Core", "AccurateCPUCache",
-         "Accurate CPU Instruction Cache",
+         "Enable Write-Back Cache (slow)",
          "Emulate the CPU's L1 instruction cache. Slower but more accurate; "
          "needed for a handful of games that self-modify code.",
          SettingDef::Bool, "False"},
@@ -588,7 +587,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 
         // ─── Advanced / Clock Override ───────────────────────
         {"Advanced", "", "Clock Override", "Core", "OverclockEnable",
-         "Enable CPU Overclocking",
+         "Enable Emulated CPU Clock Override",
          "Allow the slider below to scale the emulated CPU's clock rate. "
          "Some games run smoother with overclocking; others crash.",
          SettingDef::Bool, "False"},
@@ -605,7 +604,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 
         // ─── Advanced / VBI Frequency Override ───────────────
         {"Advanced", "", "VBI Frequency Override", "Core", "VIOverclockEnable",
-         "Enable VI (Video Interface) Overclocking",
+         "Enable VBI Frequency Override",
          "Allow scaling the video-interface clock independently of the CPU. "
          "Affects refresh-rate timing for some games.",
          SettingDef::Bool, "False"},
@@ -642,7 +641,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 
         // ─── Advanced / Custom RTC Options ───────────────────
         {"Advanced", "", "Custom RTC Options", "Core", "EnableCustomRTC",
-         "Enable Custom Real-Time Clock",
+         "Enable Custom RTC",
          "Override the emulated system clock with a fixed date/time. "
          "Set the value via Dolphin's native UI — RetroNest doesn't yet expose "
          "a date picker.",
@@ -692,7 +691,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
            {"4x (~1440p)","4"}, {"5x (~1800p)","5"}, {"6x (~4K)","6"} }}),
 
         gfx({"Graphics", "General", "Aspect & Window", "Hardware", "VSync",
-         "VSync",
+         "V-Sync",
          "Synchronizes output to the display refresh rate. Reduces tearing.",
          SettingDef::Bool, "True"}),
 
@@ -704,7 +703,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 
         // No gfx() wrapper — Fullscreen is in Dolphin.ini's [Display] section.
         {"Graphics", "General", "Aspect & Window", "Display", "Fullscreen",
-         "Fullscreen",
+         "Start in Fullscreen",
          "Render in fullscreen mode. RetroNest already runs Dolphin "
          "embedded in our window, so this is True by default.",
          SettingDef::Bool, "True"},
@@ -786,7 +785,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "True"}),
 
         gfx({"Graphics", "Enhancements", "Color & Lighting", "Enhancements", "HDROutput",
-         "HDR Output",
+         "HDR Post-Processing",
          "Output in HDR (high-dynamic-range) when the display supports it.",
          SettingDef::Bool, "False"}),
 
@@ -803,7 +802,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "False"}),
 
         gfx({"Graphics", "Enhancements", "Stereoscopy", "Stereoscopy", "StereoPerEyeResolutionFull",
-         "Full Per-Eye Resolution",
+         "Use Full Resolution Per Eye",
          "Render each eye at the full internal resolution instead of half. "
          "Doubles GPU cost.",
          SettingDef::Bool, "False"}),
@@ -850,7 +849,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "True"}),
 
         gfx({"Graphics", "Hacks", "XFB", "Hacks", "ImmediateXFBEnable",
-         "Immediate XFB",
+         "Immediately Present XFB",
          "Display the XFB as soon as it's drawn instead of on next vblank. "
          "Lower latency, slight tearing risk.",
          SettingDef::Bool, "False"}),
@@ -874,12 +873,12 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          { {"Safe (0)","0"}, {"Default (128)","128"}, {"Fast (512)","512"} }}),
 
         gfx({"Graphics", "Hacks", "Texture Cache", "Hacks", "FastTextureSampling",
-         "Fast Texture Sampling",
+         "Manual Texture Sampling",
          "Trade some accuracy for speed in the texture sampler.",
          SettingDef::Bool, "True"}),
 
         gfx({"Graphics", "Hacks", "Texture Cache", "Settings", "SaveTextureCacheToState",
-         "Save Texture Cache To State",
+         "Save Texture Cache to State",
          "Save the texture cache contents in save states. Larger states, "
          "smoother resume.",
          SettingDef::Bool, "True"}),
@@ -906,7 +905,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "True"}),
 
         gfx({"Graphics", "Hacks", "Other", "Settings", "CPUCull",
-         "CPU Culling",
+         "Cull Vertices on the CPU",
          "Cull invisible geometry on the CPU before sending to the GPU. "
          "Speeds up some games.",
          SettingDef::Bool, "False"}),
@@ -941,7 +940,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "True"}),
 
         gfx({"Graphics", "Advanced", "Custom Textures", "Settings", "DumpMipTextures",
-         "Dump Mip Textures",
+         "Dump Mip Maps",
          "Include all mipmap levels in the texture dump.",
          SettingDef::Bool, "True"}),
 
@@ -974,12 +973,12 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Int, "6", {}, 0, 9, 1, "slider", ""}),
 
         gfx({"Graphics", "Advanced", "Frame Dumping", "Settings", "UseLossless",
-         "Use Lossless Codec",
+         "Use Lossless Codec (Ut Video)",
          "Encode frame dumps with a lossless codec. Larger files, no quality loss.",
          SettingDef::Bool, "False"}),
 
         gfx({"Graphics", "Advanced", "Debug", "Settings", "WireFrame",
-         "Wireframe",
+         "Enable Wireframe",
          "Render geometry as wireframe lines. Debug only.",
          SettingDef::Bool, "False"}),
 
@@ -994,7 +993,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "False"}),
 
         gfx({"Graphics", "Advanced", "Debug", "Settings", "TexFmtOverlayEnable",
-         "Show Texture Format Overlay",
+         "Texture Format Overlay",
          "Tag each texture with its format. Debug only.",
          SettingDef::Bool, "False"}),
 
@@ -1015,7 +1014,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Int, "1000", {}, 100, 10000, 100, "slider", "ms"}),
 
         gfx({"Graphics", "Advanced", "Misc", "Settings", "PreferVSForLinePointExpansion",
-         "Prefer Vertex Shader For Line/Point Expansion",
+         "Prefer VS for Point/Line Expansion",
          "Expand line/point primitives in the vertex shader instead of "
          "geometry. Workaround for some drivers.",
          SettingDef::Bool, "False"}),
@@ -1026,7 +1025,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "False"}),
 
         gfx({"Graphics", "Advanced", "Misc", "Settings", "Crop",
-         "Crop Black Borders",
+         "Crop",
          "Crop overscan/black borders from the rendered image.",
          SettingDef::Bool, "False"}),
 
@@ -1038,7 +1037,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // OSD messages + font size live in Dolphin.ini, not GFX.ini.
         {"Graphics", "On-Screen Display", "General", "Interface",
          "OnScreenDisplayMessages",
-         "Show On-Screen Messages",
+         "Show Messages",
          "Display Dolphin's own status messages (savestates, achievements, etc.)",
          SettingDef::Bool, "True"},
 
@@ -1061,13 +1060,13 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 
         gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
          "ShowSpeed",
-         "Show Speed",
+         "Show % Speed",
          "Emulation speed as a percentage of native.",
          SettingDef::Bool, "False"}),
 
         gfx({"Graphics", "On-Screen Display", "Performance Statistics", "Settings",
          "ShowSpeedColors",
-         "Color-Code Speed",
+         "Show Speed Colors",
          "Tint the Show Speed indicator green/yellow/red based on how close "
          "to native it is.",
          SettingDef::Bool, "True"}),
@@ -1095,7 +1094,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // [General].
         {"Graphics", "On-Screen Display", "Movie Window", "General",
          "ShowFrameCount",
-         "Show Frame Count",
+         "Show Frame Counter",
          "Display the running frame number.",
          SettingDef::Bool, "False"},
 
@@ -1112,7 +1111,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
 
         gfx({"Graphics", "On-Screen Display", "Netplay", "Settings",
          "ShowNetPlayMessages",
-         "Show NetPlay Messages",
+         "Show NetPlay Chat",
          "Display NetPlay chat/event messages on screen.",
          SettingDef::Bool, "False"}),
 
@@ -1187,13 +1186,13 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
         // schema-driven page only routes to text INI files. The user
         // reaches these via the "Open Native Settings" button.
         {"Wii", "", "SD Card", "Core", "WiiSDCard",
-         "Insert Wii SD Card",
+         "Insert SD Card",
          "Make a virtual SD card visible to Wii software. Required for "
          "save imports, channel installs, and homebrew that uses the slot.",
          SettingDef::Bool, "True"},
 
         {"Wii", "", "SD Card", "Core", "WiiSDCardAllowWrites",
-         "Allow SD Card Writes",
+         "Allow Writes to SD Card",
          "When off, the SD card is read-only — useful for protecting a "
          "shared image from accidental modification.",
          SettingDef::Bool, "True"},
@@ -1217,7 +1216,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Bool, "False"},
 
         {"Wii", "", "Online", "Core", "EnableWiiLink",
-         "Enable WiiLink",
+         "Enable WiiConnect24 via WiiLink",
          "Patch the Wii Shop / Wii Channels to use community-run "
          "replacement servers (WiiLink). Off by default to avoid surprising "
          "users with third-party network calls.",
