@@ -482,9 +482,9 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
                      "Improves texture clarity at oblique viewing angles. Low cost on modern GPUs and generally safe to raise.",
                      SettingDef::Combo, "0",
                      {{"Off", "0"}, {"2x", "2"}, {"4x", "4"}, {"8x", "8"}, {"16x", "16"}}, 0, 0, 0};
-        // Upstream disables anisotropic filtering when GPU palette conversion
-        // is on (paltex), since palette-mode textures bypass HW filtering.
-        d.dependsOn = "!paltex";
+        // Upstream disables this when GPU Palette Conversion (paltex) is on,
+        // but that toggle lives in the Hardware Fixes pane which we don't
+        // surface — no schema-visible master to gate on, so leave ungated.
         s.append(d);
     }
     {
