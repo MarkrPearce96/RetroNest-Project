@@ -225,7 +225,7 @@ Every shape upstream uses has a schema mechanism. **Reach for the existing tool 
 
 - **Multi-file routing**: `iniFilePath`. Use a small lambda helper to stamp it onto every entry in a sub-section (Dolphin uses `gfx()` to stamp `GFX.ini`).
 
-- **Dependency gates** (`dependsOn`): a small boolean DSL. Atoms are `Foo` (truthy), `!Foo` (falsy), `Foo=Bar` (combo equality), `Foo!=Bar` (combo inequality). Combine with `&&` or `||` (single top-level operator, no parens, no mixing). Bare-key form (`dependsOn = "Foo"`) is fully backward compatible with pre-DSL adapters. The legacy `dependsOnValue` semicolon-allow-list also still works. See `cpp/src/core/setting_dependency.h`. Examples:
+- **Dependency gates** (`dependsOn`): a small boolean DSL. Atoms are `Foo` (truthy), `!Foo` (falsy), `Foo=Bar` (combo equality), `Foo!=Bar` (combo inequality). Combine with `&&` or `||` (single top-level operator, no parens, no mixing). Bare-key form (`dependsOn = "Foo"`) preserves the original truthy-only semantics, so PCSX2 / DuckStation / PPSSPP entries that pre-date the DSL keep working without edits. See `cpp/src/core/setting_dependency.h`. Examples:
   - `"Backend=OpenAL && DSPHLE!=HLE"` — Dolphin's DPL2 Decoder gate
   - `"!EFBToTextureEnable || !XFBToTextureEnable"` — Dolphin's Defer EFB Copies gate
   - `"!ImmediateXFBEnable && !VISkip"` — Dolphin's Skip Duplicate XFBs gate

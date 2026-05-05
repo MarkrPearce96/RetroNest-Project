@@ -15,7 +15,9 @@
 //         | key '!=' value     — true when masterValues[key] != value
 //
 // Mixing '&&' and '||' in the same expression is rejected (qWarning + return
-// true so the dependent stays active rather than being silently hidden).
+// false so the dependent renders as a permanently-greyed row — that is far
+// more visible during development than silently leaving it active, and is
+// what the reviewer sweep on 2026-05-05 settled on).
 //
 // `masterStates` carries the truthy/falsy reading of toggles + combos
 // (combos are "active" when their value is not in {"", "0", "false",
@@ -39,7 +41,7 @@ inline bool evaluateDependencyExpression(
     if (hasAnd && hasOr) {
         qWarning("dependsOn mixes '&&' and '||' (no parentheses supported): %s",
                  qUtf8Printable(expr));
-        return true;
+        return false;
     }
 
     const QString separator = hasOr ? QStringLiteral("||")

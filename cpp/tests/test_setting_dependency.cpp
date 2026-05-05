@@ -156,12 +156,13 @@ private slots:
     // ─── Pathological inputs ──────────────────────────────────
 
     void testMixedAndOrIsRejected() {
-        // No parentheses means a mixed expression is ambiguous; the
-        // evaluator returns true (active) so a malformed schema entry
-        // doesn't silently hide its dependent.
+        // No parentheses means a mixed expression is ambiguous. The
+        // evaluator returns false (inactive) so a malformed schema entry
+        // shows up as a permanently-greyed row — that's much more
+        // visible during development than a silently-always-active row.
         setMaster("A", true, "true");
         setMaster("B", true, "true");
-        QVERIFY(evaluateDependencyExpression("A && B || A", states_, values_));
+        QVERIFY(!evaluateDependencyExpression("A && B || A", states_, values_));
     }
 
     void testWhitespaceTolerated() {

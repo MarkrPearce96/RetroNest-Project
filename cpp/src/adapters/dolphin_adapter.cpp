@@ -209,6 +209,50 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
     // Bounding Box" stored over BBoxEnable=False/True).
     auto inv = [](SettingDef d) { d.inverted = true; return d; };
 
+    // ConfigSliderU32 multiplier from AdvancedPane.cpp:250,266 — the
+    // slider position (in MB) is multiplied to byte count on write and
+    // divided on read. Named so the two Memory-Override sliders below
+    // don't carry a magic literal.
+    constexpr qint64 kBytesPerMiB = 0x100000;
+
+    // Helper: build a Memory-Override slider (MEM1/MEM2). Both sliders
+    // display in MB but Dolphin stores the byte count, so they share a
+    // uniform save/loadTransform pair. Captured by-value so each
+    // SettingDef owns its own copy of the key string and default text.
+    auto memSlider = [](const char* iniKey, const char* label,
+                        const char* tooltip, int defaultMB,
+                        int minMB, int maxMB, const char* suffix) {
+        SettingDef d;
+        d.category    = "Advanced";
+        d.group       = "Memory Override";
+        d.section     = "Core";
+        d.key         = iniKey;
+        d.label       = label;
+        d.tooltip     = tooltip;
+        d.type        = SettingDef::Int;
+        d.defaultValue = QString::number(defaultMB);
+        d.minVal      = minMB;
+        d.maxVal      = maxMB;
+        d.step        = 1;
+        d.layout      = "slider";
+        d.suffix      = suffix;
+        d.dependsOn   = "RAMOverrideEnable";
+        const QString section = d.section;
+        const QString key     = d.key;
+        const QString defStr  = d.defaultValue;
+        d.saveTransform = [section, key](const QString &v,
+                                          const SettingDef::SaveCallback &save) {
+            const qint64 bytes = qint64(v.toInt()) * kBytesPerMiB;
+            save(section, key, QString::number(bytes));
+        };
+        d.loadTransform = [section, key, defStr](const SettingDef::LoadCallback &read) {
+            const QString cur = read(section, key);
+            if (cur.isEmpty()) return defStr;
+            return QString::number(cur.toLongLong() / kBytesPerMiB);
+        };
+        return d;
+    };
+
     const QVector<QPair<QString,QString>> audioBackends = {
         {"Cubeb",   "Cubeb"},
         {"OpenAL",  "OpenAL"},
@@ -503,7 +547,7 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          "audio dropouts under load. Only available with backends that "
          "support latency control (OpenAL on macOS).",
          SettingDef::Int, "20", {}, 0, 200, 1, "slider", "ms",
-         "Backend", "OpenAL"},
+         "Backend=OpenAL"},
 
         // Upstream gates the DPL2 controls on (backend supports DPL2)
         // AND (DSP is in LLE mode) — see AudioPane::OnDspChanged in
@@ -737,77 +781,22 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
          SettingDef::Int, "1", {}, 1, 4, 1, "slider", "x", "VIOverclockEnable"},
 
         // ─── Advanced / Memory Override ──────────────────────
-        // Mirrors AdvancedPane::CreateLayout (AdvancedPane.cpp:236-283).
-        // MEM1/MEM2 sliders display in MB; Dolphin stores the byte count
-        // (slider position * 0x100000 = 1 MiB). saveTransform / load
-        // Transform handle the conversion both ways.
+        // Mirrors AdvancedPane::CreateLayout. MEM1/MEM2 sliders display
+        // in MB; Dolphin stores the byte count via the kBytesPerMiB
+        // multiplier handled by memSlider's save/loadTransform.
         {"Advanced", "", "Memory Override", "Core", "RAMOverrideEnable",
          "Enable Emulated Memory Size Override",
          "Allow using non-retail RAM sizes (MEM1/MEM2). Required for some "
          "homebrew. Most games will not boot with non-retail sizes.",
          SettingDef::Bool, "False"},
 
-        []() {
-            SettingDef d;
-            d.category    = "Advanced";
-            d.subcategory = "";
-            d.group       = "Memory Override";
-            d.section     = "Core";
-            d.key         = "MEM1Size";
-            d.label       = "MEM1";
-            d.tooltip     = "Size of the emulated console's main RAM. Default 24 MB.";
-            d.type        = SettingDef::Int;
-            d.defaultValue = "24";
-            d.minVal      = 24;
-            d.maxVal      = 64;
-            d.step        = 1;
-            d.layout      = "slider";
-            d.suffix      = " MB (MEM1)";
-            d.dependsOn   = "RAMOverrideEnable";
-            // Stored value is bytes (slider_pos * 0x100000). Slider
-            // displays MB.
-            d.saveTransform = [](const QString &v,
-                                 const SettingDef::SaveCallback &save) {
-                const qint64 bytes = qint64(v.toInt()) * 0x100000;
-                save("Core", "MEM1Size", QString::number(bytes));
-            };
-            d.loadTransform = [](const SettingDef::LoadCallback &read) {
-                const QString cur = read("Core", "MEM1Size");
-                if (cur.isEmpty()) return QString("24");
-                return QString::number(cur.toLongLong() / 0x100000);
-            };
-            return d;
-        }(),
+        memSlider("MEM1Size", "MEM1",
+                  "Size of the emulated console's main RAM. Default 24 MB.",
+                  /*defaultMB=*/24, /*min=*/24, /*max=*/64, " MB (MEM1)"),
 
-        []() {
-            SettingDef d;
-            d.category    = "Advanced";
-            d.subcategory = "";
-            d.group       = "Memory Override";
-            d.section     = "Core";
-            d.key         = "MEM2Size";
-            d.label       = "MEM2";
-            d.tooltip     = "Size of the emulated Wii's external RAM. Default 64 MB.";
-            d.type        = SettingDef::Int;
-            d.defaultValue = "64";
-            d.minVal      = 64;
-            d.maxVal      = 128;
-            d.step        = 1;
-            d.layout      = "slider";
-            d.suffix      = " MB (MEM2)";
-            d.dependsOn   = "RAMOverrideEnable";
-            d.saveTransform = [](const QString &v,
-                                 const SettingDef::SaveCallback &save) {
-                const qint64 bytes = qint64(v.toInt()) * 0x100000;
-                save("Core", "MEM2Size", QString::number(bytes));
-            };
-            d.loadTransform = [](const SettingDef::LoadCallback &read) {
-                const QString cur = read("Core", "MEM2Size");
-                if (cur.isEmpty()) return QString("64");
-                return QString::number(cur.toLongLong() / 0x100000);
-            };
-            return d;
-        }(),
+        memSlider("MEM2Size", "MEM2",
+                  "Size of the emulated Wii's external RAM. Default 64 MB.",
+                  /*defaultMB=*/64, /*min=*/64, /*max=*/128, " MB (MEM2)"),
 
         // ─── Advanced / Custom RTC Options ───────────────────
         // Upstream also exposes a `QDateTimeEdit` gated on
@@ -971,31 +960,23 @@ QVector<SettingDef> DolphinAdapter::settingsSchema() const {
             };
             d.saveTransform = [](const QString &v,
                                  const SettingDef::SaveCallback &save) {
-                // SSAA half is a bool; MSAA half is the sample count
-                // (1 means none — upstream's ConfigComplexChoice writes
-                // (u32)1, false for "None").
-                if (v == "None") {
-                    save("Settings", "MSAA", "1");
-                    save("Settings", "SSAA", "False");
-                } else if (v == "2x MSAA") {
-                    save("Settings", "MSAA", "2");
-                    save("Settings", "SSAA", "False");
-                } else if (v == "4x MSAA") {
-                    save("Settings", "MSAA", "4");
-                    save("Settings", "SSAA", "False");
-                } else if (v == "8x MSAA") {
-                    save("Settings", "MSAA", "8");
-                    save("Settings", "SSAA", "False");
-                } else if (v == "2x SSAA") {
-                    save("Settings", "MSAA", "2");
-                    save("Settings", "SSAA", "True");
-                } else if (v == "4x SSAA") {
-                    save("Settings", "MSAA", "4");
-                    save("Settings", "SSAA", "True");
-                } else { // 8x SSAA
-                    save("Settings", "MSAA", "8");
-                    save("Settings", "SSAA", "True");
-                }
+                // (msaaSamples, ssaaFlag). SSAA half is a bool; MSAA half
+                // is the sample count (1 means none — upstream's
+                // ConfigComplexChoice writes (u32)1, false for "None").
+                struct Pair { const char* msaa; const char* ssaa; };
+                static const std::map<QString, Pair> table = {
+                    {"None",    {"1", "False"}},
+                    {"2x MSAA", {"2", "False"}},
+                    {"4x MSAA", {"4", "False"}},
+                    {"8x MSAA", {"8", "False"}},
+                    {"2x SSAA", {"2", "True"}},
+                    {"4x SSAA", {"4", "True"}},
+                    {"8x SSAA", {"8", "True"}},
+                };
+                auto it = table.find(v);
+                if (it == table.end()) it = table.find("None");
+                save("Settings", "MSAA", it->second.msaa);
+                save("Settings", "SSAA", it->second.ssaa);
             };
             d.loadTransform = [](const SettingDef::LoadCallback &read) {
                 const QString msaa  = read("Settings", "MSAA");

@@ -550,7 +550,7 @@ void GenericSettingsPage::loadValues() {
     const SettingDef &d = slider->settingDef();
     // Sliders may declare a loadTransform when the displayed unit
     // differs from the stored unit (e.g. Dolphin's MEM1/MEM2 sliders
-    // display MB but Dolphin stores bytes via a 0x100000 multiplier).
+    // display MB but Dolphin stores bytes via a 1-MiB multiplier).
     const QString cur = d.loadTransform
         ? d.loadTransform(readKey)
         : app->settingValue(emuId, d.section, d.key);
@@ -589,10 +589,10 @@ void GenericSettingsPage::saveValue(const QString &section, const QString &key,
 }
 
 void GenericSettingsPage::refreshDependencies() {
-  // Master state maps:
-  //   masterStates[key] = is the master "active"? (truthy/non-disabled)
-  //   masterValues[key] = the master's current raw value (combos compare
-  //                       against SettingDef::dependsOnValue strings).
+  // Master state maps populated from every Toggle / Combo on the page:
+  //   masterStates[key] = is the master "active"? (truthy / non-disabled)
+  //   masterValues[key] = the master's current raw value (combo equality
+  //                       atoms in the dependsOn DSL compare against this).
   QHash<QString, bool> masterStates;
   QHash<QString, QString> masterValues;
   // For inverted toggles, the displayed `isChecked()` is the OPPOSITE of
@@ -620,26 +620,14 @@ void GenericSettingsPage::refreshDependencies() {
     masterValues.insert(combo->settingDef().key, v);
   }
 
-  // Compute whether a dependent's master gate is active.
-  //   1. dependsOnValue (semicolon-separated allow-list) — legacy single-master
-  //      value-equality form. Takes precedence when set so old schema entries
-  //      keep their exact previous behavior.
-  //   2. dependsOn — single bare key (legacy truthy check) OR a small boolean
-  //      expression (key, !key, key=val, key!=val, joined by '&&'/'||').
-  //      See evaluateDependencyExpression in setting_dependency.h.
+  // dependsOn is parsed as a small boolean expression DSL: a bare key
+  // ("Foo") behaves like the legacy truthy check; richer atoms ("!Foo",
+  // "Foo=Bar", "Foo!=Bar") and chains joined by '&&' or '||' express
+  // multi-condition gates verbatim. See evaluateDependencyExpression in
+  // setting_dependency.h.
   auto isDependencyActive = [&](const SettingDef &d) -> bool {
     if (d.dependsOn.isEmpty())
       return true;
-    if (!d.dependsOnValue.isEmpty()) {
-      const QString cur = masterValues.value(d.dependsOn);
-      const QStringList allow =
-          d.dependsOnValue.split(QChar(';'), Qt::SkipEmptyParts);
-      for (const QString &allowed : allow) {
-        if (cur == allowed)
-          return true;
-      }
-      return false;
-    }
     return evaluateDependencyExpression(d.dependsOn, masterStates,
                                          masterValues);
   };
