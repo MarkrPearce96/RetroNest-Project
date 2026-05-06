@@ -553,10 +553,14 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               SettingDef::Combo, "Disabled",
               {{"Disabled", "Disabled"}, {"Box (Downsample 3D/Smooth All)", "Box"},
                {"Adaptive (Preserve 3D/Smooth 2D)", "Adaptive"}},
-              0, 0, 0, "paired", ""});
-    s.append(dep({"Graphics", "Rendering", "", "GPU", "DownsampleScale", "Downsample Scale",
-                  "Target downsampling factor.",
-                  SettingDef::Int, "1", {}, 1, 16, 1, "paired", "x"}, "DownsampleMode"));
+              0, 0, 0, "", ""});
+    // Down-Sampling Display Scale (GPU/DownsampleScale) is intentionally
+    // omitted — upstream sets it visible only when DownsampleMode == Box
+    // (graphicssettingswidget.cpp:1052: setVisible(mode==GPUDownsampleMode::Box)).
+    // Our dependsOn DSL only greys out, doesn't hide; rendering it as a
+    // permanently-greyed slider when Adaptive is picked would diverge from
+    // upstream. Dynamic-visibility blocker — restore once the schema gains
+    // a "hide when inactive" mode.
     s.append({"Graphics", "Rendering", "", "GPU", "TextureFilter", "Texture Filtering", "",
               SettingDef::Combo, "Nearest", textureFilterOptions, 0, 0, 0, "", ""});
     s.append({"Graphics", "Rendering", "", "GPU", "SpriteTextureFilter", "Sprite Texture Filtering",

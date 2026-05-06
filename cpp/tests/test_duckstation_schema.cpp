@@ -167,9 +167,11 @@ private slots:
 
     void testGraphicsRenderingFullCatalog() {
         // Adapter (GPU/Adapter) deferred — populated dynamically per renderer.
+        // DownsampleScale deferred — upstream visibility-gates on
+        // DownsampleMode==Box; our DSL only greys out, doesn't hide.
         QCOMPARE(keysFor("Graphics", "Rendering"), QSet<QString>({
             "Renderer",
-            "ResolutionScale", "DownsampleMode", "DownsampleScale",
+            "ResolutionScale", "DownsampleMode",
             "TextureFilter", "SpriteTextureFilter",
             "DitheringMode", "DeinterlacingMode",
             "AspectRatio", "CropMode", "Scaling", "Scaling24Bit",
