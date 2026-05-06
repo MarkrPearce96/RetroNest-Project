@@ -6,13 +6,8 @@ VideoSoftware::VideoSoftware(QObject* parent) : QObject(parent) {}
 
 void VideoSoftware::setPixelFormat(PixelFormat fmt) { m_fmt = fmt; }
 
-void VideoSoftware::setGeometry(int /*baseW*/, int /*baseH*/, int maxW, int maxH) {
-    if (maxW != m_maxW || maxH != m_maxH) {
-        m_maxW = maxW;
-        m_maxH = maxH;
-        m_buffers[0] = QImage(maxW, maxH, QImage::Format_RGB32);
-        m_buffers[1] = QImage(maxW, maxH, QImage::Format_RGB32);
-    }
+void VideoSoftware::setGeometry(int /*baseW*/, int /*baseH*/, int /*maxW*/, int /*maxH*/) {
+    // No-op: frames are converted on demand in submitFrame; no pool to pre-allocate.
 }
 
 QImage VideoSoftware::convert(const void* data, int width, int height, size_t pitch) const {
@@ -57,10 +52,6 @@ QImage VideoSoftware::convert(const void* data, int width, int height, size_t pi
 
 void VideoSoftware::submitFrame(const void* data, int width, int height, size_t pitch) {
     if (!data || width <= 0 || height <= 0) return;
-    int idx = m_nextBuffer.fetch_add(1) & 1;
-    if (m_buffers[idx].width() < width || m_buffers[idx].height() < height) {
-        m_buffers[idx] = QImage(width, height, QImage::Format_RGB32);
-    }
     QImage frame = convert(data, width, height, pitch);
     emit frameReady(frame);
 }
