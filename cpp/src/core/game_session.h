@@ -1,13 +1,15 @@
 #pragma once
 
 #include "manifest.h"
+#include <QImage>
 #include <QObject>
 #include <QProcess>
 
 class EmulatorAdapter;
+class LibretroAdapter;
 
 /**
- * GameSession — manages an async emulator process.
+ * GameSession — manages an async emulator process or libretro core.
  * Only one session at a time. Owned by GameService.
  */
 class GameSession : public QObject {
@@ -24,10 +26,10 @@ public:
                const QString& romPath,
                const QStringList& extraArgs = {});
 
-    /** Kill the emulator process immediately (SIGKILL). */
+    /** Kill the emulator process immediately (SIGKILL / runtime stop). */
     void kill();
 
-    /** Terminate the emulator process gracefully (SIGTERM). */
+    /** Terminate the emulator process gracefully (SIGTERM / save-on-quit + stop). */
     void terminate();
 
     bool isRunning() const;
@@ -44,6 +46,8 @@ signals:
     void started();
     void finished(int exitCode, bool crashed);
     void errorOccurred(const QString& error);
+    /** Emitted for each rendered frame (libretro path only). Used by EmulationView. */
+    void frameReady(const QImage& frame);
 
 private slots:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
@@ -51,8 +55,21 @@ private slots:
     void onReadyRead();
 
 private:
+    enum class Backend { Process, Libretro };
+    Backend m_backend = Backend::Process;
+
+    bool startProcess(const EmulatorManifest& manifest,
+                      EmulatorAdapter* adapter,
+                      const QString& romPath,
+                      const QStringList& extraArgs);
+    bool startLibretro(const EmulatorManifest& manifest,
+                       EmulatorAdapter* adapter,
+                       const QString& romPath);
+
     QProcess* m_process = nullptr;
     EmulatorAdapter* m_adapter = nullptr;
     const EmulatorManifest* m_manifest = nullptr;
     QString m_emuId;
+    QString m_currentRomPath;
+    LibretroAdapter* m_libretroAdapter = nullptr;
 };

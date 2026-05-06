@@ -1,9 +1,7 @@
 #include "libretro_adapter.h"
 #include "core/paths.h"
-#include "core/github_client.h"
 #include <QDir>
 #include <QFileInfo>
-#include <QSysInfo>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
