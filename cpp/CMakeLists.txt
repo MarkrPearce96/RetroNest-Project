@@ -97,16 +97,6 @@ set(SOURCES
     src/ui/settings/dolphin/dolphin_category_hub.cpp
     src/ui/settings/duckstation/duckstation_settings_dialog.cpp
     src/ui/settings/duckstation/duckstation_category_hub.cpp
-    src/ui/settings/duckstation/pages/duckstation_audio_page.cpp
-    src/ui/settings/duckstation/pages/duckstation_console_page.cpp
-    src/ui/settings/duckstation/pages/duckstation_emulation_page.cpp
-    src/ui/settings/duckstation/pages/duckstation_graphics_page.cpp
-    src/ui/settings/duckstation/pages/duckstation_graphics_rendering_page.cpp
-    src/ui/settings/duckstation/pages/duckstation_graphics_advanced_page.cpp
-    src/ui/settings/duckstation/pages/duckstation_graphics_osd_page.cpp
-    src/ui/settings/duckstation/pages/duckstation_memory_cards_page.cpp
-    src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.cpp
-    src/ui/settings/duckstation/widgets/duckstation_osd_preview.cpp
     # PPSSPP settings
     src/ui/settings/ppsspp/ppsspp_category_hub.cpp
     src/ui/settings/ppsspp/ppsspp_settings_dialog.cpp
@@ -190,16 +180,6 @@ set(HEADERS
     # DuckStation settings
     src/ui/settings/duckstation/duckstation_settings_dialog.h
     src/ui/settings/duckstation/duckstation_category_hub.h
-    src/ui/settings/duckstation/pages/duckstation_audio_page.h
-    src/ui/settings/duckstation/pages/duckstation_console_page.h
-    src/ui/settings/duckstation/pages/duckstation_emulation_page.h
-    src/ui/settings/duckstation/pages/duckstation_graphics_page.h
-    src/ui/settings/duckstation/pages/duckstation_graphics_rendering_page.h
-    src/ui/settings/duckstation/pages/duckstation_graphics_advanced_page.h
-    src/ui/settings/duckstation/pages/duckstation_graphics_osd_page.h
-    src/ui/settings/duckstation/pages/duckstation_memory_cards_page.h
-    src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.h
-    src/ui/settings/duckstation/widgets/duckstation_osd_preview.h
     src/ui/settings/widgets/settings_card.h
     src/ui/settings/widgets/settings_section_header.h
     src/ui/settings/widgets/settings_toggle.h
@@ -627,15 +607,6 @@ set_target_properties(test_aspect_ratio_preview PROPERTIES AUTOMOC ON)
 target_include_directories(test_aspect_ratio_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 add_test(NAME AspectRatioPreview COMMAND test_aspect_ratio_preview)
-
-add_executable(test_duckstation_aspect_ratio_preview
-    tests/test_duckstation_aspect_ratio_preview.cpp
-    src/ui/settings/duckstation/widgets/duckstation_aspect_ratio_preview.cpp
-)
-set_target_properties(test_duckstation_aspect_ratio_preview PROPERTIES AUTOMOC ON)
-target_include_directories(test_duckstation_aspect_ratio_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_duckstation_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
-add_test(NAME DuckStationAspectRatioPreview COMMAND test_duckstation_aspect_ratio_preview)
 
 add_executable(test_osd_preview
     tests/test_osd_preview.cpp

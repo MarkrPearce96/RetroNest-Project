@@ -110,9 +110,8 @@ void GenericSettingsPage::buildUi() {
                            kRootContentMargin, kRootContentMarginV);
   root->setSpacing(kRootSpacing);
 
-  // Back button (matches existing pages — see
-  // duckstation_console_page.cpp:76-81). NoFocus so Tab/arrows can't sink focus
-  // onto it — popPage is reachable via Esc/B-button at the dialog level.
+  // Back button — NoFocus so Tab/arrows can't sink focus onto it
+  // (popPage is reachable via Esc/B-button at the dialog level).
   auto *back = new QPushButton("← Back", content);
   back->setFocusPolicy(Qt::NoFocus);
   back->setStyleSheet(
@@ -125,7 +124,7 @@ void GenericSettingsPage::buildUi() {
 
   // Sub-tab handling: if there's more than one subcategory, render a
   // SettingsGraphicsSubTabBar at the top + a QStackedWidget that swaps
-  // on tab change. Mirrors duckstation_graphics_page.cpp:40-47.
+  // on tab change.
   if (m_subcategories.size() > 1) {
     m_subTabBar = new SettingsGraphicsSubTabBar(content);
     // NoFocus — the bar is driven by Tab/Shift-Tab in eventFilter, not
@@ -673,9 +672,8 @@ bool GenericSettingsPage::eventFilter(QObject *obj, QEvent *e) {
   if (!current || !isAncestorOf(current))
     return QWidget::eventFilter(obj, e);
 
-  // Tab / Shift+Tab cycles through sub-tabs when present. Mirrors
-  // DuckStationGraphicsPage::eventFilter:106-117 (L1/R1 on a controller
-  // is mapped to Tab/Backtab by the global input layer).
+  // Tab / Shift+Tab cycles through sub-tabs when present (L1/R1 on a
+  // controller is mapped to Tab/Backtab by the global input layer).
   if ((k == Qt::Key_Tab || k == Qt::Key_Backtab) && m_subTabBar) {
     const int count = m_subTabBar->tabCount();
     if (count >= 2) {
@@ -830,8 +828,7 @@ SettingsCard *GenericSettingsPage::findNextCardSpatial(SettingsCard *current,
 void GenericSettingsPage::focusFirstSettingOnCurrentSubTab() {
   // Search inside the visible sub-stack page when present, otherwise the
   // whole page. First focusable SettingsCard wins so spatial-nav has a
-  // starting point. Mirrors
-  // DuckStationGraphicsPage::focusFirstSettingOnCurrentTab.
+  // starting point.
   QWidget *searchRoot = m_subStack ? m_subStack->currentWidget() : this;
   if (!searchRoot)
     return;
