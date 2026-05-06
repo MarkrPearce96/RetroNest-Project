@@ -1,6 +1,7 @@
 #include "generic_settings_page.h"
 #include "adapters/emulator_adapter.h"
 #include "core/bitmask_helpers.h"
+#include "core/libretro/options_store.h"
 #include "core/setting_dependency.h"
 #include "emulator_settings_dialog_base.h"
 #include "settings_page_builder.h"
@@ -33,6 +34,38 @@
 #include <limits>
 
 namespace {
+// ─── Storage dispatch helpers ─────────────────────────────────────────────
+// Read a SettingDef's current value from whichever backend owns it.
+// Falls back to AppController (INI path) for Storage::Ini and for
+// Storage::LibretroOption when no OptionsStore is available (null adapter
+// or adapter that returns nullptr — i.e. all existing non-libretro adapters).
+static QString readSetting(const SettingDef &def, EmulatorAdapter *adapter,
+                           const std::function<QString(const QString &,
+                                                       const QString &)> &iniRead) {
+    if (def.storage == SettingDef::Storage::LibretroOption) {
+        if (auto *store = adapter ? adapter->libretroOptionsStore() : nullptr)
+            return store->get(def.key);
+        return def.defaultValue;
+    }
+    return iniRead(def.section, def.key);
+}
+
+// Write a SettingDef's new value to whichever backend owns it.
+// Falls back silently for Storage::LibretroOption when no OptionsStore is
+// available — same "inert for non-libretro adapters" contract as readSetting.
+static void writeSetting(const SettingDef &def, EmulatorAdapter *adapter,
+                         const QString &value,
+                         const std::function<void(const QString &,
+                                                  const QString &,
+                                                  const QString &)> &iniWrite) {
+    if (def.storage == SettingDef::Storage::LibretroOption) {
+        if (auto *store = adapter ? adapter->libretroOptionsStore() : nullptr)
+            store->set(def.key, value);
+        return;
+    }
+    iniWrite(def.section, def.key, value);
+}
+
 // ─── Layout chrome (shared across buildUi and buildSubcategory) ───
 // Centralized so a designer tweaking spacing in one place doesn't
 // silently desync the math elsewhere.
@@ -569,13 +602,13 @@ void GenericSettingsPage::loadValues() {
     const SettingDef &d = combo->settingDef();
     const QString cur = d.loadTransform
         ? d.loadTransform(readKey)
-        : app->settingValue(emuId, d.section, d.key);
+        : readSetting(d, m_adapter, readKey);
     const QSignalBlocker blocker(combo);
     combo->setValue(cur.isEmpty() ? d.defaultValue : cur);
   }
   for (auto *toggle : findChildren<SettingsToggleRow *>()) {
     const SettingDef &d = toggle->settingDef();
-    const QString cur = app->settingValue(emuId, d.section, d.key);
+    const QString cur = readSetting(d, m_adapter, readKey);
     const QString v = cur.isEmpty() ? d.defaultValue : cur;
     bool stored;
     if (d.bitmask != 0) {
@@ -594,7 +627,7 @@ void GenericSettingsPage::loadValues() {
     // display MB but Dolphin stores bytes via a 1-MiB multiplier).
     const QString cur = d.loadTransform
         ? d.loadTransform(readKey)
-        : app->settingValue(emuId, d.section, d.key);
+        : readSetting(d, m_adapter, readKey);
     const QString v = cur.isEmpty() ? d.defaultValue : cur;
     const QSignalBlocker blocker(slider);
     slider->setValue(v.toInt());
@@ -613,15 +646,19 @@ void GenericSettingsPage::saveValue(const QString &section, const QString &key,
     app->saveSettings(emuId, m);
   };
 
-  bool transformed = false;
+  bool dispatched = false;
   for (const auto &d : m_schema) {
-    if (d.section == section && d.key == key && d.saveTransform) {
+    if (d.section != section || d.key != key)
+      continue;
+    if (d.saveTransform) {
       d.saveTransform(value, defaultSave);
-      transformed = true;
-      break;
+    } else {
+      writeSetting(d, m_adapter, value, defaultSave);
     }
+    dispatched = true;
+    break;
   }
-  if (!transformed)
+  if (!dispatched)
     defaultSave(section, key, value);
 
   // A toggle change may flip a dependent slider's active state.
@@ -943,7 +980,10 @@ void GenericSettingsPage::wirePreviewBinding(const PreviewSpec &spec,
     for (const auto &d : m_schema) {
       if (d.key != key || d.bitmask != bitmask)
         continue;
-      const QString cur = app->settingValue(emuId, d.section, d.key);
+      auto iniRead = [app, emuId](const QString &sec, const QString &k) {
+        return app->settingValue(emuId, sec, k);
+      };
+      const QString cur = readSetting(d, m_adapter, iniRead);
       const QString val = cur.isEmpty() ? d.defaultValue : cur;
       seed(propName, val, d.type, bitmask);
       break;

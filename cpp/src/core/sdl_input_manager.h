@@ -4,10 +4,13 @@
 #include <QTimer>
 #include <QVariantList>
 #include <QMap>
+#include <QHash>
 #include <QWindow>
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <SDL2/SDL.h>
+
+#include "core/libretro/input_router.h"
 
 /**
  * SdlInputManager — polls SDL2 for gamepad/keyboard events.
@@ -58,6 +61,15 @@ public:
     /** Convert SDL button/axis name to canonical name (e.g. "a" -> "A", "dpup" -> "DPadUp") */
     static QString canonicalName(const char* sdlName);
 
+    /**
+     * Switch to emulation mode: SDL gamepad button events write into the
+     * InputRouter instead of being injected as Qt key events. The in-game
+     * menu hotkey (Select+Circle) still fires inGameMenuRequested().
+     * Call clearEmulationMode() when the libretro game ends.
+     */
+    void setEmulationMode(InputRouter* target);
+    void clearEmulationMode();
+
 signals:
     void capturingChanged();
     void controllersChanged();
@@ -99,4 +111,9 @@ private:
     QMap<SDL_JoystickID, int> m_deviceIndices;
     ControllerType m_activeControllerType = Xbox;
     QMap<SDL_JoystickID, ControllerType> m_controllerTypes;
+
+    // Emulation mode: non-null while a libretro game is running
+    InputRouter* m_emulationTarget = nullptr;
+    // Hardcoded SDL button → RetroPad slot mapping (set once in setEmulationMode)
+    QHash<SDL_GameControllerButton, RetroPadSlot> m_emulationMap;
 };

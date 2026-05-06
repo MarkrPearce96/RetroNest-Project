@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Required to dlopen libretro core dylibs downloaded from the buildbot.
+         They are not signed by us. Hardened Runtime would otherwise refuse
+         them. Do not remove without replacing with a notarize-on-download
+         pipeline. -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

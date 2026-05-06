@@ -2,6 +2,7 @@
 
 #include "core/manifest_loader.h"
 #include "core/database.h"
+#include "core/game_session.h"
 #include "services/game_service.h"
 #include "services/scraper_service.h"
 #include "services/emulator_service.h"
@@ -23,11 +24,18 @@ class AppController : public QObject {
     Q_PROPERTY(int currentTab READ currentTab WRITE setCurrentTab NOTIFY currentTabChanged)
     Q_PROPERTY(int settingsCategory READ settingsCategory WRITE setSettingsCategory NOTIFY settingsCategoryChanged)
     Q_PROPERTY(bool gameRunning READ isGameRunning NOTIFY gameRunningChanged)
+    Q_PROPERTY(GameSession* gameSession READ gameSession CONSTANT)
 
 public:
     AppController(ManifestLoader* loader, Database* db, QObject* parent = nullptr);
-    void setSdlInputManager(SdlInputManager* mgr) { m_inputManager = mgr; }
+    void setSdlInputManager(SdlInputManager* mgr) {
+        m_inputManager = mgr;
+        m_gameService.session()->setSdlInputManager(mgr);
+    }
     SdlInputManager* sdlInputManager() const { return m_inputManager; }
+
+    // Game session (for QML binding to frameReady signal)
+    GameSession* gameSession();
 
     // App state
     QString statusMessage() const;
@@ -182,6 +190,8 @@ signals:
     void gamesChanged();
     void gameRunningChanged();
     void gameStarted();
+    /** Emitted instead of gameStarted() when the backend is libretro (in-process). */
+    void gameStartedLibretro();
     void gameFinished(int exitCode, bool crashed);
     void globalHotkeyPressed();
     void emulatorInstalled(const QString& emuId);

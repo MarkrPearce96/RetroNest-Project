@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(RetroNest LANGUAGES CXX OBJCXX)
+project(RetroNest LANGUAGES C CXX OBJCXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,6 +19,24 @@ FetchContent_Declare(
 )
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(libchdr)
+
+FetchContent_Declare(
+    rcheevos
+    GIT_REPOSITORY https://github.com/RetroAchievements/rcheevos.git
+    GIT_TAG        v12.3.0
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(rcheevos)
+# rcheevos has no CMakeLists.txt — build a static lib manually from its sources.
+file(GLOB RCHEEVOS_SOURCES
+    ${rcheevos_SOURCE_DIR}/src/rcheevos/*.c
+    ${rcheevos_SOURCE_DIR}/src/rapi/*.c
+    ${rcheevos_SOURCE_DIR}/src/rhash/*.c
+    ${rcheevos_SOURCE_DIR}/src/*.c)
+add_library(rcheevos_static STATIC ${RCHEEVOS_SOURCES})
+# PUBLIC so consumers (only ${PROJECT_NAME}) get rcheevos headers automatically (e.g. rcheevos_runtime.cpp).
+target_include_directories(rcheevos_static PUBLIC ${rcheevos_SOURCE_DIR}/include)
+target_include_directories(rcheevos_static PRIVATE ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
 
 # ScreenScraper developer credentials (build-time, not in repo)
 set(SCREENSCRAPER_DEV_ID "" CACHE STRING "ScreenScraper dev ID")
@@ -47,6 +65,17 @@ set(SOURCES
     src/services/ra_credentials.cpp
     src/core/ra_client.cpp
     src/core/iso9660_reader.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/retro_log.cpp
+    src/core/libretro/rcheevos_runtime.cpp
+    src/adapters/libretro/libretro_adapter.cpp
+    src/adapters/libretro/mgba_libretro_adapter.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
     src/services/game_service.cpp
     src/services/scraper_service.cpp
     src/services/emulator_service.cpp
@@ -114,6 +143,15 @@ set(HEADERS
     src/adapters/duckstation_adapter.h
     src/adapters/ppsspp_adapter.h
     src/adapters/dolphin_adapter.h
+    src/adapters/libretro/libretro_adapter.h
+    src/adapters/libretro/mgba_libretro_adapter.h
+    src/core/libretro/core_loader.h
+    src/core/libretro/core_runtime.h
+    src/core/libretro/rcheevos_runtime.h
+    src/core/libretro/environment_callbacks.h
+    src/core/libretro/video_software.h
+    src/core/libretro/audio_sink.h
+    src/core/libretro/input_router.h
     src/core/sfo_parser.h
     src/core/ini_file.h
     src/core/scraper.h
@@ -225,6 +263,7 @@ qt_add_qml_module(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${SDL2_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -245,7 +284,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Concurrent
     Qt6::Multimedia
     ${SDL2_LIBRARIES}
+    ${CMAKE_DL_LIBS}
     chdr-static
+    rcheevos_static
     "-framework AppKit"
     "-framework Carbon"
 )
@@ -293,7 +334,11 @@ qt_add_qml_module(setupwizard_backing
 
 # ── AppUI QML module ──
 qt_add_library(appui_backing STATIC)
-target_link_libraries(appui_backing PRIVATE Qt6::Qml Qt6::Quick)
+target_include_directories(appui_backing PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/libretro
+)
+target_link_libraries(appui_backing PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2)
 
 qt_add_qml_module(appui_backing
     URI AppUI
@@ -333,7 +378,11 @@ qt_add_qml_module(appui_backing
         qml/AppUI/AchievementsPage.qml
         qml/AppUI/AllGamesPage.qml
         qml/AppUI/RecentlyPlayedPage.qml
+        qml/AppUI/EmulationView.qml
         qml/AppUI/EmulatorLogos.js
+    SOURCES
+        src/ui/libretro/libretro_video_item.h
+        src/ui/libretro/libretro_video_item.cpp
     RESOURCES
         qml/AppUI/images/pcsx2_logo.png
         qml/AppUI/images/duckstation_logo.png
@@ -419,11 +468,27 @@ add_executable(test_rom_scanner
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
     src/adapters/dolphin_adapter.cpp
+    src/adapters/libretro/libretro_adapter.cpp
+    src/adapters/libretro/mgba_libretro_adapter.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/rcheevos_runtime.cpp
+    src/core/libretro/retro_log.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
 )
-target_include_directories(test_rom_scanner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_rom_scanner PRIVATE Qt6::Core Qt6::Network Qt6::Sql Qt6::Test chdr-static)
+set_target_properties(test_rom_scanner PROPERTIES AUTOMOC ON)
+target_include_directories(test_rom_scanner PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS}
+)
+target_link_libraries(test_rom_scanner PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
 add_test(NAME RomScanner COMMAND test_rom_scanner)
 
 add_executable(test_iso9660_reader
@@ -457,6 +522,28 @@ set_target_properties(test_setting_dependency PROPERTIES AUTOMOC ON)
 target_include_directories(test_setting_dependency PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_setting_dependency PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME SettingDependency COMMAND test_setting_dependency)
+
+add_executable(test_setting_def_storage tests/test_setting_def_storage.cpp)
+target_include_directories(test_setting_def_storage PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_setting_def_storage PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME SettingDefStorage COMMAND test_setting_def_storage)
+
+add_executable(test_manifest_libretro_fields tests/test_manifest_libretro_fields.cpp
+    src/core/manifest_loader.cpp)
+target_include_directories(test_manifest_libretro_fields PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_manifest_libretro_fields PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME ManifestLibretroFields COMMAND test_manifest_libretro_fields)
+
+add_executable(test_core_loader
+    tests/test_core_loader.cpp
+    src/core/libretro/core_loader.cpp)
+set_target_properties(test_core_loader PROPERTIES AUTOMOC ON)
+target_include_directories(test_core_loader PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+target_link_libraries(test_core_loader PRIVATE Qt6::Core Qt6::Test ${CMAKE_DL_LIBS})
+add_dependencies(test_core_loader fake_libretro_core)
+add_test(NAME CoreLoader COMMAND test_core_loader)
 
 add_executable(test_ppsspp_schema
     tests/test_ppsspp_schema.cpp
@@ -535,6 +622,17 @@ add_executable(test_quick_settings_file_field
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
     src/adapters/dolphin_adapter.cpp
+    src/adapters/libretro/libretro_adapter.cpp
+    src/adapters/libretro/mgba_libretro_adapter.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/rcheevos_runtime.cpp
+    src/core/libretro/retro_log.cpp
     src/core/ini_file.cpp
     src/core/iso9660_reader.cpp
     src/core/sfo_parser.cpp
@@ -543,8 +641,12 @@ add_executable(test_quick_settings_file_field
     src/core/manifest_loader.cpp
 )
 set_target_properties(test_quick_settings_file_field PROPERTIES AUTOMOC ON)
-target_include_directories(test_quick_settings_file_field PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Network Qt6::Sql Qt6::Test chdr-static)
+target_include_directories(test_quick_settings_file_field PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS}
+)
+target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
 add_test(NAME QuickSettingsFileField COMMAND test_quick_settings_file_field)
 
 add_executable(test_settings_toggle
@@ -609,3 +711,82 @@ set_target_properties(test_setting_def_ini_routing PROPERTIES AUTOMOC ON)
 target_include_directories(test_setting_def_ini_routing PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_setting_def_ini_routing PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME SettingDefIniRouting COMMAND test_setting_def_ini_routing)
+
+add_executable(test_video_software
+    tests/test_video_software.cpp
+    src/core/libretro/video_software.cpp)
+set_target_properties(test_video_software PROPERTIES AUTOMOC ON)
+target_include_directories(test_video_software PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+target_link_libraries(test_video_software PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME VideoSoftware COMMAND test_video_software)
+
+add_executable(test_audio_sink
+    tests/test_audio_sink.cpp
+    src/core/libretro/audio_sink.cpp)
+set_target_properties(test_audio_sink PROPERTIES AUTOMOC ON)
+target_include_directories(test_audio_sink PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS})
+target_link_libraries(test_audio_sink PRIVATE Qt6::Core Qt6::Test ${SDL2_LIBRARIES})
+add_test(NAME AudioSink COMMAND test_audio_sink)
+
+add_executable(test_input_router
+    tests/test_input_router.cpp
+    src/core/libretro/input_router.cpp)
+set_target_properties(test_input_router PROPERTIES AUTOMOC ON)
+target_include_directories(test_input_router PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+target_link_libraries(test_input_router PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME InputRouter COMMAND test_input_router)
+
+add_executable(test_options_store
+    tests/test_options_store.cpp
+    src/core/libretro/options_store.cpp)
+set_target_properties(test_options_store PROPERTIES AUTOMOC ON)
+target_include_directories(test_options_store PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_options_store PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME OptionsStore COMMAND test_options_store)
+
+add_executable(test_environment_callbacks
+    tests/test_environment_callbacks.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/retro_log.cpp)
+set_target_properties(test_environment_callbacks PROPERTIES AUTOMOC ON)
+target_include_directories(test_environment_callbacks PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+target_link_libraries(test_environment_callbacks PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME EnvironmentCallbacks COMMAND test_environment_callbacks)
+
+add_executable(test_core_runtime
+    tests/test_core_runtime.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/rcheevos_runtime.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
+    src/core/libretro/retro_log.cpp)
+set_target_properties(test_core_runtime PROPERTIES AUTOMOC ON)
+target_include_directories(test_core_runtime PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS})
+target_link_libraries(test_core_runtime PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES} rcheevos_static)
+add_dependencies(test_core_runtime fake_libretro_core)
+add_test(NAME CoreRuntime COMMAND test_core_runtime)
+
+add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
+set_target_properties(fake_libretro_core PROPERTIES
+    PREFIX "" OUTPUT_NAME "fake_libretro_core"
+    SUFFIX ".dylib")
+target_include_directories(fake_libretro_core PRIVATE
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)

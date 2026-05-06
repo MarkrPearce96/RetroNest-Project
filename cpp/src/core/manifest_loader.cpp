@@ -65,6 +65,9 @@ bool ManifestLoader::loadAll(const QString& manifestsDir) {
         m.install_folder = obj["install_folder"].toString();
         m.rom_extensions = jsonArrayToStringList(obj["rom_extensions"].toArray());
         m.launch_args = jsonArrayToStringList(obj["launch_args"].toArray());
+        m.backend = obj.value("backend").toString("process");
+        m.core_dylib = obj.value("core_dylib").toString();
+        m.core_buildbot_path = obj.value("core_buildbot_path").toString();
 
         // Default install_folder to id if not specified
         if (m.install_folder.isEmpty()) {

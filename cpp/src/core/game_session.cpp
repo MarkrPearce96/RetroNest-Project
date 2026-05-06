@@ -1,6 +1,10 @@
 #include "game_session.h"
 #include "paths.h"
 #include "adapters/emulator_adapter.h"
+#include "adapters/libretro/libretro_adapter.h"
+#include "core/libretro/rcheevos_runtime.h"
+#include "core/sdl_input_manager.h"
+#include "services/ra_service.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -21,17 +25,40 @@ bool GameSession::start(const EmulatorManifest& manifest,
                         EmulatorAdapter* adapter,
                         const QString& romPath,
                         const QStringList& extraArgs) {
-    if (m_process && m_process->state() != QProcess::NotRunning) {
-        qWarning() << "[GameSession] Already running, cannot start another";
+    if (isRunning()) {
+        qWarning() << "[GameSession] Already running";
         return false;
     }
-
-    // Verify ROM exists
     if (!QFileInfo::exists(romPath)) {
         emit errorOccurred("ROM file not found: " + romPath);
         return false;
     }
 
+    const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
+    const QString biosPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
+    const QString dataPath = QFileInfo(Paths::emulatorDataDir(manifest.id, systemId)).absoluteFilePath();
+    QDir().mkpath(dataPath);
+
+    if (!adapter->ensureConfig(manifest, biosPath, dataPath))
+        qWarning() << "[GameSession] ensureConfig failed for" << manifest.name;
+
+    m_adapter = adapter;
+    m_manifest = &manifest;
+    m_emuId = manifest.id;
+    m_currentRomPath = romPath;
+
+    if (manifest.backend == "libretro") {
+        m_backend = Backend::Libretro;
+        return startLibretro(manifest, adapter, romPath);
+    }
+    m_backend = Backend::Process;
+    return startProcess(manifest, adapter, romPath, extraArgs);
+}
+
+bool GameSession::startProcess(const EmulatorManifest& manifest,
+                               EmulatorAdapter* adapter,
+                               const QString& romPath,
+                               const QStringList& extraArgs) {
     // Resolve executable
     const QString installPath = Paths::emulatorsDir(manifest.install_folder);
     const QString execPath = QFileInfo(adapter->resolveExecutable(manifest, installPath)).absoluteFilePath();
@@ -39,16 +66,6 @@ bool GameSession::start(const EmulatorManifest& manifest,
     if (!QFileInfo::exists(execPath)) {
         emit errorOccurred(manifest.name + " is not installed. Executable not found: " + execPath);
         return false;
-    }
-
-    // Ensure config
-    const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
-    const QString biosPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
-    const QString dataPath = QFileInfo(Paths::emulatorDataDir(manifest.id, systemId)).absoluteFilePath();
-    QDir().mkpath(dataPath);
-
-    if (!adapter->ensureConfig(manifest, biosPath, dataPath)) {
-        qWarning() << "[GameSession] Config creation/patching failed for" << manifest.name;
     }
 
     // Build arguments
@@ -78,11 +95,6 @@ bool GameSession::start(const EmulatorManifest& manifest,
         cwd = QFileInfo(execPath).absolutePath();
     }
 
-    // Store state
-    m_adapter = adapter;
-    m_manifest = &manifest;
-    m_emuId = manifest.id;
-
     // Create and configure process
     delete m_process;
     m_process = new QProcess(this);
@@ -109,21 +121,112 @@ bool GameSession::start(const EmulatorManifest& manifest,
     return true;
 }
 
+bool GameSession::startLibretro(const EmulatorManifest& manifest,
+                                EmulatorAdapter* adapter,
+                                const QString& romPath) {
+    auto* lr = dynamic_cast<LibretroAdapter*>(adapter);
+    if (!lr) { emit errorOccurred("Adapter is not LibretroAdapter"); return false; }
+    m_libretroAdapter = lr;
+    lr->prepareRuntime();
+    auto* rt = lr->runtime();
+
+    const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
+
+    CoreRuntime::StartConfig cfg;
+    cfg.corePath = lr->resolveExecutable(manifest, Paths::emulatorsDir(manifest.install_folder));
+    cfg.romPath = romPath;
+    cfg.systemDir = Paths::biosDir();
+    cfg.saveDir = Paths::emulatorDataDir(manifest.id, systemId);
+    cfg.optionsJsonPath = Paths::emulatorsDir("libretro") + "/" + lr->coreId() + "/options.json";
+
+    // Fix 3: Populate RA fields
+    cfg.raConsoleId = lr->raConsoleId(systemId);
+    if (m_raService) {
+        cfg.raToken   = m_raService->credentials().apiKey;
+        cfg.raHardcore = m_raService->hardcoreMode();
+    }
+
+    // Fix 4: Populate resume state path
+    const QString serial = lr->extractSerial(romPath);
+    if (!serial.isEmpty())
+        cfg.resumeStatePath = lr->findResumeFile(serial);
+
+    connect(rt, &CoreRuntime::started, this, [this] {
+        emit runningChanged(); emit started();
+    }, Qt::UniqueConnection);
+    connect(rt, &CoreRuntime::finished, this, [this](bool crashed) {
+        // Fix 1: restore navigation mode when the libretro game ends
+        if (m_sdlInputManager)
+            m_sdlInputManager->clearEmulationMode();
+        m_adapter = nullptr; m_manifest = nullptr;
+        emit runningChanged();
+        emit finished(crashed ? -1 : 0, crashed);
+        if (m_libretroAdapter) m_libretroAdapter->releaseRuntime();
+        m_libretroAdapter = nullptr;
+    }, Qt::UniqueConnection);
+    connect(rt, &CoreRuntime::errorOccurred, this, [this](const QString& m) {
+        emit errorOccurred(m);
+    }, Qt::UniqueConnection);
+    connect(rt, &CoreRuntime::frameReady, this, &GameSession::frameReady,
+            Qt::UniqueConnection);
+
+    // Fix 5: Forward achievement unlocks to RAService
+    if (m_raService) {
+        connect(&rt->rcheevos(), &RcheevosRuntime::achievementUnlocked,
+                m_raService, &RAService::notifyAchievementUnlocked,
+                Qt::QueuedConnection);
+    }
+
+    if (!rt->start(cfg))
+        return false;
+
+    // Fix 1: Switch SDL input into emulation mode so button events feed the InputRouter
+    if (m_sdlInputManager)
+        m_sdlInputManager->setEmulationMode(&rt->input());
+
+    return true;
+}
+
 void GameSession::kill() {
-    if (m_process && m_process->state() != QProcess::NotRunning) {
+    if (m_backend == Backend::Libretro && m_libretroAdapter && m_libretroAdapter->runtime())
+        m_libretroAdapter->runtime()->stop();
+    else if (m_process && m_process->state() != QProcess::NotRunning) {
         qInfo() << "[GameSession] Killing emulator process";
         m_process->kill();
     }
 }
 
 void GameSession::terminate() {
-    if (m_process && m_process->state() != QProcess::NotRunning) {
+    if (m_backend == Backend::Libretro && m_libretroAdapter && m_libretroAdapter->runtime()) {
+        // Save-on-quit: pause the runtime, write resume file, then stop
+        const auto* mf = m_manifest;
+        if (mf) {
+            const QString systemId = Paths::systemIdFor(mf->id, mf->systems);
+            // Use the serial as the resume filename so findResumeFile can match
+            // by serial without a DB lookup.  Fall back to the ROM base name
+            // only when serial extraction fails (e.g. unsupported format).
+            const QString serial = m_libretroAdapter->extractSerial(m_currentRomPath);
+            const QString resumeName = serial.isEmpty()
+                ? QFileInfo(m_currentRomPath).completeBaseName()
+                : serial;
+            const QString resumePath = Paths::emulatorDataDir(mf->id, systemId)
+                + "/savestates/" + resumeName + ".resume";
+            QDir().mkpath(QFileInfo(resumePath).absolutePath());
+            // Schedule the save onto the worker thread (race-free: the worker
+            // will flush the pending path in its post-loop teardown, before
+            // retro_unload_game, after stop() unblocks the pause condvar).
+            m_libretroAdapter->runtime()->requestSaveState(resumePath);
+        }
+        m_libretroAdapter->runtime()->stop();
+    } else if (m_process && m_process->state() != QProcess::NotRunning) {
         qInfo() << "[GameSession] Terminating emulator process (SIGTERM)";
         m_process->terminate();
     }
 }
 
 bool GameSession::isRunning() const {
+    if (m_backend == Backend::Libretro)
+        return m_libretroAdapter && m_libretroAdapter->runtime();
     return m_process && m_process->state() != QProcess::NotRunning;
 }
 

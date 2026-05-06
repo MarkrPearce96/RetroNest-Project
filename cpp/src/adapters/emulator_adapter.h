@@ -181,6 +181,14 @@ public:
     virtual QString configFilePath() const { return {}; }
 
     /**
+     * Return the in-process libretro options store for this adapter, or nullptr
+     * if this adapter is not libretro-backed. Overridden by LibretroAdapter.
+     * Used by GenericSettingsPage to read/write SettingDefs whose storage is
+     * SettingDef::Storage::LibretroOption.
+     */
+    virtual class OptionsStore* libretroOptionsStore() { return nullptr; }
+
+    /**
      * Return the path to the config file where controller bindings are stored.
      * Most emulators store bindings in the main config file, so this defaults
      * to configFilePath(). Override for emulators that use a separate file

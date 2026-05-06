@@ -43,6 +43,13 @@ public:
     /** Returns true if this is the first RA-enabled launch for this emulator. Marks it as prompted. */
     bool needsEmulatorLoginPrompt(const QString& emuId);
 
+public slots:
+    /** Called by RcheevosRuntime via queued connection when an in-process
+     *  achievement unlocks. Forwards to the achievementUnlocked signal
+     *  that the toast UI listens to. */
+    void notifyAchievementUnlocked(const QString& id, const QString& title,
+                                   const QString& description);
+
 signals:
     void loginCompleted(bool success, const QString& message);
     void signedOut();
@@ -50,6 +57,8 @@ signals:
     void userGamesReady(const QVariantList& games);
     void gameDetailReady(int raGameId, const QVariantMap& detail);
     void gameIdLookupReady(const QString& title, int raGameId);
+    void achievementUnlocked(const QString& id, const QString& title,
+                             const QString& description);
 
 private:
     Database* m_db;

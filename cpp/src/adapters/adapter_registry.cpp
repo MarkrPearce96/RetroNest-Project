@@ -3,6 +3,7 @@
 #include "duckstation_adapter.h"
 #include "ppsspp_adapter.h"
 #include "dolphin_adapter.h"
+#include "libretro/mgba_libretro_adapter.h"
 
 #include <QDebug>
 
@@ -16,6 +17,7 @@ void AdapterRegistry::registerBuiltinAdapters() {
     registerAdapter("duckstation", std::make_unique<DuckStationAdapter>());
     registerAdapter("ppsspp", std::make_unique<PPSSPPAdapter>());
     registerAdapter("dolphin", std::make_unique<DolphinAdapter>());
+    registerAdapter("mgba", std::make_unique<MgbaLibretroAdapter>());
 }
 
 void AdapterRegistry::registerAdapter(const QString& id, std::unique_ptr<EmulatorAdapter> adapter) {

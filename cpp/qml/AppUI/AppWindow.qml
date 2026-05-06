@@ -558,12 +558,28 @@ ApplicationWindow {
         }
     }
 
+    // Libretro game start — push EmulationView on top of the theme
+    Connections {
+        target: app
+        function onGameStartedLibretro() {
+            var view = mainStack.push("EmulationView.qml")
+            // Bind the session so frameReady flows through
+            view.session = app.gameSession
+            // In-game menu toggle (keyboard Esc path inside the view)
+            view.inGameMenuRequested.connect(window.toggleInGameMenu)
+        }
+    }
+
     // Game lifecycle
     Connections {
         target: themeContext
         function onGameFinished(exitCode, crashed) {
             inGameMenu.close();
             resumeStateDialog.close();
+            // If an EmulationView was pushed (libretro path), pop it now
+            if (mainStack.depth > 1 && mainStack.currentItem
+                    && mainStack.currentItem.isEmulationView)
+                mainStack.pop()
             // Restore focus to the theme page so controller/keyboard nav works
             if (mainStack.currentItem)
                 mainStack.currentItem.forceActiveFocus();
