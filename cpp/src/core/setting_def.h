@@ -19,13 +19,12 @@ struct SettingDef {
      *    libretro option key (e.g. "mgba_skip_bios").
      */
     enum class Storage { Ini, LibretroOption };
-    Storage storage = Storage::Ini;
 
     QString category;    // UI tab/group (e.g. "Graphics", "Audio")
     QString subcategory; // Sub-tab within category (e.g. "Display", "Rendering")
     QString group;       // Group box title (empty = no group box)
-    QString section;     // INI section (e.g. "EmuCore/GS")
-    QString key;         // INI key (e.g. "upscale_multiplier")
+    QString section;     // INI section (e.g. "EmuCore/GS"); unused when storage == LibretroOption
+    QString key;         // INI key (e.g. "upscale_multiplier"), or libretro option key when storage == LibretroOption
     QString label;       // Display label
     QString tooltip;     // Optional tooltip
     Type type = String;
@@ -113,4 +112,9 @@ struct SettingDef {
     // Used by emulators that span multiple config files (e.g. Dolphin's
     // GFX.ini for graphics keys vs Dolphin.ini for everything else).
     QString iniFilePath;
+
+    // Storage backend: Ini (default) reads/writes via the emulator's INI file;
+    // LibretroOption reads/writes via the per-core libretro options.json sidecar.
+    // Placed last so existing positional aggregate initialisers are unaffected.
+    Storage storage = Storage::Ini;
 };
