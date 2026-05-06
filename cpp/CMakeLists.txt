@@ -693,6 +693,26 @@ target_include_directories(test_environment_callbacks PRIVATE
 target_link_libraries(test_environment_callbacks PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME EnvironmentCallbacks COMMAND test_environment_callbacks)
 
+add_executable(test_core_runtime
+    tests/test_core_runtime.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
+    src/core/libretro/retro_log.cpp)
+set_target_properties(test_core_runtime PROPERTIES AUTOMOC ON)
+target_include_directories(test_core_runtime PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS})
+target_link_libraries(test_core_runtime PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES})
+add_dependencies(test_core_runtime fake_libretro_core)
+add_test(NAME CoreRuntime COMMAND test_core_runtime)
+
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
 set_target_properties(fake_libretro_core PROPERTIES
     PREFIX "" OUTPUT_NAME "fake_libretro_core"
