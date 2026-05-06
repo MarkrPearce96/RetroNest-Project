@@ -59,7 +59,81 @@ private slots:
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
         QCOMPARE(categories,
-                 QSet<QString>({"Graphics", "Audio", "Networking", "System"}));
+                 QSet<QString>({"Recommended", "Graphics", "Audio",
+                                "Networking", "System"}));
+    }
+
+    // ──────── Recommended ────────
+
+    void testRecommendedGroupOrder() {
+        QCOMPARE(groupsIn("Recommended"),
+                 QStringList({
+                     "Performance", "Visual Quality", "Frame Pacing",
+                     "Audio", "Convenience",
+                 }));
+    }
+
+    void testRecommendedPerformanceFullCatalog() {
+        QCOMPARE(keysIn("Recommended", "Performance"),
+                 QStringList({
+                     "GraphicsBackend", "SkipBufferEffects",
+                     "AutoFrameSkip", "InflightFrames",
+                 }));
+    }
+
+    void testRecommendedVisualQualityFullCatalog() {
+        // Synthetic AspectRatio combo is the FIRST entry — it must be the
+        // primary preview-bound key for the AspectRatioPreview layout.
+        QCOMPARE(keysIn("Recommended", "Visual Quality"),
+                 QStringList({
+                     "DisplayStretch", "InternalResolution",
+                     "MultiSampleLevel", "TextureFiltering",
+                     "AnisotropyLevel",
+                 }));
+    }
+
+    void testRecommendedFramePacingFullCatalog() {
+        QCOMPARE(keysIn("Recommended", "Frame Pacing"),
+                 QStringList({"VerticalSync", "FrameSkip", "FrameRate"}));
+    }
+
+    void testRecommendedAudioFullCatalog() {
+        QCOMPARE(keysIn("Recommended", "Audio"),
+                 QStringList({"Enable", "AudioSyncMode", "GameVolume"}));
+    }
+
+    void testRecommendedConvenienceFullCatalog() {
+        QCOMPARE(keysIn("Recommended", "Convenience"),
+                 QStringList({"AutoLoadSaveState", "EnableCheats"}));
+    }
+
+    void testRecommendedAspectRatioSynthetic() {
+        // The synthetic AspectRatio combo writes to bDisplayStretch in
+        // [DisplayLayout.Landscape]. Verify the section/key are wired right
+        // and that load/save transforms are present.
+        const SettingDef* found = nullptr;
+        for (const auto& d : schema_) {
+            if (d.category == "Recommended" && d.key == "DisplayStretch") {
+                found = &d;
+                break;
+            }
+        }
+        QVERIFY(found != nullptr);
+        QCOMPARE(found->section, QString("DisplayLayout.Landscape"));
+        QCOMPARE(found->label, QString("Aspect Ratio"));
+        QCOMPARE(int(found->type), int(SettingDef::Combo));
+        QCOMPARE(found->options.size(), 4);  // Auto / 16:9 / 4:3 / Stretch
+        QVERIFY(found->saveTransform != nullptr);
+        QVERIFY(found->loadTransform != nullptr);
+    }
+
+    void testRecommendedPreviewSpec() {
+        PPSSPPAdapter adapter;
+        const PreviewSpec spec = adapter.previewSpec("Recommended", "");
+        QCOMPARE(spec.previewType, QString("aspect"));
+        QVERIFY(spec.keyToProperty.contains("DisplayStretch"));
+        QCOMPARE(spec.keyToProperty.value("DisplayStretch"),
+                 QString("aspectMode"));
     }
 
     void testNoSubcategoriesAnywhere() {
@@ -177,14 +251,18 @@ private slots:
     }
 
     void testRenderingResolutionGate() {
+        // Look up the Graphics-tab copy specifically — the Recommended-tab
+        // copy doesn't carry the dependsOn gate (gates only resolve within
+        // a category's slice, and the Recommended slice doesn't include
+        // SoftwareRenderer / SkipBufferEffects).
         for (const auto& d : schema_) {
-            if (d.key == "InternalResolution") {
+            if (d.category == "Graphics" && d.key == "InternalResolution") {
                 QCOMPARE(d.dependsOn,
                          QString("!SoftwareRenderer && !SkipBufferEffects"));
                 return;
             }
         }
-        QFAIL("InternalResolution not found in schema");
+        QFAIL("Graphics InternalResolution not found in schema");
     }
 
     void testLensFlareOcclusionExists() {

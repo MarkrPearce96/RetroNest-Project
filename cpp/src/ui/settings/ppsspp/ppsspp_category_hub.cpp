@@ -10,27 +10,37 @@ PpssppCategoryHub::PpssppCategoryHub(QWidget* parent)
     auto* grid = new QGridLayout();
     grid->setSpacing(14);
 
+    // Row 0: Recommended — full-width stretch card. Same pattern as the
+    // Dolphin hub: a curated VIEW of the most-tweaked settings, sitting at
+    // the top so a user looking for "the dozen settings that actually
+    // matter" can find them without hunting through every tab. Same INI
+    // keys as the full panes below — just collected for fast access.
+    grid->addWidget(makeCard(QStringLiteral("\U0001F4A1"), "Recommended",
+                             "Most-tweaked settings — performance, visuals, audio",
+                             countSettings("Recommended"), "Recommended"),
+                    0, 0, 1, 2);  // spans both columns
+
     // Mirrors PPSSPP's standalone GameSettingsScreen tabs (minus Controls,
     // Tools, VR — see ppsspp_adapter.cpp::settingsSchema for rationale).
-    // Row 0: Graphics · Audio
+    // Row 1: Graphics · Audio
     grid->addWidget(makeCard(QStringLiteral("\U0001F5BC"), "Graphics",
                              "Backend, resolution, frame pacing, textures, overlays",
                              countSettings("Graphics"), "Graphics"),
-                    0, 0);
+                    1, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F50A"), "Audio",
                              "Backend, latency, volume mix, UI sounds",
                              countSettings("Audio"), "Audio"),
-                    0, 1);
+                    1, 1);
 
-    // Row 1: Networking · System
+    // Row 2: Networking · System
     grid->addWidget(makeCard(QStringLiteral("\U0001F4F6"), "Networking",
                              "Wlan, ad hoc, infrastructure, UPnP, chat",
                              countSettings("Networking"), "Networking"),
-                    1, 0);
+                    2, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F527"), "System",
                              "Memory stick, save states, cheats, PSP settings",
                              countSettings("System"), "System"),
-                    1, 1);
+                    2, 1);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);

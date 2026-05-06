@@ -21,6 +21,8 @@ public:
                               const QString& installPath) override;
 
     QVector<SettingDef> settingsSchema() const override;
+    PreviewSpec previewSpec(const QString& category,
+                            const QString& subcategory) const override;
     QString configFilePath() const override;
     QString controllerBindingsConfigFilePath() const override;
     QString controllerBindingsSection(int port) const override;

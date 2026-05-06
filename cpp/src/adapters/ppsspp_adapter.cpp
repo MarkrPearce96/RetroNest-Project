@@ -58,6 +58,24 @@ QString PPSSPPAdapter::controllerSettingsSection(int /*port*/) const {
 }
 
 // ============================================================================
+// previewSpec — bind the synthetic AspectRatio combo on the Recommended
+// page to AspectRatioPreview's aspectMode property, the same shape Dolphin /
+// DuckStation use. PPSSPP only exposes the aspect-mode property — the other
+// crop / stretchY / integerScaling Q_PROPERTYs stay at their feature-absent
+// defaults, identical to Dolphin's behaviour.
+// ============================================================================
+
+PreviewSpec PPSSPPAdapter::previewSpec(const QString& category,
+                                       const QString& subcategory) const {
+    if (category == "Recommended" && subcategory.isEmpty()) {
+        return {"aspect", {
+            {"DisplayStretch", "aspectMode"},
+        }};
+    }
+    return {};
+}
+
+// ============================================================================
 // Settings schema
 // ============================================================================
 //
@@ -65,7 +83,13 @@ QString PPSSPPAdapter::controllerSettingsSection(int /*port*/) const {
 // tabs, same group order, same setting order, same labels, same gating chains.
 // Reference: references/ppsspp-master/UI/GameSettingsScreen.cpp.
 //
-// Top-level tabs:  Graphics · Audio · Networking · System
+// Top-level tabs:  Recommended · Graphics · Audio · Networking · System
+//
+// "Recommended" is a curated VIEW of the most-tweaked settings, prepended at
+// the top of the dialog — same pattern as Dolphin / PCSX2 / DuckStation. Its
+// entries bind the same INI keys as the equivalent rows in Graphics / Audio /
+// System, so editing through either path produces identical INI output. Not
+// part of upstream PPSSPP's UI.
 //
 // Deliberately NOT exposed (with rationale):
 // - Controls tab: handled by separate controller_mapping_page / hotkey UI.
@@ -99,6 +123,154 @@ QString PPSSPPAdapter::controllerSettingsSection(int /*port*/) const {
 
 QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     QVector<SettingDef> s;
+
+    // ────────────────────────────────────────────────────────────────────────
+    // RECOMMENDED — curated short list of the settings most users actually
+    // tweak, grouped by impact. Mirrors the Dolphin / PCSX2 / DuckStation
+    // Recommended pattern verbatim (see `recommended-page-layout-contract.md`
+    // in user memory). Every entry binds the same INI section/key as its
+    // full-pane counterpart, so editing here and editing in the matching
+    // Graphics / Audio / System pane produce identical results.
+    //
+    // The "AspectRatio" combo at the top of Visual Quality is synthetic:
+    // PPSSPP doesn't have a discrete 4:3/16:9/Stretch enum (its display
+    // aspect lives in the deferred DisplayLayoutScreen submodal as a float
+    // multiplier + a stretch boolean). To match the other emulators'
+    // structure — and to give the AspectRatioPreview something to render —
+    // we expose a 4-option combo whose load/save transforms route to
+    // `bDisplayStretch` in [DisplayLayout.Landscape]:
+    //   "Stretch"            → bDisplayStretch = True
+    //   "Auto" / "16:9" / "4:3" → bDisplayStretch = False
+    // Only the Stretch option has a distinct INI effect; the other three
+    // collapse to the same write but the preview animates between them so
+    // the page reads visually identically to the other adapters'.
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Performance — biggest impact for getting games playable.
+    s.append({"Recommended", "", "Performance", "Graphics", "GraphicsBackend", "Backend",
+              "Graphics API used for rendering. Vulkan is the macOS default; "
+              "OpenGL is a fallback for older drivers. Switching backends "
+              "often produces the single biggest performance change.",
+              SettingDef::Combo, "3 (VULKAN)",
+              {{"OpenGL", "0 (OPENGL)"},
+#if defined(Q_OS_WIN)
+               {"Direct3D 11", "2 (DIRECT3D11)"},
+#endif
+               {"Vulkan", "3 (VULKAN)"}}, 0, 0, 0});
+    s.append({"Recommended", "", "Performance", "Graphics", "SkipBufferEffects", "Skip Buffer Effects",
+              "Faster, but graphics may be missing in some games. Big speed-up "
+              "for games that don't rely on buffer effects.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"Recommended", "", "Performance", "Graphics", "AutoFrameSkip", "Auto FrameSkip",
+              "Automatically skip frames to maintain full speed when the host "
+              "can't keep up. Recommended for low-end hardware.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"Recommended", "", "Performance", "Graphics", "InflightFrames", "Buffer graphics commands",
+              "Faster, but adds input lag. Up to 1 is a good balance.",
+              SettingDef::Combo, "1",
+              {{"No buffer", "0"}, {"Up to 1", "1"}, {"Up to 2", "2"}}, 0, 0, 0});
+
+    // Visual Quality — what users see, in order of typical impact.
+    // Synthetic AspectRatio combo — see header comment for the full
+    // rationale. Picks Stretch / non-Stretch via bDisplayStretch in
+    // [DisplayLayout.Landscape]; default-unset reads as "Auto".
+    {
+        SettingDef d{"Recommended", "", "Visual Quality",
+                     "DisplayLayout.Landscape", "DisplayStretch",
+                     "Aspect Ratio",
+                     "How the rendered output fills the display. Stretch fills "
+                     "the full viewport; the other modes preserve the PSP's "
+                     "native ~16:9 aspect (the preview shows different shapes "
+                     "for each, but on PPSSPP only Stretch vs not-Stretch is a "
+                     "real difference).",
+                     SettingDef::Combo, "Auto",
+                     {{"Auto", "Auto"}, {"16:9", "16:9"},
+                      {"4:3", "4:3"}, {"Stretch", "Stretch"}}};
+        d.saveTransform = [](const QString& v,
+                             const SettingDef::SaveCallback& save) {
+            const QString stretch = (v == "Stretch") ? "True" : "False";
+            save("DisplayLayout.Landscape", "DisplayStretch", stretch);
+        };
+        d.loadTransform = [](const SettingDef::LoadCallback& read) {
+            const QString cur = read("DisplayLayout.Landscape", "DisplayStretch");
+            return cur.compare("true", Qt::CaseInsensitive) == 0
+                       ? QString("Stretch") : QString("Auto");
+        };
+        s.append(d);
+    }
+    s.append({"Recommended", "", "Visual Quality", "Graphics", "InternalResolution", "Rendering Resolution",
+              "Higher multipliers sharpen the PSP's 480x272 framebuffer at the "
+              "cost of GPU load. 2x or 3x is enough for most modern displays.",
+              SettingDef::Combo, "0",
+              {{"Auto (1:1)", "0"}, {"1x PSP", "1"}, {"2x PSP", "2"},
+               {"3x PSP", "3"}, {"4x PSP", "4"}, {"5x PSP", "5"},
+               {"6x PSP", "6"}, {"7x PSP", "7"}, {"8x PSP", "8"},
+               {"9x PSP", "9"}, {"10x PSP", "10"}}, 0, 0, 0});
+    s.append({"Recommended", "", "Visual Quality", "Graphics", "MultiSampleLevel", "Antialiasing (MSAA)",
+              "Smooths jagged edges. 2x or 4x is a good balance; higher values "
+              "scale GPU cost faster than visual return.",
+              SettingDef::Combo, "0",
+              {{"Off", "0"}, {"2x", "1"}, {"4x", "2"}, {"8x", "3"}, {"16x", "4"}}, 0, 0, 0});
+    s.append({"Recommended", "", "Visual Quality", "Graphics", "TextureFiltering", "Texture Filter",
+              "How textures are sampled. Auto Max Quality looks best but costs "
+              "fillrate; Linear is the safe default.",
+              SettingDef::Combo, "1",
+              {{"Auto", "1"}, {"Nearest", "2"}, {"Linear", "3"}, {"Auto Max Quality", "4"}}, 0, 0, 0});
+    s.append({"Recommended", "", "Visual Quality", "Graphics", "AnisotropyLevel", "Anisotropic Filtering",
+              "Sharpens textures viewed at oblique angles. 4x or 8x is ideal "
+              "for most games — the cost is small on modern GPUs.",
+              SettingDef::Combo, "0",
+              {{"Off", "0"}, {"2x", "1"}, {"4x", "2"}, {"8x", "3"}, {"16x", "4"}}, 0, 0, 0});
+
+    // Frame Pacing — smoothness knobs.
+    s.append({"Recommended", "", "Frame Pacing", "Graphics", "VerticalSync", "VSync",
+              "Synchronize rendering to display refresh rate. Eliminates "
+              "tearing at the cost of a frame of latency.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+    s.append({"Recommended", "", "Frame Pacing", "Graphics", "FrameSkip", "Frame Skipping",
+              "Manually skip N rendered frames per game frame. Use only if "
+              "Auto FrameSkip can't hold full speed.",
+              SettingDef::Combo, "0",
+              {{"Off", "0"}, {"1", "1"}, {"2", "2"}, {"3", "3"},
+               {"4", "4"}, {"5", "5"}, {"6", "6"}, {"7", "7"}, {"8", "8"}}, 0, 0, 0});
+    s.append({"Recommended", "", "Frame Pacing", "Graphics", "FrameRate", "Alternative speed",
+              "Speed used when the alternative-speed hotkey is held. Stored "
+              "as raw FPS — labels show the equivalent percent of 60 FPS.",
+              SettingDef::Combo, "0",
+              {{"Unlimited (No Cap)", "0"},
+               {"50% (30 FPS)",  "30"},
+               {"75% (45 FPS)",  "45"},
+               {"100% (60 FPS)", "60"},
+               {"125% (75 FPS)", "75"},
+               {"150% (90 FPS)", "90"},
+               {"200% (120 FPS)","120"},
+               {"300% (180 FPS)","180"},
+               {"500% (300 FPS)","300"}}, 0, 0, 0});
+
+    // Audio — the two knobs that matter for headless emulation.
+    s.append({"Recommended", "", "Audio", "Sound", "Enable", "Enable Sound",
+              "Master audio toggle. Off only for silent benchmarking.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+    s.append({"Recommended", "", "Audio", "Sound", "AudioSyncMode", "Playback mode",
+              "Smooth reduces audio artifacts at the cost of slightly higher "
+              "latency. Classic is the lowest-latency option.",
+              SettingDef::Combo, "1",
+              {{"Smooth (reduces artifacts)", "0"}, {"Classic (lowest latency)", "1"}}, 0, 0, 0});
+    s.append({"Recommended", "", "Audio", "Sound", "GameVolume", "Game volume",
+              "Master in-game volume.",
+              SettingDef::Int, "100", {}, 0, 100, 5, "slider", "%"});
+
+    // Convenience — quality-of-life toggles that aren't visual or audio.
+    s.append({"Recommended", "", "Convenience", "General", "AutoLoadSaveState", "Auto load savestate",
+              "Automatically load a save state when launching a game. Slot 1 "
+              "is a common pick for quick resume.",
+              SettingDef::Combo, "0",
+              {{"Off", "0"}, {"Newest Save", "2"},
+               {"Slot 1", "3"}, {"Slot 2", "4"}, {"Slot 3", "5"},
+               {"Slot 4", "6"}, {"Slot 5", "7"}}, 0, 0, 0});
+    s.append({"Recommended", "", "Convenience", "General", "EnableCheats", "Enable Cheats",
+              "Apply cheat codes loaded for the running game.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
 
     // ────────────────────────────────────────────────────────────────────────
     // GRAPHICS — single scrolling page, no sub-tabs (mirrors upstream's
