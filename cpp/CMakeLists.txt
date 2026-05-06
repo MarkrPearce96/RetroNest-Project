@@ -650,6 +650,17 @@ target_include_directories(test_video_software PRIVATE
 target_link_libraries(test_video_software PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME VideoSoftware COMMAND test_video_software)
 
+add_executable(test_audio_sink
+    tests/test_audio_sink.cpp
+    src/core/libretro/audio_sink.cpp)
+set_target_properties(test_audio_sink PROPERTIES AUTOMOC ON)
+target_include_directories(test_audio_sink PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS})
+target_link_libraries(test_audio_sink PRIVATE Qt6::Core Qt6::Test ${SDL2_LIBRARIES})
+add_test(NAME AudioSink COMMAND test_audio_sink)
+
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
 set_target_properties(fake_libretro_core PROPERTIES
     PREFIX "" OUTPUT_NAME "fake_libretro_core"
