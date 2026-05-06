@@ -58,5 +58,5 @@ private slots:
         QVERIFY(!s.consumeDirty());
     }
 };
-QTEST_APPLESS_MAIN(TestOptionsStore)
+QTEST_MAIN(TestOptionsStore)
 #include "test_options_store.moc"

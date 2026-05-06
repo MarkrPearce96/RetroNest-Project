@@ -47,7 +47,11 @@ QString OptionsStore::get(const QString& key) const {
 }
 
 void OptionsStore::set(const QString& key, const QString& value) {
-    if (!m_values.contains(key) || m_values.value(key) == value) return;
+    if (!m_values.contains(key)) {
+        qWarning() << "[OptionsStore] set: unknown key" << key;
+        return;
+    }
+    if (m_values.value(key) == value) return;
     m_values.insert(key, value);
     m_dirty.store(true);
     save();
