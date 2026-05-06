@@ -22,6 +22,10 @@ public:
                               const QString& installPath) override;
 
     QVector<SettingDef> settingsSchema() const override;
+    PreviewSpec previewSpec(const QString& category,
+                            const QString& subcategory) const override;
+    QString subcategoryIcon(const QString& category,
+                            const QString& subcategory) const override;
     QString configFilePath() const override;
     QVector<BiosDef> biosFiles() const override;
     QVector<PathDef> pathsDefs() const override;

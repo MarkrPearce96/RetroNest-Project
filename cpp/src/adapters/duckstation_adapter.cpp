@@ -16,11 +16,82 @@ QString DuckStationAdapter::configFilePath() const {
     return portableDir() + "/settings.ini";
 }
 
-QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
-    // Field order: category, subcategory, group, section, key, label, tooltip,
-    //              type, defaultValue, options, minVal, maxVal, step, layout, suffix
+// ============================================================================
+// Preview spec — wires the shared AspectRatio + OSD previews to schema-driven
+// pages. Mirrors DolphinAdapter::previewSpec; the upstream Graphics > Rendering
+// pane has the AspectRatio combo near the top, and the OSD pane has the
+// overlay toggles.
+// ============================================================================
 
-    // Shared option lists
+PreviewSpec DuckStationAdapter::previewSpec(const QString& category,
+                                             const QString& subcategory) const {
+    // The shared AspectRatioPreview's fromSchemaValue currently maps
+    // PCSX2/Dolphin aspect strings; DuckStation's strings ("Auto (Game
+    // Native)", "PAR 1:1" etc.) fall back to R4_3. The preview still
+    // renders — it just doesn't differentiate DuckStation's extra ratios
+    // (19:9, 20:9, 21:9, 16:10) yet. Tracked in
+    // `duckstation-schema-alignment.md` as a follow-up.
+    if (category == "Graphics" && subcategory == "Rendering") {
+        return {"aspect", {
+            {"AspectRatio", "aspectMode"},
+        }};
+    }
+    // OsdPreview Q_PROPERTYs that exist (osd_preview.h:22-44):
+    //   showFps, showSpeed, showFrameTimes, showResolution, showCpu,
+    //   showGpu, showGsStats, showInputs, showSettings, … etc.
+    // DuckStation's ShowLatencyStatistics has no direct preview equivalent
+    // — left out (preview still renders, just no toggle for it).
+    if (category == "On-Screen Display") {
+        return {"osd", {
+            {"ShowFPS",            "showFps"},
+            {"ShowSpeed",          "showSpeed"},
+            {"ShowFrameTimes",     "showFrameTimes"},
+            {"ShowResolution",     "showResolution"},
+            {"ShowCPU",            "showCpu"},
+            {"ShowGPU",            "showGpu"},
+            {"ShowGPUStatistics",  "showGsStats"},
+            {"ShowInputs",         "showInputs"},
+            {"ShowEnhancements",   "showSettings"},
+        }};
+    }
+    return {};
+}
+
+QString DuckStationAdapter::subcategoryIcon(const QString& category,
+                                             const QString& subcategory) const {
+    if (category != "Graphics") return {};
+    if (subcategory == "Rendering")           return QStringLiteral("\U0001F5BC");  // 🖼
+    if (subcategory == "Advanced")            return QStringLiteral("\U0001F527");  // 🔧
+    if (subcategory == "PGXP")                return QStringLiteral("✨");        // ✨
+    if (subcategory == "Texture Replacement") return QStringLiteral("\U0001F3A8");  // 🎨
+    return {};
+}
+
+// ============================================================================
+// settingsSchema — mirrors standalone DuckStation's SettingsWindow panes
+// verbatim: same top-level categories, same group order, same setting order
+// inside each group, same labels, same gating chains. Driven entirely from
+// the schema; rendered by GenericSettingsPage. See `dolphin-schema-alignment.md`
+// in user memory for the reference shape and `docs/new-adapter-checklist.md`
+// "Mirroring the upstream UI verbatim (THE rule)" for the audit recipe.
+//
+// Top-level categories in upstream display order (skipping panes that don't
+// apply to RetroNest's embedded UI — see `duckstation-schema-alignment.md`
+// in user memory for the full omission rationale):
+//   BIOS · Console · Emulation · Memory Cards · Graphics · On-Screen Display
+//   · Audio · Achievements · Capture · Advanced
+//
+// Helper lambdas:
+//   dep(d, expr) — set d.dependsOn (boolean DSL — see setting_def.h).
+// ============================================================================
+QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
+    auto dep = [](SettingDef d, const QString& expr) -> SettingDef {
+        d.dependsOn = expr;
+        return d;
+    };
+
+    // ── Shared option lists ─────────────────────────────────────────────
+
     const QVector<QPair<QString,QString>> memCardTypes = {
         {"No Memory Card",                          "None"},
         {"Shared Between All Games",                "Shared"},
@@ -30,48 +101,27 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
         {"Non-Persistent Card (Do Not Save)",        "NonPersistent"},
     };
 
-    // INI values must use shortest float representation (e.g. "1", "0.5", "2") —
-    // DuckStation writes floats via StringUtil::ToChars / std::to_chars which
-    // strips trailing zeros, so padded values fail to round-trip. See audit
-    // 2026-04-06.
-    const QVector<QPair<QString,QString>> speedOptions = {
-        {"10% [6 FPS]",   "0.1"},
-        {"20% [12 FPS]",  "0.2"},
-        {"30% [18 FPS]",  "0.3"},
-        {"40% [24 FPS]",  "0.4"},
-        {"50% [30 FPS]",  "0.5"},
-        {"60% [36 FPS]",  "0.6"},
-        {"70% [42 FPS]",  "0.7"},
-        {"75% [45 FPS]",  "0.75"},
-        {"80% [48 FPS]",  "0.8"},
-        {"90% [54 FPS]",  "0.9"},
-        {"100% [60 FPS]", "1"},
-        {"120% [72 FPS]", "1.2"},
-        {"150% [90 FPS]", "1.5"},
-        {"175% [105 FPS]","1.75"},
-        {"200% [120 FPS]","2"},
-        {"250% [150 FPS]","2.5"},
-        {"300% [180 FPS]","3"},
-        {"350% [210 FPS]","3.5"},
-        {"400% [240 FPS]","4"},
-        {"450% [270 FPS]","4.5"},
-        {"500% [300 FPS]","5"},
-    };
-
-    const QVector<QPair<QString,QString>> turbospeedOptions = {
-        {"Unlimited",        "0"},
-        {"100% [60 FPS]",   "1"},
-        {"150% [90 FPS]",   "1.5"},
-        {"200% [120 FPS]",  "2"},
-        {"300% [180 FPS]",  "3"},
-        {"400% [240 FPS]",  "4"},
-        {"500% [300 FPS]",  "5"},
-        {"600% [360 FPS]",  "6"},
-        {"700% [420 FPS]",  "7"},
-        {"800% [480 FPS]",  "8"},
-        {"900% [540 FPS]",  "9"},
-        {"1000% [600 FPS]", "10"},
-    };
+    // Speed combo — used for EmulationSpeed / FastForwardSpeed / TurboSpeed.
+    // Mirrors fillComboBoxWithEmulationSpeeds (emulationsettingswidget.cpp:171):
+    // "Unlimited" + 25 percentages, label "%1% [%2 FPS (NTSC) / %3 FPS (PAL)]".
+    // INI values use shortest float representation (DuckStation writes via
+    // StringUtil::ToChars / std::to_chars — padded forms like "1.00" fail to
+    // round-trip — audit 2026-04-06).
+    const QVector<QPair<QString,QString>> speedOptions = [] {
+        using P = QPair<QString,QString>;
+        QVector<P> out;
+        out.append(P{QStringLiteral("Unlimited"), QStringLiteral("0")});
+        const QVector<int> speeds = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175,
+                                     200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000};
+        for (int p : speeds) {
+            const QString label = QStringLiteral("%1% [%2 FPS (NTSC) / %3 FPS (PAL)]")
+                                      .arg(p).arg((60 * p) / 100).arg((50 * p) / 100);
+            const double f = static_cast<double>(p) / 100.0;
+            const QString val = QString::number(f, 'g', 6);  // shortest form (e.g. "1", "0.5", "1.25")
+            out.append(P{label, val});
+        }
+        return out;
+    }();
 
     const QVector<QPair<QString,QString>> cdromSpeedupOptions = {
         {"None (Double Speed)", "1"},
@@ -83,10 +133,10 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
         {"Maximum (Safer)",    "0"},
     };
 
-    // Native DuckStation CDROM SeekSpeedup uses 1 for normal speed and 0 for the
+    // Native CDROM SeekSpeedup uses 1 for normal speed and 0 for the
     // maximum-cycles override (cdrom.cpp:1616, consolesettingswidget.cpp:19,74).
-    // Earlier versions of this list had the endpoints swapped, so picking
-    // "Maximum (Safer)" actually selected normal speed. See audit 2026-04-06.
+    // Earlier versions had endpoints swapped — picking "Maximum" actually
+    // selected normal speed. See audit 2026-04-06.
     const QVector<QPair<QString,QString>> cdromSeekOptions = {
         {"None (Normal Speed)", "1"},
         {"2x",  "2"},
@@ -111,8 +161,7 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
         {"MMPX Enhanced (Slow)",                   "MMPXEnhanced"},
     };
 
-    // INI values must match s_display_scaling_names from
-    // references/duckstation-master/src/core/settings.cpp:2188-2190.
+    // INI values must match s_display_scaling_names (settings.cpp:2188-2190).
     // Three names were wrong before: NearestNeighbor → Nearest,
     // NearestNeighborInteger → NearestInteger, Bilinear → BilinearSmooth.
     // See audit 2026-04-06.
@@ -126,25 +175,75 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
         {"Lanczos (Sharp)",             "Lanczos"},
     };
 
+    // NotificationLocation — used for Achievement notification + indicator
+    // location. INI values match s_notification_location_names
+    // (settings.cpp:2421-2423).
+    const QVector<QPair<QString,QString>> notificationLocationOptions = {
+        {"Top Left",      "TopLeft"},
+        {"Top Center",    "TopCenter"},
+        {"Top Right",     "TopRight"},
+        {"Bottom Left",   "BottomLeft"},
+        {"Bottom Center", "BottomCenter"},
+        {"Bottom Right",  "BottomRight"},
+    };
+
     QVector<SettingDef> s;
 
     // =========================================================================
-    // Console category
+    // BIOS category — mirrors biossettingswidget.cpp
+    //
+    // BIOS Selection (per-region BIOS combos) and BIOS Directory are deferred:
+    // the per-region combos are populated at runtime by scanning the BIOS dir
+    // (filesystem-scanned combo blocker), and the BIOS dir itself is managed
+    // centrally by RetroNest (PathBase::Bios → {root}/bios/). The visible
+    // BIOS pane is therefore Parallel Port + Options.
+    // =========================================================================
+
+    // Parallel Port group
+    s.append({"BIOS", "", "Parallel Port", "PIO", "DeviceType", "Device Type", "",
+              SettingDef::Combo, "None",
+              {{"None", "None"}, {"Xplorer/Xploder Cartridge", "XplorerCart"}},
+              0, 0, 0, "", ""});
+    s.append(dep({"BIOS", "", "Parallel Port", "PIO", "FlashImagePath", "Image Path", "",
+                  SettingDef::String, "", {}, 0, 0, 0, "", ""}, "DeviceType=XplorerCart"));
+    s.append(dep({"BIOS", "", "Parallel Port", "PIO", "SwitchActive", "Cartridge Switch On", "",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "DeviceType=XplorerCart"));
+    s.append(dep({"BIOS", "", "Parallel Port", "PIO", "FlashImageWriteEnable", "Allow Image Writes", "",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "DeviceType=XplorerCart"));
+
+    // Options group
+    s.append({"BIOS", "", "Options", "BIOS", "TTYLogging", "Enable TTY Logging",
+              "Forwards BIOS putc/printf calls to the host log.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+
+    // =========================================================================
+    // Console category — mirrors consolesettingswidget.cpp
     // =========================================================================
 
     // Console group
     s.append({"Console", "", "Console", "Console", "Region", "Region", "",
               SettingDef::Combo, "Auto",
-              {{"Auto-Detect", "Auto"}, {"NTSC-U", "NTSC-U"}, {"NTSC-J", "NTSC-J"}, {"PAL", "PAL"}},
+              {{"Auto-Detect",                 "Auto"},
+               {"NTSC-J (Japan)",              "NTSC-J"},
+               {"NTSC-U/C (US, Canada)",       "NTSC-U"},
+               {"PAL (Europe, Australia)",     "PAL"}},
               0, 0, 0, "", ""});
-    s.append({"Console", "", "Console", "GPU", "ForceVideoTiming", "Force Video Timing", "",
+    s.append({"Console", "", "Console", "GPU", "ForceVideoTiming", "Frame Rate", "",
               SettingDef::Combo, "Disabled",
-              {{"Disabled (Auto)", "Disabled"}, {"NTSC/60hz", "NTSC"}, {"PAL/50hz", "PAL"}},
+              {{"Auto-Detect", "Disabled"}, {"NTSC (60hz)", "NTSC"}, {"PAL (50hz)", "PAL"}},
               0, 0, 0, "", ""});
-    s.append({"Console", "", "Console", "BIOS", "PatchFastBoot", "Fast Boot", "", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Console", "", "Console", "MemoryCards", "FastForwardAccess", "Fast Forward Memory Card Access", "", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Console", "", "Console", "BIOS", "FastForwardBoot", "Fast Forward Boot", "", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Console", "", "Console", "Console", "Enable8MBRAM", "Enable 8MB RAM (Dev Console)", "Expands RAM to 8MB, as found in dev units.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Console", "", "Console", "BIOS", "PatchFastBoot", "Fast Boot",
+              "Skips the BIOS boot animation and Sony intro.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append(dep({"Console", "", "Console", "BIOS", "FastForwardBoot", "Fast Forward Boot",
+                  "Runs at fast forward speed during boot until the game starts.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PatchFastBoot"));
+    s.append({"Console", "", "Console", "MemoryCards", "FastForwardAccess", "Fast Forward Memory Card Access",
+              "Speeds up memory card access animations.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Console", "", "Console", "Console", "Enable8MBRAM", "Enable 8MB RAM (Dev Console)",
+              "Expands RAM to 8MB, as found in dev units.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
 
     // CPU Emulation group
     s.append({"Console", "", "CPU Emulation", "CPU", "ExecutionMode", "Execution Mode", "",
@@ -153,92 +252,212 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
                {"Cached Interpreter (Faster)",  "CachedInterpreter"},
                {"Recompiler (Fastest)",         "Recompiler"}},
               0, 0, 0, "", ""});
-    s.append({"Console", "", "CPU Emulation", "CPU", "OverclockEnable", "Enable Clock Speed Control (Overclocking/Underclocking)", "", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    { SettingDef d = {"Console", "", "CPU Emulation", "CPU", "OverclockNumerator", "Clock Speed Multiplier",
-                      "Sets the CPU clock speed. 100% matches the original PSX CPU (33.87 MHz). Stored as a numerator/denominator fraction.",
-                      SettingDef::Int, "100", {}, 10, 1000, 5, "slider", "%"};
-      d.dependsOn = "OverclockEnable"; s.append(d); }
-    s.append({"Console", "", "CPU Emulation", "CPU", "RecompilerICache", "Enable Recompiler ICache", "Simulates the instruction cache in the recompiler. Slower but more accurate.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Console", "", "CPU Emulation", "CPU", "OverclockEnable",
+              "Enable Clock Speed Control (Overclocking/Underclocking)", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    // Overclocking Percentage — slider stores percent; on save we synthesize
+    // OverclockNumerator / OverclockDenominator via the same gcd reduction
+    // upstream uses (Settings::CPUOverclockPercentToFraction at settings.cpp:230).
+    // On load we recover the percent via num*100/denom (FractionToPercent).
+    {
+        SettingDef d = {"Console", "", "CPU Emulation", "CPU", "OverclockNumerator",
+                        "Overclocking Percentage",
+                        "Sets the CPU clock speed. 100% matches the original PSX CPU "
+                        "(33.87 MHz). Stored as a numerator/denominator fraction.",
+                        SettingDef::Int, "100", {}, 10, 1000, 5, "slider", "%"};
+        d.dependsOn = "OverclockEnable";
+        d.saveTransform = [](const QString& widgetValue,
+                              const SettingDef::SaveCallback& save) {
+            bool ok = false;
+            int percent = widgetValue.toInt(&ok);
+            if (!ok) percent = 100;
+            const auto gcd = [](int a, int b) { while (b) { a %= b; std::swap(a, b); } return a; };
+            const int g = gcd(percent, 100);
+            save("CPU", "OverclockNumerator",   QString::number(percent / g));
+            save("CPU", "OverclockDenominator", QString::number(100 / g));
+        };
+        d.loadTransform = [](const SettingDef::LoadCallback& read) -> QString {
+            const int num = read("CPU", "OverclockNumerator").toInt();
+            const int den = read("CPU", "OverclockDenominator").toInt();
+            if (num <= 0 || den <= 0) return "100";
+            return QString::number((num * 100) / den);
+        };
+        s.append(d);
+    }
+    s.append(dep({"Console", "", "CPU Emulation", "CPU", "RecompilerICache", "Enable Recompiler ICache",
+                  "Simulates the instruction cache in the recompiler. Slower but more accurate.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""},
+                 "ExecutionMode=Recompiler"));
 
     // CD-ROM Emulation group
-    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "ReadSpeedup", "Read Speedup", "Speeds up CD-ROM reads beyond hardware limits.",
+    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "ReadSpeedup", "Read Speedup",
+              "Speeds up CD-ROM reads beyond hardware limits.",
               SettingDef::Combo, "1", cdromSpeedupOptions, 0, 0, 0, "", ""});
-    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "SeekSpeedup", "Seek Speedup", "Reduces seek time beyond hardware limits.",
+    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "SeekSpeedup", "Seek Speedup",
+              "Reduces seek time beyond hardware limits.",
               SettingDef::Combo, "1", cdromSeekOptions, 0, 0, 0, "", ""});
-    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "LoadImageToRAM", "Preload Image To RAM", "Loads the disc image into RAM to reduce I/O stutter.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "AutoDiscChange", "Switch to Next Disc on Stop", "Automatically switches to the next queued disc when the current one stops.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "LoadImagePatches", "Apply Image Patches", "Applies PPF patches found alongside the disc image.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "IgnoreHostSubcode", "Ignore Drive Subcode", "Ignores subcode errors on physical drives.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "LoadImageToRAM", "Preload Image To RAM",
+              "Loads the disc image into RAM to reduce I/O stutter.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "LoadImagePatches", "Apply Image Patches",
+              "Applies PPF patches found alongside the disc image.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "AutoDiscChange", "Switch to Next Disc on Stop",
+              "Automatically switches to the next queued disc when the current one stops.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Console", "", "CD-ROM Emulation", "CDROM", "IgnoreHostSubcode", "Ignore Drive Subcode",
+              "Ignores subcode errors on physical drives.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
 
     // =========================================================================
-    // Emulation category
+    // Emulation category — mirrors emulationsettingswidget.cpp
     // =========================================================================
 
     // Speed Control group
-    s.append({"Emulation", "", "Speed Control", "Main", "EmulationSpeed", "Emulation Speed", "Sets the target emulation speed.",
+    s.append({"Emulation", "", "Speed Control", "Main", "EmulationSpeed", "Emulation Speed",
+              "Sets the target emulation speed.",
               SettingDef::Combo, "1", speedOptions, 0, 0, 0, "", ""});
-    s.append({"Emulation", "", "Speed Control", "Main", "FastForwardSpeed", "Fast Forward Speed", "Speed used when the fast forward hotkey is held.",
-              SettingDef::Combo, "0", turbospeedOptions, 0, 0, 0, "", ""});
-    s.append({"Emulation", "", "Speed Control", "Main", "TurboSpeed", "Turbo Speed", "Speed used when the turbo hotkey is held.",
-              SettingDef::Combo, "0", turbospeedOptions, 0, 0, 0, "", ""});
+    s.append({"Emulation", "", "Speed Control", "Main", "FastForwardSpeed", "Fast Forward Speed",
+              "Speed used when the fast forward hotkey is held.",
+              SettingDef::Combo, "0", speedOptions, 0, 0, 0, "", ""});
+    s.append({"Emulation", "", "Speed Control", "Main", "TurboSpeed", "Turbo Speed",
+              "Speed used when the turbo hotkey is held.",
+              SettingDef::Combo, "0", speedOptions, 0, 0, 0, "", ""});
 
     // Latency Control group
-    s.append({"Emulation", "", "Latency Control", "Display", "VSync", "Vertical Sync (VSync)", "Synchronises frame presentation with the display refresh rate.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Emulation", "", "Latency Control", "Main", "SyncToHostRefreshRate", "Sync To Host Refresh Rate", "Adjusts emulation speed to match the host display refresh rate.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Emulation", "", "Latency Control", "Display", "OptimalFramePacing", "Optimal Frame Pacing", "Enables an optimal frame pacing mode that reduces jitter.", SettingDef::Bool, "true", {}, 0, 0, 0, "", ""});
-    s.append({"Emulation", "", "Latency Control", "Display", "PreFrameSleep", "Reduce Input Latency", "Reduces input lag by delaying frame presentation slightly.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Emulation", "", "Latency Control", "Display", "SkipPresentingDuplicateFrames", "Skip Duplicate Frame Display", "Skips presenting duplicate frames to reduce GPU load.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Emulation", "", "Latency Control", "Display", "VSync", "Vertical Sync (VSync)",
+              "Synchronises frame presentation with the display refresh rate.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Emulation", "", "Latency Control", "Main", "SyncToHostRefreshRate", "Sync To Host Refresh Rate",
+              "Adjusts emulation speed so the console's refresh rate matches the host's.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Emulation", "", "Latency Control", "Display", "OptimalFramePacing", "Optimal Frame Pacing",
+              "Reduces frame pacing jitter at a small CPU cost.",
+              SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""});
+    s.append(dep({"Emulation", "", "Latency Control", "Display", "PreFrameSleep", "Reduce Input Latency",
+                  "Sleeps before frame presentation to lower input lag.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "OptimalFramePacing"));
+    // Skip Duplicate Frame Display — disabled when both VSync AND
+    // SyncToHostRefreshRate force the duplicate-skip effect already.
+    // Mirrors EmulationSettingsWidget::updateSkipDuplicateFramesEnabled.
+    s.append(dep({"Emulation", "", "Latency Control", "Display", "SkipPresentingDuplicateFrames",
+                  "Skip Duplicate Frame Display",
+                  "Skips presenting duplicate frames to reduce GPU load.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""},
+                 "!VSync || !SyncToHostRefreshRate"));
+    s.append(dep({"Emulation", "", "Latency Control", "Display", "PreFrameSleepBuffer",
+                  "Frame Time Buffer", "Pre-frame sleep buffer in milliseconds.",
+                  SettingDef::Float, "2", {}, 0.5, 20.0, 0.5, "", "Milliseconds"},
+                 "PreFrameSleep && OptimalFramePacing"));
 
-    // Rewind group
-    s.append({"Emulation", "", "Rewind", "Main", "RewindEnable", "Enable Rewinding", "Enables the rewind feature (uses extra RAM).", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    { SettingDef d = {"Emulation", "", "Rewind", "GPU", "UseSoftwareRendererForMemoryStates", "Use Software Renderer (Low VRAM Mode)", "Uses the software renderer for rewind snapshots to save VRAM.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}; d.dependsOn = "RewindEnable"; s.append(d); }
-    { SettingDef d = {"Emulation", "", "Rewind", "Main", "RewindFrequency", "Rewind Save Frequency", "How often (in seconds) to save a rewind snapshot.",
-              SettingDef::Float, "10", {}, 0.0, 60.0, 0.1, "", "Seconds"}; d.dependsOn = "RewindEnable"; s.append(d); }
-    { SettingDef d = {"Emulation", "", "Rewind", "Main", "RewindSaveSlots", "Rewind Buffer Size", "Number of rewind frames to keep in memory.",
-              SettingDef::Int, "10", {}, 1, 1000, 1, "", "Frames"}; d.dependsOn = "RewindEnable"; s.append(d); }
+    // Rewind group — RewindEnable is mutually exclusive with Runahead upstream;
+    // Runahead also gates the rewind sub-controls.
+    s.append(dep({"Emulation", "", "Rewind", "Main", "RewindEnable", "Enable Rewinding",
+                  "Enables the rewind feature (uses extra RAM).",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""},
+                 "RunaheadFrameCount=0"));
+    s.append(dep({"Emulation", "", "Rewind", "Main", "RewindFrequency", "Rewind Save Frequency",
+                  "How often to save a rewind snapshot.",
+                  SettingDef::Float, "10", {}, 0.0, 3600.0, 0.1, "", "Seconds"},
+                 "RewindEnable && RunaheadFrameCount=0"));
+    s.append(dep({"Emulation", "", "Rewind", "Main", "RewindSaveSlots", "Rewind Buffer Size",
+                  "Number of rewind frames to keep in memory.",
+                  SettingDef::Int, "10", {}, 1, 10000, 1, "", "Frames"},
+                 "RewindEnable && RunaheadFrameCount=0"));
+    s.append(dep({"Emulation", "", "Rewind", "GPU", "UseSoftwareRendererForMemoryStates",
+                  "Use Software Renderer (Low VRAM Mode)",
+                  "Uses the software renderer for rewind snapshots to save VRAM.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""},
+                 "RewindEnable && RunaheadFrameCount=0"));
 
     // Runahead group
-    s.append({"Emulation", "", "Runahead", "Main", "RunaheadFrameCount", "Runahead", "Simulates N frames ahead to hide input latency.",
+    s.append({"Emulation", "", "Runahead", "Main", "RunaheadFrameCount", "Runahead",
+              "Simulates N frames ahead to hide input latency.",
               SettingDef::Combo, "0",
-              {{"Disabled", "0"}, {"1 Frame", "1"}, {"2 Frames", "2"}, {"3 Frames", "3"},
-               {"4 Frames", "4"}, {"5 Frames", "5"}, {"6 Frames", "6"}, {"7 Frames", "7"},
-               {"8 Frames", "8"}},
+              {{"Disabled", "0"},  {"1 Frame", "1"},  {"2 Frames", "2"}, {"3 Frames", "3"},
+               {"4 Frames", "4"},  {"5 Frames", "5"}, {"6 Frames", "6"}, {"7 Frames", "7"},
+               {"8 Frames", "8"},  {"9 Frames", "9"}, {"10 Frames", "10"}},
               0, 0, 0, "", ""});
-    { SettingDef d = {"Emulation", "", "Runahead", "Main", "RunaheadForAnalogInput", "Enable for Analog Input", "Enables runahead even when an analog controller is connected.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}; d.dependsOn = "RunaheadFrameCount"; s.append(d); }
+    s.append(dep({"Emulation", "", "Runahead", "Main", "RunaheadForAnalogInput",
+                  "Enable for Analog Input",
+                  "Enables runahead even when an analog controller is connected.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""},
+                 "RunaheadFrameCount"));
 
     // =========================================================================
-    // Graphics category — top-level (no subcategory)
+    // Memory Cards category — mirrors memorycardsettingswidget.cpp
+    //
+    // Save Locations group (Memory Cards / Save States dirs) is intentionally
+    // omitted: RetroNest manages those directories under
+    // {root}/emulators/duckstation/{systemId}/{memcards,savestates} and
+    // the adapter writes them in createDefaultConfig / patchExistingConfig.
     // =========================================================================
 
-    s.append({"Graphics", "", "", "GPU", "Renderer", "Renderer", "GPU backend used for rendering.",
+    s.append({"Memory Cards", "", "Memory Card 1", "MemoryCards", "Card1Type", "Memory Card Type", "",
+              SettingDef::Combo, "PerGameTitle", memCardTypes, 0, 0, 0, "", ""});
+    s.append(dep({"Memory Cards", "", "Memory Card 1", "MemoryCards", "Card1Path",
+                  "Shared Memory Card Path", "",
+                  SettingDef::String, "", {}, 0, 0, 0, "readonly", ""}, "Card1Type=Shared"));
+
+    s.append({"Memory Cards", "", "Memory Card 2", "MemoryCards", "Card2Type", "Memory Card Type", "",
+              SettingDef::Combo, "None", memCardTypes, 0, 0, 0, "", ""});
+    s.append(dep({"Memory Cards", "", "Memory Card 2", "MemoryCards", "Card2Path",
+                  "Shared Memory Card Path", "",
+                  SettingDef::String, "", {}, 0, 0, 0, "readonly", ""}, "Card2Type=Shared"));
+
+    s.append({"Memory Cards", "", "Game-Specific Card Settings", "MemoryCards", "UsePlaylistTitle",
+              "Use Single Card For Multi-Disc Games",
+              "When playing a multi-disc game with per-game-title memory cards, use a "
+              "single card for all discs.",
+              SettingDef::Bool, "true", {}, 0, 0, 0, "", ""});
+
+    // =========================================================================
+    // Graphics category — mirrors graphicssettingswidget.cpp's QTabWidget.
+    //
+    // Sub-tab order verbatim (Rendering / Advanced / PGXP / Texture Replacement).
+    // The upstream 5th tab ("Debugging") is gated at runtime via
+    // QtHost::ShouldShowDebugOptions() / setTabVisible(TAB_INDEX_DEBUGGING)
+    // (graphicssettingswidget.cpp:601) and hidden by default — dropped here
+    // matching the precedent in user memory `pcsx2-schema-alignment.md`.
+    //
+    // Renderer + Adapter live at the top of the upstream Graphics pane (above
+    // the QTabWidget). We render them at the top of the first sub-tab
+    // (Rendering) — Adapter is deferred (dynamically populated per renderer
+    // at runtime).
+    // =========================================================================
+
+    // ── Graphics / Rendering ─────────────────────────────────────────────
+
+    s.append({"Graphics", "Rendering", "", "GPU", "Renderer", "Renderer", "GPU backend used for rendering.",
               SettingDef::Combo, "Automatic",
-              {{"Automatic", "Automatic"}, {"Vulkan", "Vulkan"}, {"Metal", "Metal"}, {"OpenGL", "OpenGL"}, {"Software", "Software"}},
-              0, 0, 0, "", ""});
-    s.append({"Graphics", "", "", "GPU", "Adapter", "Adapter", "GPU adapter to use for rendering.",
-              SettingDef::Combo, "",
-              {{"Default", ""}},
+              {{"Automatic", "Automatic"}, {"Vulkan", "Vulkan"}, {"Metal", "Metal"},
+               {"OpenGL", "OpenGL"}, {"Software", "Software"}},
               0, 0, 0, "", ""});
 
-    // ── Graphics / Rendering subcategory ─────────────────────────────────
-
-    s.append({"Graphics", "Rendering", "", "GPU", "ResolutionScale", "Internal Resolution", "Renders the PS1 GPU at a higher resolution.",
+    s.append({"Graphics", "Rendering", "", "GPU", "ResolutionScale", "Internal Resolution",
+              "Renders the PS1 GPU at a higher resolution.",
               SettingDef::Combo, "1",
               {{"1x Native",  "1"},  {"2x", "2"},  {"3x", "3"},  {"4x Native (1440p)", "4"},
                {"5x", "5"},  {"6x", "6"},  {"7x", "7"},  {"8x Native (4K)", "8"},
                {"9x", "9"},  {"10x","10"}, {"11x","11"}, {"12x","12"},
                {"13x","13"}, {"14x","14"}, {"15x","15"}, {"16x","16"}},
               0, 0, 0, "", ""});
-    s.append({"Graphics", "Rendering", "", "GPU", "DownsampleMode", "Down-Sampling", "Downsamples the rendered image back to native resolution.",
+    s.append({"Graphics", "Rendering", "", "GPU", "DownsampleMode", "Down-Sampling",
+              "Downsamples the rendered image back to native resolution.",
               SettingDef::Combo, "Disabled",
-              {{"Disabled", "Disabled"}, {"Box", "Box"}, {"Adaptive", "Adaptive"}},
-              0, 0, 0, "", ""});
+              {{"Disabled", "Disabled"}, {"Box (Downsample 3D/Smooth All)", "Box"},
+               {"Adaptive (Preserve 3D/Smooth 2D)", "Adaptive"}},
+              0, 0, 0, "paired", ""});
+    s.append(dep({"Graphics", "Rendering", "", "GPU", "DownsampleScale", "Downsample Scale",
+                  "Target downsampling factor.",
+                  SettingDef::Int, "1", {}, 1, 16, 1, "paired", "x"}, "DownsampleMode"));
     s.append({"Graphics", "Rendering", "", "GPU", "TextureFilter", "Texture Filtering", "",
               SettingDef::Combo, "Nearest", textureFilterOptions, 0, 0, 0, "", ""});
-    s.append({"Graphics", "Rendering", "", "GPU", "SpriteTextureFilter", "Sprite Texture Filtering", "Texture filtering applied only to 2D sprites.",
+    s.append({"Graphics", "Rendering", "", "GPU", "SpriteTextureFilter", "Sprite Texture Filtering",
+              "Texture filtering applied only to 2D sprites.",
               SettingDef::Combo, "Nearest", textureFilterOptions, 0, 0, 0, "", ""});
-    // INI values must match s_gpu_dithering_mode_names from
-    // references/duckstation-master/src/core/settings.cpp:1708-1711.
-    // Native default is TrueColor (settings.h:226). See audit 2026-04-06.
+    // INI values match s_gpu_dithering_mode_names (settings.cpp:1708-1711).
+    // Native default is TrueColor (settings.h:226). Audit 2026-04-06.
     s.append({"Graphics", "Rendering", "", "GPU", "DitheringMode", "Dithering", "",
               SettingDef::Combo, "TrueColor",
               {{"Unscaled", "Unscaled"},
@@ -253,21 +472,19 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               {{"Progressive (Optimal)", "Progressive"}, {"Disabled", "Disabled"},
                {"Weave", "Weave"}, {"Blend", "Blend"}, {"Adaptive", "Adaptive"}},
               0, 0, 0, "", ""});
-    // INI values must match what Settings::ParseDisplayAspectRatio /
-    // GetDisplayAspectRatioName accept; the special strings "Auto (Game Native)",
-    // "Stretch To Fill" and "PAR 1:1" are required verbatim (with the space).
-    // The "Custom" option had no native equivalent and is dropped — DuckStation
-    // exposes custom ratios via numerator/denominator widgets that are out of
-    // scope for this audit. See audit 2026-04-06.
+    // INI values must match Settings::ParseDisplayAspectRatio /
+    // GetDisplayAspectRatioName: special strings "Auto (Game Native)",
+    // "Stretch To Fill" and "PAR 1:1" required verbatim (with the spaces).
+    // The "Custom" option is dropped — it requires a dynamic-visibility
+    // numerator/denominator spinbox pair (deferral blocker). Audit 2026-04-06.
     s.append({"Graphics", "Rendering", "", "Display", "AspectRatio", "Aspect Ratio", "",
               SettingDef::Combo, "Auto (Game Native)",
               {{"Auto (Game Native)", "Auto (Game Native)"}, {"Stretch To Fill", "Stretch To Fill"},
                {"4:3", "4:3"}, {"16:9", "16:9"}, {"19:9", "19:9"}, {"20:9", "20:9"},
                {"21:9", "21:9"}, {"16:10", "16:10"}, {"PAR 1:1", "PAR 1:1"}},
               0, 0, 0, "", ""});
-    // INI values must match s_display_crop_mode_names from
-    // references/duckstation-master/src/core/settings.cpp:1923-1925
-    // (Borders, not AllBorders). See audit 2026-04-06.
+    // INI values match s_display_crop_mode_names (settings.cpp:1923-1925)
+    // — Borders, not AllBorders. Audit 2026-04-06.
     s.append({"Graphics", "Rendering", "", "Display", "CropMode", "Crop", "",
               SettingDef::Combo, "Overscan",
               {{"None", "None"},
@@ -276,22 +493,45 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
                {"All Borders", "Borders"},
                {"All Borders (Aspect Uncorrected)", "BordersUncorrected"}},
               0, 0, 0, "", ""});
-    s.append({"Graphics", "Rendering", "", "Display", "Scaling", "Scaling", "Scaling filter applied to the final output.",
+    s.append({"Graphics", "Rendering", "", "Display", "Scaling", "Scaling",
+              "Scaling filter applied to the final output.",
               SettingDef::Combo, "BilinearSmooth", scalingOptions, 0, 0, 0, "", ""});
-    s.append({"Graphics", "Rendering", "", "Display", "Scaling24Bit", "FMV Scaling", "Scaling filter applied during FMV playback.",
+    s.append({"Graphics", "Rendering", "", "Display", "Scaling24Bit", "FMV Scaling",
+              "Scaling filter applied during FMV playback.",
               SettingDef::Combo, "BilinearSmooth", scalingOptions, 0, 0, 0, "", ""});
-    // Rendering bools
-    s.append({"Graphics", "Rendering", "", "GPU", "PGXPEnable", "PGXP Geometry Correction", "Fixes polygon wobble by using a sub-pixel geometry buffer.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Graphics", "Rendering", "", "GPU", "PGXPDepthBuffer", "PGXP Depth Buffer (Low Compatibility)", "Uses a depth buffer for PGXP; may break some games.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Graphics", "Rendering", "", "Display", "Force4_3For24Bit", "Force 4:3 For FMVs", "Switches to 4:3 aspect ratio during FMV sequences.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Graphics", "Rendering", "", "GPU", "ChromaSmoothing24Bit", "FMV Chroma Smoothing", "Applies chroma smoothing to FMV playback.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Graphics", "Rendering", "", "GPU", "WidescreenHack", "Widescreen Rendering", "Stretches 3D geometry to fill a widescreen display.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Graphics", "Rendering", "", "GPU", "ForceRoundTextureCoordinates", "Round Upscaled Texture Coordinates", "Reduces texture seams at high resolutions.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    // PGXP toggles live in the Rendering tab upstream; the rest of the PGXP
+    // settings are in the dedicated PGXP sub-tab below.
+    s.append({"Graphics", "Rendering", "", "GPU", "PGXPEnable", "PGXP Geometry Correction",
+              "Fixes polygon wobble by using a sub-pixel geometry buffer.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append(dep({"Graphics", "Rendering", "", "GPU", "PGXPDepthBuffer",
+                  "PGXP Depth Buffer (Low Compatibility)",
+                  "Uses a depth buffer for PGXP; may break some games.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
+    s.append({"Graphics", "Rendering", "", "Display", "Force4_3For24Bit", "Force 4:3 For FMVs",
+              "Switches to 4:3 aspect ratio during FMV sequences.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Graphics", "Rendering", "", "GPU", "ChromaSmoothing24Bit", "FMV Chroma Smoothing",
+              "Applies chroma smoothing to FMV playback.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Graphics", "Rendering", "", "GPU", "WidescreenHack", "Widescreen Rendering",
+              "Stretches 3D geometry to fill a widescreen display.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Graphics", "Rendering", "", "GPU", "ForceRoundTextureCoordinates",
+              "Round Upscaled Texture Coordinates",
+              "Reduces texture seams at high resolutions.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
 
-    // ── Graphics / Advanced subcategory ──────────────────────────────────
+    // ── Graphics / Advanced ──────────────────────────────────────────────
 
     // Display Options group
-    s.append({"Graphics", "Advanced", "Display Options", "Display", "Alignment", "Screen Position", "",
+    //
+    // Fullscreen Mode + Exclusive Fullscreen Control are deferred:
+    // upstream populates the FullscreenMode combo from
+    // adapter.fullscreen_modes at runtime (filesystem/runtime-scanned combo
+    // blocker), and ExclusiveFullscreenControl is gated to Vulkan-only via
+    // a backend-capability check we don't yet model.
+    s.append({"Graphics", "Advanced", "Display Options", "Display", "Alignment", "Position", "",
               SettingDef::Combo, "Center",
               {{"Left/Top", "LeftOrTop"}, {"Center", "Center"}, {"Right/Bottom", "RightOrBottom"}},
               0, 0, 0, "paired", ""});
@@ -305,11 +545,28 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               {{"None", "None"}, {"Video Resolution", "VideoResolution"},
                {"Internal Resolution", "InternalResolution"}, {"Window Resolution", "WindowResolution"}},
               0, 0, 0, "", ""});
-    { SettingDef d = {"Graphics", "Advanced", "Display Options", "Display", "FineCropLeft",   "Left",   "Fine Crop Size", SettingDef::Int, "0", {}, 0, 100, 1, "inline", "px"}; d.dependsOn = "FineCropMode"; s.append(d); }
-    { SettingDef d = {"Graphics", "Advanced", "Display Options", "Display", "FineCropTop",    "Top",    "", SettingDef::Int, "0", {}, 0, 100, 1, "inline", "px"}; d.dependsOn = "FineCropMode"; s.append(d); }
-    { SettingDef d = {"Graphics", "Advanced", "Display Options", "Display", "FineCropRight",  "Right",  "", SettingDef::Int, "0", {}, 0, 100, 1, "inline", "px"}; d.dependsOn = "FineCropMode"; s.append(d); }
-    { SettingDef d = {"Graphics", "Advanced", "Display Options", "Display", "FineCropBottom", "Bottom", "", SettingDef::Int, "0", {}, 0, 100, 1, "inline", "px"}; d.dependsOn = "FineCropMode"; s.append(d); }
-    s.append({"Graphics", "Advanced", "Display Options", "Display", "DisableMailboxPresentation", "Disable Mailbox Presentation", "Forces FIFO presentation instead of mailbox.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    // Fine Crop bounds match upstream graphicssettingswidget.ui — short range
+    // would silently clip user values written by the standalone UI.
+    s.append(dep({"Graphics", "Advanced", "Display Options", "Display", "FineCropLeft",
+                  "Left", "Fine Crop Size",
+                  SettingDef::Int, "0", {}, -32768, 32767, 1, "inline", "px"}, "FineCropMode"));
+    s.append(dep({"Graphics", "Advanced", "Display Options", "Display", "FineCropTop",
+                  "Top", "",
+                  SettingDef::Int, "0", {}, -32768, 32767, 1, "inline", "px"}, "FineCropMode"));
+    s.append(dep({"Graphics", "Advanced", "Display Options", "Display", "FineCropRight",
+                  "Right", "",
+                  SettingDef::Int, "0", {}, -32768, 32767, 1, "inline", "px"}, "FineCropMode"));
+    s.append(dep({"Graphics", "Advanced", "Display Options", "Display", "FineCropBottom",
+                  "Bottom", "",
+                  SettingDef::Int, "0", {}, -32768, 32767, 1, "inline", "px"}, "FineCropMode"));
+    s.append({"Graphics", "Advanced", "Display Options", "Display", "DisableMailboxPresentation",
+              "Disable Mailbox Presentation",
+              "Forces FIFO presentation instead of mailbox.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "Advanced", "Display Options", "Display", "UseBlitSwapChain",
+              "Use Blit Swap Chain",
+              "Uses a blit-style swap chain instead of a flip swap chain (Windows-style).",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
 
     // Rendering Options group
     s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "Multisamples", "Multi-Sampling", "",
@@ -321,44 +578,135 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               {{"Disabled",  "Disabled"}, {"Quads",     "Quads"},
                {"Basic Triangles", "BasicTriangles"}, {"Aggressive Triangles", "AggressiveTriangles"}},
               0, 0, 0, "", ""});
-    s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "UseThread", "Threaded Rendering", "Renders frames on a separate thread.", SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""});
-    { SettingDef d = {"Graphics", "Advanced", "Rendering Options", "GPU", "MaxQueuedFrames", "Max Queued Frames", "Maximum number of frames to queue for rendering.",
-              SettingDef::Int, "2", {}, 1, 4, 1, "paired", ""}; d.dependsOn = "UseThread"; s.append(d); }
-    s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "EnableModulationCrop", "Texture Modulation Cropping (\"Old/v0 GPU\")", "Uses legacy texture modulation cropping behaviour.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-    s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "ScaledInterlacing", "Scaled Interlacing", "Scales interlaced content to full resolution.", SettingDef::Bool, "true", {}, 0, 0, 0, "", ""});
-    s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "UseSoftwareRendererForReadbacks", "Software Renderer Readbacks", "Uses the software renderer for GPU readbacks.", SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "UseThread", "Threaded Rendering",
+              "Renders frames on a separate thread.",
+              SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""});
+    s.append(dep({"Graphics", "Advanced", "Rendering Options", "GPU", "MaxQueuedFrames",
+                  "Max Queued Frames",
+                  "Maximum number of frames to queue for rendering.",
+                  SettingDef::Int, "2", {}, 0, 10, 1, "paired", ""}, "UseThread"));
+    s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "EnableModulationCrop",
+              "Texture Modulation Cropping (\"Old/v0 GPU\")",
+              "Uses legacy texture modulation cropping behaviour.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "ScaledInterlacing",
+              "Scaled Interlacing",
+              "Scales interlaced content to full resolution.",
+              SettingDef::Bool, "true", {}, 0, 0, 0, "", ""});
+    s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "UseSoftwareRendererForReadbacks",
+              "Software Renderer Readbacks",
+              "Uses the software renderer for GPU readbacks.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
 
+    // ── Graphics / PGXP ──────────────────────────────────────────────────
+    //
+    // Whole sub-tab gated on PGXPEnable upstream. The two float spinboxes
+    // (PGXPTolerance step 0.25, PGXPDepthThreshold step 1.0) are deferred:
+    // our slider/int widgets are integer-only, and the upstream
+    // QDoubleSpinBox semantics aren't yet supported as a SettingDef type.
+
+    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPTextureCorrection",
+                  "Perspective Correct Textures",
+                  "Corrects texture warping caused by PS1 affine mapping.",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
+    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPColorCorrection",
+                  "Perspective Correct Colors",
+                  "Corrects vertex color interpolation under PGXP.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""},
+                 "PGXPEnable && PGXPTextureCorrection"));
+    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPCulling", "Culling Correction",
+                  "Uses high-precision vertices for back-face culling.",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
+    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPPreserveProjFP",
+                  "Preserve Projection Precision",
+                  "Disables float precision rounding in PGXP projection.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
+    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPCPU", "CPU Mode",
+                  "Tracks PGXP across CPU registers (slower, fixes more games).",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
+    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPVertexCache", "Vertex Cache",
+                  "Caches vertex positions seen on a per-frame basis.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
+    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPDisableOn2DPolygons",
+                  "Disable on 2D Polygons",
+                  "Skips PGXP processing for 2D polygon submission.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
+    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPTransparentDepthTest",
+                  "Depth Test Transparent Polygons",
+                  "Applies depth-test to transparent polygons under PGXP depth-buffer.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""},
+                 "PGXPEnable && PGXPDepthBuffer"));
+
+    // ── Graphics / Texture Replacement ───────────────────────────────────
+    //
+    // Textures Directory (Folders/Textures) is omitted: RetroNest manages
+    // textures under {root}/emulators/duckstation/{systemId}/textures/.
+
+    // General Settings group
+    s.append({"Graphics", "Texture Replacement", "General Settings", "GPU", "EnableTextureCache",
+              "Enable Texture Cache", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "Texture Replacement", "General Settings", "TextureReplacements",
+              "PreloadTextures", "Preload Texture Replacements", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+
+    // Texture Replacement group
+    s.append({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
+              "EnableTextureReplacements", "Enable Texture Replacement", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
+              "DumpTextures", "Enable Texture Dumping", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
+              "AlwaysTrackUploads", "Always Track Uploads", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
+              "DumpReplacedTextures", "Dump Replaced Textures", "",
+              SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""});
+
+    // VRAM Write (Background) Replacement group
+    s.append({"Graphics", "Texture Replacement", "VRAM Write Replacement", "TextureReplacements",
+              "EnableVRAMWriteReplacements", "Enable VRAM Write Replacement", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "Texture Replacement", "VRAM Write Replacement", "TextureReplacements",
+              "DumpVRAMWrites", "Enable VRAM Write Dumping", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    // Use Old MDEC Routines lives in [Hacks] upstream — same widget group, different INI section.
+    s.append({"Graphics", "Texture Replacement", "VRAM Write Replacement", "Hacks",
+              "UseOldMDECRoutines", "Use Old MDEC Routines", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
 
     // =========================================================================
-    // On-Screen Display category
+    // On-Screen Display category — mirrors osdsettingswidget.cpp
+    //
+    // Theme + Font + Overlay Font deferred: filesystem/runtime-scanned combos
+    // (FullscreenUI::GetThemeNames(), ImGuiManager::GetTextFontNames(),
+    // ImGuiManager::GetFixedFontNames() — populated at widget construction).
     // =========================================================================
 
-    // Display group
-    s.append({"On-Screen Display", "", "Display", "Display", "OSDScale",  "Display Scale",   "Scale factor for OSD text.",
-              SettingDef::Int, "100", {}, 50, 500, 10, "", "%"});
-    s.append({"On-Screen Display", "", "Display", "Display", "OSDMargin", "Display Margin", "Margin around the OSD in pixels.",
-              SettingDef::Int, "10", {}, 0, 100, 1, "", "px"});
+    s.append({"On-Screen Display", "", "Display", "Display", "OSDScale",  "Display Scale",
+              "Scale factor for OSD text.",
+              SettingDef::Int, "100", {}, 25, 500, 1, "", "%"});
+    s.append({"On-Screen Display", "", "Display", "Display", "OSDMargin", "Display Margins",
+              "Margin around the OSD in pixels.",
+              SettingDef::Int, "10", {}, 0, 200, 1, "", "px"});
 
-    // Messages group — checkboxes paired, durations paired, Display Location full-width
     s.append({"On-Screen Display", "", "Messages", "Display", "ShowOSDMessages",          "Show Messages",           "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
     s.append({"On-Screen Display", "", "Messages", "Display", "ShowStatusIndicators",     "Show Status Indicators",  "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
     s.append({"On-Screen Display", "", "Messages", "Display", "AnimateOSDMessages",       "Animate Messages",        "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
     s.append({"On-Screen Display", "", "Messages", "Display", "BlurOSDMessageBackgrounds","Blur Message Backgrounds","", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Messages", "Display", "OSDErrorDuration",         "Error Duration",         "How long error messages remain on screen.",
-              SettingDef::Float, "15", {}, 0.0, 60.0, 0.5, "paired", "seconds"});
-    s.append({"On-Screen Display", "", "Messages", "Display", "OSDWarningDuration",       "Warning Duration",       "",
-              SettingDef::Float, "10", {}, 0.0, 60.0, 0.5, "paired", "seconds"});
-    s.append({"On-Screen Display", "", "Messages", "Display", "OSDInfoDuration",          "Information Duration",   "",
-              SettingDef::Float, "5",  {}, 0.0, 60.0, 0.5, "paired", "seconds"});
-    s.append({"On-Screen Display", "", "Messages", "Display", "OSDQuickDuration",         "Action Duration",        "",
-              SettingDef::Float, "2.5",  {}, 0.0, 60.0, 0.5, "paired", "seconds"});
+    s.append({"On-Screen Display", "", "Messages", "Display", "OSDErrorDuration", "Error Duration",
+              "How long error messages remain on screen.",
+              SettingDef::Float, "15", {}, 0.5, 60.0, 0.5, "paired", "seconds"});
+    s.append({"On-Screen Display", "", "Messages", "Display", "OSDWarningDuration", "Warning Duration", "",
+              SettingDef::Float, "10", {}, 0.5, 60.0, 0.5, "paired", "seconds"});
+    s.append(dep({"On-Screen Display", "", "Messages", "Display", "OSDInfoDuration", "Information Duration", "",
+                  SettingDef::Float, "5",  {}, 0.5, 60.0, 0.5, "paired", "seconds"}, "ShowOSDMessages"));
+    s.append(dep({"On-Screen Display", "", "Messages", "Display", "OSDQuickDuration", "Action Duration", "",
+                  SettingDef::Float, "2.5",  {}, 0.5, 60.0, 0.5, "paired", "seconds"}, "ShowOSDMessages"));
     s.append({"On-Screen Display", "", "Messages", "Display", "OSDMessageLocation", "Display Location", "",
-              SettingDef::Combo, "TopLeft",
-              {{"Top Left",      "TopLeft"},    {"Top Center",    "TopCenter"},    {"Top Right",      "TopRight"},
-               {"Bottom Left",   "BottomLeft"}, {"Bottom Center",  "BottomCenter"}, {"Bottom Right",   "BottomRight"}},
-              0, 0, 0, "", ""});
+              SettingDef::Combo, "TopLeft", notificationLocationOptions, 0, 0, 0, "", ""});
 
-    // Overlays group — all paired 2-column layout
     s.append({"On-Screen Display", "", "Overlays", "Display", "ShowFPS",              "Show FPS",              "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
     s.append({"On-Screen Display", "", "Overlays", "Display", "ShowSpeed",            "Show Emulation Speed",  "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
     s.append({"On-Screen Display", "", "Overlays", "Display", "ShowCPU",              "Show CPU Usage",        "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
@@ -367,82 +715,312 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
     s.append({"On-Screen Display", "", "Overlays", "Display", "ShowGPUStatistics",    "Show GPU Statistics",   "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
     s.append({"On-Screen Display", "", "Overlays", "Display", "ShowFrameTimes",       "Show Frame Times",      "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
     s.append({"On-Screen Display", "", "Overlays", "Display", "ShowLatencyStatistics","Show Latency Statistics","", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowInputs",           "Show Controller Input",  "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowEnhancements",     "Show Enhancements",      "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowInputs",           "Show Controller Input", "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowEnhancements",     "Show Enhancements",     "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
 
     // =========================================================================
-    // Audio category
+    // Audio category — mirrors audiosettingswidget.cpp
     // =========================================================================
 
-    // Controls group — sliders then paired mute checkboxes
-    s.append({"Audio", "", "Controls", "Audio", "OutputVolume",      "Output Volume",       "Master output volume.",
-              SettingDef::Int, "100", {}, 0, 100, 1, "slider", "%"});
-    s.append({"Audio", "", "Controls", "Audio", "FastForwardVolume",  "Fast Forward Volume", "Volume during fast forward.",
-              SettingDef::Int, "100", {}, 0, 100, 1, "slider", "%"});
-    s.append({"Audio", "", "Controls", "Audio", "OutputMuted",  "Mute All Sound",  "Silences all audio output.", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"Audio", "", "Controls", "CDROM", "MuteCDAudio",  "Mute CD Audio",   "Silences CD audio tracks only.", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-
-    // Configuration group — Backend + Driver paired, then full-width combos, then sliders
-    s.append({"Audio", "", "Configuration", "Audio", "Backend", "Backend", "",
-              SettingDef::Combo, "Cubeb",
-              {{"Cubeb", "Cubeb"}, {"SDL", "SDL"}, {"Null", "Null"}},
-              0, 0, 0, "paired", ""});
-    // TODO(audit-tier-4): Driver/Output Device should be enumerated at runtime
-    // from Cubeb's GetCubebDriverNames() and AudioStream::GetOutputDevices().
-    // Hard-coded options are functionally inert. Deferred until a shared
-    // mechanism is designed across all three adapters.
-    // The "Default" INI value must be empty string ("") — any non-empty value
-    // is passed through to Cubeb as a driver-name lookup and fails. Audit 2026-04-06.
-    s.append({"Audio", "", "Configuration", "Audio", "Driver", "Driver", "",
-              SettingDef::Combo, "",
-              {{"Default", ""}},
-              0, 0, 0, "paired", ""});
-    s.append({"Audio", "", "Configuration", "Audio", "OutputDevice", "Output Device", "",
-              SettingDef::Combo, "",
-              {{"Default", ""}},
-              0, 0, 0, "", ""});
-    s.append({"Audio", "", "Configuration", "Audio", "StretchMode", "Stretch Mode", "",
-              SettingDef::Combo, "TimeStretch",
-              {{"Time Stretch (Tempo Change, Best Sound)", "TimeStretch"},
-               {"Resample (Pitch Change, Fastest)", "Resample"},
-               {"None (Audio Glitches Are Fun)", "None"}},
-              0, 0, 0, "", ""});
-    s.append({"Audio", "", "Configuration", "Audio", "BufferMS", "Buffer Size", "Audio buffer size; lower values reduce latency.",
-              SettingDef::Int, "50", {}, 10, 500, 5, "slider", "ms"});
-    s.append({"Audio", "", "Configuration", "Audio", "OutputLatencyMS", "Output Latency", "Additional output latency.",
-              SettingDef::Int, "20", {}, 1, 500, 1, "slider", "ms"});
-    s.append({"Audio", "", "Configuration", "Audio", "OutputLatencyMinimal", "Minimal", "Use the smallest output latency the audio device supports.",
+    // Controls group
+    s.append({"Audio", "", "Controls", "Audio", "OutputVolume", "Output Volume",
+              "Master output volume.",
+              SettingDef::Int, "100", {}, 0, 200, 1, "slider", "%"});
+    s.append({"Audio", "", "Controls", "Audio", "FastForwardVolume", "Fast Forward Volume",
+              "Volume during fast forward.",
+              SettingDef::Int, "100", {}, 0, 200, 1, "slider", "%"});
+    s.append({"Audio", "", "Controls", "Audio", "OutputMuted", "Mute All Sound",
+              "Silences all audio output.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Audio", "", "Controls", "CDROM", "MuteCDAudio", "Mute CD Audio",
+              "Silences CD audio tracks only.",
               SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
 
-    // Time Stretching group — sliders then paired checkboxes
-    s.append({"Audio", "", "Time Stretching", "Audio", "StretchSequenceLengthMS", "Sequence Length", "SoundTouch sequence length.",
-              SettingDef::Int, "30", {}, 10, 500, 1, "slider", "ms"});
-    s.append({"Audio", "", "Time Stretching", "Audio", "StretchSeekWindowMS", "Seek Window", "SoundTouch seek window size.",
-              SettingDef::Int, "20", {}, 10, 500, 1, "slider", "ms"});
-    s.append({"Audio", "", "Time Stretching", "Audio", "StretchOverlapMS", "Overlap", "SoundTouch overlap duration.",
-              SettingDef::Int, "10", {}, 1, 100, 1, "slider", "ms"});
-    s.append({"Audio", "", "Time Stretching", "Audio", "StretchUseQuickSeek",    "Use Quick Seek",            "Enables SoundTouch quick seek mode (lower quality, less CPU).", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"Audio", "", "Time Stretching", "Audio", "StretchUseAAFilter",     "Use Anti-Aliasing Filter",  "Enables SoundTouch anti-aliasing filter.", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    // Configuration group
+    //
+    // Audio backend INI values match s_backend_names (audio_stream.cpp:20).
+    // On macOS the available backends are Null / Cubeb / SDL.
+    s.append({"Audio", "", "Configuration", "Audio", "Backend", "Backend", "",
+              SettingDef::Combo, "Cubeb",
+              {{"Null (No Output)", "Null"}, {"Cubeb", "Cubeb"}, {"SDL", "SDL"}},
+              0, 0, 0, "paired", ""});
+    // Driver and Output Device are deferred — upstream populates both at
+    // runtime (Cubeb's GetCubebDriverNames() / AudioStream::GetOutputDevices()
+    // — async device enumeration, filesystem-scanned-style blocker). The
+    // "Default" INI value must be the empty string ("") — any non-empty value
+    // is passed to Cubeb as a driver-name lookup and fails. Audit 2026-04-06.
+    s.append({"Audio", "", "Configuration", "Audio", "Driver", "Driver", "",
+              SettingDef::Combo, "",
+              {{"Default", ""}}, 0, 0, 0, "paired", ""});
+    s.append({"Audio", "", "Configuration", "Audio", "OutputDevice", "Output Device", "",
+              SettingDef::Combo, "",
+              {{"Default", ""}}, 0, 0, 0, "", ""});
+    // StretchMode display labels match s_stretch_mode_display_names
+    // (core_audio_stream.cpp:230-234) verbatim. INI values match
+    // s_stretch_mode_names (core_audio_stream.cpp:225-229).
+    s.append({"Audio", "", "Configuration", "Audio", "StretchMode", "Stretch Mode", "",
+              SettingDef::Combo, "TimeStretch",
+              {{"Off (Noisy)", "None"},
+               {"Resampling (Pitch Shift)", "Resample"},
+               {"Time Stretch (Tempo Change, Best Sound)", "TimeStretch"}},
+              0, 0, 0, "", ""});
+    s.append({"Audio", "", "Configuration", "Audio", "BufferMS", "Buffer Size",
+              "Audio buffer size; lower values reduce latency.",
+              SettingDef::Int, "50", {}, 15, 500, 1, "slider", "ms"});
+    s.append(dep({"Audio", "", "Configuration", "Audio", "OutputLatencyMS", "Output Latency",
+                  "Additional output latency.",
+                  SettingDef::Int, "20", {}, 1, 500, 1, "slider", "ms"},
+                 "!OutputLatencyMinimal"));
+    s.append({"Audio", "", "Configuration", "Audio", "OutputLatencyMinimal", "Minimal",
+              "Use the smallest output latency the audio device supports.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+
+    // Time Stretching group — gated on StretchMode == TimeStretch.
+    s.append(dep({"Audio", "", "Time Stretching", "Audio", "StretchSequenceLengthMS",
+                  "Sequence Length", "SoundTouch sequence length.",
+                  SettingDef::Int, "30", {}, 20, 100, 1, "slider", "ms"},
+                 "StretchMode=TimeStretch"));
+    s.append(dep({"Audio", "", "Time Stretching", "Audio", "StretchSeekWindowMS",
+                  "Seek Window", "SoundTouch seek window size.",
+                  SettingDef::Int, "20", {}, 10, 30, 1, "slider", "ms"},
+                 "StretchMode=TimeStretch"));
+    s.append(dep({"Audio", "", "Time Stretching", "Audio", "StretchOverlapMS",
+                  "Overlap", "SoundTouch overlap duration.",
+                  SettingDef::Int, "10", {}, 5, 15, 1, "slider", "ms"},
+                 "StretchMode=TimeStretch"));
+    s.append({"Audio", "", "Time Stretching", "Audio", "StretchUseQuickSeek", "Use Quick Seek",
+              "Enables SoundTouch quick seek mode (lower quality, less CPU).",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Audio", "", "Time Stretching", "Audio", "StretchUseAAFilter", "Use Anti-Aliasing Filter",
+              "Enables SoundTouch anti-aliasing filter.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
 
     // =========================================================================
-    // Memory Cards category
+    // Achievements category — mirrors achievementsettingswidget.cpp
+    //
+    // Login box (username display + Login/Logout buttons) is intentionally
+    // omitted — credentials live in RetroNest's RAService (see CLAUDE.md
+    // RetroAchievements section). NotificationScale + IndicatorScale are
+    // deferred: upstream uses a tri-mode size combo (Auto / OSD Scale /
+    // Custom) coupled to a percent spinbox — needs combo+spinbox composite
+    // widget infra we don't have yet.
     // =========================================================================
 
-    // Memory Card 1 group
-    s.append({"Memory Cards", "", "Memory Card 1", "MemoryCards", "Card1Type", "Memory Card Type", "",
-              SettingDef::Combo, "PerGameTitle", memCardTypes, 0, 0, 0, "", ""});
-    s.append({"Memory Cards", "", "Memory Card 1", "MemoryCards", "Card1Path", "Shared Memory Card Path", "",
-              SettingDef::String, "", {}, 0, 0, 0, "readonly", ""});
+    // Settings group
+    s.append({"Achievements", "", "Settings", "Cheevos", "Enabled", "Enable Achievements", "",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append(dep({"Achievements", "", "Settings", "Cheevos", "ChallengeMode",
+                  "Enable Hardcore Mode",
+                  "Disables save states, fast forward, cheats, and more.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "Enabled"));
+    s.append(dep({"Achievements", "", "Settings", "Cheevos", "SpectatorMode",
+                  "Enable Spectator Mode",
+                  "Tracks achievements without unlocking them on RetroAchievements.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "Enabled"));
+    s.append(dep({"Achievements", "", "Settings", "Cheevos", "EncoreMode", "Enable Encore Mode",
+                  "Allows replaying already-earned achievements for additional notifications.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""},
+                 "Enabled && !SpectatorMode"));
+    s.append(dep({"Achievements", "", "Settings", "Cheevos", "UnofficialTestMode",
+                  "Test Unofficial Achievements",
+                  "Includes unofficial / in-development achievements.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "Enabled"));
+    s.append(dep({"Achievements", "", "Settings", "Cheevos", "PrefetchBadges", "Prefetch Badges",
+                  "Pre-downloads achievement badge images.",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""}, "Enabled"));
 
-    // Memory Card 2 group
-    s.append({"Memory Cards", "", "Memory Card 2", "MemoryCards", "Card2Type", "Memory Card Type", "",
-              SettingDef::Combo, "None", memCardTypes, 0, 0, 0, "", ""});
-    s.append({"Memory Cards", "", "Memory Card 2", "MemoryCards", "Card2Path", "Shared Memory Card Path", "",
-              SettingDef::String, "", {}, 0, 0, 0, "readonly", ""});
+    // Notifications group
+    s.append(dep({"Achievements", "", "Notifications", "Cheevos", "Notifications",
+                  "Show Achievement Notifications",
+                  "Pops up a notification when an achievement is unlocked.",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "Enabled"));
+    s.append(dep({"Achievements", "", "Notifications", "Cheevos", "NotificationsDuration",
+                  "Achievement Notifications Duration",
+                  "How long the achievement notification stays on screen.",
+                  SettingDef::Int, "5", {}, 1, 30, 1, "slider", "seconds"},
+                 "Enabled && Notifications"));
+    s.append(dep({"Achievements", "", "Notifications", "Cheevos", "LeaderboardNotifications",
+                  "Show Leaderboard Notifications",
+                  "Pops up a notification on leaderboard submissions.",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "Enabled"));
+    s.append(dep({"Achievements", "", "Notifications", "Cheevos", "LeaderboardsDuration",
+                  "Leaderboard Notifications Duration",
+                  "How long the leaderboard notification stays on screen.",
+                  SettingDef::Int, "10", {}, 1, 30, 1, "slider", "seconds"},
+                 "Enabled && LeaderboardNotifications"));
+    s.append(dep({"Achievements", "", "Notifications", "Cheevos", "LeaderboardTrackers",
+                  "Show Leaderboard Trackers",
+                  "Shows live leaderboard trackers while playing.",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "Enabled"));
+    s.append(dep({"Achievements", "", "Notifications", "Cheevos", "SoundEffects",
+                  "Enable Sound Effects",
+                  "Plays a sound on achievement unlock and other events.",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "Enabled"));
+    s.append(dep({"Achievements", "", "Notifications", "Cheevos", "NotificationLocation",
+                  "Notification Location", "",
+                  SettingDef::Combo, "TopLeft", notificationLocationOptions, 0, 0, 0, "", ""},
+                 "Enabled"));
 
-    // Game-Specific Card Settings group
-    s.append({"Memory Cards", "", "Game-Specific Card Settings", "MemoryCards", "UsePlaylistTitle", "Use Single Card For Multi-Disc Games", "",
-              SettingDef::Bool, "true", {}, 0, 0, 0, "", ""});
+    // Progress Tracking group
+    s.append(dep({"Achievements", "", "Progress Tracking", "Cheevos", "ChallengeIndicatorMode",
+                  "Challenge Indicators", "",
+                  SettingDef::Combo, "PersistentIcon",
+                  {{"Disabled", "Disabled"},
+                   {"Show Persistent Icons", "PersistentIcon"},
+                   {"Show Temporary Icons",  "TemporaryIcon"},
+                   {"Show Notifications",    "Notification"}},
+                  0, 0, 0, "", ""}, "Enabled"));
+    s.append(dep({"Achievements", "", "Progress Tracking", "Cheevos", "ProgressIndicatorMode",
+                  "Progress Indicators", "",
+                  SettingDef::Combo, "Icon",
+                  {{"Disabled", "Disabled"},
+                   {"Show Icon", "Icon"},
+                   {"Show Icon and Title", "IconAndTitle"}},
+                  0, 0, 0, "", ""}, "Enabled"));
+    s.append(dep({"Achievements", "", "Progress Tracking", "Cheevos", "IndicatorLocation",
+                  "Indicator Location", "",
+                  SettingDef::Combo, "BottomRight", notificationLocationOptions, 0, 0, 0, "", ""},
+                 "Enabled"));
+
+    // =========================================================================
+    // Capture category — mirrors capturesettingswidget.cpp
+    //
+    // Save Locations (Folders/Screenshots, Folders/Videos) deferred — managed
+    // by RetroNest under emulators/duckstation/{systemId}/{screenshots,videos}.
+    // Container / VideoCodec / AudioCodec combos are deferred — populated
+    // dynamically from MediaCapture::GetContainerList(backend) /
+    // GetVideoCodecList(backend, container) / GetAudioCodecList. Without
+    // backend selection these inputs degrade to free-text strings, so we
+    // surface the keys but leave the combo population to upstream.
+    // =========================================================================
+
+    // Screenshots group
+    s.append({"Capture", "", "Screenshots", "Display", "ScreenshotMode", "Screenshot Size", "",
+              SettingDef::Combo, "ScreenResolution",
+              {{"Screen Resolution", "ScreenResolution"},
+               {"Internal Resolution", "InternalResolution"},
+               {"Internal Resolution (Aspect Uncorrected)", "UncorrectedInternalResolution"}},
+              0, 0, 0, "paired", ""});
+    s.append({"Capture", "", "Screenshots", "Display", "ScreenshotFormat", "Screenshot Format", "",
+              SettingDef::Combo, "PNG",
+              {{"PNG", "PNG"}, {"JPEG", "JPEG"}, {"WebP", "WebP"}},
+              0, 0, 0, "paired", ""});
+    s.append({"Capture", "", "Screenshots", "Display", "ScreenshotQuality", "Screenshot Quality", "",
+              SettingDef::Int, "85", {}, 1, 100, 1, "slider", "%"});
+    s.append({"Capture", "", "Screenshots", "Display", "ScreenshotFileNameFormat", "File Name Format", "",
+              SettingDef::Combo, "TitleAndTimestamp",
+              {{"Timestamp", "Timestamp"},
+               {"Game and Timestamp", "TitleAndTimestamp"},
+               {"Timestamp in Game Folder", "TimestampInFolder"},
+               {"Game and Timestamp in Game Folder", "TitleAndTimestampInFolder"}},
+              0, 0, 0, "", ""});
+
+    // Media Capture group
+    s.append({"Capture", "", "Media Capture", "MediaCapture", "Backend", "Backend", "",
+              SettingDef::Combo, "FFmpeg",
+              {{"FFmpeg", "FFmpeg"}},
+              0, 0, 0, "paired", ""});
+    // Container is dynamic per backend — surfaced as a free-form String so
+    // round-trip with upstream's selection still works (default mp4).
+    s.append({"Capture", "", "Media Capture", "MediaCapture", "Container", "Container", "",
+              SettingDef::String, "mp4", {}, 0, 0, 0, "paired", ""});
+    s.append({"Capture", "", "Media Capture", "MediaCapture", "FilenameFormat", "File Name Format", "",
+              SettingDef::Combo, "TitleAndTimestamp",
+              {{"Timestamp", "Timestamp"},
+               {"Game and Timestamp", "TitleAndTimestamp"},
+               {"Timestamp in Game Folder", "TimestampInFolder"},
+               {"Game and Timestamp in Game Folder", "TitleAndTimestampInFolder"}},
+              0, 0, 0, "", ""});
+
+    // Video sub-area
+    s.append({"Capture", "", "Media Capture", "MediaCapture", "VideoCapture", "Capture Video",
+              "Captures video to the chosen file when media capture is started.",
+              SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""});
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoCodec", "Video Codec",
+                  "Video codec name (FFmpeg) — leave blank for default.",
+                  SettingDef::String, "", {}, 0, 0, 0, "paired", ""}, "VideoCapture"));
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoBitrate", "Video Bitrate",
+                  "Target video bitrate.",
+                  SettingDef::Int, "6000", {}, 100, 100000, 100, "", "kbps"}, "VideoCapture"));
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoAutoSize",
+                  "Automatic Video Resolution",
+                  "Captures at the running game's internal resolution.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "VideoCapture"));
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoWidth", "Video Width", "",
+                  SettingDef::Int, "640", {}, 320, 32768, 16, "paired", "px"},
+                 "VideoCapture && !VideoAutoSize"));
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoHeight", "Video Height", "",
+                  SettingDef::Int, "480", {}, 240, 32768, 16, "paired", "px"},
+                 "VideoCapture && !VideoAutoSize"));
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoCodecUseArgs",
+                  "Enable Extra Video Arguments", "",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "VideoCapture"));
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoCodecArgs",
+                  "Extra Video Arguments",
+                  "Codec parameters as 'key = value : key = value' pairs.",
+                  SettingDef::String, "", {}, 0, 0, 0, "paired", ""},
+                 "VideoCapture && VideoCodecUseArgs"));
+
+    // Audio sub-area
+    s.append({"Capture", "", "Media Capture", "MediaCapture", "AudioCapture", "Capture Audio",
+              "Captures audio to the chosen file when media capture is started.",
+              SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""});
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "AudioCodec", "Audio Codec",
+                  "Audio codec name (FFmpeg) — leave blank for default.",
+                  SettingDef::String, "", {}, 0, 0, 0, "paired", ""}, "AudioCapture"));
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "AudioBitrate", "Audio Bitrate",
+                  "Target audio bitrate.",
+                  SettingDef::Int, "128", {}, 16, 2048, 1, "", "kbps"}, "AudioCapture"));
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "AudioCodecUseArgs",
+                  "Enable Extra Audio Arguments", "",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "AudioCapture"));
+    // NOTE — upstream binds both VideoCodecArgs and AudioCodecArgs to the
+    // same INI key "MediaCapture/AudioCodecArgs" (capturesettingswidget.cpp
+    // :64+:70). Our Audio extra args therefore mirrors the upstream bug; if
+    // upstream fixes it, the audit will refresh the key here.
+    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "AudioCodecArgs",
+                  "Extra Audio Arguments",
+                  "Codec parameters as 'key = value : key = value' pairs.",
+                  SettingDef::String, "", {}, 0, 0, 0, "paired", ""},
+                 "AudioCapture && AudioCodecUseArgs"));
+
+    // =========================================================================
+    // Advanced category — mirrors advancedsettingswidget.cpp (Logging only).
+    //
+    // Cache + Covers folder pickers omitted (RetroNest manages those paths).
+    // ShowDebugMenu omitted — its only effect is unlocking the upstream
+    // Debugging panes, which RetroNest already drops. Log Channels button
+    // (popup menu over LogWindow::populateFilterMenu) and Web Cache action
+    // buttons (refresh / clear) deferred — modal/action widget blockers.
+    // RAIntegration is Windows-only.
+    // =========================================================================
+
+    s.append({"Advanced", "", "Logging", "Logging", "LogLevel", "Log Level",
+              "Verbosity of host log messages.",
+              SettingDef::Combo, "Info",
+              {{"None", "None"}, {"Error", "Error"}, {"Warning", "Warning"},
+               {"Information", "Info"}, {"Verbose", "Verbose"}, {"Developer", "Dev"},
+               {"Debug", "Debug"}, {"Trace", "Trace"}},
+              0, 0, 0, "", ""});
+    s.append({"Advanced", "", "Logging", "Logging", "LogToConsole", "Log To System Console",
+              "Logs messages to the console window.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Advanced", "", "Logging", "Logging", "LogToDebug", "Log To Debug Console",
+              "Logs messages to the debug console where supported.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Advanced", "", "Logging", "Logging", "LogToWindow", "Log To Window",
+              "Logs messages to the in-emulator log window.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Advanced", "", "Logging", "Logging", "LogToFile", "Log To File",
+              "Logs messages to duckstation.log in the user directory.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append(dep({"Advanced", "", "Logging", "Logging", "LogTimestamps", "Log Timestamps",
+                  "Includes elapsed time since application start in window/console logs.",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""},
+                 "LogToConsole || LogToWindow"));
+    s.append(dep({"Advanced", "", "Logging", "Logging", "LogFileTimestamps", "Log File Timestamps",
+                  "Includes elapsed time since application start in file logs.",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "LogToFile"));
 
     return s;
 }
