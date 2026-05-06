@@ -1,14 +1,13 @@
 #include "duckstation_settings_dialog.h"
-#include "pages/duckstation_audio_page.h"
-#include "pages/duckstation_memory_cards_page.h"
-#include "pages/duckstation_console_page.h"
-#include "pages/duckstation_emulation_page.h"
-#include "pages/duckstation_graphics_page.h"
 #include "duckstation_category_hub.h"
+#include "ui/settings/generic_settings_page.h"
 #include "ui/settings/settings_dialog_theme.h"
 #include "ui/app_controller.h"
+#include "adapters/duckstation_adapter.h"
 
-DuckStationSettingsDialog::DuckStationSettingsDialog(AppController* app, const QString& emuId, QWidget* parent)
+DuckStationSettingsDialog::DuckStationSettingsDialog(AppController* app,
+                                                     const QString& emuId,
+                                                     QWidget* parent)
     : EmulatorSettingsDialogBase(app, emuId, parent) {
     setupChrome("DuckStation Settings", QSize(1000, 720), SettingsDialogTheme::windowBg());
 
@@ -21,39 +20,18 @@ DuckStationSettingsDialog::DuckStationSettingsDialog(AppController* app, const Q
 }
 
 void DuckStationSettingsDialog::onCategoryActivated(const QString& category) {
-    if (category == "Audio") {
-        auto* page = new DuckStationAudioPage(this);
-        connect(page, &DuckStationAudioPage::settingFocused,
-                this, &DuckStationSettingsDialog::setFocusedSetting);
-        pushPage(page);
-        return;
-    }
-    if (category == "Console") {
-        auto* page = new DuckStationConsolePage(this);
-        connect(page, &DuckStationConsolePage::settingFocused,
-                this, &DuckStationSettingsDialog::setFocusedSetting);
-        pushPage(page);
-        return;
-    }
-    if (category == "Emulation") {
-        auto* page = new DuckStationEmulationPage(this);
-        connect(page, &DuckStationEmulationPage::settingFocused,
-                this, &DuckStationSettingsDialog::setFocusedSetting);
-        pushPage(page);
-        return;
-    }
-    if (category == "Graphics") {
-        auto* page = new DuckStationGraphicsPage(this);
-        connect(page, &DuckStationGraphicsPage::settingFocused,
-                this, &DuckStationSettingsDialog::setFocusedSetting);
-        pushPage(page, /*hasSubTabs=*/true);
-        return;
-    }
-    if (category == "Memory Cards") {
-        auto* page = new DuckStationMemoryCardsPage(this);
-        connect(page, &DuckStationMemoryCardsPage::settingFocused,
-                this, &DuckStationSettingsDialog::setFocusedSetting);
-        pushPage(page);
-        return;
-    }
+    DuckStationAdapter adapter;  // stateless; matches DolphinSettingsDialog::onCategoryActivated
+
+    QVector<SettingDef> slice;
+    for (const auto& d : adapter.settingsSchema())
+        if (d.category == category) slice.append(d);
+
+    auto* page = new GenericSettingsPage(this, std::move(slice), &adapter);
+    connect(page, &GenericSettingsPage::settingFocused,
+            this, &DuckStationSettingsDialog::setFocusedSetting);
+
+    // Graphics has 4 sub-tabs (Rendering / Advanced / PGXP / Texture
+    // Replacement) — pass hasSubTabs=true so L1/R1 hints show on chrome.
+    const bool hasSubTabs = (category == "Graphics");
+    pushPage(page, hasSubTabs);
 }
