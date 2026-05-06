@@ -34,6 +34,7 @@ file(GLOB RCHEEVOS_SOURCES
     ${rcheevos_SOURCE_DIR}/src/rhash/*.c
     ${rcheevos_SOURCE_DIR}/src/*.c)
 add_library(rcheevos_static STATIC ${RCHEEVOS_SOURCES})
+# PUBLIC so consumers (only ${PROJECT_NAME}) get rcheevos headers automatically (e.g. rcheevos_runtime.cpp).
 target_include_directories(rcheevos_static PUBLIC ${rcheevos_SOURCE_DIR}/include)
 target_include_directories(rcheevos_static PRIVATE ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
 
