@@ -290,6 +290,45 @@ EmulatorInstaller::InstallResult EmulatorInstaller::postDownload(
     result.version = tagName;
     result.publishedAt = publishedAt;
 
+    // Libretro cores arrive as a single .dylib.zip — unzip into cores/ and
+    // strip quarantine on the dylib itself rather than the whole install dir.
+    if (tempFile.endsWith(".dylib.zip", Qt::CaseInsensitive)) {
+        const QString coreDir = installPath + "/cores";
+        QDir().mkpath(coreDir);
+
+        QProcess unzip;
+        unzip.start("/usr/bin/unzip", {"-o", tempFile, "-d", coreDir});
+        unzip.waitForFinished(30000);
+        QFile::remove(tempFile);
+        if (unzip.exitCode() != 0) {
+            qWarning() << "[Installer] Libretro unzip failed:" << unzip.readAllStandardError();
+            result.message = "Extraction failed";
+            return result;
+        }
+
+        // Derive the dylib name by stripping .zip from the archive name.
+        const QString dylibName = QFileInfo(tempFile).fileName().chopped(4); // strip ".zip"
+        const QString dylibPath = coreDir + "/" + dylibName;
+
+#if defined(Q_OS_MACOS)
+        // Strip quarantine so dlopen() can map the unsigned dylib.
+        QProcess xattr;
+        xattr.start("/usr/bin/xattr", {"-d", "com.apple.quarantine", dylibPath});
+        xattr.waitForFinished(2000);
+        // Ignore exit code — the attribute may not be present.
+#endif
+
+        // Write a version sidecar for update-check comparisons.
+        QFile vf(dylibPath + ".version");
+        if (vf.open(QIODevice::WriteOnly))
+            vf.write(publishedAt.toUtf8());
+
+        qInfo() << "[Installer] Libretro core installed to" << dylibPath;
+        result.success = true;
+        result.message = "Successfully installed";
+        return result;
+    }
+
     if (!extract(tempFile, installPath)) {
         QFile::remove(tempFile);
         result.message = "Extraction failed";
