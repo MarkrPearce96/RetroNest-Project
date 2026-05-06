@@ -169,9 +169,15 @@ void GameSession::terminate() {
         const auto* mf = m_manifest;
         if (mf) {
             const QString systemId = Paths::systemIdFor(mf->id, mf->systems);
-            const QString romBase = QFileInfo(m_currentRomPath).completeBaseName();
+            // Use the serial as the resume filename so findResumeFile can match
+            // by serial without a DB lookup.  Fall back to the ROM base name
+            // only when serial extraction fails (e.g. unsupported format).
+            const QString serial = m_libretroAdapter->extractSerial(m_currentRomPath);
+            const QString resumeName = serial.isEmpty()
+                ? QFileInfo(m_currentRomPath).completeBaseName()
+                : serial;
             const QString resumePath = Paths::emulatorDataDir(mf->id, systemId)
-                + "/savestates/" + romBase + ".resume";
+                + "/savestates/" + resumeName + ".resume";
             QDir().mkpath(QFileInfo(resumePath).absolutePath());
             // Schedule the save onto the worker thread (race-free: the worker
             // will flush the pending path in its post-loop teardown, before

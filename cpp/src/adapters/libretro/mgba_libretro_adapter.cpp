@@ -101,9 +101,10 @@ QString MgbaLibretroAdapter::extractSerial(const QString& romPath) const {
         return {};
     const QString ext = QFileInfo(romPath).suffix().toLower();
     if (ext == "gba") {
-        // GBA cartridge header: game code at 0xAC, 4 bytes; title at 0xA0, 12 bytes
-        f.seek(0xA0);
-        QByteArray code = f.read(12);
+        // GBA cartridge header: game code at 0xAC, 4 bytes (e.g. "AAME")
+        // 0xA0 is the Game Title (12 bytes) — NOT the serial.
+        f.seek(0xAC);
+        QByteArray code = f.read(4);
         return QString::fromLatin1(code).trimmed();
     }
     if (ext == "gb" || ext == "gbc") {
@@ -121,9 +122,10 @@ QString MgbaLibretroAdapter::findResumeFile(const QString& serial) const {
     for (const QString& sys : { "gba", "gb", "gbc" }) {
         const QString dir = Paths::emulatorDataDir("mgba", sys) + "/savestates";
         QDir d(dir);
-        const auto entries = d.entryList({ "*.resume" }, QDir::Files);
-        for (const auto& entry : entries)
-            return d.absoluteFilePath(entry);
+        // Filter directly by serial: GameSession::terminate writes "{serial}.resume"
+        const auto entries = d.entryList({ serial + ".resume" }, QDir::Files);
+        if (!entries.isEmpty())
+            return d.absoluteFilePath(entries.first());
     }
     return {};
 }
