@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(RetroNest LANGUAGES CXX OBJCXX)
+project(RetroNest LANGUAGES C CXX OBJCXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -621,3 +621,10 @@ set_target_properties(test_setting_def_ini_routing PROPERTIES AUTOMOC ON)
 target_include_directories(test_setting_def_ini_routing PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_setting_def_ini_routing PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME SettingDefIniRouting COMMAND test_setting_def_ini_routing)
+
+add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
+set_target_properties(fake_libretro_core PROPERTIES
+    PREFIX "" OUTPUT_NAME "fake_libretro_core"
+    SUFFIX ".dylib")
+target_include_directories(fake_libretro_core PRIVATE
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
