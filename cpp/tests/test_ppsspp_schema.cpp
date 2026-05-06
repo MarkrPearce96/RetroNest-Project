@@ -158,14 +158,19 @@ private slots:
     }
 
     void testGraphicsOSDPreviewSpec() {
-        // Same decorative pattern: OsdPreview sits beside the bitmask
-        // toggles but isn't wired to them (the toggles share one INI key,
-        // which the preview-binding wiring can't disambiguate).
+        // OsdPreview live-binds to individual bits of iShowStatusFlags
+        // via the "<key>:<bitmask>" lookup syntax. FPS_COUNTER (bit 2) →
+        // showFps, SPEED_COUNTER (bit 4) → showSpeed. Show Battery %
+        // (bit 8) has no OsdPreview equivalent and stays unbound.
         PPSSPPAdapter adapter;
         const PreviewSpec spec =
             adapter.previewSpec("Graphics", "On-Screen Display");
         QCOMPARE(spec.previewType, QString("osd"));
-        QVERIFY(spec.keyToProperty.isEmpty());
+        QCOMPARE(spec.keyToProperty.value("iShowStatusFlags:2"),
+                 QString("showFps"));
+        QCOMPARE(spec.keyToProperty.value("iShowStatusFlags:4"),
+                 QString("showSpeed"));
+        QVERIFY(!spec.keyToProperty.contains("iShowStatusFlags:8"));
     }
 
     void testSubcategoriesOnlyOnGraphics() {

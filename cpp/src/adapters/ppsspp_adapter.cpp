@@ -60,14 +60,20 @@ QString PPSSPPAdapter::controllerSettingsSection(int /*port*/) const {
 // ============================================================================
 // previewSpec — declare which preview widget the Recommended and Graphics →
 // On-Screen Display sub-tab pages render alongside their cards. Mirrors the
-// Dolphin / PCSX2 / DuckStation pattern (Recommended → AspectRatioPreview;
-// Graphics OSD sub-tab → OsdPreview). Both bindings are decorative for
-// PPSSPP — the standalone UI exposes neither a discrete aspect-ratio enum
-// nor individual OSD show-toggles (PPSSPP packs FPS/Speed/Battery into one
-// bitmask key, which the preview-binding wiring can't disambiguate by key
-// alone). GenericSettingsPage falls back to the first group in the
-// subcategory when no schema key is bound, so the preview block still lays
-// out cards beside the preview — visually identical to the other adapters'.
+// Dolphin / PCSX2 / DuckStation pattern.
+//
+// Recommended → AspectRatioPreview is decorative-only (no schema key bound):
+// PPSSPP's standalone UI exposes no discrete aspect-ratio enum at this
+// level. The preview renders its default 4:3 frame and stays static.
+// GenericSettingsPage falls back to the first group as primaryPreviewGroup
+// so cards still lay out beside the preview.
+//
+// Graphics → On-Screen Display → OsdPreview binds individual bits of the
+// packed-int iShowStatusFlags key to the matching OsdPreview Q_PROPERTY
+// using the "<key>:<bitmask>" lookup syntax — see wirePreviewBinding.
+// Show Battery % has no OsdPreview equivalent (only FPS / Speed / battery
+// in PPSSPP's bitmask, vs OsdPreview's many show* properties), so its
+// toggle stays unbound.
 // ============================================================================
 
 PreviewSpec PPSSPPAdapter::previewSpec(const QString& category,
@@ -76,7 +82,10 @@ PreviewSpec PPSSPPAdapter::previewSpec(const QString& category,
         return {"aspect", {}};
     }
     if (category == "Graphics" && subcategory == "On-Screen Display") {
-        return {"osd", {}};
+        return {"osd", {
+            {"iShowStatusFlags:2", "showFps"},     // FPS_COUNTER     bit
+            {"iShowStatusFlags:4", "showSpeed"},   // SPEED_COUNTER   bit
+        }};
     }
     return {};
 }
