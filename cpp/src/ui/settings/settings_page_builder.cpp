@@ -1,4 +1,5 @@
 #include "settings_page_builder.h"
+#include "core/bitmask_helpers.h"
 #include "ui/settings/widgets/settings_card.h"
 #include "ui/settings/widgets/settings_combo_row.h"
 #include "ui/settings/widgets/settings_slider_row.h"
@@ -17,11 +18,16 @@ const char* SettingsPageBuilder::kScrollAreaQss =
 SettingsPageBuilder::SettingsPageBuilder(QWidget* parentPage,
                                          const QVector<SettingDef>& schema,
                                          SaveFn save,
+                                         ReadFn read,
                                          FocusFn focus)
-    : m_parent(parentPage), m_schema(schema), m_save(std::move(save)), m_focus(std::move(focus)) {}
+    : m_parent(parentPage), m_schema(schema),
+      m_save(std::move(save)), m_read(std::move(read)),
+      m_focus(std::move(focus)) {}
 
-const SettingDef* SettingsPageBuilder::findDef(const QString& key) const {
-    for (const auto& d : m_schema) if (d.key == key) return &d;
+const SettingDef* SettingsPageBuilder::findDef(const QString& key,
+                                                int bitmask) const {
+    for (const auto& d : m_schema)
+        if (d.key == key && d.bitmask == bitmask) return &d;
     return nullptr;
 }
 
@@ -84,8 +90,9 @@ SettingsCard* SettingsPageBuilder::makeSliderCard(const QString& key) {
     return card;
 }
 
-SettingsCard* SettingsPageBuilder::makeToggleCard(const QString& key) {
-    const SettingDef* d = findDef(key);
+SettingsCard* SettingsPageBuilder::makeToggleCard(const QString& key,
+                                                   int bitmask) {
+    const SettingDef* d = findDef(key, bitmask);
     if (!d) return nullptr;
     auto* card = new SettingsCard(m_parent);
     card->pinToReferenceHeight();
@@ -101,11 +108,27 @@ SettingsCard* SettingsPageBuilder::makeToggleCard(const QString& key) {
     QString section = d->section;
     QString defKey = d->key;
     const bool inverted = d->inverted;
+    const int bit = d->bitmask;
+    QString defValue = d->defaultValue;
     auto save = m_save;
+    auto read = m_read;
     QObject::connect(row, &SettingsToggleRow::toggled, m_parent,
-                     [section, defKey, inverted, save](bool on){
+                     [section, defKey, inverted, bit, defValue, save, read](bool on){
                          const bool stored = inverted ? !on : on;
-                         save(section, defKey, stored ? "true" : "false");
+                         if (bit == 0) {
+                             save(section, defKey, stored ? "true" : "false");
+                         } else {
+                             // Re-read the current int from disk so other bits
+                             // (other bitmask checkboxes sharing this key)
+                             // stay intact when this one toggles.
+                             const QString cur = read ? read(section, defKey)
+                                                      : QString();
+                             const int curInt = cur.isEmpty() ? defValue.toInt()
+                                                              : cur.toInt();
+                             const int newInt =
+                                 BitmaskHelpers::setBit(curInt, bit, stored);
+                             save(section, defKey, QString::number(newInt));
+                         }
                      });
     v->addWidget(row);
     return card;

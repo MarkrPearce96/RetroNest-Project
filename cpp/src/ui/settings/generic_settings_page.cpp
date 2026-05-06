@@ -1,5 +1,6 @@
 #include "generic_settings_page.h"
 #include "adapters/emulator_adapter.h"
+#include "core/bitmask_helpers.h"
 #include "core/setting_dependency.h"
 #include "emulator_settings_dialog_base.h"
 #include "settings_page_builder.h"
@@ -243,10 +244,17 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
   // kColumnSpacing, kStackSpacing, kCardsBesidePreview defined in the
   // anonymous namespace at the top of this file.
   if (!spec.previewType.isEmpty()) {
+    // keyToProperty entries may be plain keys or "<key>:<bitmask>" pairs
+    // (see wirePreviewBinding for the full bitmask wiring). Strip the
+    // bitmask suffix here so primary-group lookup matches schema entries
+    // by bare key — the bitmask only matters when binding to widget
+    // signals further down.
     QSet<QString> previewKeys;
     for (auto it = spec.keyToProperty.constBegin();
          it != spec.keyToProperty.constEnd(); ++it) {
-      previewKeys.insert(it.key());
+      const QString &s = it.key();
+      const int colon = s.indexOf(':');
+      previewKeys.insert(colon < 0 ? s : s.left(colon));
     }
     // First group (in schema order) that owns at least one spec-mapped key.
     QString firstPreviewGroup;
@@ -367,10 +375,15 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     m_currentPreview = preview;
   }
 
+  auto *app = m_dlg->appController();
+  const QString emuId = m_dlg->emuId();
   SettingsPageBuilder builder(
       this, m_schema,
       [this](const QString &sec, const QString &k, const QString &v) {
         saveValue(sec, k, v);
+      },
+      [app, emuId](const QString &sec, const QString &k) {
+        return app->settingValue(emuId, sec, k);
       },
       [this](const SettingDef &d) { emit settingFocused(d); });
 
@@ -391,7 +404,7 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
     case SettingDef::Combo:
       return builder.makeComboCard(d.key);
     case SettingDef::Bool:
-      return builder.makeToggleCard(d.key);
+      return builder.makeToggleCard(d.key, d.bitmask);
     case SettingDef::Int:
     case SettingDef::Float:
       // Slider card carries an embedded spinbox, so it doubles as the
@@ -564,7 +577,13 @@ void GenericSettingsPage::loadValues() {
     const SettingDef &d = toggle->settingDef();
     const QString cur = app->settingValue(emuId, d.section, d.key);
     const QString v = cur.isEmpty() ? d.defaultValue : cur;
-    const bool stored = v.compare("true", Qt::CaseInsensitive) == 0;
+    bool stored;
+    if (d.bitmask != 0) {
+      // Packed-int bitmask checkbox — test the specific bit.
+      stored = BitmaskHelpers::getBit(v.toInt(), d.bitmask);
+    } else {
+      stored = v.compare("true", Qt::CaseInsensitive) == 0;
+    }
     const QSignalBlocker blocker(toggle);
     toggle->setChecked(d.inverted ? !stored : stored);
   }
@@ -876,10 +895,28 @@ void GenericSettingsPage::wirePreviewBinding(const PreviewSpec &spec,
   auto *app = m_dlg->appController();
   const QString emuId = m_dlg->emuId();
 
+  // keyToProperty entries can be either plain keys ("AspectRatio") or
+  // "<key>:<bitmask>" pairs for bitmask checkboxes that share one INI
+  // key (PPSSPP's iShowStatusFlags packs FPS/Speed/Battery into bits
+  // 2/4/8). Parse a lookup string into (key, bitmask) once; bitmask=0
+  // means "plain key, normal Bool/Combo/Slider binding".
+  auto parseLookup = [](const QString &s) -> QPair<QString, int> {
+    const int colon = s.indexOf(':');
+    if (colon < 0) return {s, 0};
+    return {s.left(colon), s.mid(colon + 1).toInt()};
+  };
+
   // Initial sync: read each bound setting's current value and seed the
   // matching preview Q_PROPERTY.
   auto seed = [&](const QString &propName, const QString &val,
-                  SettingDef::Type type) {
+                  SettingDef::Type type, int bitmask) {
+    if (bitmask != 0) {
+      // Packed-int checkbox — seed the preview's bool property by
+      // testing the specific bit on the raw INI int.
+      preview->setProperty(propName.toUtf8().constData(),
+                           BitmaskHelpers::getBit(val.toInt(), bitmask));
+      return;
+    }
     bool ok = false;
     const int asInt = val.toInt(&ok);
     // For non-Combo numeric types the int form is the right shape;
@@ -901,14 +938,14 @@ void GenericSettingsPage::wirePreviewBinding(const PreviewSpec &spec,
 
   for (auto it = spec.keyToProperty.constBegin();
        it != spec.keyToProperty.constEnd(); ++it) {
-    const QString &key = it.key();
+    const auto [key, bitmask] = parseLookup(it.key());
     const QString &propName = it.value();
     for (const auto &d : m_schema) {
-      if (d.key != key)
+      if (d.key != key || d.bitmask != bitmask)
         continue;
       const QString cur = app->settingValue(emuId, d.section, d.key);
       const QString val = cur.isEmpty() ? d.defaultValue : cur;
-      seed(propName, val, d.type);
+      seed(propName, val, d.type, bitmask);
       break;
     }
   }
@@ -926,10 +963,16 @@ void GenericSettingsPage::wirePreviewBinding(const PreviewSpec &spec,
             });
   }
   for (auto *tog : findChildren<SettingsToggleRow *>()) {
-    const QString key = tog->settingDef().key;
-    if (!spec.keyToProperty.contains(key))
+    const SettingDef &def = tog->settingDef();
+    // Bitmask checkboxes look up as "<key>:<bitmask>" so individual
+    // bits in a packed-int INI value can drive different preview
+    // properties (PPSSPP OSD: iShowStatusFlags:2 → showFps etc.).
+    const QString lookupKey = def.bitmask != 0
+        ? QStringLiteral("%1:%2").arg(def.key).arg(def.bitmask)
+        : def.key;
+    if (!spec.keyToProperty.contains(lookupKey))
       continue;
-    const QString prop = spec.keyToProperty.value(key);
+    const QString prop = spec.keyToProperty.value(lookupKey);
     connect(tog, &SettingsToggleRow::toggled, preview,
             [preview, prop](bool on) {
               preview->setProperty(prop.toUtf8().constData(), on);
