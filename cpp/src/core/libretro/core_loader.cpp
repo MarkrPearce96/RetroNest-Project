@@ -25,32 +25,30 @@ bool CoreLoader::open(const QString& path, QString* err) {
         if (err) *err = QString("dlopen(%1) failed: %2").arg(path, dlerror());
         return false;
     }
-    bool ok = true;
-    ok &= resolveRequired(m_handle, "retro_api_version", m_syms.retro_api_version, err);
-    ok &= resolveRequired(m_handle, "retro_init", m_syms.retro_init, err);
-    ok &= resolveRequired(m_handle, "retro_deinit", m_syms.retro_deinit, err);
-    ok &= resolveRequired(m_handle, "retro_set_environment", m_syms.retro_set_environment, err);
-    ok &= resolveRequired(m_handle, "retro_set_video_refresh", m_syms.retro_set_video_refresh, err);
-    ok &= resolveRequired(m_handle, "retro_set_audio_sample", m_syms.retro_set_audio_sample, err);
-    ok &= resolveRequired(m_handle, "retro_set_audio_sample_batch", m_syms.retro_set_audio_sample_batch, err);
-    ok &= resolveRequired(m_handle, "retro_set_input_poll", m_syms.retro_set_input_poll, err);
-    ok &= resolveRequired(m_handle, "retro_set_input_state", m_syms.retro_set_input_state, err);
-    ok &= resolveRequired(m_handle, "retro_get_system_info", m_syms.retro_get_system_info, err);
-    ok &= resolveRequired(m_handle, "retro_get_system_av_info", m_syms.retro_get_system_av_info, err);
-    ok &= resolveRequired(m_handle, "retro_set_controller_port_device", m_syms.retro_set_controller_port_device, err);
-    ok &= resolveRequired(m_handle, "retro_reset", m_syms.retro_reset, err);
-    ok &= resolveRequired(m_handle, "retro_run", m_syms.retro_run, err);
-    ok &= resolveRequired(m_handle, "retro_load_game", m_syms.retro_load_game, err);
-    ok &= resolveRequired(m_handle, "retro_unload_game", m_syms.retro_unload_game, err);
-    ok &= resolveRequired(m_handle, "retro_get_region", m_syms.retro_get_region, err);
-    ok &= resolveRequired(m_handle, "retro_serialize_size", m_syms.retro_serialize_size, err);
-    ok &= resolveRequired(m_handle, "retro_serialize", m_syms.retro_serialize, err);
-    ok &= resolveRequired(m_handle, "retro_unserialize", m_syms.retro_unserialize, err);
-    ok &= resolveRequired(m_handle, "retro_get_memory_data", m_syms.retro_get_memory_data, err);
-    ok &= resolveRequired(m_handle, "retro_get_memory_size", m_syms.retro_get_memory_size, err);
+    if (!resolveRequired(m_handle, "retro_api_version", m_syms.retro_api_version, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_init", m_syms.retro_init, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_deinit", m_syms.retro_deinit, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_set_environment", m_syms.retro_set_environment, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_set_video_refresh", m_syms.retro_set_video_refresh, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_set_audio_sample", m_syms.retro_set_audio_sample, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_set_audio_sample_batch", m_syms.retro_set_audio_sample_batch, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_set_input_poll", m_syms.retro_set_input_poll, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_set_input_state", m_syms.retro_set_input_state, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_get_system_info", m_syms.retro_get_system_info, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_get_system_av_info", m_syms.retro_get_system_av_info, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_set_controller_port_device", m_syms.retro_set_controller_port_device, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_reset", m_syms.retro_reset, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_run", m_syms.retro_run, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_load_game", m_syms.retro_load_game, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_unload_game", m_syms.retro_unload_game, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_get_region", m_syms.retro_get_region, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_serialize_size", m_syms.retro_serialize_size, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_serialize", m_syms.retro_serialize, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_unserialize", m_syms.retro_unserialize, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_get_memory_data", m_syms.retro_get_memory_data, err)) { close(); return false; }
+    if (!resolveRequired(m_handle, "retro_get_memory_size", m_syms.retro_get_memory_size, err)) { close(); return false; }
     resolveOptional(m_handle, "retro_cheat_reset", m_syms.retro_cheat_reset);
     resolveOptional(m_handle, "retro_cheat_set", m_syms.retro_cheat_set);
-    if (!ok) { close(); return false; }
     return true;
 }
 
