@@ -470,6 +470,17 @@ target_include_directories(test_manifest_libretro_fields PRIVATE ${CMAKE_CURRENT
 target_link_libraries(test_manifest_libretro_fields PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME ManifestLibretroFields COMMAND test_manifest_libretro_fields)
 
+add_executable(test_core_loader
+    tests/test_core_loader.cpp
+    src/core/libretro/core_loader.cpp)
+set_target_properties(test_core_loader PROPERTIES AUTOMOC ON)
+target_include_directories(test_core_loader PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+target_link_libraries(test_core_loader PRIVATE Qt6::Core Qt6::Test ${CMAKE_DL_LIBS})
+add_dependencies(test_core_loader fake_libretro_core)
+add_test(NAME CoreLoader COMMAND test_core_loader)
+
 add_executable(test_ppsspp_schema
     tests/test_ppsspp_schema.cpp
     src/adapters/ppsspp_adapter.cpp
