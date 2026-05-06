@@ -47,7 +47,7 @@ PreviewSpec DuckStationAdapter::previewSpec(const QString& category,
     //   showGpu, showGsStats, showInputs, showSettings, … etc.
     // DuckStation's ShowLatencyStatistics has no direct preview equivalent
     // — left out (preview still renders, just no toggle for it).
-    if (category == "On-Screen Display") {
+    if (category == "Graphics" && subcategory == "On-Screen Display") {
         return {"osd", {
             {"ShowFPS",            "showFps"},
             {"ShowSpeed",          "showSpeed"},
@@ -69,6 +69,7 @@ QString DuckStationAdapter::subcategoryIcon(const QString& category,
     if (subcategory == "Rendering")           return QStringLiteral("\U0001F5BC");  // 🖼
     if (subcategory == "Advanced")            return QStringLiteral("\U0001F527");  // 🔧
     if (subcategory == "Texture Replacement") return QStringLiteral("\U0001F3A8");  // 🎨
+    if (subcategory == "On-Screen Display")   return QStringLiteral("\U0001F4CA");  // 📊
     return {};
 }
 
@@ -774,46 +775,50 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
 
     // =========================================================================
-    // On-Screen Display category — mirrors osdsettingswidget.cpp
+    // Graphics > On-Screen Display sub-tab — mirrors osdsettingswidget.cpp.
+    //
+    // Upstream surfaces this as a top-level category, but RetroNest folds
+    // it into Graphics as a sub-tab matching the Dolphin pattern (one
+    // unified Graphics dialog covers display + OSD).
     //
     // Theme + Font + Overlay Font deferred: filesystem/runtime-scanned combos
     // (FullscreenUI::GetThemeNames(), ImGuiManager::GetTextFontNames(),
     // ImGuiManager::GetFixedFontNames() — populated at widget construction).
     // =========================================================================
 
-    s.append({"On-Screen Display", "", "Display", "Display", "OSDScale",  "Display Scale",
+    s.append({"Graphics", "On-Screen Display", "Display", "Display", "OSDScale",  "Display Scale",
               "Scale factor for OSD text.",
               SettingDef::Int, "100", {}, 25, 500, 1, "", "%"});
-    s.append({"On-Screen Display", "", "Display", "Display", "OSDMargin", "Display Margins",
+    s.append({"Graphics", "On-Screen Display", "Display", "Display", "OSDMargin", "Display Margins",
               "Margin around the OSD in pixels.",
               SettingDef::Int, "10", {}, 0, 200, 1, "", "px"});
 
-    s.append({"On-Screen Display", "", "Messages", "Display", "ShowOSDMessages",          "Show Messages",           "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Messages", "Display", "ShowStatusIndicators",     "Show Status Indicators",  "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Messages", "Display", "AnimateOSDMessages",       "Animate Messages",        "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Messages", "Display", "BlurOSDMessageBackgrounds","Blur Message Backgrounds","", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Messages", "Display", "OSDErrorDuration", "Error Duration",
+    s.append({"Graphics", "On-Screen Display", "Messages", "Display", "ShowOSDMessages",          "Show Messages",           "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Messages", "Display", "ShowStatusIndicators",     "Show Status Indicators",  "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Messages", "Display", "AnimateOSDMessages",       "Animate Messages",        "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Messages", "Display", "BlurOSDMessageBackgrounds","Blur Message Backgrounds","", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Messages", "Display", "OSDErrorDuration", "Error Duration",
               "How long error messages remain on screen.",
               SettingDef::Float, "15", {}, 0.5, 60.0, 0.5, "paired", "seconds"});
-    s.append({"On-Screen Display", "", "Messages", "Display", "OSDWarningDuration", "Warning Duration", "",
+    s.append({"Graphics", "On-Screen Display", "Messages", "Display", "OSDWarningDuration", "Warning Duration", "",
               SettingDef::Float, "10", {}, 0.5, 60.0, 0.5, "paired", "seconds"});
-    s.append(dep({"On-Screen Display", "", "Messages", "Display", "OSDInfoDuration", "Information Duration", "",
+    s.append(dep({"Graphics", "On-Screen Display", "Messages", "Display", "OSDInfoDuration", "Information Duration", "",
                   SettingDef::Float, "5",  {}, 0.5, 60.0, 0.5, "paired", "seconds"}, "ShowOSDMessages"));
-    s.append(dep({"On-Screen Display", "", "Messages", "Display", "OSDQuickDuration", "Action Duration", "",
+    s.append(dep({"Graphics", "On-Screen Display", "Messages", "Display", "OSDQuickDuration", "Action Duration", "",
                   SettingDef::Float, "2.5",  {}, 0.5, 60.0, 0.5, "paired", "seconds"}, "ShowOSDMessages"));
-    s.append({"On-Screen Display", "", "Messages", "Display", "OSDMessageLocation", "Display Location", "",
+    s.append({"Graphics", "On-Screen Display", "Messages", "Display", "OSDMessageLocation", "Display Location", "",
               SettingDef::Combo, "TopLeft", notificationLocationOptions, 0, 0, 0, "", ""});
 
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowFPS",              "Show FPS",              "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowSpeed",            "Show Emulation Speed",  "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowCPU",              "Show CPU Usage",        "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowGPU",              "Show GPU Usage",        "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowResolution",       "Show Resolution",       "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowGPUStatistics",    "Show GPU Statistics",   "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowFrameTimes",       "Show Frame Times",      "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowLatencyStatistics","Show Latency Statistics","", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowInputs",           "Show Controller Input", "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"On-Screen Display", "", "Overlays", "Display", "ShowEnhancements",     "Show Enhancements",     "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowFPS",              "Show FPS",              "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowSpeed",            "Show Emulation Speed",  "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowCPU",              "Show CPU Usage",        "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowGPU",              "Show GPU Usage",        "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowResolution",       "Show Resolution",       "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowGPUStatistics",    "Show GPU Statistics",   "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowFrameTimes",       "Show Frame Times",      "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowLatencyStatistics","Show Latency Statistics","", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowInputs",           "Show Controller Input", "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Graphics", "On-Screen Display", "Overlays", "Display", "ShowEnhancements",     "Show Enhancements",     "", SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
 
     // =========================================================================
     // Audio category — mirrors audiosettingswidget.cpp

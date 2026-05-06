@@ -47,7 +47,7 @@ private slots:
         QCOMPARE(categories, QSet<QString>({
             "Recommended",
             "Console", "Emulation", "Memory Cards",
-            "Graphics", "On-Screen Display", "Audio",
+            "Graphics", "Audio",
             "Achievements", "Capture", "Advanced",
         }));
     }
@@ -162,8 +162,10 @@ private slots:
         // matching the PCSX2 precedent. The PGXP sub-tab is also dropped
         // (Mark, 2026-05-06): the per-knob toggles are niche and
         // PGXPEnable / PGXPDepthBuffer remain reachable from Rendering.
+        // On-Screen Display is folded into Graphics as a sub-tab
+        // (Dolphin pattern), not its own top-level pane.
         QCOMPARE(subcategoriesFor("Graphics"), QSet<QString>({
-            "Rendering", "Advanced", "Texture Replacement",
+            "Rendering", "Advanced", "Texture Replacement", "On-Screen Display",
         }));
     }
 
@@ -211,7 +213,8 @@ private slots:
 
     void testOnScreenDisplayFullCatalog() {
         // Theme / Font / Overlay Font deferred — runtime-populated combos.
-        QCOMPARE(keysFor("On-Screen Display"), QSet<QString>({
+        // Lives under Graphics as a sub-tab (Dolphin pattern).
+        QCOMPARE(keysFor("Graphics", "On-Screen Display"), QSet<QString>({
             // Display
             "OSDScale", "OSDMargin",
             // Messages
@@ -404,7 +407,7 @@ private slots:
 
     void testOsdHasOsdPreviewSpec() {
         DuckStationAdapter adapter;
-        const PreviewSpec spec = adapter.previewSpec("On-Screen Display", "");
+        const PreviewSpec spec = adapter.previewSpec("Graphics", "On-Screen Display");
         QCOMPARE(spec.previewType, QString("osd"));
         QVERIFY(spec.keyToProperty.contains("ShowFPS"));
     }

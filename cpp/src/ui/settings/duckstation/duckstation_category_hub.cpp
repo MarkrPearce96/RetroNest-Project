@@ -4,11 +4,13 @@
 #include <QGridLayout>
 
 // Hub layout mirrors the upstream SettingsWindow tab list
-// (settingswindow.cpp:92-184) in left-to-right reading order, omitting
-// Interface / Game List / BIOS / Post-Processing / Debugging panes per
-// duckstation-schema-alignment.md (in user memory). The Recommended card
-// at the top is a curated cross-cut for users who don't want to hunt
-// through every sub-tab — same pattern as Dolphin and PCSX2.
+// (settingswindow.cpp:92-184) in left-to-right reading order, with two
+// structural folds vs upstream:
+//   - Recommended (curated cross-cut at the top — Dolphin/PCSX2 pattern).
+//   - On-Screen Display lives under Graphics as a sub-tab (Dolphin
+//     pattern), not as a top-level card.
+// Other omitted panes (Interface, Game List, BIOS, Post-Processing,
+// Debugging) are documented in duckstation-schema-alignment.md.
 DuckStationCategoryHub::DuckStationCategoryHub(QWidget* parent)
     : EmulatorCategoryHubBase(parent) {
     setupChrome("DuckStation Settings");
@@ -36,28 +38,24 @@ DuckStationCategoryHub::DuckStationCategoryHub(QWidget* parent)
                              "Slots and card types",
                              countSettings("Memory Cards"), "Memory Cards"), 1, 2);
 
-    // Row 2: Graphics · On-Screen Display · Audio
+    // Row 2: Graphics · Audio · Achievements
     grid->addWidget(makeCard(QStringLiteral("\U0001F5BC"), "Graphics",
-                             "Renderer, advanced, PGXP, textures",
+                             "Renderer, advanced, textures, OSD",
                              countSettings("Graphics"), "Graphics"),       2, 0);
-    grid->addWidget(makeCard(QStringLiteral("\U0001F4CA"), "On-Screen Display",
-                             "OSD, messages, overlays",
-                             countSettings("On-Screen Display"),
-                             "On-Screen Display"),                          2, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F50A"), "Audio",
                              "Backend, latency, volume",
-                             countSettings("Audio"), "Audio"),             2, 2);
-
-    // Row 3: Achievements · Capture · Advanced
+                             countSettings("Audio"), "Audio"),             2, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3C6"), "Achievements",
                              "RetroAchievements options",
-                             countSettings("Achievements"), "Achievements"), 3, 0);
+                             countSettings("Achievements"), "Achievements"), 2, 2);
+
+    // Row 3: Capture · Advanced (full-width pair, leaves the third slot empty)
     grid->addWidget(makeCard(QStringLiteral("\U0001F3A5"), "Capture",
                              "Screenshots and media capture",
-                             countSettings("Capture"), "Capture"),         3, 1);
+                             countSettings("Capture"), "Capture"),         3, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F527"), "Advanced",
                              "Logging",
-                             countSettings("Advanced"), "Advanced"),       3, 2);
+                             countSettings("Advanced"), "Advanced"),       3, 1, 1, 2);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
