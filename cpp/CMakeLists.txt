@@ -20,6 +20,23 @@ FetchContent_Declare(
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(libchdr)
 
+FetchContent_Declare(
+    rcheevos
+    GIT_REPOSITORY https://github.com/RetroAchievements/rcheevos.git
+    GIT_TAG        v12.3.0
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(rcheevos)
+# rcheevos has no CMakeLists.txt — build a static lib manually from its sources.
+file(GLOB RCHEEVOS_SOURCES
+    ${rcheevos_SOURCE_DIR}/src/rcheevos/*.c
+    ${rcheevos_SOURCE_DIR}/src/rapi/*.c
+    ${rcheevos_SOURCE_DIR}/src/rhash/*.c
+    ${rcheevos_SOURCE_DIR}/src/*.c)
+add_library(rcheevos_static STATIC ${RCHEEVOS_SOURCES})
+target_include_directories(rcheevos_static PUBLIC ${rcheevos_SOURCE_DIR}/include)
+target_include_directories(rcheevos_static PRIVATE ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+
 # ScreenScraper developer credentials (build-time, not in repo)
 set(SCREENSCRAPER_DEV_ID "" CACHE STRING "ScreenScraper dev ID")
 set(SCREENSCRAPER_DEV_PASSWORD "" CACHE STRING "ScreenScraper dev password")
@@ -264,6 +281,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${SDL2_LIBRARIES}
     ${CMAKE_DL_LIBS}
     chdr-static
+    rcheevos_static
     "-framework AppKit"
     "-framework Carbon"
 )
