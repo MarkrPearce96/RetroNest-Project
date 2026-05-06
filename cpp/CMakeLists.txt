@@ -680,6 +680,17 @@ target_include_directories(test_options_store PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(test_options_store PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME OptionsStore COMMAND test_options_store)
 
+add_executable(test_environment_callbacks
+    tests/test_environment_callbacks.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/options_store.cpp)
+set_target_properties(test_environment_callbacks PROPERTIES AUTOMOC ON)
+target_include_directories(test_environment_callbacks PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+target_link_libraries(test_environment_callbacks PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME EnvironmentCallbacks COMMAND test_environment_callbacks)
+
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
 set_target_properties(fake_libretro_core PROPERTIES
     PREFIX "" OUTPUT_NAME "fake_libretro_core"

@@ -10,6 +10,12 @@ bool OptionsStore::load(const QString& jsonPath, const QVector<CoreOption>& core
     m_path = jsonPath;
     m_values.clear();
 
+    if (jsonPath == ":memory:") {
+        m_path.clear();          // sentinel: never write to disk
+        for (const auto& opt : coreOptions) m_values.insert(opt.key, opt.defaultValue);
+        return true;
+    }
+
     QHash<QString, QString> existing;
     QFile f(jsonPath);
     if (f.exists() && f.open(QIODevice::ReadOnly)) {
@@ -31,7 +37,7 @@ bool OptionsStore::load(const QString& jsonPath, const QVector<CoreOption>& core
 }
 
 bool OptionsStore::save() const {
-    if (m_path.isEmpty()) return false;
+    if (m_path.isEmpty()) return true;   // :memory: mode — pretend success
     QDir().mkpath(QFileInfo(m_path).absolutePath());
     QJsonObject obj;
     for (auto it = m_values.constBegin(); it != m_values.constEnd(); ++it)
