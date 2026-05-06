@@ -6,6 +6,7 @@
 AudioSink::~AudioSink() { close(); }
 
 bool AudioSink::open(int sourceSampleRate) {
+    if (isOpen()) close();
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
         qWarning() << "[AudioSink] SDL_InitSubSystem(AUDIO) failed:" << SDL_GetError();
         return false;
@@ -38,7 +39,8 @@ bool AudioSink::open(int sourceSampleRate) {
 void AudioSink::close() {
     if (m_stream) { SDL_FreeAudioStream(m_stream); m_stream = nullptr; }
     if (m_dev)    { SDL_CloseAudioDevice(m_dev); m_dev = 0; }
-    m_totalFrames = 0;
+    m_totalFrames.store(0, std::memory_order_relaxed);
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
 void AudioSink::writeSamples(const int16_t* data, int frames) {
