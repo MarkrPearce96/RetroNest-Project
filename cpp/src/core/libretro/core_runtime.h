@@ -6,6 +6,7 @@
 #include "audio_sink.h"
 #include "input_router.h"
 #include "options_store.h"
+#include "rcheevos_runtime.h"
 
 #include <QObject>
 #include <QThread>
@@ -24,6 +25,9 @@ public:
         QString saveDir;
         QString optionsJsonPath;
         QString resumeStatePath;   // optional; if non-empty, retro_unserialize after load
+        int raConsoleId = 0;
+        QString raToken;
+        bool raHardcore = false;
     };
 
     explicit CoreRuntime(QObject* parent = nullptr);
@@ -65,6 +69,7 @@ public:
 
     InputRouter& input() { return m_input; }
     OptionsStore& options() { return m_options; }
+    RcheevosRuntime& rcheevos() { return m_rcheevos; }
 
 signals:
     void started();
@@ -92,6 +97,7 @@ private:
     AudioSink m_audio;
     InputRouter m_input;
     OptionsStore m_options;
+    RcheevosRuntime m_rcheevos;
 
     QThread* m_thread = nullptr;
     std::atomic<bool> m_stopRequested{false};

@@ -67,6 +67,7 @@ set(SOURCES
     src/core/iso9660_reader.cpp
     src/core/libretro/options_store.cpp
     src/core/libretro/retro_log.cpp
+    src/core/libretro/rcheevos_runtime.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
@@ -144,6 +145,7 @@ set(HEADERS
     src/adapters/libretro/libretro_adapter.h
     src/core/libretro/core_loader.h
     src/core/libretro/core_runtime.h
+    src/core/libretro/rcheevos_runtime.h
     src/core/libretro/environment_callbacks.h
     src/core/libretro/video_software.h
     src/core/libretro/audio_sink.h
@@ -730,6 +732,7 @@ add_test(NAME EnvironmentCallbacks COMMAND test_environment_callbacks)
 add_executable(test_core_runtime
     tests/test_core_runtime.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/rcheevos_runtime.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/options_store.cpp
@@ -743,7 +746,7 @@ target_include_directories(test_core_runtime PRIVATE
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
     ${SDL2_INCLUDE_DIRS})
 target_link_libraries(test_core_runtime PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES})
+    Qt6::Core Qt6::Gui Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES} rcheevos_static)
 add_dependencies(test_core_runtime fake_libretro_core)
 add_test(NAME CoreRuntime COMMAND test_core_runtime)
 

@@ -309,6 +309,14 @@ int RAService::matchRaGameIdSync(const QString& title, const QString& system) {
     return bestId;
 }
 
+// ── In-Process Achievement Unlock ──
+
+void RAService::notifyAchievementUnlocked(const QString& id, const QString& title,
+                                          const QString& description) {
+    qInfo() << "[RAService] Achievement unlocked:" << id << title;
+    emit achievementUnlocked(id, title, description);
+}
+
 // ── Settings ──
 
 bool RAService::hardcoreMode() const { return m_creds.hardcoreMode; }

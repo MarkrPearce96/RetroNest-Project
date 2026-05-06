@@ -187,6 +187,10 @@ void CoreRuntime::runLoop() {
         }
     }
 
+    // rcheevos session — best-effort; failure is non-fatal.
+    m_rcheevos.beginSession(s, m_cfg.romPath, m_cfg.raConsoleId,
+                            m_cfg.raToken, m_cfg.raHardcore);
+
     emit started();
 
     using clock = std::chrono::steady_clock;
@@ -198,7 +202,7 @@ void CoreRuntime::runLoop() {
         }
         if (m_stopRequested.load()) break;
         s.retro_run();
-        // rcheevos frame tick wired in Phase 9; no-op here.
+        m_rcheevos.frame();
         flushPendingSaveState(s);
         next += std::chrono::nanoseconds(static_cast<long long>(m_frameDurationSec * 1e9));
         std::this_thread::sleep_until(next);
@@ -208,6 +212,7 @@ void CoreRuntime::runLoop() {
     // (e.g. from GameSession::terminate → requestSaveState + stop).
     flushPendingSaveState(s);
 
+    m_rcheevos.endSession();
     s.retro_unload_game();
     s.retro_deinit();
     m_audio.close();
