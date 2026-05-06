@@ -151,9 +151,13 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     if (!serial.isEmpty())
         cfg.resumeStatePath = lr->findResumeFile(serial);
 
+    // Qt::UniqueConnection requires the slot to be a member function pointer
+    // (qobject.h:267 asserts on lambdas + UniqueConnection). The runtime is
+    // recreated per session via prepareRuntime/releaseRuntime, so duplicate
+    // connections aren't possible here and AutoConnection is sufficient.
     connect(rt, &CoreRuntime::started, this, [this] {
         emit runningChanged(); emit started();
-    }, Qt::UniqueConnection);
+    });
     connect(rt, &CoreRuntime::finished, this, [this](bool crashed) {
         // Fix 1: restore navigation mode when the libretro game ends
         if (m_sdlInputManager)
@@ -163,10 +167,10 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         emit finished(crashed ? -1 : 0, crashed);
         if (m_libretroAdapter) m_libretroAdapter->releaseRuntime();
         m_libretroAdapter = nullptr;
-    }, Qt::UniqueConnection);
+    });
     connect(rt, &CoreRuntime::errorOccurred, this, [this](const QString& m) {
         emit errorOccurred(m);
-    }, Qt::UniqueConnection);
+    });
     connect(rt, &CoreRuntime::frameReady, this, &GameSession::frameReady,
             Qt::UniqueConnection);
 
