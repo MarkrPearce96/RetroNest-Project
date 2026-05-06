@@ -673,10 +673,11 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               "Disable Mailbox Presentation",
               "Forces FIFO presentation instead of mailbox.",
               SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"Graphics", "Advanced", "Display Options", "Display", "UseBlitSwapChain",
-              "Use Blit Swap Chain",
-              "Uses a blit-style swap chain instead of a flip swap chain (Windows-style).",
-              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    // Use Blit Swap Chain (Display/UseBlitSwapChain) is Windows + D3D11
+    // only — `#ifdef _WIN32` around the binding (graphicssettingswidget.cpp:170)
+    // and `#ifndef _WIN32 ... delete m_ui.blitSwapChain` removes the widget
+    // entirely on non-Windows builds (graphicssettingswidget.cpp:578-582).
+    // Dropped per the compile-gate exclusion rule.
 
     // Rendering Options group
     s.append({"Graphics", "Advanced", "Rendering Options", "GPU", "Multisamples", "Multi-Sampling", "",

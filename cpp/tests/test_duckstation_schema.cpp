@@ -184,11 +184,12 @@ private slots:
     void testGraphicsAdvancedFullCatalog() {
         // FullscreenMode + ExclusiveFullscreenControl deferred — runtime-
         // populated from adapter.fullscreen_modes / Vulkan-only.
+        // UseBlitSwapChain dropped — Windows + D3D11 only upstream.
         QCOMPARE(keysFor("Graphics", "Advanced"), QSet<QString>({
             // Display Options
             "Alignment", "Rotation", "FineCropMode",
             "FineCropLeft", "FineCropTop", "FineCropRight", "FineCropBottom",
-            "DisableMailboxPresentation", "UseBlitSwapChain",
+            "DisableMailboxPresentation",
             // Rendering Options
             "Multisamples", "LineDetectMode", "UseThread", "MaxQueuedFrames",
             "EnableModulationCrop", "ScaledInterlacing", "UseSoftwareRendererForReadbacks",
