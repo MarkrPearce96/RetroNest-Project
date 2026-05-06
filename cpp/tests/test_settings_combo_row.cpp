@@ -22,4 +22,4 @@ private slots:
     }
 };
 QTEST_MAIN(TestSettingsComboRow)
-#include "test_pcsx2_combo_row.moc"
+#include "test_settings_combo_row.moc"

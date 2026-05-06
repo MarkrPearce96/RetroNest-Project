@@ -547,41 +547,41 @@ target_include_directories(test_quick_settings_file_field PRIVATE ${CMAKE_CURREN
 target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Network Qt6::Sql Qt6::Test chdr-static)
 add_test(NAME QuickSettingsFileField COMMAND test_quick_settings_file_field)
 
-add_executable(test_pcsx2_toggle
-    tests/test_pcsx2_toggle.cpp
+add_executable(test_settings_toggle
+    tests/test_settings_toggle.cpp
     src/ui/settings/widgets/settings_toggle.cpp
 )
-set_target_properties(test_pcsx2_toggle PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_toggle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_pcsx2_toggle PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
-add_test(NAME Pcsx2Toggle COMMAND test_pcsx2_toggle)
+set_target_properties(test_settings_toggle PROPERTIES AUTOMOC ON)
+target_include_directories(test_settings_toggle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_settings_toggle PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME SettingsToggle COMMAND test_settings_toggle)
 
-add_executable(test_pcsx2_combo_row
-    tests/test_pcsx2_combo_row.cpp
+add_executable(test_settings_combo_row
+    tests/test_settings_combo_row.cpp
     src/ui/settings/widgets/settings_combo_row.cpp
 )
-set_target_properties(test_pcsx2_combo_row PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_combo_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_pcsx2_combo_row PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
-add_test(NAME Pcsx2ComboRow COMMAND test_pcsx2_combo_row)
+set_target_properties(test_settings_combo_row PROPERTIES AUTOMOC ON)
+target_include_directories(test_settings_combo_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_settings_combo_row PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME SettingsComboRow COMMAND test_settings_combo_row)
 
-add_executable(test_pcsx2_slider_row
-    tests/test_pcsx2_slider_row.cpp
+add_executable(test_settings_slider_row
+    tests/test_settings_slider_row.cpp
     src/ui/settings/widgets/settings_slider_row.cpp
 )
-set_target_properties(test_pcsx2_slider_row PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_slider_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_pcsx2_slider_row PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
-add_test(NAME Pcsx2SliderRow COMMAND test_pcsx2_slider_row)
+set_target_properties(test_settings_slider_row PROPERTIES AUTOMOC ON)
+target_include_directories(test_settings_slider_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_settings_slider_row PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME SettingsSliderRow COMMAND test_settings_slider_row)
 
-add_executable(test_pcsx2_description_bar
-    tests/test_pcsx2_description_bar.cpp
+add_executable(test_settings_description_bar
+    tests/test_settings_description_bar.cpp
     src/ui/settings/widgets/settings_description_bar.cpp
 )
-set_target_properties(test_pcsx2_description_bar PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_description_bar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${SDL2_INCLUDE_DIRS})
-target_link_libraries(test_pcsx2_description_bar PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
-add_test(NAME Pcsx2DescriptionBar COMMAND test_pcsx2_description_bar)
+set_target_properties(test_settings_description_bar PROPERTIES AUTOMOC ON)
+target_include_directories(test_settings_description_bar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${SDL2_INCLUDE_DIRS})
+target_link_libraries(test_settings_description_bar PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_test(NAME SettingsDescriptionBar COMMAND test_settings_description_bar)
 
 add_executable(test_aspect_ratio_preview
     tests/test_aspect_ratio_preview.cpp

@@ -62,4 +62,4 @@ private slots:
     }
 };
 QTEST_MAIN(TestSettingsDescriptionBar)
-#include "test_pcsx2_description_bar.moc"
+#include "test_settings_description_bar.moc"

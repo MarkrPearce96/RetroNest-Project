@@ -22,4 +22,4 @@ private slots:
     }
 };
 QTEST_MAIN(TestSettingsToggle)
-#include "test_pcsx2_toggle.moc"
+#include "test_settings_toggle.moc"

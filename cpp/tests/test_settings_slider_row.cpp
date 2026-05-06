@@ -31,4 +31,4 @@ private slots:
     }
 };
 QTEST_MAIN(TestSettingsSliderRow)
-#include "test_pcsx2_slider_row.moc"
+#include "test_settings_slider_row.moc"
