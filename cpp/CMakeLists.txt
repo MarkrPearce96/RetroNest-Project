@@ -671,6 +671,14 @@ target_include_directories(test_input_router PRIVATE
 target_link_libraries(test_input_router PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME InputRouter COMMAND test_input_router)
 
+add_executable(test_options_store
+    tests/test_options_store.cpp
+    src/core/libretro/options_store.cpp)
+set_target_properties(test_options_store PROPERTIES AUTOMOC ON)
+target_include_directories(test_options_store PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_options_store PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME OptionsStore COMMAND test_options_store)
+
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
 set_target_properties(fake_libretro_core PROPERTIES
     PREFIX "" OUTPUT_NAME "fake_libretro_core"
