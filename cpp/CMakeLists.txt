@@ -47,6 +47,7 @@ set(SOURCES
     src/services/ra_credentials.cpp
     src/core/ra_client.cpp
     src/core/iso9660_reader.cpp
+    src/core/libretro/options_store.cpp
     src/services/game_service.cpp
     src/services/scraper_service.cpp
     src/services/emulator_service.cpp
