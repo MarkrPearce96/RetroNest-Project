@@ -49,6 +49,13 @@ set(SOURCES
     src/core/iso9660_reader.cpp
     src/core/libretro/options_store.cpp
     src/core/libretro/retro_log.cpp
+    src/adapters/libretro/libretro_adapter.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
     src/services/game_service.cpp
     src/services/scraper_service.cpp
     src/services/emulator_service.cpp
@@ -116,6 +123,13 @@ set(HEADERS
     src/adapters/duckstation_adapter.h
     src/adapters/ppsspp_adapter.h
     src/adapters/dolphin_adapter.h
+    src/adapters/libretro/libretro_adapter.h
+    src/core/libretro/core_loader.h
+    src/core/libretro/core_runtime.h
+    src/core/libretro/environment_callbacks.h
+    src/core/libretro/video_software.h
+    src/core/libretro/audio_sink.h
+    src/core/libretro/input_router.h
     src/core/sfo_parser.h
     src/core/ini_file.h
     src/core/scraper.h
@@ -248,6 +262,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Concurrent
     Qt6::Multimedia
     ${SDL2_LIBRARIES}
+    ${CMAKE_DL_LIBS}
     chdr-static
     "-framework AppKit"
     "-framework Carbon"
