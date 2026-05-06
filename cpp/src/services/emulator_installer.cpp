@@ -299,12 +299,13 @@ EmulatorInstaller::InstallResult EmulatorInstaller::postDownload(
         QProcess unzip;
         unzip.start("/usr/bin/unzip", {"-o", tempFile, "-d", coreDir});
         unzip.waitForFinished(30000);
-        QFile::remove(tempFile);
         if (unzip.exitCode() != 0) {
             qWarning() << "[Installer] Libretro unzip failed:" << unzip.readAllStandardError();
+            QFile::remove(tempFile);
             result.message = "Extraction failed";
             return result;
         }
+        QFile::remove(tempFile);
 
         // Derive the dylib name by stripping .zip from the archive name.
         const QString dylibName = QFileInfo(tempFile).fileName().chopped(4); // strip ".zip"
