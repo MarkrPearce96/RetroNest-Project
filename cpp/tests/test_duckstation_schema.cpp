@@ -45,10 +45,56 @@ private slots:
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
         QCOMPARE(categories, QSet<QString>({
+            "Recommended",
             "BIOS", "Console", "Emulation", "Memory Cards",
             "Graphics", "On-Screen Display", "Audio",
             "Achievements", "Capture", "Advanced",
         }));
+    }
+
+    void testRecommendedCategoryFullCatalog() {
+        // Curated cross-cut of the most-tweaked DuckStation settings.
+        // These INI keys ALSO appear under their primary category — both
+        // entries write the same section/key so editing in either place
+        // produces the same result. Mirrors dolphin_adapter / pcsx2_adapter.
+        QCOMPARE(keysFor("Recommended"), QSet<QString>({
+            // Performance
+            "Renderer", "ExecutionMode", "UseThread", "ReadSpeedup",
+            // Visual Quality (AspectRatio drives the live aspect preview)
+            "ResolutionScale", "AspectRatio", "WidescreenHack",
+            "PGXPEnable", "Multisamples", "TextureFilter",
+            // Frame Pacing
+            "VSync", "SyncToHostRefreshRate", "OptimalFramePacing",
+            // Audio
+            "Backend", "OutputVolume",
+            // Convenience
+            "EmulationSpeed", "Region", "PatchFastBoot",
+        }));
+    }
+
+    void testRecommendedHasAspectPreview() {
+        DuckStationAdapter adapter;
+        const PreviewSpec spec = adapter.previewSpec("Recommended", "");
+        QCOMPARE(spec.previewType, QString("aspect"));
+        QVERIFY(spec.keyToProperty.contains("AspectRatio"));
+    }
+
+    void testRecommendedDuplicatesUnderlyingKeys() {
+        // Every Recommended entry must duplicate (not replace) a key that
+        // exists under another category — otherwise the curated view
+        // would diverge from the full panes.
+        QSet<QPair<QString,QString>> primaryKeys;
+        for (const auto& d : schema_)
+            if (d.category != "Recommended")
+                primaryKeys.insert(qMakePair(d.section, d.key));
+        for (const auto& d : schema_) {
+            if (d.category != "Recommended") continue;
+            QVERIFY2(primaryKeys.contains(qMakePair(d.section, d.key)),
+                qPrintable(QString("Recommended key '%1/%2' has no primary "
+                                   "category counterpart — Recommended must be "
+                                   "a curated VIEW, not a primary owner")
+                           .arg(d.section, d.key)));
+        }
     }
 
     void testInterfaceCategoryNotInSchema() {
@@ -368,11 +414,11 @@ private slots:
         }));
     }
 
-    void testRenderingHasAspectPreviewSpec() {
+    void testRenderingHasNoPreviewSpec() {
+        // Aspect preview moved to Recommended — see testRecommendedHasAspectPreview.
         DuckStationAdapter adapter;
         const PreviewSpec spec = adapter.previewSpec("Graphics", "Rendering");
-        QCOMPARE(spec.previewType, QString("aspect"));
-        QVERIFY(spec.keyToProperty.contains("AspectRatio"));
+        QVERIFY(spec.previewType.isEmpty());
     }
 
     void testOsdHasOsdPreviewSpec() {

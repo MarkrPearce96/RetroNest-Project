@@ -6,7 +6,9 @@
 // Hub layout mirrors the upstream SettingsWindow tab list
 // (settingswindow.cpp:92-184) in left-to-right reading order, omitting
 // Interface / Game List / Post-Processing / Debugging panes per
-// duckstation-schema-alignment.md (in user memory).
+// duckstation-schema-alignment.md (in user memory). The Recommended card
+// at the top is a curated cross-cut for users who don't want to hunt
+// through every sub-tab — same pattern as Dolphin and PCSX2.
 DuckStationCategoryHub::DuckStationCategoryHub(QWidget* parent)
     : EmulatorCategoryHubBase(parent) {
     setupChrome("DuckStation Settings");
@@ -14,44 +16,53 @@ DuckStationCategoryHub::DuckStationCategoryHub(QWidget* parent)
     auto* grid = new QGridLayout();
     grid->setSpacing(14);
 
-    // Row 0: BIOS · Console · Emulation
+    // Row 0: Recommended — full-width stretch card. Highlighted at the top
+    // because it's the curated short list of settings users most commonly
+    // tweak (sourced from DuckStation's setup docs + community consensus).
+    // Same INI keys as the full panes below, just collected for fast access.
+    grid->addWidget(makeCard(QStringLiteral("\U0001F4A1"), "Recommended",
+                             "Most-tweaked settings — performance, visuals, audio",
+                             countSettings("Recommended"), "Recommended"),
+                    0, 0, 1, 3);  // spans all 3 columns
+
+    // Row 1: BIOS · Console · Emulation
     grid->addWidget(makeCard(QStringLiteral("\U0001F4BB"), "BIOS",
                              "Region BIOS, parallel port",
-                             countSettings("BIOS"), "BIOS"),               0, 0);
+                             countSettings("BIOS"), "BIOS"),               1, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F39B"), "Console",
                              "Region, fast boot, CPU, CD-ROM",
-                             countSettings("Console"), "Console"),         0, 1);
+                             countSettings("Console"), "Console"),         1, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3AE"), "Emulation",
                              "Speed, latency, rewind, runahead",
-                             countSettings("Emulation"), "Emulation"),     0, 2);
+                             countSettings("Emulation"), "Emulation"),     1, 2);
 
-    // Row 1: Memory Cards · Graphics · On-Screen Display
+    // Row 2: Memory Cards · Graphics · On-Screen Display
     grid->addWidget(makeCard(QStringLiteral("\U0001F4BE"), "Memory Cards",
                              "Slots and card types",
-                             countSettings("Memory Cards"), "Memory Cards"), 1, 0);
+                             countSettings("Memory Cards"), "Memory Cards"), 2, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F5BC"), "Graphics",
                              "Renderer, advanced, PGXP, textures",
-                             countSettings("Graphics"), "Graphics"),       1, 1);
+                             countSettings("Graphics"), "Graphics"),       2, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F4CA"), "On-Screen Display",
                              "OSD, messages, overlays",
                              countSettings("On-Screen Display"),
-                             "On-Screen Display"),                          1, 2);
+                             "On-Screen Display"),                          2, 2);
 
-    // Row 2: Audio · Achievements · Capture
+    // Row 3: Audio · Achievements · Capture
     grid->addWidget(makeCard(QStringLiteral("\U0001F50A"), "Audio",
                              "Backend, latency, volume",
-                             countSettings("Audio"), "Audio"),             2, 0);
+                             countSettings("Audio"), "Audio"),             3, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3C6"), "Achievements",
                              "RetroAchievements options",
-                             countSettings("Achievements"), "Achievements"), 2, 1);
+                             countSettings("Achievements"), "Achievements"), 3, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3A5"), "Capture",
                              "Screenshots and media capture",
-                             countSettings("Capture"), "Capture"),         2, 2);
+                             countSettings("Capture"), "Capture"),         3, 2);
 
-    // Row 3: Advanced (full width — small category, gets the stretch row)
+    // Row 4: Advanced (full width — small category, gets the stretch row)
     grid->addWidget(makeCard(QStringLiteral("\U0001F527"), "Advanced",
                              "Logging",
-                             countSettings("Advanced"), "Advanced"),       3, 0, 1, 3);
+                             countSettings("Advanced"), "Advanced"),       4, 0, 1, 3);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);

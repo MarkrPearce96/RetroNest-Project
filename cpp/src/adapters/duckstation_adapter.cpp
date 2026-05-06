@@ -25,13 +25,19 @@ QString DuckStationAdapter::configFilePath() const {
 
 PreviewSpec DuckStationAdapter::previewSpec(const QString& category,
                                              const QString& subcategory) const {
+    // Aspect-ratio preview lives on the Recommended category — that's the
+    // primary entry point and already has AspectRatio near the top
+    // (mirrors dolphin_adapter / pcsx2_adapter). Graphics > Rendering has
+    // the same combo without the preview, matching the rest of the
+    // sub-tabs.
+    //
     // The shared AspectRatioPreview's fromSchemaValue currently maps
     // PCSX2/Dolphin aspect strings; DuckStation's strings ("Auto (Game
     // Native)", "PAR 1:1" etc.) fall back to R4_3. The preview still
     // renders — it just doesn't differentiate DuckStation's extra ratios
     // (19:9, 20:9, 21:9, 16:10) yet. Tracked in
     // `duckstation-schema-alignment.md` as a follow-up.
-    if (category == "Graphics" && subcategory == "Rendering") {
+    if (category == "Recommended" && subcategory.isEmpty()) {
         return {"aspect", {
             {"AspectRatio", "aspectMode"},
         }};
@@ -188,6 +194,126 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
     };
 
     QVector<SettingDef> s;
+
+    // =========================================================================
+    // Recommended  (curated short list of the settings users most commonly
+    // change — sourced from DuckStation's official setup/performance
+    // documentation + community consensus. These entries DUPLICATE keys
+    // that also appear under their primary category; both write the same
+    // INI section/key, so editing here and editing in the full pane
+    // produce the same result. The Recommended card is a curated VIEW for
+    // users who don't want to hunt through every sub-tab to find the
+    // dozen settings that actually matter for most games. Mirrors
+    // dolphin_adapter.cpp / pcsx2_adapter.cpp.
+    // =========================================================================
+
+    // Performance — biggest impact for getting games playable.
+    s.append({"Recommended", "", "Performance", "GPU", "Renderer", "Renderer",
+              "GPU backend used for rendering. Switching backends often produces "
+              "the single biggest performance change. Vulkan and Metal are fastest "
+              "on modern macOS hardware; OpenGL is the most compatible; Software "
+              "emulates the GPU on the CPU for perfect accuracy.",
+              SettingDef::Combo, "Automatic",
+              {{"Automatic", "Automatic"}, {"Vulkan", "Vulkan"}, {"Metal", "Metal"},
+               {"OpenGL", "OpenGL"}, {"Software", "Software"}},
+              0, 0, 0, "", ""});
+    s.append({"Recommended", "", "Performance", "CPU", "ExecutionMode", "Execution Mode",
+              "How the PSX CPU is emulated. Recompiler is fastest; Cached Interpreter "
+              "is more accurate; Interpreter is the slowest, used only for debugging.",
+              SettingDef::Combo, "Recompiler",
+              {{"Interpreter (Slowest)",        "Interpreter"},
+               {"Cached Interpreter (Faster)",  "CachedInterpreter"},
+               {"Recompiler (Fastest)",         "Recompiler"}},
+              0, 0, 0, "", ""});
+    s.append({"Recommended", "", "Performance", "GPU", "UseThread", "Threaded Rendering",
+              "Renders frames on a separate thread. Substantial speed improvement on "
+              "modern multi-core CPUs.",
+              SettingDef::Bool, "true", {}, 0, 0, 0, "", ""});
+    s.append({"Recommended", "", "Performance", "CDROM", "ReadSpeedup", "CD-ROM Read Speedup",
+              "Speeds up CD-ROM reads beyond hardware limits. Cuts loading times in "
+              "most games at no risk for the majority of titles.",
+              SettingDef::Combo, "1", cdromSpeedupOptions, 0, 0, 0, "", ""});
+
+    // Visual Quality — the most-tweaked image settings. Aspect Ratio drives
+    // the live preview (see previewSpec).
+    s.append({"Recommended", "", "Visual Quality", "GPU", "ResolutionScale", "Internal Resolution",
+              "Render scale relative to native PS1 resolution. Higher = sharper but "
+              "slower. Single biggest knob for visual fidelity.",
+              SettingDef::Combo, "1",
+              {{"1x Native",  "1"},  {"2x", "2"},  {"3x", "3"},  {"4x Native (1440p)", "4"},
+               {"5x", "5"},  {"6x", "6"},  {"7x", "7"},  {"8x Native (4K)", "8"}},
+              0, 0, 0, "", ""});
+    s.append({"Recommended", "", "Visual Quality", "Display", "AspectRatio", "Aspect Ratio",
+              "Display aspect ratio. Auto matches the game; force 16:9 for a "
+              "widescreen TV; Stretch fills the whole window.",
+              SettingDef::Combo, "Auto (Game Native)",
+              {{"Auto (Game Native)", "Auto (Game Native)"}, {"Stretch To Fill", "Stretch To Fill"},
+               {"4:3", "4:3"}, {"16:9", "16:9"}, {"19:9", "19:9"}, {"20:9", "20:9"},
+               {"21:9", "21:9"}, {"16:10", "16:10"}, {"PAR 1:1", "PAR 1:1"}},
+              0, 0, 0, "", ""});
+    s.append({"Recommended", "", "Visual Quality", "GPU", "WidescreenHack", "Widescreen Rendering",
+              "Stretches 3D geometry to fill a widescreen display. Pair with Aspect "
+              "Ratio = 16:9 for the best result on a widescreen TV.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    s.append({"Recommended", "", "Visual Quality", "GPU", "PGXPEnable", "PGXP Geometry Correction",
+              "Fixes polygon wobble by using a sub-pixel geometry buffer. Highly "
+              "recommended — almost every PS1 game looks better with it on.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
+    // Multi-Sampling + Texture Filtering — paired side-by-side on the
+    // Recommended page (matches dolphin_adapter's "paired" Anisotropic
+    // Filtering / Force Texture Filtering pattern).
+    s.append({"Recommended", "", "Visual Quality", "GPU", "Multisamples", "Multi-Sampling",
+              "Multi-sample anti-aliasing. Smoother edges at modest GPU cost.",
+              SettingDef::Combo, "1",
+              {{"Disabled", "1"}, {"2x MSAA", "2"}, {"4x MSAA", "4"}, {"8x MSAA", "8"}, {"16x MSAA", "16"}},
+              0, 0, 0, "paired", ""});
+    s.append({"Recommended", "", "Visual Quality", "GPU", "TextureFilter", "Texture Filtering",
+              "How textures are sampled. Nearest matches original hardware; Bilinear "
+              "smooths low-res textures.",
+              SettingDef::Combo, "Nearest", textureFilterOptions, 0, 0, 0, "paired", ""});
+
+    // Frame Pacing — common stutter-fix toggles.
+    s.append({"Recommended", "", "Frame Pacing", "Display", "VSync", "Vertical Sync (VSync)",
+              "Synchronises frame output with the monitor to prevent screen tearing.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Recommended", "", "Frame Pacing", "Main", "SyncToHostRefreshRate",
+              "Sync To Host Refresh Rate",
+              "Adjusts emulation speed slightly so the console's refresh rate "
+              "matches your monitor's. Smoother pacing at the cost of correct game speed.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    s.append({"Recommended", "", "Frame Pacing", "Display", "OptimalFramePacing",
+              "Optimal Frame Pacing",
+              "Reduces frame pacing jitter at a small CPU cost. Recommended on for "
+              "most users.",
+              SettingDef::Bool, "true", {}, 0, 0, 0, "", ""});
+
+    // Audio — most-toggled audio knobs.
+    s.append({"Recommended", "", "Audio", "Audio", "Backend", "Audio Backend",
+              "Output backend for the audio engine. Cubeb is the macOS default; SDL "
+              "is the cross-platform fallback.",
+              SettingDef::Combo, "Cubeb",
+              {{"Null (No Output)", "Null"}, {"Cubeb", "Cubeb"}, {"SDL", "SDL"}},
+              0, 0, 0, "", ""});
+    s.append({"Recommended", "", "Audio", "Audio", "OutputVolume", "Output Volume",
+              "Master output volume.",
+              SettingDef::Int, "100", {}, 0, 200, 1, "slider", "%"});
+
+    // Convenience — common quality-of-life toggles.
+    s.append({"Recommended", "", "Convenience", "Main", "EmulationSpeed", "Emulation Speed",
+              "Sets the target emulation speed for normal gameplay.",
+              SettingDef::Combo, "1", speedOptions, 0, 0, 0, "", ""});
+    s.append({"Recommended", "", "Convenience", "Console", "Region", "Region",
+              "PS1 region. Auto-Detect picks the right region from the disc; force a "
+              "value only if a particular game refuses to boot.",
+              SettingDef::Combo, "Auto",
+              {{"Auto-Detect",                 "Auto"},
+               {"NTSC-J (Japan)",              "NTSC-J"},
+               {"NTSC-U/C (US, Canada)",       "NTSC-U"},
+               {"PAL (Europe, Australia)",     "PAL"}},
+              0, 0, 0, "", ""});
+    s.append({"Recommended", "", "Convenience", "BIOS", "PatchFastBoot", "Fast Boot",
+              "Skips the BIOS boot animation and Sony intro.",
+              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
 
     // =========================================================================
     // BIOS category — mirrors biossettingswidget.cpp
