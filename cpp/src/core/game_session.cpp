@@ -2,6 +2,9 @@
 #include "paths.h"
 #include "adapters/emulator_adapter.h"
 #include "adapters/libretro/libretro_adapter.h"
+#include "core/libretro/rcheevos_runtime.h"
+#include "core/sdl_input_manager.h"
+#include "services/ra_service.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -127,18 +130,34 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     lr->prepareRuntime();
     auto* rt = lr->runtime();
 
+    const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
+
     CoreRuntime::StartConfig cfg;
     cfg.corePath = lr->resolveExecutable(manifest, Paths::emulatorsDir(manifest.install_folder));
     cfg.romPath = romPath;
     cfg.systemDir = Paths::biosDir();
-    const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
     cfg.saveDir = Paths::emulatorDataDir(manifest.id, systemId);
     cfg.optionsJsonPath = Paths::emulatorsDir("libretro") + "/" + lr->coreId() + "/options.json";
+
+    // Fix 3: Populate RA fields
+    cfg.raConsoleId = lr->raConsoleId(systemId);
+    if (m_raService) {
+        cfg.raToken   = m_raService->credentials().apiKey;
+        cfg.raHardcore = m_raService->hardcoreMode();
+    }
+
+    // Fix 4: Populate resume state path
+    const QString serial = lr->extractSerial(romPath);
+    if (!serial.isEmpty())
+        cfg.resumeStatePath = lr->findResumeFile(serial);
 
     connect(rt, &CoreRuntime::started, this, [this] {
         emit runningChanged(); emit started();
     }, Qt::UniqueConnection);
     connect(rt, &CoreRuntime::finished, this, [this](bool crashed) {
+        // Fix 1: restore navigation mode when the libretro game ends
+        if (m_sdlInputManager)
+            m_sdlInputManager->clearEmulationMode();
         m_adapter = nullptr; m_manifest = nullptr;
         emit runningChanged();
         emit finished(crashed ? -1 : 0, crashed);
@@ -151,7 +170,21 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     connect(rt, &CoreRuntime::frameReady, this, &GameSession::frameReady,
             Qt::UniqueConnection);
 
-    return rt->start(cfg);
+    // Fix 5: Forward achievement unlocks to RAService
+    if (m_raService) {
+        connect(&rt->rcheevos(), &RcheevosRuntime::achievementUnlocked,
+                m_raService, &RAService::notifyAchievementUnlocked,
+                Qt::QueuedConnection);
+    }
+
+    if (!rt->start(cfg))
+        return false;
+
+    // Fix 1: Switch SDL input into emulation mode so button events feed the InputRouter
+    if (m_sdlInputManager)
+        m_sdlInputManager->setEmulationMode(&rt->input());
+
+    return true;
 }
 
 void GameSession::kill() {

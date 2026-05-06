@@ -116,6 +116,13 @@ QString MgbaLibretroAdapter::extractSerial(const QString& romPath) const {
     return {};
 }
 
+int MgbaLibretroAdapter::raConsoleId(const QString& systemId) const {
+    if (systemId == "gba") return 5;
+    if (systemId == "gb")  return 4;
+    if (systemId == "gbc") return 6;
+    return 0;
+}
+
 QString MgbaLibretroAdapter::findResumeFile(const QString& serial) const {
     if (serial.isEmpty())
         return {};

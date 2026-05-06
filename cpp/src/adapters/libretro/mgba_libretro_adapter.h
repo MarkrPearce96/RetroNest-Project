@@ -19,4 +19,5 @@ public:
 
     QString extractSerial(const QString& romPath) const override;
     QString findResumeFile(const QString& serial) const override;
+    int raConsoleId(const QString& systemId) const override;
 };

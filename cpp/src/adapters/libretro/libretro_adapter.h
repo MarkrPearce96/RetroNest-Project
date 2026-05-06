@@ -39,6 +39,12 @@ public:
     /** Per-core: e.g. "mgba". Used to compute paths under emulators/libretro/. */
     virtual QString coreId() const = 0;
 
+    /** RA console ID for the given system. Default returns 0 (unknown).
+     *  Concrete adapters override to return per-system mappings. */
+    virtual int raConsoleId(const QString& systemId) const {
+        Q_UNUSED(systemId); return 0;
+    }
+
 protected:
     /** Static path: {root}/emulators/libretro/cores/{core_dylib} */
     static QString coreDylibPath(const EmulatorManifest& manifest);

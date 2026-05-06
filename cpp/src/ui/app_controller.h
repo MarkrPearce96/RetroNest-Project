@@ -28,7 +28,10 @@ class AppController : public QObject {
 
 public:
     AppController(ManifestLoader* loader, Database* db, QObject* parent = nullptr);
-    void setSdlInputManager(SdlInputManager* mgr) { m_inputManager = mgr; }
+    void setSdlInputManager(SdlInputManager* mgr) {
+        m_inputManager = mgr;
+        m_gameService.session()->setSdlInputManager(mgr);
+    }
     SdlInputManager* sdlInputManager() const { return m_inputManager; }
 
     // Game session (for QML binding to frameReady signal)

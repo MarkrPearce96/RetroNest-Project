@@ -205,6 +205,31 @@ QString SdlInputManager::canonicalName(const char* sdlName) {
     return canonicalMap().value(QString(sdlName).toLower(), QString(sdlName));
 }
 
+void SdlInputManager::setEmulationMode(InputRouter* target) {
+    m_emulationTarget = target;
+    m_emulationMap = {
+        { SDL_CONTROLLER_BUTTON_A,             RetroPadSlot::A },
+        { SDL_CONTROLLER_BUTTON_B,             RetroPadSlot::B },
+        { SDL_CONTROLLER_BUTTON_X,             RetroPadSlot::Y },  // libretro X=Y
+        { SDL_CONTROLLER_BUTTON_Y,             RetroPadSlot::X },  // libretro Y=X
+        { SDL_CONTROLLER_BUTTON_LEFTSHOULDER,  RetroPadSlot::L },
+        { SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, RetroPadSlot::R },
+        { SDL_CONTROLLER_BUTTON_BACK,          RetroPadSlot::Select },
+        { SDL_CONTROLLER_BUTTON_START,         RetroPadSlot::Start },
+        { SDL_CONTROLLER_BUTTON_DPAD_UP,       RetroPadSlot::Up },
+        { SDL_CONTROLLER_BUTTON_DPAD_DOWN,     RetroPadSlot::Down },
+        { SDL_CONTROLLER_BUTTON_DPAD_LEFT,     RetroPadSlot::Left },
+        { SDL_CONTROLLER_BUTTON_DPAD_RIGHT,    RetroPadSlot::Right },
+    };
+    qInfo() << "[SdlInput] Emulation mode ON";
+}
+
+void SdlInputManager::clearEmulationMode() {
+    m_emulationTarget = nullptr;
+    m_emulationMap.clear();
+    qInfo() << "[SdlInput] Emulation mode OFF";
+}
+
 void SdlInputManager::injectKey(int qtKey, QEvent::Type type) {
     if (!m_window) return;
     m_injectingKey = true;
@@ -285,6 +310,19 @@ void SdlInputManager::pollEvents() {
                     emit capturingChanged();
                 }
                 emit bindingCaptured(devIdx, element, false, true);
+            } else if (m_emulationTarget) {
+                // Emulation mode: route to InputRouter, except for the in-game menu combo
+                auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);
+                if (btn == SDL_CONTROLLER_BUTTON_BACK)
+                    m_selectHeld = true;
+                if (m_selectHeld && btn == SDL_CONTROLLER_BUTTON_B) {
+                    qInfo() << "[SdlInput] Select+B combo detected — emitting inGameMenuRequested";
+                    emit inGameMenuRequested();
+                    break;
+                }
+                auto it = m_emulationMap.constFind(btn);
+                if (it != m_emulationMap.constEnd())
+                    m_emulationTarget->setButtonPressed(0, it.value(), true);
             } else {
                 auto type = m_controllerTypes.value(event.cbutton.which, Xbox);
                 bool typeChanged = (type != m_activeControllerType || !m_lastInputWasController);
@@ -321,6 +359,13 @@ void SdlInputManager::pollEvents() {
         case SDL_CONTROLLERBUTTONUP: {
             if (m_capturing && m_multiCapture) {
                 emit captureButtonReleased();
+            } else if (m_emulationTarget) {
+                auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);
+                if (btn == SDL_CONTROLLER_BUTTON_BACK)
+                    m_selectHeld = false;
+                auto it = m_emulationMap.constFind(btn);
+                if (it != m_emulationMap.constEnd())
+                    m_emulationTarget->setButtonPressed(0, it.value(), false);
             } else if (!m_capturing) {
                 auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);
                 // Track Select/Back release for combo detection

@@ -7,6 +7,8 @@
 
 class EmulatorAdapter;
 class LibretroAdapter;
+class SdlInputManager;
+class RAService;
 
 /**
  * GameSession — manages an async emulator process or libretro core.
@@ -19,6 +21,12 @@ class GameSession : public QObject {
 public:
     explicit GameSession(QObject* parent = nullptr);
     ~GameSession() override;
+
+    /** Wire up the SDL input manager (called once at app startup). */
+    void setSdlInputManager(SdlInputManager* mgr) { m_sdlInputManager = mgr; }
+
+    /** Wire up the RA service (called once at app startup). */
+    void setRaService(RAService* svc) { m_raService = svc; }
 
     /** Launch the emulator. Returns false if already running or start fails. */
     bool start(const EmulatorManifest& manifest,
@@ -75,4 +83,7 @@ private:
     QString m_emuId;
     QString m_currentRomPath;
     LibretroAdapter* m_libretroAdapter = nullptr;
+
+    SdlInputManager* m_sdlInputManager = nullptr;
+    RAService* m_raService = nullptr;
 };
