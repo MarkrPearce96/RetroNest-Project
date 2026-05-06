@@ -225,6 +225,7 @@ qt_add_qml_module(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${SDL2_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
