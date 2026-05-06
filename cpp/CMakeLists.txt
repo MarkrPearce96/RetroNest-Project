@@ -458,6 +458,11 @@ target_include_directories(test_setting_dependency PRIVATE ${CMAKE_CURRENT_SOURC
 target_link_libraries(test_setting_dependency PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME SettingDependency COMMAND test_setting_dependency)
 
+add_executable(test_setting_def_storage tests/test_setting_def_storage.cpp)
+target_include_directories(test_setting_def_storage PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_setting_def_storage PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME SettingDefStorage COMMAND test_setting_def_storage)
+
 add_executable(test_ppsspp_schema
     tests/test_ppsspp_schema.cpp
     src/adapters/ppsspp_adapter.cpp

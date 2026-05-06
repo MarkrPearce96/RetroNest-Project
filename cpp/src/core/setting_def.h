@@ -11,6 +11,16 @@
 struct SettingDef {
     enum Type { Bool, Int, Float, String, Combo };
 
+    /**
+     * Storage backend for this setting's value.
+     *  - Ini: read/write via the emulator's INI file (existing behavior).
+     *  - LibretroOption: read/write via the per-core libretro options.json
+     *    sidecar. Used by libretro-backed adapters; `key` becomes the
+     *    libretro option key (e.g. "mgba_skip_bios").
+     */
+    enum class Storage { Ini, LibretroOption };
+    Storage storage = Storage::Ini;
+
     QString category;    // UI tab/group (e.g. "Graphics", "Audio")
     QString subcategory; // Sub-tab within category (e.g. "Display", "Rendering")
     QString group;       // Group box title (empty = no group box)
