@@ -41,13 +41,27 @@ public:
     void pause();
     void resume();
     /**
-     * Serialize the current core state to `path`. Caller MUST have paused the
-     * runtime (via pause() or by being in the stop-requested state) before
-     * calling — retro_serialize is not reentrant with retro_run, so concurrent
-     * calls would be undefined behaviour. Returns false if the core is not
-     * loaded or serialization fails.
+     * Serialize the current core state to `path`. Caller MUST only call this
+     * when the worker thread is NOT running (i.e. after stop() has returned, or
+     * before start() has been called). retro_serialize is not reentrant with
+     * retro_run; calling this while the worker is active is undefined behaviour.
+     * Returns false if the core is not loaded or serialization fails.
+     *
+     * When a game is actively running, use requestSaveState() instead — it
+     * schedules the write onto the worker thread where it is safe.
      */
     bool saveState(const QString& path);
+
+    /**
+     * Asynchronously schedule a save-state write. The worker thread will write
+     * the state to `path` between frames (or during post-loop teardown, before
+     * retro_unload_game). Safe to call from any thread while the worker is
+     * running. Returns immediately; the write is guaranteed to complete before
+     * the `finished` signal fires. Only the most recently requested path is
+     * kept — calling again before the worker services the first request
+     * overwrites it.
+     */
+    void requestSaveState(const QString& path);
 
     InputRouter& input() { return m_input; }
     OptionsStore& options() { return m_options; }
@@ -69,6 +83,7 @@ private:
                                         unsigned index, unsigned id);
 
     void runLoop();
+    void flushPendingSaveState(const CoreSymbols& s);
 
     StartConfig m_cfg;
     CoreLoader m_loader;
@@ -83,6 +98,9 @@ private:
     std::atomic<bool> m_paused{false};
     std::mutex m_pauseMx;
     std::condition_variable m_pauseCv;
+
+    std::mutex m_saveMx;
+    QString m_pendingSavePath;
 
     double m_frameDurationSec = 1.0 / 60.0;
     int m_sampleRate = 48000;

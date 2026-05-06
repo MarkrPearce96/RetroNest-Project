@@ -96,9 +96,9 @@ void CoreRuntime::resume() {
 }
 
 bool CoreRuntime::saveState(const QString& path) {
-    Q_ASSERT_X(m_paused.load() || m_stopRequested.load() || !m_thread,
+    Q_ASSERT_X(!m_thread,
                "CoreRuntime::saveState",
-               "must pause or stop runtime before serializing");
+               "worker thread is still running — use requestSaveState() instead");
     if (!m_loader.isOpen()) return false;
     size_t n = m_loader.symbols().retro_serialize_size();
     if (n == 0) return false;
@@ -108,6 +108,25 @@ bool CoreRuntime::saveState(const QString& path) {
     if (!f.open(QIODevice::WriteOnly)) return false;
     f.write(buf);
     return true;
+}
+
+void CoreRuntime::requestSaveState(const QString& path) {
+    std::lock_guard<std::mutex> l(m_saveMx);
+    m_pendingSavePath = path;
+}
+
+void CoreRuntime::flushPendingSaveState(const CoreSymbols& s) {
+    std::lock_guard<std::mutex> l(m_saveMx);
+    if (m_pendingSavePath.isEmpty()) return;
+    size_t n = s.retro_serialize_size();
+    if (n > 0) {
+        QByteArray buf(static_cast<int>(n), 0);
+        if (s.retro_serialize(buf.data(), n)) {
+            QFile f(m_pendingSavePath);
+            if (f.open(QIODevice::WriteOnly)) f.write(buf);
+        }
+    }
+    m_pendingSavePath.clear();
 }
 
 void CoreRuntime::runLoop() {
@@ -180,9 +199,14 @@ void CoreRuntime::runLoop() {
         if (m_stopRequested.load()) break;
         s.retro_run();
         // rcheevos frame tick wired in Phase 9; no-op here.
+        flushPendingSaveState(s);
         next += std::chrono::nanoseconds(static_cast<long long>(m_frameDurationSec * 1e9));
         std::this_thread::sleep_until(next);
     }
+
+    // Drain any save-state request that arrived after the last retro_run
+    // (e.g. from GameSession::terminate → requestSaveState + stop).
+    flushPendingSaveState(s);
 
     s.retro_unload_game();
     s.retro_deinit();

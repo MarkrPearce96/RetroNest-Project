@@ -173,9 +173,10 @@ void GameSession::terminate() {
             const QString resumePath = Paths::emulatorDataDir(mf->id, systemId)
                 + "/savestates/" + romBase + ".resume";
             QDir().mkpath(QFileInfo(resumePath).absolutePath());
-            // saveState requires the runtime to be paused (per Task 7.1 fix)
-            m_libretroAdapter->runtime()->pause();
-            m_libretroAdapter->runtime()->saveState(resumePath);
+            // Schedule the save onto the worker thread (race-free: the worker
+            // will flush the pending path in its post-loop teardown, before
+            // retro_unload_game, after stop() unblocks the pause condvar).
+            m_libretroAdapter->runtime()->requestSaveState(resumePath);
         }
         m_libretroAdapter->runtime()->stop();
     } else if (m_process && m_process->state() != QProcess::NotRunning) {
