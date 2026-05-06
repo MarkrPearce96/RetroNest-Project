@@ -379,9 +379,14 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
       return builder.makeToggleCard(d.key);
     case SettingDef::Int:
     case SettingDef::Float:
-      if (d.layout == "slider" || d.layout == "paired")
-        return builder.makeSliderCard(d.key);
-      return nullptr;
+      // Slider card carries an embedded spinbox, so it doubles as the
+      // plain-spinbox renderer when the schema doesn't specify a layout.
+      // Float fields with sub-integer step lose precision (slider widget
+      // is integer-only — tracked as a deferral in dolphin-schema-
+      // alignment.md), but the value still round-trips for whole-number
+      // inputs. Without this fallback, every Int/Float without an
+      // explicit layout was silently dropped.
+      return builder.makeSliderCard(d.key);
     default:
       return nullptr;
     }
