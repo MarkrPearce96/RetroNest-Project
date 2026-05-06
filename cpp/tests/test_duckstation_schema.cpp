@@ -216,7 +216,7 @@ private slots:
         QCOMPARE(keysFor("Graphics", "On-Screen Display"), QSet<QString>({
             // Display
             "OSDScale", "OSDMargin",
-            "FullscreenUITheme", "ImGuiTextFont", "ImGuiFixedFont",
+            "FullscreenUITheme",
             // Messages
             "ShowOSDMessages", "ShowStatusIndicators", "AnimateOSDMessages",
             "BlurOSDMessageBackgrounds",
