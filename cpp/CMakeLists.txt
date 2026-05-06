@@ -294,7 +294,11 @@ qt_add_qml_module(setupwizard_backing
 
 # ── AppUI QML module ──
 qt_add_library(appui_backing STATIC)
-target_link_libraries(appui_backing PRIVATE Qt6::Qml Qt6::Quick)
+target_include_directories(appui_backing PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/libretro
+)
+target_link_libraries(appui_backing PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2)
 
 qt_add_qml_module(appui_backing
     URI AppUI
@@ -335,6 +339,9 @@ qt_add_qml_module(appui_backing
         qml/AppUI/AllGamesPage.qml
         qml/AppUI/RecentlyPlayedPage.qml
         qml/AppUI/EmulatorLogos.js
+    SOURCES
+        src/ui/libretro/libretro_video_item.h
+        src/ui/libretro/libretro_video_item.cpp
     RESOURCES
         qml/AppUI/images/pcsx2_logo.png
         qml/AppUI/images/duckstation_logo.png
