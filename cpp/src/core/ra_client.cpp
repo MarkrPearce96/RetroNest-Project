@@ -299,6 +299,9 @@ static const QMap<QString, int>& consoleIdMapping() {
         {"psp", 41},
         {"gc", 16},
         {"wii", 19},
+        {"gb",   4},   // Game Boy
+        {"gbc",  6},   // Game Boy Color
+        {"gba",  5},   // Game Boy Advance
     };
     return mapping;
 }
