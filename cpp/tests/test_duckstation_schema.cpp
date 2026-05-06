@@ -48,7 +48,7 @@ private slots:
             "Recommended",
             "Console", "Emulation", "Memory Cards",
             "Graphics", "Audio",
-            "Achievements", "Capture", "Advanced",
+            "Achievements", "Advanced",
         }));
     }
 
@@ -162,10 +162,11 @@ private slots:
         // matching the PCSX2 precedent. The PGXP sub-tab is also dropped
         // (Mark, 2026-05-06): the per-knob toggles are niche and
         // PGXPEnable / PGXPDepthBuffer remain reachable from Rendering.
-        // On-Screen Display is folded into Graphics as a sub-tab
-        // (Dolphin pattern), not its own top-level pane.
+        // On-Screen Display + Capture are folded into Graphics as
+        // sub-tabs (Dolphin pattern), not their own top-level panes.
         QCOMPARE(subcategoriesFor("Graphics"), QSet<QString>({
-            "Rendering", "Advanced", "Texture Replacement", "On-Screen Display",
+            "Rendering", "Advanced", "Texture Replacement",
+            "On-Screen Display", "Capture",
         }));
     }
 
@@ -263,7 +264,8 @@ private slots:
 
     void testCaptureFullCatalog() {
         // Screenshot/video Save Locations deferred — RetroNest-managed.
-        QCOMPARE(keysFor("Capture"), QSet<QString>({
+        // Lives under Graphics as a sub-tab (Dolphin/OSD precedent).
+        QCOMPARE(keysFor("Graphics", "Capture"), QSet<QString>({
             // Screenshots
             "ScreenshotMode", "ScreenshotFormat", "ScreenshotQuality",
             "ScreenshotFileNameFormat",

@@ -70,6 +70,7 @@ QString DuckStationAdapter::subcategoryIcon(const QString& category,
     if (subcategory == "Advanced")            return QStringLiteral("\U0001F527");  // 🔧
     if (subcategory == "Texture Replacement") return QStringLiteral("\U0001F3A8");  // 🎨
     if (subcategory == "On-Screen Display")   return QStringLiteral("\U0001F4CA");  // 📊
+    if (subcategory == "Capture")             return QStringLiteral("\U0001F3A5");  // 🎥
     return {};
 }
 
@@ -1009,10 +1010,16 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
                  "Enabled"));
 
     // =========================================================================
-    // Capture category — mirrors capturesettingswidget.cpp
+    // Graphics > Capture sub-tab — mirrors capturesettingswidget.cpp.
     //
-    // Save Locations (Folders/Screenshots, Folders/Videos) deferred — managed
-    // by RetroNest under emulators/duckstation/{systemId}/{screenshots,videos}.
+    // Upstream surfaces this as a top-level category, but RetroNest folds
+    // it into Graphics as a sub-tab matching the OSD precedent — capture
+    // is graphics-adjacent (screenshots + video output), so one unified
+    // Graphics dialog stays clean.
+    //
+    // Save Locations (Folders/Screenshots, Folders/Videos) deferred —
+    // managed by RetroNest under
+    // emulators/duckstation/{systemId}/{screenshots,videos}.
     // Container / VideoCodec / AudioCodec combos are deferred — populated
     // dynamically from MediaCapture::GetContainerList(backend) /
     // GetVideoCodecList(backend, container) / GetAudioCodecList. Without
@@ -1021,19 +1028,19 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
     // =========================================================================
 
     // Screenshots group
-    s.append({"Capture", "", "Screenshots", "Display", "ScreenshotMode", "Screenshot Size", "",
+    s.append({"Graphics", "Capture", "Screenshots", "Display", "ScreenshotMode", "Screenshot Size", "",
               SettingDef::Combo, "ScreenResolution",
               {{"Screen Resolution", "ScreenResolution"},
                {"Internal Resolution", "InternalResolution"},
                {"Internal Resolution (Aspect Uncorrected)", "UncorrectedInternalResolution"}},
               0, 0, 0, "paired", ""});
-    s.append({"Capture", "", "Screenshots", "Display", "ScreenshotFormat", "Screenshot Format", "",
+    s.append({"Graphics", "Capture", "Screenshots", "Display", "ScreenshotFormat", "Screenshot Format", "",
               SettingDef::Combo, "PNG",
               {{"PNG", "PNG"}, {"JPEG", "JPEG"}, {"WebP", "WebP"}},
               0, 0, 0, "paired", ""});
-    s.append({"Capture", "", "Screenshots", "Display", "ScreenshotQuality", "Screenshot Quality", "",
+    s.append({"Graphics", "Capture", "Screenshots", "Display", "ScreenshotQuality", "Screenshot Quality", "",
               SettingDef::Int, "85", {}, 1, 100, 1, "slider", "%"});
-    s.append({"Capture", "", "Screenshots", "Display", "ScreenshotFileNameFormat", "File Name Format", "",
+    s.append({"Graphics", "Capture", "Screenshots", "Display", "ScreenshotFileNameFormat", "File Name Format", "",
               SettingDef::Combo, "TitleAndTimestamp",
               {{"Timestamp", "Timestamp"},
                {"Game and Timestamp", "TitleAndTimestamp"},
@@ -1042,15 +1049,15 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               0, 0, 0, "", ""});
 
     // Media Capture group
-    s.append({"Capture", "", "Media Capture", "MediaCapture", "Backend", "Backend", "",
+    s.append({"Graphics", "Capture", "Media Capture", "MediaCapture", "Backend", "Backend", "",
               SettingDef::Combo, "FFmpeg",
               {{"FFmpeg", "FFmpeg"}},
               0, 0, 0, "paired", ""});
     // Container is dynamic per backend — surfaced as a free-form String so
     // round-trip with upstream's selection still works (default mp4).
-    s.append({"Capture", "", "Media Capture", "MediaCapture", "Container", "Container", "",
+    s.append({"Graphics", "Capture", "Media Capture", "MediaCapture", "Container", "Container", "",
               SettingDef::String, "mp4", {}, 0, 0, 0, "paired", ""});
-    s.append({"Capture", "", "Media Capture", "MediaCapture", "FilenameFormat", "File Name Format", "",
+    s.append({"Graphics", "Capture", "Media Capture", "MediaCapture", "FilenameFormat", "File Name Format", "",
               SettingDef::Combo, "TitleAndTimestamp",
               {{"Timestamp", "Timestamp"},
                {"Game and Timestamp", "TitleAndTimestamp"},
@@ -1059,52 +1066,52 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               0, 0, 0, "", ""});
 
     // Video sub-area
-    s.append({"Capture", "", "Media Capture", "MediaCapture", "VideoCapture", "Capture Video",
+    s.append({"Graphics", "Capture", "Media Capture", "MediaCapture", "VideoCapture", "Capture Video",
               "Captures video to the chosen file when media capture is started.",
               SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""});
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoCodec", "Video Codec",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "VideoCodec", "Video Codec",
                   "Video codec name (FFmpeg) — leave blank for default.",
                   SettingDef::String, "", {}, 0, 0, 0, "paired", ""}, "VideoCapture"));
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoBitrate", "Video Bitrate",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "VideoBitrate", "Video Bitrate",
                   "Target video bitrate.",
                   SettingDef::Int, "6000", {}, 100, 100000, 100, "", "kbps"}, "VideoCapture"));
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoAutoSize",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "VideoAutoSize",
                   "Automatic Video Resolution",
                   "Captures at the running game's internal resolution.",
                   SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "VideoCapture"));
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoWidth", "Video Width", "",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "VideoWidth", "Video Width", "",
                   SettingDef::Int, "640", {}, 320, 32768, 16, "paired", "px"},
                  "VideoCapture && !VideoAutoSize"));
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoHeight", "Video Height", "",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "VideoHeight", "Video Height", "",
                   SettingDef::Int, "480", {}, 240, 32768, 16, "paired", "px"},
                  "VideoCapture && !VideoAutoSize"));
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoCodecUseArgs",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "VideoCodecUseArgs",
                   "Enable Extra Video Arguments", "",
                   SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "VideoCapture"));
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "VideoCodecArgs",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "VideoCodecArgs",
                   "Extra Video Arguments",
                   "Codec parameters as 'key = value : key = value' pairs.",
                   SettingDef::String, "", {}, 0, 0, 0, "paired", ""},
                  "VideoCapture && VideoCodecUseArgs"));
 
     // Audio sub-area
-    s.append({"Capture", "", "Media Capture", "MediaCapture", "AudioCapture", "Capture Audio",
+    s.append({"Graphics", "Capture", "Media Capture", "MediaCapture", "AudioCapture", "Capture Audio",
               "Captures audio to the chosen file when media capture is started.",
               SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""});
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "AudioCodec", "Audio Codec",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "AudioCodec", "Audio Codec",
                   "Audio codec name (FFmpeg) — leave blank for default.",
                   SettingDef::String, "", {}, 0, 0, 0, "paired", ""}, "AudioCapture"));
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "AudioBitrate", "Audio Bitrate",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "AudioBitrate", "Audio Bitrate",
                   "Target audio bitrate.",
                   SettingDef::Int, "128", {}, 16, 2048, 1, "", "kbps"}, "AudioCapture"));
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "AudioCodecUseArgs",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "AudioCodecUseArgs",
                   "Enable Extra Audio Arguments", "",
                   SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "AudioCapture"));
     // NOTE — upstream binds both VideoCodecArgs and AudioCodecArgs to the
     // same INI key "MediaCapture/AudioCodecArgs" (capturesettingswidget.cpp
     // :64+:70). Our Audio extra args therefore mirrors the upstream bug; if
     // upstream fixes it, the audit will refresh the key here.
-    s.append(dep({"Capture", "", "Media Capture", "MediaCapture", "AudioCodecArgs",
+    s.append(dep({"Graphics", "Capture", "Media Capture", "MediaCapture", "AudioCodecArgs",
                   "Extra Audio Arguments",
                   "Codec parameters as 'key = value : key = value' pairs.",
                   SettingDef::String, "", {}, 0, 0, 0, "paired", ""},

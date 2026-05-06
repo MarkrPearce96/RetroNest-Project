@@ -4,11 +4,14 @@
 #include <QGridLayout>
 
 // Hub layout mirrors the upstream SettingsWindow tab list
-// (settingswindow.cpp:92-184) in left-to-right reading order, with two
+// (settingswindow.cpp:92-184) in left-to-right reading order, with three
 // structural folds vs upstream:
 //   - Recommended (curated cross-cut at the top — Dolphin/PCSX2 pattern).
 //   - On-Screen Display lives under Graphics as a sub-tab (Dolphin
 //     pattern), not as a top-level card.
+//   - Capture also lives under Graphics as a sub-tab — capture is
+//     graphics-adjacent (screenshots + video output) so the unified
+//     Graphics dialog stays clean.
 // Other omitted panes (Interface, Game List, BIOS, Post-Processing,
 // Debugging) are documented in duckstation-schema-alignment.md.
 DuckStationCategoryHub::DuckStationCategoryHub(QWidget* parent)
@@ -40,7 +43,7 @@ DuckStationCategoryHub::DuckStationCategoryHub(QWidget* parent)
 
     // Row 2: Graphics · Audio · Achievements
     grid->addWidget(makeCard(QStringLiteral("\U0001F5BC"), "Graphics",
-                             "Renderer, advanced, textures, OSD",
+                             "Renderer, advanced, textures, OSD, capture",
                              countSettings("Graphics"), "Graphics"),       2, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F50A"), "Audio",
                              "Backend, latency, volume",
@@ -49,13 +52,10 @@ DuckStationCategoryHub::DuckStationCategoryHub(QWidget* parent)
                              "RetroAchievements options",
                              countSettings("Achievements"), "Achievements"), 2, 2);
 
-    // Row 3: Capture · Advanced (full-width pair, leaves the third slot empty)
-    grid->addWidget(makeCard(QStringLiteral("\U0001F3A5"), "Capture",
-                             "Screenshots and media capture",
-                             countSettings("Capture"), "Capture"),         3, 0);
+    // Row 3: Advanced — full-width stretch row.
     grid->addWidget(makeCard(QStringLiteral("\U0001F527"), "Advanced",
                              "Logging",
-                             countSettings("Advanced"), "Advanced"),       3, 1, 1, 2);
+                             countSettings("Advanced"), "Advanced"),       3, 0, 1, 3);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
