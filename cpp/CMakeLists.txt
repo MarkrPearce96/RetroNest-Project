@@ -48,6 +48,7 @@ set(SOURCES
     src/core/ra_client.cpp
     src/core/iso9660_reader.cpp
     src/core/libretro/options_store.cpp
+    src/core/libretro/retro_log.cpp
     src/services/game_service.cpp
     src/services/scraper_service.cpp
     src/services/emulator_service.cpp
@@ -683,7 +684,8 @@ add_test(NAME OptionsStore COMMAND test_options_store)
 add_executable(test_environment_callbacks
     tests/test_environment_callbacks.cpp
     src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/options_store.cpp)
+    src/core/libretro/options_store.cpp
+    src/core/libretro/retro_log.cpp)
 set_target_properties(test_environment_callbacks PROPERTIES AUTOMOC ON)
 target_include_directories(test_environment_callbacks PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src

@@ -1,5 +1,6 @@
 #include "environment_callbacks.h"
 #include "options_store.h"
+#include "retro_log.h"
 #include <QDebug>
 #include <QSet>
 
@@ -60,9 +61,12 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             return handleVariableUpdate(ctx, data);
         case RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2:
             return handleCoreOptionsV2(ctx, data);
-        case RETRO_ENVIRONMENT_GET_LOG_INTERFACE:
-            // implemented in Task 6.2 (retro_log)
-            return false;
+        case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: {
+            auto* cb = static_cast<retro_log_callback*>(data);
+            if (!cb) return false;
+            *cb = retroLogCallback();
+            return true;
+        }
         case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS:
             return true;  // accept and ignore
         case RETRO_ENVIRONMENT_GET_CAN_DUPE:
