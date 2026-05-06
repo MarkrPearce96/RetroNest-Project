@@ -633,6 +633,16 @@ target_include_directories(test_setting_def_ini_routing PRIVATE ${CMAKE_CURRENT_
 target_link_libraries(test_setting_def_ini_routing PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME SettingDefIniRouting COMMAND test_setting_def_ini_routing)
 
+add_executable(test_video_software
+    tests/test_video_software.cpp
+    src/core/libretro/video_software.cpp)
+set_target_properties(test_video_software PROPERTIES AUTOMOC ON)
+target_include_directories(test_video_software PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+target_link_libraries(test_video_software PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME VideoSoftware COMMAND test_video_software)
+
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
 set_target_properties(fake_libretro_core PROPERTIES
     PREFIX "" OUTPUT_NAME "fake_libretro_core"
