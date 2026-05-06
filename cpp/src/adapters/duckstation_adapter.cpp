@@ -792,6 +792,51 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
     s.append({"Graphics", "On-Screen Display", "Display", "Display", "OSDMargin", "Display Margins",
               "Margin around the OSD in pixels.",
               SettingDef::Int, "10", {}, 0, 200, 1, "", "px"});
+    // Theme / Font / Overlay Font — display labels and INI values match
+    // s_theme_names + s_theme_display_names (fullscreenui_widgets.cpp:121-130),
+    // TEXT_FONT_NAMES + TEXT_FONT_DISPLAY_NAMES (imgui_manager.cpp:130-155),
+    // and FIXED_FONT_NAMES + FIXED_FONT_DISPLAY_NAMES (imgui_manager.cpp:167-189).
+    // Empty INI value for "Automatic" theme matches upstream's default.
+    s.append({"Graphics", "On-Screen Display", "Display", "UI", "FullscreenUITheme",
+              "Theme", "Selects the OSD/big-picture theme.",
+              SettingDef::Combo, "",
+              {{"Automatic",   ""},
+               {"Dark",        "Dark"},
+               {"Light",       "Light"},
+               {"AMOLED",      "AMOLED"},
+               {"Cobalt Sky",  "CobaltSky"},
+               {"Grey Matter", "GreyMatter"},
+               {"Green Giant", "GreenGiant"},
+               {"Pinky Pals",  "PinkyPals"},
+               {"Dark Ocean",  "DarkOcean"},
+               {"Dark Ruby",   "DarkRuby"},
+               {"Purple Rain", "PurpleRain"}},
+              0, 0, 0, "", ""});
+    s.append({"Graphics", "On-Screen Display", "Display", "Main", "ImGuiTextFont",
+              "Font", "Font used for OSD messages.",
+              SettingDef::Combo, "Roboto",
+              {{"Roboto",            "Roboto"},
+               {"Bitcount",          "Bitcount"},
+               {"Pixelify Sans",     "PixelifySans"},
+               {"Handjet",           "Handjet"},
+               {"Orbitron",          "Orbitron"},
+               {"Tektur",            "Tektur"},
+               {"Plus Jakarta Sans", "PlusJakartaSans"},
+               {"Manrope",           "Manrope"},
+               {"Jersey 25",         "Jersey25"},
+               {"VT323",             "VT323"},
+               {"Google Sans Code",  "GoogleSansCode"},
+               {"Kode Mono",         "KodeMono"},
+               {"Roboto Mono",       "RobotoMono"}},
+              0, 0, 0, "", ""});
+    s.append({"Graphics", "On-Screen Display", "Display", "Main", "ImGuiFixedFont",
+              "Overlay Font", "Fixed-width font used for the in-game OSD overlay.",
+              SettingDef::Combo, "GoogleSansCode",
+              {{"Google Sans Code", "GoogleSansCode"},
+               {"Roboto Mono",      "RobotoMono"},
+               {"Kode Mono",        "KodeMono"},
+               {"Bitcount",         "Bitcount"}},
+              0, 0, 0, "", ""});
 
     s.append({"Graphics", "On-Screen Display", "Messages", "Display", "ShowOSDMessages",          "Show Messages",           "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});
     s.append({"Graphics", "On-Screen Display", "Messages", "Display", "ShowStatusIndicators",     "Show Status Indicators",  "", SettingDef::Bool, "true",  {}, 0, 0, 0, "paired", ""});

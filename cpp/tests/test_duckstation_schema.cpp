@@ -212,11 +212,11 @@ private slots:
     }
 
     void testOnScreenDisplayFullCatalog() {
-        // Theme / Font / Overlay Font deferred — runtime-populated combos.
         // Lives under Graphics as a sub-tab (Dolphin pattern).
         QCOMPARE(keysFor("Graphics", "On-Screen Display"), QSet<QString>({
             // Display
             "OSDScale", "OSDMargin",
+            "FullscreenUITheme", "ImGuiTextFont", "ImGuiFixedFont",
             // Messages
             "ShowOSDMessages", "ShowStatusIndicators", "AnimateOSDMessages",
             "BlurOSDMessageBackgrounds",
