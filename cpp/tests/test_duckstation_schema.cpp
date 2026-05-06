@@ -46,7 +46,7 @@ private slots:
         for (const auto& d : schema_) categories.insert(d.category);
         QCOMPARE(categories, QSet<QString>({
             "Recommended",
-            "BIOS", "Console", "Emulation", "Memory Cards",
+            "Console", "Emulation", "Memory Cards",
             "Graphics", "On-Screen Display", "Audio",
             "Achievements", "Capture", "Advanced",
         }));
@@ -116,20 +116,6 @@ private slots:
 
     // ── Per-category catalogs — each is the visible upstream pane in
     //    addRow order, exact INI keys, no surplus and no omissions. ───────
-
-    void testBiosCategoryFullCatalog() {
-        // Mirrors biossettingswidget.cpp / biossettingswidget.ui.
-        // Per-region BIOS combos (PathNTSCJ/PathNTSCU/PathPAL) deferred —
-        // populated by directory scan. SearchDirectory deferred —
-        // RetroNest-managed BIOS folder. Both flagged in
-        // duckstation-schema-alignment.md.
-        QCOMPARE(keysFor("BIOS"), QSet<QString>({
-            // Parallel Port group
-            "DeviceType", "FlashImagePath", "SwitchActive", "FlashImageWriteEnable",
-            // Options group
-            "TTYLogging",
-        }));
-    }
 
     void testConsoleCategoryFullCatalog() {
         QCOMPARE(keysFor("Console"), QSet<QString>({

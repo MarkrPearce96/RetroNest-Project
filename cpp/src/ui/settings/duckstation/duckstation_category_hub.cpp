@@ -5,7 +5,7 @@
 
 // Hub layout mirrors the upstream SettingsWindow tab list
 // (settingswindow.cpp:92-184) in left-to-right reading order, omitting
-// Interface / Game List / Post-Processing / Debugging panes per
+// Interface / Game List / BIOS / Post-Processing / Debugging panes per
 // duckstation-schema-alignment.md (in user memory). The Recommended card
 // at the top is a curated cross-cut for users who don't want to hunt
 // through every sub-tab — same pattern as Dolphin and PCSX2.
@@ -25,44 +25,39 @@ DuckStationCategoryHub::DuckStationCategoryHub(QWidget* parent)
                              countSettings("Recommended"), "Recommended"),
                     0, 0, 1, 3);  // spans all 3 columns
 
-    // Row 1: BIOS · Console · Emulation
-    grid->addWidget(makeCard(QStringLiteral("\U0001F4BB"), "BIOS",
-                             "Region BIOS, parallel port",
-                             countSettings("BIOS"), "BIOS"),               1, 0);
+    // Row 1: Console · Emulation · Memory Cards
     grid->addWidget(makeCard(QStringLiteral("\U0001F39B"), "Console",
                              "Region, fast boot, CPU, CD-ROM",
-                             countSettings("Console"), "Console"),         1, 1);
+                             countSettings("Console"), "Console"),         1, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3AE"), "Emulation",
                              "Speed, latency, rewind, runahead",
-                             countSettings("Emulation"), "Emulation"),     1, 2);
-
-    // Row 2: Memory Cards · Graphics · On-Screen Display
+                             countSettings("Emulation"), "Emulation"),     1, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F4BE"), "Memory Cards",
                              "Slots and card types",
-                             countSettings("Memory Cards"), "Memory Cards"), 2, 0);
+                             countSettings("Memory Cards"), "Memory Cards"), 1, 2);
+
+    // Row 2: Graphics · On-Screen Display · Audio
     grid->addWidget(makeCard(QStringLiteral("\U0001F5BC"), "Graphics",
                              "Renderer, advanced, PGXP, textures",
-                             countSettings("Graphics"), "Graphics"),       2, 1);
+                             countSettings("Graphics"), "Graphics"),       2, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F4CA"), "On-Screen Display",
                              "OSD, messages, overlays",
                              countSettings("On-Screen Display"),
-                             "On-Screen Display"),                          2, 2);
-
-    // Row 3: Audio · Achievements · Capture
+                             "On-Screen Display"),                          2, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F50A"), "Audio",
                              "Backend, latency, volume",
-                             countSettings("Audio"), "Audio"),             3, 0);
+                             countSettings("Audio"), "Audio"),             2, 2);
+
+    // Row 3: Achievements · Capture · Advanced
     grid->addWidget(makeCard(QStringLiteral("\U0001F3C6"), "Achievements",
                              "RetroAchievements options",
-                             countSettings("Achievements"), "Achievements"), 3, 1);
+                             countSettings("Achievements"), "Achievements"), 3, 0);
     grid->addWidget(makeCard(QStringLiteral("\U0001F3A5"), "Capture",
                              "Screenshots and media capture",
-                             countSettings("Capture"), "Capture"),         3, 2);
-
-    // Row 4: Advanced (full width — small category, gets the stretch row)
+                             countSettings("Capture"), "Capture"),         3, 1);
     grid->addWidget(makeCard(QStringLiteral("\U0001F527"), "Advanced",
                              "Logging",
-                             countSettings("Advanced"), "Advanced"),       4, 0, 1, 3);
+                             countSettings("Advanced"), "Advanced"),       3, 2);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);

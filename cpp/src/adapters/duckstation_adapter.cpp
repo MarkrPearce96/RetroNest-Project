@@ -316,34 +316,14 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
 
     // =========================================================================
-    // BIOS category — mirrors biossettingswidget.cpp
-    //
-    // BIOS Selection (per-region BIOS combos) and BIOS Directory are deferred:
-    // the per-region combos are populated at runtime by scanning the BIOS dir
-    // (filesystem-scanned combo blocker), and the BIOS dir itself is managed
-    // centrally by RetroNest (PathBase::Bios → {root}/bios/). The visible
-    // BIOS pane is therefore Parallel Port + Options.
-    // =========================================================================
-
-    // Parallel Port group
-    s.append({"BIOS", "", "Parallel Port", "PIO", "DeviceType", "Device Type", "",
-              SettingDef::Combo, "None",
-              {{"None", "None"}, {"Xplorer/Xploder Cartridge", "XplorerCart"}},
-              0, 0, 0, "", ""});
-    s.append(dep({"BIOS", "", "Parallel Port", "PIO", "FlashImagePath", "Image Path", "",
-                  SettingDef::String, "", {}, 0, 0, 0, "", ""}, "DeviceType=XplorerCart"));
-    s.append(dep({"BIOS", "", "Parallel Port", "PIO", "SwitchActive", "Cartridge Switch On", "",
-                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "DeviceType=XplorerCart"));
-    s.append(dep({"BIOS", "", "Parallel Port", "PIO", "FlashImageWriteEnable", "Allow Image Writes", "",
-                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "DeviceType=XplorerCart"));
-
-    // Options group
-    s.append({"BIOS", "", "Options", "BIOS", "TTYLogging", "Enable TTY Logging",
-              "Forwards BIOS putc/printf calls to the host log.",
-              SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
-
-    // =========================================================================
     // Console category — mirrors consolesettingswidget.cpp
+    //
+    // Upstream BIOS pane (PIO Parallel Port group, BIOS/TTYLogging) is
+    // intentionally omitted from RetroNest — Mark removed it 2026-05-06
+    // (BIOS file pickers are filesystem-scanned + RetroNest-managed,
+    // and the parallel-port emulation + TTY logging are debug-only edge
+    // cases not relevant to the embedded UX).
+    // =========================================================================
     // =========================================================================
 
     // Console group
