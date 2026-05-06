@@ -9,8 +9,8 @@ PpssppSettingsDialog::PpssppSettingsDialog(AppController* app,
                                             const QString& emuId,
                                             QWidget* parent)
     : EmulatorSettingsDialogBase(app, emuId, parent) {
-    setupChrome("PPSSPP Settings", QSize(950, 550),
-                SettingsDialogTheme::windowBg(), QSize(1000, 700));
+    setupChrome("PPSSPP Settings", QSize(1000, 720),
+                SettingsDialogTheme::windowBg());
 
     auto* hub = new PpssppCategoryHub(this);
     connect(hub, &PpssppCategoryHub::categoryActivated,

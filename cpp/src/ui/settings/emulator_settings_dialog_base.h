@@ -34,13 +34,9 @@ public slots:
 
 protected:
     // Subclass calls this from its ctor with its window chrome.
-    // expandedSize: optional. When non-empty, push resizes to that size and
-    // pop back to the hub resizes back to the dialog's initial minimum. Used
-    // by PCSX2 + PPSSPP. DuckStation passes {} and never resizes.
     void setupChrome(const QString& title,
                      const QSize& minSize,
-                     const QColor& windowBg,
-                     const QSize& expandedSize = {});
+                     const QColor& windowBg);
 
     // Subclass installs its hub (any QWidget) here. Wires currentChanged to
     // the description bar and applies initial hints.
@@ -57,6 +53,4 @@ protected:
     QWidget* m_hub = nullptr;
     QStack<int> m_history;
     bool m_currentPageHasSubTabs = false;
-    QSize m_compactSize;
-    QSize m_expandedSize;
 };

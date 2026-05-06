@@ -25,13 +25,10 @@ EmulatorSettingsDialogBase::~EmulatorSettingsDialogBase() {
 
 void EmulatorSettingsDialogBase::setupChrome(const QString& title,
                                              const QSize& minSize,
-                                             const QColor& windowBg,
-                                             const QSize& expandedSize) {
+                                             const QColor& windowBg) {
     setWindowTitle(title);
     setMinimumSize(minSize);
     setStyleSheet(QString("QDialog { background-color: %1; }").arg(windowBg.name()));
-    m_compactSize = minSize;
-    m_expandedSize = expandedSize;
 
     auto* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -67,11 +64,6 @@ void EmulatorSettingsDialogBase::pushPage(QWidget* page, bool hasSubTabs) {
     int idx = m_stack->addWidget(page);
     m_history.push(m_stack->currentIndex());
     m_stack->setCurrentIndex(idx);
-    if (m_expandedSize.isValid() &&
-        (size().width() < m_expandedSize.width() ||
-         size().height() < m_expandedSize.height())) {
-        resize(m_expandedSize);
-    }
     clearFocusedSetting();
 
     // Auto-focus the first focusable SettingsCard so arrow keys work
@@ -90,8 +82,6 @@ void EmulatorSettingsDialogBase::popPage() {
     int prev = m_history.pop();
     m_stack->setCurrentIndex(prev);
     m_currentPageHasSubTabs = false;
-    if (m_expandedSize.isValid() && m_stack->currentWidget() == m_hub)
-        resize(m_compactSize);
     if (current && current != m_hub) {
         m_stack->removeWidget(current);
         current->deleteLater();
