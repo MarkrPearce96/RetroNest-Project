@@ -274,14 +274,31 @@ private slots:
                  }));
     }
 
+    void testGraphicsOSDGroupOrder() {
+        // Mirrors upstream's Overlay Information section (3 BitCheckBox +
+        // AddOverlayList Debug overlay combo) plus a Notifications group
+        // for Notification screen position (lifted from System → UI to
+        // match the other adapters' OSD-page placement).
+        QCOMPARE(groupsIn("Graphics", "On-Screen Display"),
+                 QStringList({"Overlay Information", "Notifications"}));
+    }
+
     void testGraphicsOSDFullCatalog() {
-        // Three bitmask checkboxes share the same iShowStatusFlags key.
+        // Three bitmask checkboxes share the same iShowStatusFlags key,
+        // followed by Debug overlay (verbatim from upstream's
+        // AddOverlayList — UI/GameSettingsScreen.cpp:651).
         QCOMPARE(keysIn("Graphics", "On-Screen Display", "Overlay Information"),
                  QStringList({
                      "iShowStatusFlags",  // Show FPS Counter
                      "iShowStatusFlags",  // Show Speed
                      "iShowStatusFlags",  // Show Battery %
+                     "DebugOverlay",      // Debug overlay
                  }));
+    }
+
+    void testGraphicsOSDNotificationsFullCatalog() {
+        QCOMPARE(keysIn("Graphics", "On-Screen Display", "Notifications"),
+                 QStringList({"NotificationPos"}));
     }
 
     void testOverlayBitmaskCheckboxes() {

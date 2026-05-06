@@ -461,6 +461,43 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     s.append({"Graphics", "On-Screen Display", "Overlay Information", "Graphics", "iShowStatusFlags","Show Battery %",
               "Display the host battery percentage in-game.",
               SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/8});
+    // Debug overlay — upstream's Graphics tab adds this via AddOverlayList()
+    // right after the BitCheckBoxes (UI/GameSettingsScreen.cpp:651). Combo
+    // labels mirror the upstream g_debugOverlayList strings; "Frame profile"
+    // (index 4) is gated on USE_PROFILER upstream so we omit it for build-
+    // flag safety (the surrounding indices stay stable). iDebugOverlay is
+    // marked DONT_SAVE in PPSSPP's own config — our ensureConfig patches it
+    // before each launch so the value lives across launches as long as the
+    // user changes it through our UI.
+    s.append({"Graphics", "On-Screen Display", "Overlay Information", "General", "DebugOverlay", "Debug overlay",
+              "PPSSPP debug overlay. PPSSPP doesn't persist this setting "
+              "between runs, so launching the emulator outside this app "
+              "resets it to Off.",
+              SettingDef::Combo, "0",
+              {{"Off", "0"},
+               {"Debug stats", "1"},
+               {"Draw Frametimes Graph", "2"},
+               {"Frame timing", "3"},
+               {"Control Debug", "5"},
+               {"Audio Debug", "6"},
+               {"GPU Profile", "7"},
+               {"GPU Allocator Viewer", "8"},
+               {"Framebuffer list", "9"}}, 0, 0, 0});
+
+    // ── Group: Notifications ──
+    // iNotificationPos is in upstream's System → UI section, but it's
+    // structurally an OSD setting (controls where in-game notifications
+    // appear) and the other adapters all surface notification position on
+    // their OSD pages. Hosting it here matches that cross-emulator pattern;
+    // the underlying INI section/key is unchanged so round-trip stays
+    // identical regardless of which page the user edits it from.
+    s.append({"Graphics", "On-Screen Display", "Notifications", "General", "NotificationPos", "Notification screen position",
+              "Where in-game notifications appear over the game.",
+              SettingDef::Combo, "4",
+              {{"None", "-1"}, {"Bottom Left", "0"}, {"Bottom Center", "1"},
+               {"Bottom Right", "2"}, {"Top Left", "3"}, {"Top Center", "4"},
+               {"Top Right", "5"}, {"Center Left", "6"}, {"Center Right", "7"}},
+              0, 0, 0});
 
     // ────────────────────────────────────────────────────────────────────────
     // AUDIO — mirrors CreateAudioSettings (UI/GameSettingsScreen.cpp:654).
@@ -620,13 +657,8 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     s.append({"System", "", "UI", "General", "TransparentBackground", "Transparent UI background",
               "Use a translucent background for the PPSSPP menu UI.",
               SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"System", "", "UI", "General", "NotificationPos", "Notification screen position",
-              "Where notifications appear over the game.",
-              SettingDef::Combo, "4",
-              {{"None", "-1"}, {"Bottom Left", "0"}, {"Bottom Center", "1"},
-               {"Bottom Right", "2"}, {"Top Left", "3"}, {"Top Center", "4"},
-               {"Top Right", "5"}, {"Center Left", "6"}, {"Center Right", "7"}},
-              0, 0, 0});
+    // iNotificationPos lives on Graphics → On-Screen Display now (matches
+    // the other adapters' OSD-page placement of notification position).
     s.append({"System", "", "UI", "General", "BackgroundAnimation", "UI background animation",
               "Animation behind PPSSPP's menu UI.",
               SettingDef::Combo, "1",
