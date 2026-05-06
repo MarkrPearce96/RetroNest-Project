@@ -60,37 +60,55 @@ QString PPSSPPAdapter::controllerSettingsSection(int /*port*/) const {
 // ============================================================================
 // Settings schema
 // ============================================================================
+//
+// Mirrors upstream PPSSPP's GameSettingsScreen panes verbatim — same top-level
+// tabs, same group order, same setting order, same labels, same gating chains.
+// Reference: references/ppsspp-master/UI/GameSettingsScreen.cpp.
+//
+// Top-level tabs:  Graphics · Audio · Networking · System
+//
+// Deliberately NOT exposed (with rationale):
+// - Controls tab: handled by separate controller_mapping_page / hotkey UI.
+// - Tools tab: every entry is a navigation submodal (RetroAchievements,
+//   Savedata Manager, System Information, Developer Tools, Remote disc
+//   streaming) — no direct INI-backed settings to render. DebugOverlay
+//   (a real INI key) lives inside the Developer Tools submodal upstream;
+//   it's deferred until we have submodal-rendering infra.
+// - VR tab: gated on DEVICE_TYPE_VR upstream; not relevant to macOS Dolphin/
+//   PPSSPP emulation use.
+// - Display tab "Full screen" toggle: embedding-critical (force-patched true).
+// - "Pause when not focused" (System → General): embedding-critical
+//   (force-patched true so our overlay can take over pausing).
+// - Settings backed by PopupTextInputChoice / PopupTextInputChoice with text
+//   restrictions: Nickname, Username, DNS server, Quick chat 1-5. Our renderer
+//   has no text-input widget yet (deferral: see ppsspp-schema-alignment).
+// - Float sliders (fUITint, fUISaturation, fAnalogTriggerThreshold, etc.):
+//   integer-only slider widget, deferred.
+// - Submodal-driven settings: GPU texture upscaler (TextureShaderScreen),
+//   Theme (filesystem-scanned combo), Language (NewLanguageScreen),
+//   Set Memory Stick folder, Display layout & effects (DisplayLayoutScreen,
+//   which hosts the post-processing shader picker).
+// - Compile-gated upstream on macOS SDL build:
+//   * Discord Rich Presence (ENABLE_DISCORD)
+//   * Cardboard VR group (Android/iOS)
+//   * App switching mode (iOS)
+//   * Hide navigation bar (Android)
+//   * Bluetooth-friendly buffer (Android)
+//   * Recording group (Windows or Qt UI build, not SDL)
+//   * iAndroidHwScale, iAppSwitchMode
 
 QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     QVector<SettingDef> s;
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Emulation (top-level — moved out of Graphics for parity with PCSX2/DS)
-    // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Emulation", "", "", "CPU", "FastMemoryAccess", "Fast Memory (Unstable)",
-              "Uses faster but less accurate memory access. May cause crashes in some games.",
-              SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Emulation", "", "", "General", "IgnoreBadMemAccess", "Ignore Bad Memory Accesses",
-              "Silently ignores invalid memory reads/writes instead of crashing.",
-              SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Emulation", "", "", "CPU", "IOTimingMethod", "I/O Timing Method",
-              "Controls how UMD (disc) I/O timing is handled.",
-              SettingDef::Combo, "0",
-              {{"Fast (lag on slow storage)", "0"}, {"Host", "1"},
-               {"Simulate UMD Delays", "2"}, {"Simulate UMD Slow", "3"}}, 0, 0, 0});
-    s.append({"Emulation", "", "", "General", "ForceLagSync2", "Force Real Clock Sync",
-              "Slower but less lag. Forces the emulator to run at real clock speed.",
-              SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Emulation", "", "", "CPU", "CPUSpeed", "CPU Clock (MHz)",
-              "Overclock the emulated PSP's CPU. 0 = default (222 MHz). Unstable on high values.",
-              SettingDef::Int, "0", {}, 0, 1000, 1, "slider", "MHz"});
+    // ────────────────────────────────────────────────────────────────────────
+    // GRAPHICS — single scrolling page, no sub-tabs (mirrors upstream's
+    // CreateGraphicsSettings exactly: one ViewGroup with multiple ItemHeader
+    // sections in addWidget order).
+    // ────────────────────────────────────────────────────────────────────────
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Graphics → Rendering
-    // ═══════════════════════════════════════════════════════════════════════
-    // PPSSPP stores backend as "{int} ({NAME})" via ConfigTranslator, so our
-    // combo values must match exactly for round-trip to work.
-    s.append({"Graphics", "Rendering", "", "Graphics", "GraphicsBackend", "Backend",
+    // ── Group: Rendering Mode ──
+    // Backend: stored as "<int> (<NAME>)" via GPUBackendTranslator.
+    s.append({"Graphics", "", "Rendering Mode", "Graphics", "GraphicsBackend", "Backend",
               "Graphics API used for rendering.",
               SettingDef::Combo, "3 (VULKAN)",
               {{"OpenGL", "0 (OPENGL)"},
@@ -98,44 +116,54 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
                {"Direct3D 11", "2 (DIRECT3D11)"},
 #endif
                {"Vulkan", "3 (VULKAN)"}}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "Graphics", "InternalResolution", "Rendering Resolution",
+    s.append({"Graphics", "", "Rendering Mode", "Graphics", "InternalResolution", "Rendering Resolution",
               "Rendering resolution multiplier.",
-              SettingDef::Combo, "1",
-              {{"Auto (1:1)", "0"}, {"1x PSP (480x272)", "1"}, {"2x (960x544)", "2"},
-               {"3x (1440x816)", "3"}, {"4x (1920x1088)", "4"}, {"5x (2400x1360)", "5"},
-               {"6x (2880x1632)", "6"}, {"7x (3360x1904)", "7"}, {"8x (3840x2176)", "8"},
-               {"9x (4320x2448)", "9"}, {"10x (4800x2720)", "10"}}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "Graphics", "SoftwareRenderer", "Software Rendering (slow, accurate)",
+              SettingDef::Combo, "0",
+              {{"Auto (1:1)", "0"}, {"1x PSP", "1"}, {"2x PSP", "2"},
+               {"3x PSP", "3"}, {"4x PSP", "4"}, {"5x PSP", "5"},
+               {"6x PSP", "6"}, {"7x PSP", "7"}, {"8x PSP", "8"},
+               {"9x PSP", "9"}, {"10x PSP", "10"}}, 0, 0, 0,
+              "", "", "!SoftwareRenderer && !SkipBufferEffects"});
+    s.append({"Graphics", "", "Rendering Mode", "Graphics", "SoftwareRenderer", "Software Rendering (slow)",
               "Uses CPU rendering for maximum accuracy. Very slow.",
               SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "Graphics", "MultiSampleLevel", "Antialiasing (MSAA)",
+    s.append({"Graphics", "", "Rendering Mode", "Graphics", "MultiSampleLevel", "Antialiasing (MSAA)",
               "Multisample anti-aliasing level.",
               SettingDef::Combo, "0",
-              {{"Off", "0"}, {"2x", "1"}, {"4x", "2"}, {"8x", "3"},
-               {"16x", "4"}, {"32x", "5"}}, 0, 0, 0});
-    s.append({"Graphics", "Rendering", "", "Graphics", "ReplaceTextures", "Replace Textures",
+              {{"Off", "0"}, {"2x", "1"}, {"4x", "2"}, {"8x", "3"}, {"16x", "4"}},
+              0, 0, 0, "", "", "!SoftwareRenderer && !SkipBufferEffects"});
+    s.append({"Graphics", "", "Rendering Mode", "Graphics", "ReplaceTextures", "Replace textures",
               "Allow custom texture replacement packs.",
               SettingDef::Bool, "true", {}, 0, 0, 0});
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Graphics → Frame Pacing
-    // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Graphics", "Frame Pacing", "", "Graphics", "VerticalSync", "VSync",
+    // ── Group: Display ──
+    // Full screen / Display layout & effects intentionally omitted (see header).
+    s.append({"Graphics", "", "Display", "Graphics", "VerticalSync", "VSync",
               "Synchronize rendering to display refresh rate.",
               SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "Frame Pacing", "", "Graphics", "FrameSkip", "Frame Skipping",
+    s.append({"Graphics", "", "Display", "Graphics", "LowLatencyPresent", "Low latency display",
+              "Reduce display latency where the backend supports MAILBOX present mode.",
+              SettingDef::Bool, "false", {}, 0, 0, 0,
+              "", "", "VerticalSync"});
+
+    // ── Group: Frame Rate Control ──
+    // Frame Skipping is gated on !AutoFrameSkip upstream.
+    s.append({"Graphics", "", "Frame Rate Control", "Graphics", "FrameSkip", "Frame Skipping",
               "Number of frames to skip to maintain speed.",
               SettingDef::Combo, "0",
               {{"Off", "0"}, {"1", "1"}, {"2", "2"}, {"3", "3"},
-               {"4", "4"}, {"5", "5"}, {"6", "6"}, {"7", "7"}, {"8", "8"}}, 0, 0, 0});
-    s.append({"Graphics", "Frame Pacing", "", "Graphics", "AutoFrameSkip", "Auto Frameskip",
+               {"4", "4"}, {"5", "5"}, {"6", "6"}, {"7", "7"}, {"8", "8"}},
+              0, 0, 0, "", "", "!AutoFrameSkip"});
+    s.append({"Graphics", "", "Frame Rate Control", "Graphics", "AutoFrameSkip", "Auto FrameSkip",
               "Automatically skip frames to maintain speed.",
               SettingDef::Bool, "false", {}, 0, 0, 0});
-    // PPSSPP stores iFpsLimit1 as raw FPS, not percent — native UI converts
-    // user-entered percent into FPS via (percent * 60) / 100. We pre-bake the
-    // FPS values into combo INI values so the user still sees percentages but
-    // the INI gets the right cap. See audit 2026-04-07.
-    s.append({"Graphics", "Frame Pacing", "", "Graphics", "FrameRate", "Alternative Speed",
+    // iFpsLimit1 / iFpsLimit2 are stored as raw FPS, not percent — upstream
+    // converts (percent * 60) / 100 outside the INI layer. Pre-bake the FPS
+    // values into combo INI values so percentage-labelled rows still round-
+    // trip. See audit 2026-04-07. Upstream presents these as continuous
+    // sliders with zero/negative-disable chrome we don't have yet — combo
+    // is the deferred-chrome workaround.
+    s.append({"Graphics", "", "Frame Rate Control", "Graphics", "FrameRate", "Alternative speed",
               "Speed used when the alternative-speed hotkey is held.",
               SettingDef::Combo, "0",
               {{"Unlimited (No Cap)", "0"},
@@ -147,9 +175,8 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
                {"150% (90 FPS)", "90"},
                {"200% (120 FPS)","120"},
                {"300% (180 FPS)","180"},
-               {"500% (300 FPS)","300"}},
-              0, 0, 0});
-    s.append({"Graphics", "Frame Pacing", "", "Graphics", "FrameRate2", "Alternative Speed 2",
+               {"500% (300 FPS)","300"}}, 0, 0, 0});
+    s.append({"Graphics", "", "Frame Rate Control", "Graphics", "FrameRate2", "Alternative speed 2",
               "Second alternative speed for toggling. Same FPS-vs-percent caveat as above.",
               SettingDef::Combo, "-1",
               {{"Disabled",         "-1"},
@@ -162,197 +189,397 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
                {"150% (90 FPS)", "90"},
                {"200% (120 FPS)","120"},
                {"300% (180 FPS)","180"},
-               {"500% (300 FPS)","300"}},
-              0, 0, 0});
-    s.append({"Graphics", "Frame Pacing", "", "Graphics", "RenderDuplicateFrames", "Render Duplicate Frames to 60 Hz",
-              "Can make framerate smoother in games that run at lower framerates.",
-              SettingDef::Bool, "false", {}, 0, 0, 0});
+               {"500% (300 FPS)","300"}}, 0, 0, 0});
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Graphics → Performance  (two visual groups in one tab)
-    // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Graphics", "Performance", "Performance", "Graphics", "InflightFrames", "Buffer Graphics Commands",
-              "Faster, but adds input lag.",
-              SettingDef::Combo, "3",
-              {{"No buffer", "0"}, {"Up to 1", "1"}, {"Up to 2", "2"}, {"Up to 3", "3"}}, 0, 0, 0});
-    s.append({"Graphics", "Performance", "Performance", "Graphics", "HardwareTransform", "Hardware Transform",
-              "Uses hardware geometry transformation. Disable only for debugging.",
-              SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "Performance", "Performance", "Graphics", "SoftwareSkinning", "Software Skinning",
-              "Combine skinned model draws on the CPU, faster in most games.",
-              SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "Performance", "Performance", "Graphics", "HardwareTessellation", "Hardware Tessellation",
-              "Uses hardware to make curves.",
-              SettingDef::Bool, "false", {}, 0, 0, 0});
-
-    s.append({"Graphics", "Performance", "Speed Hacks", "Graphics", "SkipBufferEffects", "Skip Buffer Effects",
-              "Faster, but nothing may draw in some games.",
-              SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Performance", "Speed Hacks", "Graphics", "DisableRangeCulling", "Disable Culling",
+    // ── Group: Speed Hacks ──
+    s.append({"Graphics", "", "Speed Hacks", "Graphics", "SkipBufferEffects", "Skip Buffer Effects",
+              "Faster, but graphics may be missing in some games.",
+              SettingDef::Bool, "false", {}, 0, 0, 0,
+              "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Speed Hacks", "Graphics", "DisableRangeCulling", "Disable culling",
               "Disables range culling.",
-              SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Performance", "Speed Hacks", "Graphics", "SkipGPUReadbackMode", "Skip GPU Readbacks",
+              SettingDef::Bool, "false", {}, 0, 0, 0,
+              "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Speed Hacks", "Graphics", "SkipGPUReadbackMode", "Skip GPU Readbacks",
               "Skipping GPU readbacks is faster but may break some games.",
               SettingDef::Combo, "0",
-              {{"No (Default)", "0"}, {"Skip", "1"}, {"Copy to texture", "2"}}, 0, 0, 0});
-    s.append({"Graphics", "Performance", "Speed Hacks", "Graphics", "TextureBackoffCache", "Lazy Texture Caching",
-              "Faster, but can cause text problems in a few games.",
-              SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Performance", "Speed Hacks", "Graphics", "SplineBezierQuality", "Spline/Bezier Curves Quality",
-              "Only used by some games, controls smoothness of curves.",
-              SettingDef::Combo, "2",
-              {{"Low", "0"}, {"Medium", "1"}, {"High (Default)", "2"}}, 0, 0, 0});
-    s.append({"Graphics", "Performance", "Speed Hacks", "Graphics", "BloomHack", "Lower Resolution for Effects",
-              "Reduces artifacts.",
-              SettingDef::Combo, "0",
-              {{"Off", "0"}, {"Safe", "1"}, {"Balanced", "2"}, {"Aggressive", "3"}}, 0, 0, 0});
-    // NEW: Lens Flare Occlusion
-    s.append({"Graphics", "Performance", "Speed Hacks", "Graphics", "DepthRasterMode", "Lens Flare Occlusion",
+              {{"No", "0"}, {"Skip", "1"}, {"Copy to texture", "2"}}, 0, 0, 0,
+              "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Speed Hacks", "Graphics", "DepthRasterMode", "Lens flare occlusion",
               "Controls how the depth raster is used for lens flare occlusion.",
               SettingDef::Combo, "0",
-              {{"Auto", "0"}, {"Low", "1"}, {"Off", "2"}, {"Always on", "3"}}, 0, 0, 0});
+              {{"Auto", "0"}, {"Low", "1"}, {"Off", "2"}, {"Always on", "3"}},
+              0, 0, 0, "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Speed Hacks", "Graphics", "TextureBackoffCache", "Lazy texture caching (speedup)",
+              "Faster, but can cause text problems in a few games.",
+              SettingDef::Bool, "false", {}, 0, 0, 0,
+              "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Speed Hacks", "Graphics", "SplineBezierQuality", "Spline/Bezier curves quality",
+              "Only used by some games, controls smoothness of curves.",
+              SettingDef::Combo, "2",
+              {{"Low", "0"}, {"Medium", "1"}, {"High", "2"}}, 0, 0, 0});
+    s.append({"Graphics", "", "Speed Hacks", "Graphics", "BloomHack", "Lower resolution for effects",
+              "Reduces artifacts.",
+              SettingDef::Combo, "0",
+              {{"Off", "0"}, {"Safe", "1"}, {"Balanced", "2"}, {"Aggressive", "3"}},
+              0, 0, 0, "", "",
+              "!SoftwareRenderer && InternalResolution!=1"});
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Graphics → Textures
-    // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Graphics", "Textures", "", "Graphics", "TexHardwareScaling", "GPU Texture Upscaler (fast)",
-              "Faster texture upscaling on the GPU.",
-              SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Textures", "", "Graphics", "TexScalingType", "Upscale Type",
+    // ── Group: Performance ──
+    s.append({"Graphics", "", "Performance", "Graphics", "RenderDuplicateFrames", "Render duplicate frames to 60hz",
+              "Can make framerate smoother in games that run at lower framerates.",
+              SettingDef::Bool, "false", {}, 0, 0, 0,
+              "", "", "!SkipBufferEffects && FrameSkip=0"});
+    s.append({"Graphics", "", "Performance", "Graphics", "InflightFrames", "Buffer graphics commands",
+              "Faster, but adds input lag.",
+              SettingDef::Combo, "1",
+              {{"No buffer", "0"}, {"Up to 1", "1"}, {"Up to 2", "2"}}, 0, 0, 0});
+    s.append({"Graphics", "", "Performance", "Graphics", "HardwareTransform", "Hardware Transform",
+              "Uses hardware geometry transformation. Disable only for debugging.",
+              SettingDef::Bool, "true", {}, 0, 0, 0,
+              "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Performance", "Graphics", "SoftwareSkinning", "Software Skinning",
+              "Combine skinned model draws on the CPU, faster in most games.",
+              SettingDef::Bool, "true", {}, 0, 0, 0,
+              "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Performance", "Graphics", "HardwareTessellation", "Hardware Tessellation",
+              "Uses hardware to make curves.",
+              SettingDef::Bool, "false", {}, 0, 0, 0,
+              "", "", "!SoftwareRenderer && HardwareTransform"});
+
+    // ── Group: Texture upscaling ──
+    // GPU texture upscaler (sTextureShaderName) — submodal TextureShaderScreen
+    // upstream, deferred until we have submodal-rendering infra.
+    s.append({"Graphics", "", "Texture upscaling", "Graphics", "TexScalingType", "CPU texture upscaler (slow)",
               "Algorithm used for texture upscaling.",
               SettingDef::Combo, "0",
-              {{"xBRZ", "0"}, {"Hybrid", "1"}, {"Bicubic", "2"}, {"Hybrid+Bicubic", "3"}}, 0, 0, 0});
-    s.append({"Graphics", "Textures", "", "Graphics", "TexScalingLevel", "Upscale Level",
+              {{"xBRZ", "0"}, {"Hybrid", "1"}, {"Bicubic", "2"}, {"Hybrid + Bicubic", "3"}},
+              0, 0, 0, "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Texture upscaling", "Graphics", "TexScalingLevel", "Upscale Level",
               "CPU heavy - some scaling may be delayed to avoid stutter.",
               SettingDef::Combo, "1",
-              {{"Off", "1"}, {"2x", "2"}, {"3x", "3"}, {"4x", "4"}, {"5x", "5"}}, 0, 0, 0});
-    s.append({"Graphics", "Textures", "", "Graphics", "TexDeposterize", "Deposterize",
+              {{"Off", "1"}, {"2x", "2"}, {"3x", "3"}, {"4x", "4"}, {"5x", "5"}},
+              0, 0, 0, "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Texture upscaling", "Graphics", "TexDeposterize", "Deposterize",
               "Fixes visual banding glitches in upscaled textures.",
-              SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "Textures", "", "Graphics", "AnisotropyLevel", "Anisotropic Filtering",
+              SettingDef::Bool, "false", {}, 0, 0, 0,
+              "", "", "!SoftwareRenderer"});
+
+    // ── Group: Texture Filtering ──
+    s.append({"Graphics", "", "Texture Filtering", "Graphics", "AnisotropyLevel", "Anisotropic Filtering",
               "Improves texture quality at oblique angles.",
-              SettingDef::Combo, "4",
-              {{"Off", "0"}, {"2x", "1"}, {"4x", "2"}, {"8x", "3"}, {"16x", "4"}}, 0, 0, 0});
-    s.append({"Graphics", "Textures", "", "Graphics", "TextureFiltering", "Texture Filtering",
+              SettingDef::Combo, "0",
+              {{"Off", "0"}, {"2x", "1"}, {"4x", "2"}, {"8x", "3"}, {"16x", "4"}},
+              0, 0, 0, "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Texture Filtering", "Graphics", "TextureFiltering", "Texture Filter",
               "Filtering applied to textures.",
               SettingDef::Combo, "1",
-              {{"Auto", "1"}, {"Nearest", "2"}, {"Linear", "3"}, {"Auto Max Quality", "4"}}, 0, 0, 0});
-    s.append({"Graphics", "Textures", "", "Graphics", "Smart2DTexFiltering", "Smart 2D Texture Filtering",
+              {{"Auto", "1"}, {"Nearest", "2"}, {"Linear", "3"}, {"Auto Max Quality", "4"}},
+              0, 0, 0, "", "", "!SoftwareRenderer"});
+    s.append({"Graphics", "", "Texture Filtering", "Graphics", "Smart2DTexFiltering", "Smart 2D texture filtering",
               "Smarter filtering for 2D textures.",
-              SettingDef::Bool, "false", {}, 0, 0, 0});
+              SettingDef::Bool, "false", {}, 0, 0, 0,
+              "", "", "!SoftwareRenderer"});
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Graphics → Post-Processing  (NEW — replaces "Display layout & effects")
-    // ═══════════════════════════════════════════════════════════════════════
-    // Single-shader picker. PPSSPP stores the chain in [PostShaderList] as
-    // PostShader1, PostShader2, ... — we expose only PostShader1 for now.
-    // Values come from references/ppsspp-master/assets/shaders/defaultshaders.ini
-    s.append({"Graphics", "Post-Processing", "", "PostShaderList", "PostShader1", "Post-Processing Shader",
-              "Apply a post-processing effect to the rendered image.",
-              SettingDef::Combo, "Off",
-              {{"Off", "Off"},
-               {"FXAA Antialiasing", "FXAA"},
-               {"CRT (curved scanlines)", "CRT"},
-               {"Natural Colors", "Natural"},
-               {"Natural (No Blur)", "NaturalA"},
-               {"Vignette", "Vignette"},
-               {"Fake Reflections", "FakeReflections"},
-               {"Bloom", "Bloom"},
-               {"Bloom (no blur)", "BloomNoBlur"},
-               {"Sharpen", "Sharpen"},
-               {"Scanlines (flat)", "Scanlines"},
-               {"Cartoon", "Cartoon"},
-               {"4xHqGLSL Upscaler", "4xHqGLSL"},
-               {"AA-Color", "AAColor"},
-               {"Bicubic Upscaler", "UpscaleBicubic"},
-               {"Spline36 Upscaler", "UpscaleSpline36"},
-               {"5xBR Upscaler", "5xBR"},
-               {"5xBR lv2 Upscaler", "5xBR-lv2"},
-               {"Color Correction", "ColorCorrection"},
-               {"PSP Color", "PSPColor"},
-               {"LCD Persistence", "LCDPersistence"},
-               {"Sharp Bilinear", "UpscaleSharpBilinear"},
-               {"FSR-EASU", "FSR-EASU"}}, 0, 0, 0});
+    // ── Group: Overlay Information ──
+    // iShowStatusFlags packs FPS_COUNTER(2), SPEED_COUNTER(4), BATTERY_PERCENT(8)
+    // into one int. PPSSPP's own default is 0 (verified Core/Config.cpp).
+    s.append({"Graphics", "", "Overlay Information", "Graphics", "iShowStatusFlags", "Show FPS Counter",
+              "Display the framerate counter in-game.",
+              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/2});
+    s.append({"Graphics", "", "Overlay Information", "Graphics", "iShowStatusFlags", "Show Speed",
+              "Display the emulation speed percentage in-game.",
+              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/4});
+    s.append({"Graphics", "", "Overlay Information", "Graphics", "iShowStatusFlags", "Show Battery %",
+              "Display the host battery percentage in-game.",
+              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/8});
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Audio — unchanged from previous schema
-    // ═══════════════════════════════════════════════════════════════════════
-    s.append({"Audio", "Audio playback", "", "Sound", "AudioSyncMode", "Playback Mode",
+    // ────────────────────────────────────────────────────────────────────────
+    // AUDIO — mirrors CreateAudioSettings (UI/GameSettingsScreen.cpp:654).
+    // ────────────────────────────────────────────────────────────────────────
+
+    // ── Group: Audio playback ──
+    s.append({"Audio", "", "Audio playback", "Sound", "AudioSyncMode", "Playback mode",
               "Audio synchronization method.",
               SettingDef::Combo, "1",
-              {{"Granular", "0"}, {"Classic (lowest latency)", "1"}}, 0, 0, 0});
-    s.append({"Audio", "Audio playback", "", "Sound", "FillAudioGaps", "Fill Audio Gaps",
+              {{"Smooth (reduces artifacts)", "0"}, {"Classic (lowest latency)", "1"}}, 0, 0, 0});
+    s.append({"Audio", "", "Audio playback", "Sound", "FillAudioGaps", "Fill audio gaps",
               "Fill gaps in audio output to prevent pops.",
-              SettingDef::Bool, "true", {}, 0, 0, 0});
+              SettingDef::Bool, "true", {}, 0, 0, 0,
+              "", "", "AudioSyncMode=0"});
 
-    s.append({"Audio", "Game volume", "", "Sound", "Enable", "Enable Sound",
+    // ── Group: Game volume ──
+    s.append({"Audio", "", "Game volume", "Sound", "Enable", "Enable Sound",
               "Enable audio output.",
               SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Audio", "Game volume", "", "Sound", "GameVolume", "Game Volume",
+    s.append({"Audio", "", "Game volume", "Sound", "GameVolume", "Game volume",
               "Master audio volume.",
-              SettingDef::Int, "100", {}, 0, 100, 5, "slider", "%"});
-    s.append({"Audio", "Game volume", "", "Sound", "ReverbRelativeVolume", "Reverb Volume",
+              SettingDef::Int, "100", {}, 0, 100, 5, "slider", "%",
+              "Enable"});
+    s.append({"Audio", "", "Game volume", "Sound", "ReverbRelativeVolume", "Reverb volume",
               "Volume of reverb effects.",
-              SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%"});
-    s.append({"Audio", "Game volume", "", "Sound", "AltSpeedRelativeVolume", "Alternate Speed Volume",
+              SettingDef::Int, "100", {}, 0, 200, 5, "slider", "%",
+              "Enable"});
+    s.append({"Audio", "", "Game volume", "Sound", "AltSpeedRelativeVolume", "Alternate speed volume",
               "Volume when using fast-forward.",
-              SettingDef::Int, "100", {}, 0, 100, 5, "slider", "%"});
-    s.append({"Audio", "Game volume", "", "Sound", "AchievementVolume", "Achievement Sound Volume",
+              SettingDef::Int, "100", {}, 0, 100, 5, "slider", "%",
+              "Enable"});
+    s.append({"Audio", "", "Game volume", "Sound", "AchievementVolume", "Achievement sound volume",
               "Volume of achievement notification sounds.",
-              SettingDef::Int, "75", {}, 0, 100, 5, "slider", "%"});
+              SettingDef::Int, "75", {}, 0, 100, 5, "slider", "%",
+              "Enable"});
 
-    s.append({"Audio", "UI sound", "", "General", "UISound", "UI Sound",
+    // ── Group: UI sound ──
+    // bUISound is in [General], iUIVolume / iGamePreviewVolume in [Sound].
+    s.append({"Audio", "", "UI sound", "General", "UISound", "UI sound",
               "Play sounds for UI interactions.",
               SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Audio", "UI sound", "", "Sound", "UIVolume", "UI Volume",
+    s.append({"Audio", "", "UI sound", "Sound", "UIVolume", "UI volume",
               "Volume of UI sounds.",
-              SettingDef::Int, "75", {}, 0, 100, 5, "slider", "%"});
-    s.append({"Audio", "UI sound", "", "Sound", "GamePreviewVolume", "Game Preview Volume",
+              SettingDef::Int, "75", {}, 0, 100, 5, "slider", "%",
+              "UISound"});
+    s.append({"Audio", "", "UI sound", "Sound", "GamePreviewVolume", "Game preview volume",
               "Volume of game previews in the UI.",
               SettingDef::Int, "75", {}, 0, 100, 5, "slider", "%"});
 
-    s.append({"Audio", "Audio backend", "", "Sound", "AudioBufferSize", "Buffer Size",
+    // ── Group: Audio backend ──
+    // SDL build path. iSDLAudioBufferSize is restricted to {128,256,512,1024,
+    // 2048} upstream. Buffer size is below 128 silently clamped to 128 by the
+    // SDL backend, so minVal=128 matches the actual clamp.
+    s.append({"Audio", "", "Audio backend", "Sound", "AudioBufferSize", "Buffer size",
               "Audio buffer size in samples. Smaller = less latency but more crackling risk.",
               SettingDef::Int, "256", {}, 128, 2048, 64, "slider", ""});
-    s.append({"Audio", "Audio backend", "", "Sound", "AutoAudioDevice", "Use New Audio Devices Automatically",
+    s.append({"Audio", "", "Audio backend", "Sound", "AutoAudioDevice", "Use new audio devices automatically",
               "Automatically switch to newly connected audio devices.",
               SettingDef::Bool, "true", {}, 0, 0, 0});
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Overlay  (NEW top-level sidebar entry — bitmask checkboxes + Debug overlay)
-    // ═══════════════════════════════════════════════════════════════════════
-    // iShowStatusFlags is an int bitfield. Bit values come from
-    // references/ppsspp-master/Core/ConfigValues.h enum ShowStatusFlags:
-    //   FPS_COUNTER     = 1 << 1 = 2
-    //   SPEED_COUNTER   = 1 << 2 = 4
-    //   BATTERY_PERCENT = 1 << 3 = 8
-    // The trailing literal-int initializer uses the new SettingDef::bitmask field.
-    // PPSSPP's own default for iShowStatusFlags is 0 (verified in
-    // references/ppsspp-master/Core/Config.cpp), so initialising our schema
-    // default to "0" matches upstream and never silently clobbers user bits.
-    s.append({"Overlay", "", "", "Graphics", "iShowStatusFlags", "Show FPS Counter",
-              "Display the framerate counter in-game.",
-              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/2});
-    s.append({"Overlay", "", "", "Graphics", "iShowStatusFlags", "Show Speed",
-              "Display the emulation speed percentage in-game.",
-              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/4});
-    s.append({"Overlay", "", "", "Graphics", "iShowStatusFlags", "Show Battery %",
-              "Display the host battery percentage in-game.",
-              SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/8});
-    s.append({"Overlay", "", "", "General", "DebugOverlay", "Debug Overlay",
-              "PPSSPP debug overlay. Note: PPSSPP doesn't remember this setting "
-              "between runs, so it will reset to Off whenever the emulator is "
-              "launched outside this app.",
+    // ────────────────────────────────────────────────────────────────────────
+    // NETWORKING — mirrors CreateNetworkingSettings (line 1011). Text-input
+    // settings (Nickname, Username, DNS server, Quick chat 1-5, MAC address,
+    // Ad hoc server address) are deferred — see header.
+    // ────────────────────────────────────────────────────────────────────────
+
+    // ── Group: Networking (top-level header in upstream) ──
+    s.append({"Networking", "", "Networking", "Network", "EnableWlan", "Enable networking/wlan (beta)",
+              "Enable PSP wireless networking emulation.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+
+    // ── Group: Ad Hoc multiplayer ──
+    // Ad hoc server address (sProAdhocServer) deferred — submodal AdhocServerScreen.
+    // Nickname (sNickName) deferred — text input.
+    s.append({"Networking", "", "Ad Hoc multiplayer", "Network", "AdhocServerRelayMode", "Try to use server-provided packet relay",
+              "Available on servers that provide 'aemu_postoffice' packet relay (e.g. socom.cc). Disable for LAN/VPN play.",
               SettingDef::Combo, "0",
-              {{"Off", "0"},
-               {"Debug Stats", "1"},
-               {"Frame Graph", "2"},
-               {"Frame Timing", "3"},
-               {"Control", "5"},
-               {"Audio", "6"},
-               {"GPU Profile", "7"},
-               {"GPU Allocator", "8"},
-               {"Framebuffer List", "9"}}, 0, 0, 0});
+              {{"Auto", "0"}, {"Yes", "1"}, {"No", "2"}}, 0, 0, 0});
+    s.append({"Networking", "", "Ad Hoc multiplayer", "Network", "EnableAdhocServer", "Enable built-in ad hoc server",
+              "Run an ad hoc server inside PPSSPP for local multiplayer.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+
+    // ── Group: Infrastructure ──
+    // Username (sInfrastructureUsername) deferred — text input.
+    // DNS server (sInfrastructureDNSServer) deferred — text input.
+    s.append({"Networking", "", "Infrastructure", "Network", "InfrastructureAutoDNS", "Autoconfigure",
+              "Auto-configure DNS for infrastructure-mode multiplayer.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+
+    // ── Group: UPnP (port-forwarding) ──
+    s.append({"Networking", "", "UPnP (port-forwarding)", "Network", "EnableUPnP", "Enable UPnP (need a few seconds to detect)",
+              "Use UPnP to auto-configure router port forwarding.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"Networking", "", "UPnP (port-forwarding)", "Network", "UPnPUseOriginalPort", "UPnP use original port (Enabled = PSP compatibility)",
+              "May not work for all devices or games — see wiki.",
+              SettingDef::Bool, "false", {}, 0, 0, 0,
+              "", "", "EnableUPnP"});
+
+    // ── Group: Chat ──
+    s.append({"Networking", "", "Chat", "Network", "EnableNetworkChat", "Enable network chat",
+              "Allow text chat with other players.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"Networking", "", "Chat", "Network", "ChatButtonPosition", "Chat Button Position",
+              "Where the in-game chat button is displayed.",
+              SettingDef::Combo, "0",
+              {{"Bottom Left", "0"}, {"Bottom Center", "1"}, {"Bottom Right", "2"},
+               {"Top Left", "3"}, {"Top Center", "4"}, {"Top Right", "5"},
+               {"Center Left", "6"}, {"Center Right", "7"}, {"None", "8"}},
+              0, 0, 0, "", "", "EnableNetworkChat"});
+    s.append({"Networking", "", "Chat", "Network", "ChatScreenPosition", "Chat Screen Position",
+              "Where the chat overlay window is anchored.",
+              SettingDef::Combo, "0",
+              {{"Bottom Left", "0"}, {"Bottom Center", "1"}, {"Bottom Right", "2"},
+               {"Top Left", "3"}, {"Top Center", "4"}, {"Top Right", "5"}},
+              0, 0, 0, "", "", "EnableNetworkChat"});
+
+    // ── Group: Quick chat ──
+    // Quick chat 1-5 individual text inputs deferred.
+    s.append({"Networking", "", "Quick chat", "Network", "EnableQuickChat", "Enable quick chat",
+              "Show one-tap quick chat buttons.",
+              SettingDef::Bool, "true", {}, 0, 0, 0,
+              "", "", "EnableNetworkChat"});
+
+    // ── Group: Misc ──
+    // WLAN Channel: upstream HideChoice(2-5) and HideChoice(7-10) — only
+    // Auto / 1 / 6 / 11 are reachable. Match that in our combo entries.
+    s.append({"Networking", "", "Misc (default = compatibility)", "Network", "WlanAdhocChannel", "WLAN Channel",
+              "PSP-side ad hoc WLAN channel.",
+              SettingDef::Combo, "0",
+              {{"Auto", "0"}, {"1", "1"}, {"6", "6"}, {"11", "11"}}, 0, 0, 0});
+    s.append({"Networking", "", "Misc (default = compatibility)", "Network", "PortOffset", "Port offset",
+              "Offset added to all multiplayer ports.",
+              SettingDef::Int, "10000", {}, 0, 60000, 100, "slider", ""});
+    s.append({"Networking", "", "Misc (default = compatibility)", "Network", "MinTimeout", "Minimum Timeout (override in ms, 0 = default)",
+              "Minimum network timeout override.",
+              SettingDef::Int, "0", {}, 0, 15000, 50, "slider", "ms"});
+    s.append({"Networking", "", "Misc (default = compatibility)", "Network", "ForcedFirstConnect", "Forced First Connect (faster Connect)",
+              "Skip the initial connect handshake when joining ad hoc games.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"Networking", "", "Misc (default = compatibility)", "Network", "AllowSpeedControlWhileConnected", "Allow speed control while connected (not recommended)",
+              "Enable fast-forward / slow-mo even while connected to other players.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+
+    // ────────────────────────────────────────────────────────────────────────
+    // SYSTEM — mirrors CreateSystemSettings (line 1173). Several groups
+    // appear here only because upstream's pane is structured this way:
+    // Emulation, Save states, Cheats, PSP Settings all live under System
+    // even though we used to surface "Emulation" as a top-level tab.
+    // ────────────────────────────────────────────────────────────────────────
+
+    // ── Group: UI ──
+    // Language, Theme, Color tint/saturation, Set/Clear UI background,
+    // App switching mode, Hide navigation bar all deferred — see header.
+    s.append({"System", "", "UI", "General", "UIScaleFactor", "UI size adjustment (DPI)",
+              "Adjust the in-emulator UI scale. 0 = automatic.",
+              SettingDef::Int, "0", {}, -8, 8, 1, "slider", ""});
+    s.append({"System", "", "UI", "General", "TransparentBackground", "Transparent UI background",
+              "Use a translucent background for the PPSSPP menu UI.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+    s.append({"System", "", "UI", "General", "NotificationPos", "Notification screen position",
+              "Where notifications appear over the game.",
+              SettingDef::Combo, "4",
+              {{"None", "-1"}, {"Bottom Left", "0"}, {"Bottom Center", "1"},
+               {"Bottom Right", "2"}, {"Top Left", "3"}, {"Top Center", "4"},
+               {"Top Right", "5"}, {"Center Left", "6"}, {"Center Right", "7"}},
+              0, 0, 0});
+    s.append({"System", "", "UI", "General", "BackgroundAnimation", "UI background animation",
+              "Animation behind PPSSPP's menu UI.",
+              SettingDef::Combo, "1",
+              {{"No animation", "0"}, {"Floating symbols", "1"},
+               {"Recent games", "2"}, {"Waves", "3"}, {"Moving background", "4"},
+               {"Bouncing icon", "5"}, {"Colored floating symbols", "6"}},
+              0, 0, 0});
+
+    // ── Group: PSP Memory Stick ──
+    // Show / Set Memory Stick folder and Windows-only "in My Documents"
+    // toggles deferred — submodal navigation.
+    s.append({"System", "", "PSP Memory Stick", "General", "MemStickInserted", "Memory Stick inserted",
+              "Whether the emulated PSP memory stick is mounted.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+    s.append({"System", "", "PSP Memory Stick", "SystemParam", "MemStickSize", "Memory Stick size",
+              "Reported memory stick capacity in GB.",
+              SettingDef::Int, "16", {}, 1, 32, 1, "slider", "GB"});
+
+    // ── Group: Emulation ──
+    // FastMemoryAccess + IOTimingMethod + CPUSpeed live in [CPU] per
+    // Core/Config.cpp::cpuSettings[]; IgnoreBadMemAccess + ForceLagSync2
+    // live in [General] per generalSettings[].
+    s.append({"System", "", "Emulation", "CPU", "FastMemoryAccess", "Fast Memory",
+              "Uses faster but less accurate memory access. May cause crashes in some games.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+    s.append({"System", "", "Emulation", "General", "IgnoreBadMemAccess", "Ignore bad memory accesses",
+              "Silently ignores invalid memory reads/writes instead of crashing.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+    s.append({"System", "", "Emulation", "CPU", "IOTimingMethod", "I/O timing method",
+              "Controls how UMD (disc) I/O timing is handled.",
+              SettingDef::Combo, "0",
+              {{"Fast (lag on slow storage)", "0"},
+               {"Host (bugs, less lag)", "1"},
+               {"Simulate UMD delays", "2"},
+               {"Simulate UMD slow reading speed", "3"}}, 0, 0, 0});
+    // ForceLagSync2 is gated on !AutoFrameSkip upstream — but AutoFrameSkip
+    // lives on the Graphics tab. dependsOn DSL only resolves keys within the
+    // same category, so the gate is informational here. Keep it visible.
+    s.append({"System", "", "Emulation", "General", "ForceLagSync2", "Force real clock sync (slower, less lag)",
+              "Slower but less lag. Forces the emulator to run at real clock speed.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"System", "", "Emulation", "CPU", "CPUSpeed", "Change CPU Clock (unstable)",
+              "Overclock the emulated PSP's CPU. 0 = default (222 MHz). Unstable on high values.",
+              SettingDef::Int, "0", {}, 0, 1000, 1, "slider", "MHz"});
+
+    // ── Group: Save states ──
+    s.append({"System", "", "Save states", "General", "EnableStateUndo", "Savestate slot backups",
+              "Keep a one-step undo for save state slots.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+    s.append({"System", "", "Save states", "General", "SaveStateSlotCount", "Savestate slot count",
+              "Number of save state slots per game.",
+              SettingDef::Int, "5", {}, 1, 30, 1, "slider", ""});
+    s.append({"System", "", "Save states", "General", "AutoLoadSaveState", "Auto load savestate",
+              "Automatically load a save state when starting a game.",
+              SettingDef::Combo, "0",
+              {{"Off", "0"}, {"Newest Save", "2"},
+               {"Slot 1", "3"}, {"Slot 2", "4"}, {"Slot 3", "5"},
+               {"Slot 4", "6"}, {"Slot 5", "7"}}, 0, 0, 0});
+    s.append({"System", "", "Save states", "General", "RewindSnapshotInterval", "Rewind Snapshot Interval",
+              "Take a rewind snapshot every N seconds. 0 disables rewind.",
+              SettingDef::Int, "0", {}, 0, 60, 1, "slider", "s"});
+
+    // ── Group: General ──
+    // Restore Default Settings (action), Use system native keyboard (gated
+    // SYSPROP_HAS_KEYBOARD), Pause when not focused (force-patched embedding-
+    // critical) all omitted.
+    s.append({"System", "", "General", "General", "AskForExitConfirmationAfterSeconds", "Ask for exit confirmation after seconds",
+              "Show an exit confirmation when the game has been running this long.",
+              SettingDef::Int, "300", {}, 0, 1200, 10, "slider", "s"});
+    s.append({"System", "", "General", "General", "CacheFullIsoInRam", "Cache full ISO in RAM",
+              "Loads the entire ISO into RAM for faster reads. Uses more memory.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"System", "", "General", "General", "CheckForNewVersion", "Check for new versions of PPSSPP",
+              "Periodically check ppsspp.org for new releases.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+    s.append({"System", "", "General", "General", "ScreenshotsAsPNG", "Screenshots as PNG",
+              "Save screenshots as PNG instead of JPEG.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"System", "", "General", "General", "ScreenshotMode", "Screenshot mode",
+              "Whether screenshots include UI overlays.",
+              SettingDef::Combo, "0",
+              {{"Final processed image", "0"}, {"Raw game image", "1"}}, 0, 0, 0});
+
+    // ── Group: Cheats ──
+    s.append({"System", "", "Cheats", "General", "EnableCheats", "Enable Cheats",
+              "Apply cheat codes loaded for the running game.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"System", "", "Cheats", "General", "EnablePlugins", "Enable plugins",
+              "Load PPSSPP plugins.",
+              SettingDef::Bool, "true", {}, 0, 0, 0});
+
+    // ── Group: PSP Settings ──
+    // Nickname (sNickName) deferred — text input.
+    s.append({"System", "", "PSP Settings", "SystemParam", "GameLanguage", "Game language",
+              "Language reported to PSP games.",
+              SettingDef::Combo, "-1",
+              {{"Auto", "-1"}, {"Japanese", "0"}, {"English", "1"},
+               {"French", "2"}, {"Spanish", "3"}, {"German", "4"},
+               {"Italian", "5"}, {"Dutch", "6"}, {"Portuguese", "7"},
+               {"Russian", "8"}, {"Korean", "9"},
+               {"Chinese (traditional)", "10"}, {"Chinese (simplified)", "11"}},
+              0, 0, 0});
+    s.append({"System", "", "PSP Settings", "SystemParam", "PSPModel", "PSP Model",
+              "Reported PSP model.",
+              SettingDef::Combo, "1",
+              {{"PSP-1000", "0"}, {"PSP-2000/3000", "1"}}, 0, 0, 0});
+    s.append({"System", "", "PSP Settings", "SystemParam", "DayLightSavings", "Daylight savings",
+              "Apply DST when reporting wall-clock time to games.",
+              SettingDef::Bool, "false", {}, 0, 0, 0});
+    s.append({"System", "", "PSP Settings", "SystemParam", "ParamDateFormat", "Date Format",
+              "PSP-side date format.",
+              SettingDef::Combo, "0",
+              {{"YYYYMMDD", "0"}, {"MMDDYYYY", "1"}, {"DDMMYYYY", "2"}}, 0, 0, 0});
+    s.append({"System", "", "PSP Settings", "SystemParam", "ParamTimeFormat", "Time Format",
+              "PSP-side time format.",
+              SettingDef::Combo, "0",
+              {{"24HR", "0"}, {"12HR", "1"}}, 0, 0, 0});
+    s.append({"System", "", "PSP Settings", "SystemParam", "ButtonPreference", "Confirmation Button",
+              "PSP-side confirmation button (X for international, O for Japanese region).",
+              SettingDef::Combo, "1",
+              {{"Use O to confirm", "0"}, {"Use X to confirm", "1"}}, 0, 0, 0});
 
     return s;
 }

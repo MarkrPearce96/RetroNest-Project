@@ -3,11 +3,48 @@
 #include "adapters/ppsspp_adapter.h"
 #include "core/setting_def.h"
 
+// Tests that PPSSPPAdapter::settingsSchema() mirrors upstream PPSSPP's
+// GameSettingsScreen panes verbatim — same top-level tabs, same group order,
+// same setting order, same labels, same gating chains.
+//
+// Reference: references/ppsspp-master/UI/GameSettingsScreen.cpp.
+//
+// The per-category full-catalog tests below assert the exact set of INI keys
+// that should appear in each category. Any addition / removal trips the test
+// — that's the bug-net described in dolphin-schema-alignment.md.
+
 class TestPPSSPPSchema : public QObject {
     Q_OBJECT
 
 private:
     QVector<SettingDef> schema_;
+
+    QStringList keysIn(const QString& category) const {
+        QStringList keys;
+        for (const auto& d : schema_)
+            if (d.category == category) keys.append(d.key);
+        return keys;
+    }
+
+    QStringList keysIn(const QString& category, const QString& group) const {
+        QStringList keys;
+        for (const auto& d : schema_)
+            if (d.category == category && d.group == group) keys.append(d.key);
+        return keys;
+    }
+
+    QStringList groupsIn(const QString& category) const {
+        QStringList groups;
+        QSet<QString> seen;
+        for (const auto& d : schema_) {
+            if (d.category != category) continue;
+            if (!seen.contains(d.group)) {
+                seen.insert(d.group);
+                groups.append(d.group);
+            }
+        }
+        return groups;
+    }
 
 private slots:
     void initTestCase() {
@@ -16,58 +53,106 @@ private slots:
         QVERIFY(!schema_.isEmpty());
     }
 
+    // ──────── Top-level ────────
+
     void testTopLevelCategories() {
         QSet<QString> categories;
         for (const auto& d : schema_) categories.insert(d.category);
-        QCOMPARE(categories, QSet<QString>({"Emulation", "Graphics", "Audio", "Overlay"}));
+        QCOMPARE(categories,
+                 QSet<QString>({"Graphics", "Audio", "Networking", "System"}));
     }
 
-    void testGraphicsSubcategories() {
-        QSet<QString> subs;
-        for (const auto& d : schema_)
-            if (d.category == "Graphics") subs.insert(d.subcategory);
-        QCOMPARE(subs, QSet<QString>({
-            "Rendering", "Frame Pacing",
-            "Performance", "Textures", "Post-Processing"
-        }));
-    }
-
-    void testEmulationSettingsAtTopLevel() {
-        // FastMemoryAccess used to live under Graphics → Emulation.
-        // It now lives under top-level Emulation category.
-        bool found = false;
+    void testNoSubcategoriesAnywhere() {
+        // PPSSPP upstream renders every tab as a single scrolling page with
+        // ItemHeader sections — no sub-tabs. Subcategory must be empty for
+        // every entry so GenericSettingsPage falls back to single-page mode.
         for (const auto& d : schema_) {
-            if (d.key == "FastMemoryAccess") {
-                QCOMPARE(d.category, QString("Emulation"));
-                QCOMPARE(d.subcategory, QString(""));
-                found = true;
-            }
+            QVERIFY2(d.subcategory.isEmpty(),
+                     qPrintable(QString("non-empty subcategory '%1' on key %2")
+                                    .arg(d.subcategory, d.key)));
         }
-        QVERIFY(found);
     }
 
-    void testLensFlareOcclusionExists() {
-        const SettingDef* found = nullptr;
-        for (const auto& d : schema_)
-            if (d.key == "DepthRasterMode") found = &d;
-        QVERIFY(found != nullptr);
-        QCOMPARE(found->category, QString("Graphics"));
-        QCOMPARE(found->subcategory, QString("Performance"));
-        QCOMPARE(int(found->type), int(SettingDef::Combo));
-        QCOMPARE(found->options.size(), 4);  // Auto / Low / Off / Always on
+    // ──────── Graphics ────────
+
+    void testGraphicsGroupOrder() {
+        // Mirrors CreateGraphicsSettings ItemHeader call order in
+        // UI/GameSettingsScreen.cpp:295.
+        QCOMPARE(groupsIn("Graphics"),
+                 QStringList({
+                     "Rendering Mode",
+                     "Display",
+                     "Frame Rate Control",
+                     "Speed Hacks",
+                     "Performance",
+                     "Texture upscaling",
+                     "Texture Filtering",
+                     "Overlay Information",
+                 }));
     }
 
-    void testPostProcessingShaderExists() {
-        const SettingDef* found = nullptr;
-        for (const auto& d : schema_)
-            if (d.section == "PostShaderList" && d.key == "PostShader1") found = &d;
-        QVERIFY(found != nullptr);
-        QCOMPARE(found->category, QString("Graphics"));
-        QCOMPARE(found->subcategory, QString("Post-Processing"));
-        QCOMPARE(int(found->type), int(SettingDef::Combo));
-        QVERIFY(found->options.size() >= 10);  // expect a healthy shader list
-        // First option must be the "Off" sentinel
-        QCOMPARE(found->options.first().second, QString("Off"));
+    void testGraphicsRenderingModeFullCatalog() {
+        QCOMPARE(keysIn("Graphics", "Rendering Mode"),
+                 QStringList({
+                     "GraphicsBackend", "InternalResolution",
+                     "SoftwareRenderer", "MultiSampleLevel", "ReplaceTextures",
+                 }));
+    }
+
+    void testGraphicsDisplayFullCatalog() {
+        QCOMPARE(keysIn("Graphics", "Display"),
+                 QStringList({"VerticalSync", "LowLatencyPresent"}));
+    }
+
+    void testGraphicsFrameRateControlFullCatalog() {
+        QCOMPARE(keysIn("Graphics", "Frame Rate Control"),
+                 QStringList({
+                     "FrameSkip", "AutoFrameSkip", "FrameRate", "FrameRate2",
+                 }));
+    }
+
+    void testGraphicsSpeedHacksFullCatalog() {
+        QCOMPARE(keysIn("Graphics", "Speed Hacks"),
+                 QStringList({
+                     "SkipBufferEffects", "DisableRangeCulling",
+                     "SkipGPUReadbackMode", "DepthRasterMode",
+                     "TextureBackoffCache", "SplineBezierQuality", "BloomHack",
+                 }));
+    }
+
+    void testGraphicsPerformanceFullCatalog() {
+        QCOMPARE(keysIn("Graphics", "Performance"),
+                 QStringList({
+                     "RenderDuplicateFrames", "InflightFrames",
+                     "HardwareTransform", "SoftwareSkinning",
+                     "HardwareTessellation",
+                 }));
+    }
+
+    void testGraphicsTextureUpscalingFullCatalog() {
+        // GPU texture upscaler (sTextureShaderName) deferred — submodal.
+        QCOMPARE(keysIn("Graphics", "Texture upscaling"),
+                 QStringList({
+                     "TexScalingType", "TexScalingLevel", "TexDeposterize",
+                 }));
+    }
+
+    void testGraphicsTextureFilteringFullCatalog() {
+        QCOMPARE(keysIn("Graphics", "Texture Filtering"),
+                 QStringList({
+                     "AnisotropyLevel", "TextureFiltering",
+                     "Smart2DTexFiltering",
+                 }));
+    }
+
+    void testGraphicsOverlayInformationFullCatalog() {
+        // Three bitmask checkboxes share the same iShowStatusFlags key.
+        QCOMPARE(keysIn("Graphics", "Overlay Information"),
+                 QStringList({
+                     "iShowStatusFlags",  // Show FPS Counter
+                     "iShowStatusFlags",  // Show Speed
+                     "iShowStatusFlags",  // Show Battery %
+                 }));
     }
 
     void testOverlayBitmaskCheckboxes() {
@@ -83,21 +168,157 @@ private slots:
                 if (d.label == exp.label) { found = &d; break; }
             }
             QVERIFY2(found != nullptr, qPrintable("missing: " + exp.label));
-            QCOMPARE(found->category, QString("Overlay"));
+            QCOMPARE(found->category, QString("Graphics"));
+            QCOMPARE(found->group, QString("Overlay Information"));
             QCOMPARE(found->key, QString("iShowStatusFlags"));
             QCOMPARE(int(found->type), int(SettingDef::Bool));
             QCOMPARE(found->bitmask, exp.bit);
         }
     }
 
-    void testDebugOverlayExists() {
+    void testRenderingResolutionGate() {
+        for (const auto& d : schema_) {
+            if (d.key == "InternalResolution") {
+                QCOMPARE(d.dependsOn,
+                         QString("!SoftwareRenderer && !SkipBufferEffects"));
+                return;
+            }
+        }
+        QFAIL("InternalResolution not found in schema");
+    }
+
+    void testLensFlareOcclusionExists() {
         const SettingDef* found = nullptr;
         for (const auto& d : schema_)
-            if (d.key == "DebugOverlay") found = &d;
+            if (d.key == "DepthRasterMode") found = &d;
         QVERIFY(found != nullptr);
-        QCOMPARE(found->category, QString("Overlay"));
-        QCOMPARE(found->section, QString("General"));
+        QCOMPARE(found->category, QString("Graphics"));
+        QCOMPARE(found->group, QString("Speed Hacks"));
         QCOMPARE(int(found->type), int(SettingDef::Combo));
+        QCOMPARE(found->options.size(), 4);  // Auto / Low / Off / Always on
+    }
+
+    // ──────── Audio ────────
+
+    void testAudioGroupOrder() {
+        QCOMPARE(groupsIn("Audio"),
+                 QStringList({
+                     "Audio playback", "Game volume", "UI sound", "Audio backend",
+                 }));
+    }
+
+    void testAudioPlaybackFullCatalog() {
+        QCOMPARE(keysIn("Audio", "Audio playback"),
+                 QStringList({"AudioSyncMode", "FillAudioGaps"}));
+    }
+
+    void testAudioGameVolumeFullCatalog() {
+        QCOMPARE(keysIn("Audio", "Game volume"),
+                 QStringList({
+                     "Enable", "GameVolume", "ReverbRelativeVolume",
+                     "AltSpeedRelativeVolume", "AchievementVolume",
+                 }));
+    }
+
+    void testAudioUISoundFullCatalog() {
+        QCOMPARE(keysIn("Audio", "UI sound"),
+                 QStringList({"UISound", "UIVolume", "GamePreviewVolume"}));
+    }
+
+    void testAudioBackendFullCatalog() {
+        QCOMPARE(keysIn("Audio", "Audio backend"),
+                 QStringList({"AudioBufferSize", "AutoAudioDevice"}));
+    }
+
+    void testFillAudioGapsGate() {
+        for (const auto& d : schema_) {
+            if (d.key == "FillAudioGaps") {
+                QCOMPARE(d.dependsOn, QString("AudioSyncMode=0"));
+                return;
+            }
+        }
+        QFAIL("FillAudioGaps not found in schema");
+    }
+
+    // ──────── Networking ────────
+
+    void testNetworkingGroupOrder() {
+        QCOMPARE(groupsIn("Networking"),
+                 QStringList({
+                     "Networking",
+                     "Ad Hoc multiplayer",
+                     "Infrastructure",
+                     "UPnP (port-forwarding)",
+                     "Chat",
+                     "Quick chat",
+                     "Misc (default = compatibility)",
+                 }));
+    }
+
+    void testNetworkingChatGate() {
+        // Both chat-position combos and the quick-chat enable toggle gate on
+        // EnableNetworkChat upstream.
+        QStringList gated;
+        for (const auto& d : schema_)
+            if (d.dependsOn == "EnableNetworkChat") gated.append(d.key);
+        QCOMPARE(gated,
+                 QStringList({
+                     "ChatButtonPosition", "ChatScreenPosition",
+                     "EnableQuickChat",
+                 }));
+    }
+
+    // ──────── System ────────
+
+    void testSystemGroupOrder() {
+        QCOMPARE(groupsIn("System"),
+                 QStringList({
+                     "UI",
+                     "PSP Memory Stick",
+                     "Emulation",
+                     "Save states",
+                     "General",
+                     "Cheats",
+                     "PSP Settings",
+                 }));
+    }
+
+    void testSystemEmulationFullCatalog() {
+        QCOMPARE(keysIn("System", "Emulation"),
+                 QStringList({
+                     "FastMemoryAccess", "IgnoreBadMemAccess",
+                     "IOTimingMethod", "ForceLagSync2", "CPUSpeed",
+                 }));
+    }
+
+    void testSystemSaveStatesFullCatalog() {
+        QCOMPARE(keysIn("System", "Save states"),
+                 QStringList({
+                     "EnableStateUndo", "SaveStateSlotCount",
+                     "AutoLoadSaveState", "RewindSnapshotInterval",
+                 }));
+    }
+
+    void testSystemPSPSettingsFullCatalog() {
+        // Nickname (sNickName) deferred — text input.
+        QCOMPARE(keysIn("System", "PSP Settings"),
+                 QStringList({
+                     "GameLanguage", "PSPModel", "DayLightSavings",
+                     "ParamDateFormat", "ParamTimeFormat", "ButtonPreference",
+                 }));
+    }
+
+    void testFastMemoryInCpuSection() {
+        // Upstream Core/Config.cpp::cpuSettings[] holds FastMemoryAccess +
+        // IOTimingMethod + CPUSpeed; section name is "CPU".
+        for (const auto& d : schema_) {
+            if (d.key == "FastMemoryAccess") {
+                QCOMPARE(d.section, QString("CPU"));
+                QCOMPARE(d.category, QString("System"));
+                return;
+            }
+        }
+        QFAIL("FastMemoryAccess not found in schema");
     }
 };
 
