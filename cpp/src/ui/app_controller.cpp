@@ -42,7 +42,12 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
 
     connect(&m_gameService, &GameService::statusMessage, this, &AppController::setStatus);
     connect(&m_gameService, &GameService::gameRunningChanged, this, &AppController::gameRunningChanged);
-    connect(&m_gameService, &GameService::gameStarted, this, &AppController::gameStarted);
+    connect(&m_gameService, &GameService::gameStarted, this, [this]() {
+        if (m_gameService.session()->isLibretro())
+            emit gameStartedLibretro();
+        else
+            emit gameStarted();
+    });
     connect(&m_gameService, &GameService::gameFinished, this, &AppController::gameFinished);
     // Register global Cmd+Escape hotkey and wire to signal
     static AppController* s_instance = nullptr;
@@ -93,6 +98,12 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     connect(&m_raService, &RAService::userGamesReady, this, &AppController::raUserGamesReady);
     connect(&m_raService, &RAService::gameDetailReady, this, &AppController::raGameDetailReady);
     connect(&m_raService, &RAService::gameIdLookupReady, this, &AppController::raGameIdLookupReady);
+}
+
+// ── Game Session ───────────────────────────────────────────
+
+GameSession* AppController::gameSession() {
+    return m_gameService.session();
 }
 
 // ── App State ──────────────────────────────────────────────

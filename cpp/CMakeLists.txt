@@ -378,6 +378,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/AchievementsPage.qml
         qml/AppUI/AllGamesPage.qml
         qml/AppUI/RecentlyPlayedPage.qml
+        qml/AppUI/EmulationView.qml
         qml/AppUI/EmulatorLogos.js
     SOURCES
         src/ui/libretro/libretro_video_item.h

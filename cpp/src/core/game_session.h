@@ -35,6 +35,9 @@ public:
     bool isRunning() const;
     qint64 pid() const;
 
+    /** True when the running game uses the libretro (in-process) backend. */
+    bool isLibretro() const { return m_backend == Backend::Libretro; }
+
     /** The adapter for the currently running emulator. Null if not running. */
     EmulatorAdapter* adapter() const { return m_adapter; }
 
