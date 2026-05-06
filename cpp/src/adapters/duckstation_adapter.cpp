@@ -730,23 +730,36 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
     s.append({"Graphics", "Texture Replacement", "General Settings", "GPU", "EnableTextureCache",
               "Enable Texture Cache", "",
               SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"Graphics", "Texture Replacement", "General Settings", "TextureReplacements",
-              "PreloadTextures", "Preload Texture Replacements", "",
-              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
+    // PreloadTextures upstream gates `EnableVRAMWriteReplacements ||
+    // (EnableTextureCache && EnableTextureReplacements)`. Our DSL can't
+    // mix && / ||, but since EnableTextureReplacements is itself gated
+    // on EnableTextureCache (below), the simplified
+    // `EnableTextureReplacements || EnableVRAMWriteReplacements` matches
+    // upstream's effective active states.
+    s.append(dep({"Graphics", "Texture Replacement", "General Settings", "TextureReplacements",
+                  "PreloadTextures", "Preload Texture Replacements", "",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""},
+                 "EnableTextureReplacements || EnableVRAMWriteReplacements"));
 
-    // Texture Replacement group
-    s.append({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
-              "EnableTextureReplacements", "Enable Texture Replacement", "",
-              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
-              "DumpTextures", "Enable Texture Dumping", "",
-              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
-              "AlwaysTrackUploads", "Always Track Uploads", "",
-              SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""});
-    s.append({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
-              "DumpReplacedTextures", "Dump Replaced Textures", "",
-              SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""});
+    // Texture Replacement group — three top-level toggles all gated on
+    // EnableTextureCache (graphicssettingswidget.cpp:1116-1118).
+    s.append(dep({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
+                  "EnableTextureReplacements", "Enable Texture Replacement", "",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "EnableTextureCache"));
+    s.append(dep({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
+                  "DumpTextures", "Enable Texture Dumping", "",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "EnableTextureCache"));
+    s.append(dep({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
+                  "AlwaysTrackUploads", "Always Track Uploads", "",
+                  SettingDef::Bool, "false", {}, 0, 0, 0, "paired", ""}, "EnableTextureCache"));
+    // DumpReplacedTextures upstream gates `(EnableTextureCache &&
+    // DumpTextures) || DumpVRAMWrites` — simplified the same way as
+    // PreloadTextures since DumpTextures is itself gated on
+    // EnableTextureCache.
+    s.append(dep({"Graphics", "Texture Replacement", "Texture Replacement", "TextureReplacements",
+                  "DumpReplacedTextures", "Dump Replaced Textures", "",
+                  SettingDef::Bool, "true", {}, 0, 0, 0, "paired", ""},
+                 "DumpTextures || DumpVRAMWrites"));
 
     // VRAM Write (Background) Replacement group
     s.append({"Graphics", "Texture Replacement", "VRAM Write Replacement", "TextureReplacements",
