@@ -661,6 +661,16 @@ target_include_directories(test_audio_sink PRIVATE
 target_link_libraries(test_audio_sink PRIVATE Qt6::Core Qt6::Test ${SDL2_LIBRARIES})
 add_test(NAME AudioSink COMMAND test_audio_sink)
 
+add_executable(test_input_router
+    tests/test_input_router.cpp
+    src/core/libretro/input_router.cpp)
+set_target_properties(test_input_router PROPERTIES AUTOMOC ON)
+target_include_directories(test_input_router PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+target_link_libraries(test_input_router PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME InputRouter COMMAND test_input_router)
+
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
 set_target_properties(fake_libretro_core PROPERTIES
     PREFIX "" OUTPUT_NAME "fake_libretro_core"
