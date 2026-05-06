@@ -256,6 +256,21 @@ void GenericSettingsPage::buildSubcategory(const QString &subcategory) {
         break;
       }
     }
+    // Fallback: an adapter may declare a previewSpec without binding any
+    // schema key (decorative-only preview — e.g. PPSSPP Recommended, where
+    // the upstream UI has no aspect-ratio enum to bind to). Use the first
+    // non-empty group in the subcategory so cards still lay out beside the
+    // preview rather than alone below it. Existing adapters always have a
+    // bound key in the matching subcategory, so they hit the loop above and
+    // never reach this fallback.
+    if (firstPreviewGroup.isEmpty()) {
+      for (const auto &d : m_schema) {
+        if (d.subcategory == subcategory && !d.group.isEmpty()) {
+          firstPreviewGroup = d.group;
+          break;
+        }
+      }
+    }
     primaryPreviewGroup = firstPreviewGroup;
 
     // Header row above topRow — both section headers ("VISUAL QUALITY" /
