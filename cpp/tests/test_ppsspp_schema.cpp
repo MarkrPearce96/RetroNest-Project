@@ -33,6 +33,16 @@ private:
         return keys;
     }
 
+    QStringList keysIn(const QString& category, const QString& subcategory,
+                       const QString& group) const {
+        QStringList keys;
+        for (const auto& d : schema_) {
+            if (d.category == category && d.subcategory == subcategory &&
+                d.group == group) keys.append(d.key);
+        }
+        return keys;
+    }
+
     QStringList groupsIn(const QString& category) const {
         QStringList groups;
         QSet<QString> seen;
@@ -44,6 +54,34 @@ private:
             }
         }
         return groups;
+    }
+
+    QStringList groupsIn(const QString& category,
+                         const QString& subcategory) const {
+        QStringList groups;
+        QSet<QString> seen;
+        for (const auto& d : schema_) {
+            if (d.category != category || d.subcategory != subcategory)
+                continue;
+            if (!seen.contains(d.group)) {
+                seen.insert(d.group);
+                groups.append(d.group);
+            }
+        }
+        return groups;
+    }
+
+    QStringList subcategoriesIn(const QString& category) const {
+        QStringList subs;
+        QSet<QString> seen;
+        for (const auto& d : schema_) {
+            if (d.category != category) continue;
+            if (!seen.contains(d.subcategory)) {
+                seen.insert(d.subcategory);
+                subs.append(d.subcategory);
+            }
+        }
+        return subs;
     }
 
 private slots:
@@ -82,13 +120,13 @@ private slots:
     }
 
     void testRecommendedVisualQualityFullCatalog() {
-        // Synthetic AspectRatio combo is the FIRST entry — it must be the
-        // primary preview-bound key for the AspectRatioPreview layout.
+        // No synthetic AspectRatio combo — PPSSPP's standalone UI doesn't
+        // expose a discrete aspect-ratio enum, so the AspectRatioPreview
+        // beside this group is purely decorative.
         QCOMPARE(keysIn("Recommended", "Visual Quality"),
                  QStringList({
-                     "DisplayStretch", "InternalResolution",
-                     "MultiSampleLevel", "TextureFiltering",
-                     "AnisotropyLevel",
+                     "InternalResolution", "MultiSampleLevel",
+                     "TextureFiltering", "AnisotropyLevel",
                  }));
     }
 
@@ -107,52 +145,65 @@ private slots:
                  QStringList({"AutoLoadSaveState", "EnableCheats"}));
     }
 
-    void testRecommendedAspectRatioSynthetic() {
-        // The synthetic AspectRatio combo writes to bDisplayStretch in
-        // [DisplayLayout.Landscape]. Verify the section/key are wired right
-        // and that load/save transforms are present.
-        const SettingDef* found = nullptr;
-        for (const auto& d : schema_) {
-            if (d.category == "Recommended" && d.key == "DisplayStretch") {
-                found = &d;
-                break;
-            }
-        }
-        QVERIFY(found != nullptr);
-        QCOMPARE(found->section, QString("DisplayLayout.Landscape"));
-        QCOMPARE(found->label, QString("Aspect Ratio"));
-        QCOMPARE(int(found->type), int(SettingDef::Combo));
-        QCOMPARE(found->options.size(), 4);  // Auto / 16:9 / 4:3 / Stretch
-        QVERIFY(found->saveTransform != nullptr);
-        QVERIFY(found->loadTransform != nullptr);
-    }
-
     void testRecommendedPreviewSpec() {
+        // Decorative-only preview: aspect type, empty keyToProperty (no
+        // schema key binds — the AspectRatioPreview renders its default
+        // 4:3 frame and stays static). GenericSettingsPage's
+        // primaryPreviewGroup fallback uses the first group ("Performance")
+        // so cards still lay out beside the preview.
         PPSSPPAdapter adapter;
         const PreviewSpec spec = adapter.previewSpec("Recommended", "");
         QCOMPARE(spec.previewType, QString("aspect"));
-        QVERIFY(spec.keyToProperty.contains("DisplayStretch"));
-        QCOMPARE(spec.keyToProperty.value("DisplayStretch"),
-                 QString("aspectMode"));
+        QVERIFY(spec.keyToProperty.isEmpty());
     }
 
-    void testNoSubcategoriesAnywhere() {
-        // PPSSPP upstream renders every tab as a single scrolling page with
-        // ItemHeader sections — no sub-tabs. Subcategory must be empty for
-        // every entry so GenericSettingsPage falls back to single-page mode.
+    void testGraphicsOSDPreviewSpec() {
+        // Same decorative pattern: OsdPreview sits beside the bitmask
+        // toggles but isn't wired to them (the toggles share one INI key,
+        // which the preview-binding wiring can't disambiguate).
+        PPSSPPAdapter adapter;
+        const PreviewSpec spec =
+            adapter.previewSpec("Graphics", "On-Screen Display");
+        QCOMPARE(spec.previewType, QString("osd"));
+        QVERIFY(spec.keyToProperty.isEmpty());
+    }
+
+    void testSubcategoriesOnlyOnGraphics() {
+        // PPSSPP upstream renders every tab as a single scrolling ItemHeader
+        // page; we keep that shape for every category EXCEPT Graphics, which
+        // we split into General + On-Screen Display sub-tabs to match the
+        // pattern Dolphin / PCSX2 / DuckStation use.
         for (const auto& d : schema_) {
-            QVERIFY2(d.subcategory.isEmpty(),
-                     qPrintable(QString("non-empty subcategory '%1' on key %2")
-                                    .arg(d.subcategory, d.key)));
+            if (d.category == "Graphics") {
+                QVERIFY2(d.subcategory == "General" ||
+                             d.subcategory == "On-Screen Display",
+                         qPrintable(QString("unexpected Graphics subcategory "
+                                            "'%1' on key %2")
+                                        .arg(d.subcategory, d.key)));
+            } else {
+                QVERIFY2(d.subcategory.isEmpty(),
+                         qPrintable(QString("non-empty subcategory '%1' on "
+                                            "key %2 in category %3")
+                                        .arg(d.subcategory, d.key, d.category)));
+            }
         }
     }
 
     // ──────── Graphics ────────
 
-    void testGraphicsGroupOrder() {
+    void testGraphicsSubcategories() {
+        // Two sub-tabs: General (the upstream GameSettingsScreen content
+        // verbatim) + On-Screen Display (the bitmask Show* toggles, with an
+        // OsdPreview beside them — matches Dolphin / DuckStation / PCSX2).
+        QCOMPARE(subcategoriesIn("Graphics"),
+                 QStringList({"General", "On-Screen Display"}));
+    }
+
+    void testGraphicsGeneralGroupOrder() {
         // Mirrors CreateGraphicsSettings ItemHeader call order in
-        // UI/GameSettingsScreen.cpp:295.
-        QCOMPARE(groupsIn("Graphics"),
+        // UI/GameSettingsScreen.cpp:295. Overlay Information is no longer
+        // here — it moved to its own On-Screen Display sub-tab.
+        QCOMPARE(groupsIn("Graphics", "General"),
                  QStringList({
                      "Rendering Mode",
                      "Display",
@@ -161,12 +212,11 @@ private slots:
                      "Performance",
                      "Texture upscaling",
                      "Texture Filtering",
-                     "Overlay Information",
                  }));
     }
 
     void testGraphicsRenderingModeFullCatalog() {
-        QCOMPARE(keysIn("Graphics", "Rendering Mode"),
+        QCOMPARE(keysIn("Graphics", "General", "Rendering Mode"),
                  QStringList({
                      "GraphicsBackend", "InternalResolution",
                      "SoftwareRenderer", "MultiSampleLevel", "ReplaceTextures",
@@ -174,19 +224,19 @@ private slots:
     }
 
     void testGraphicsDisplayFullCatalog() {
-        QCOMPARE(keysIn("Graphics", "Display"),
+        QCOMPARE(keysIn("Graphics", "General", "Display"),
                  QStringList({"VerticalSync", "LowLatencyPresent"}));
     }
 
     void testGraphicsFrameRateControlFullCatalog() {
-        QCOMPARE(keysIn("Graphics", "Frame Rate Control"),
+        QCOMPARE(keysIn("Graphics", "General", "Frame Rate Control"),
                  QStringList({
                      "FrameSkip", "AutoFrameSkip", "FrameRate", "FrameRate2",
                  }));
     }
 
     void testGraphicsSpeedHacksFullCatalog() {
-        QCOMPARE(keysIn("Graphics", "Speed Hacks"),
+        QCOMPARE(keysIn("Graphics", "General", "Speed Hacks"),
                  QStringList({
                      "SkipBufferEffects", "DisableRangeCulling",
                      "SkipGPUReadbackMode", "DepthRasterMode",
@@ -195,7 +245,7 @@ private slots:
     }
 
     void testGraphicsPerformanceFullCatalog() {
-        QCOMPARE(keysIn("Graphics", "Performance"),
+        QCOMPARE(keysIn("Graphics", "General", "Performance"),
                  QStringList({
                      "RenderDuplicateFrames", "InflightFrames",
                      "HardwareTransform", "SoftwareSkinning",
@@ -205,23 +255,23 @@ private slots:
 
     void testGraphicsTextureUpscalingFullCatalog() {
         // GPU texture upscaler (sTextureShaderName) deferred — submodal.
-        QCOMPARE(keysIn("Graphics", "Texture upscaling"),
+        QCOMPARE(keysIn("Graphics", "General", "Texture upscaling"),
                  QStringList({
                      "TexScalingType", "TexScalingLevel", "TexDeposterize",
                  }));
     }
 
     void testGraphicsTextureFilteringFullCatalog() {
-        QCOMPARE(keysIn("Graphics", "Texture Filtering"),
+        QCOMPARE(keysIn("Graphics", "General", "Texture Filtering"),
                  QStringList({
                      "AnisotropyLevel", "TextureFiltering",
                      "Smart2DTexFiltering",
                  }));
     }
 
-    void testGraphicsOverlayInformationFullCatalog() {
+    void testGraphicsOSDFullCatalog() {
         // Three bitmask checkboxes share the same iShowStatusFlags key.
-        QCOMPARE(keysIn("Graphics", "Overlay Information"),
+        QCOMPARE(keysIn("Graphics", "On-Screen Display", "Overlay Information"),
                  QStringList({
                      "iShowStatusFlags",  // Show FPS Counter
                      "iShowStatusFlags",  // Show Speed
@@ -243,6 +293,7 @@ private slots:
             }
             QVERIFY2(found != nullptr, qPrintable("missing: " + exp.label));
             QCOMPARE(found->category, QString("Graphics"));
+            QCOMPARE(found->subcategory, QString("On-Screen Display"));
             QCOMPARE(found->group, QString("Overlay Information"));
             QCOMPARE(found->key, QString("iShowStatusFlags"));
             QCOMPARE(int(found->type), int(SettingDef::Bool));

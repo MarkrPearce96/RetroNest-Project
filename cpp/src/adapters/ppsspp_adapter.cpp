@@ -58,20 +58,34 @@ QString PPSSPPAdapter::controllerSettingsSection(int /*port*/) const {
 }
 
 // ============================================================================
-// previewSpec — bind the synthetic AspectRatio combo on the Recommended
-// page to AspectRatioPreview's aspectMode property, the same shape Dolphin /
-// DuckStation use. PPSSPP only exposes the aspect-mode property — the other
-// crop / stretchY / integerScaling Q_PROPERTYs stay at their feature-absent
-// defaults, identical to Dolphin's behaviour.
+// previewSpec — declare which preview widget the Recommended and Graphics →
+// On-Screen Display sub-tab pages render alongside their cards. Mirrors the
+// Dolphin / PCSX2 / DuckStation pattern (Recommended → AspectRatioPreview;
+// Graphics OSD sub-tab → OsdPreview). Both bindings are decorative for
+// PPSSPP — the standalone UI exposes neither a discrete aspect-ratio enum
+// nor individual OSD show-toggles (PPSSPP packs FPS/Speed/Battery into one
+// bitmask key, which the preview-binding wiring can't disambiguate by key
+// alone). GenericSettingsPage falls back to the first group in the
+// subcategory when no schema key is bound, so the preview block still lays
+// out cards beside the preview — visually identical to the other adapters'.
 // ============================================================================
 
 PreviewSpec PPSSPPAdapter::previewSpec(const QString& category,
                                        const QString& subcategory) const {
     if (category == "Recommended" && subcategory.isEmpty()) {
-        return {"aspect", {
-            {"DisplayStretch", "aspectMode"},
-        }};
+        return {"aspect", {}};
     }
+    if (category == "Graphics" && subcategory == "On-Screen Display") {
+        return {"osd", {}};
+    }
+    return {};
+}
+
+QString PPSSPPAdapter::subcategoryIcon(const QString& category,
+                                        const QString& subcategory) const {
+    if (category != "Graphics") return {};
+    if (subcategory == "General")            return QStringLiteral("\U0001F5BC");  // 🖼
+    if (subcategory == "On-Screen Display")  return QStringLiteral("\U0001F4CA");  // 📊
     return {};
 }
 
@@ -127,23 +141,19 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     // ────────────────────────────────────────────────────────────────────────
     // RECOMMENDED — curated short list of the settings most users actually
     // tweak, grouped by impact. Mirrors the Dolphin / PCSX2 / DuckStation
-    // Recommended pattern verbatim (see `recommended-page-layout-contract.md`
-    // in user memory). Every entry binds the same INI section/key as its
-    // full-pane counterpart, so editing here and editing in the matching
-    // Graphics / Audio / System pane produce identical results.
+    // Recommended pattern (see `recommended-page-layout-contract.md` in user
+    // memory). Every entry binds the same INI section/key as its full-pane
+    // counterpart, so editing here and editing in the matching Graphics /
+    // Audio / System pane produce identical results.
     //
-    // The "AspectRatio" combo at the top of Visual Quality is synthetic:
-    // PPSSPP doesn't have a discrete 4:3/16:9/Stretch enum (its display
-    // aspect lives in the deferred DisplayLayoutScreen submodal as a float
-    // multiplier + a stretch boolean). To match the other emulators'
-    // structure — and to give the AspectRatioPreview something to render —
-    // we expose a 4-option combo whose load/save transforms route to
-    // `bDisplayStretch` in [DisplayLayout.Landscape]:
-    //   "Stretch"            → bDisplayStretch = True
-    //   "Auto" / "16:9" / "4:3" → bDisplayStretch = False
-    // Only the Stretch option has a distinct INI effect; the other three
-    // collapse to the same write but the preview animates between them so
-    // the page reads visually identically to the other adapters'.
+    // The AspectRatioPreview shown beside this category's cards is purely
+    // decorative — PPSSPP's standalone UI doesn't expose a discrete
+    // aspect-ratio enum at this level (it lives in the deferred
+    // DisplayLayoutScreen submodal), so the schema doesn't bind any key
+    // to the preview. The preview renders its default 4:3 frame and stays
+    // static while the user tweaks settings; layout still matches the
+    // other emulators because GenericSettingsPage falls back to the first
+    // group in the subcategory when no key is bound.
     // ────────────────────────────────────────────────────────────────────────
 
     // Performance — biggest impact for getting games playable.
@@ -171,33 +181,6 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
               {{"No buffer", "0"}, {"Up to 1", "1"}, {"Up to 2", "2"}}, 0, 0, 0});
 
     // Visual Quality — what users see, in order of typical impact.
-    // Synthetic AspectRatio combo — see header comment for the full
-    // rationale. Picks Stretch / non-Stretch via bDisplayStretch in
-    // [DisplayLayout.Landscape]; default-unset reads as "Auto".
-    {
-        SettingDef d{"Recommended", "", "Visual Quality",
-                     "DisplayLayout.Landscape", "DisplayStretch",
-                     "Aspect Ratio",
-                     "How the rendered output fills the display. Stretch fills "
-                     "the full viewport; the other modes preserve the PSP's "
-                     "native ~16:9 aspect (the preview shows different shapes "
-                     "for each, but on PPSSPP only Stretch vs not-Stretch is a "
-                     "real difference).",
-                     SettingDef::Combo, "Auto",
-                     {{"Auto", "Auto"}, {"16:9", "16:9"},
-                      {"4:3", "4:3"}, {"Stretch", "Stretch"}}};
-        d.saveTransform = [](const QString& v,
-                             const SettingDef::SaveCallback& save) {
-            const QString stretch = (v == "Stretch") ? "True" : "False";
-            save("DisplayLayout.Landscape", "DisplayStretch", stretch);
-        };
-        d.loadTransform = [](const SettingDef::LoadCallback& read) {
-            const QString cur = read("DisplayLayout.Landscape", "DisplayStretch");
-            return cur.compare("true", Qt::CaseInsensitive) == 0
-                       ? QString("Stretch") : QString("Auto");
-        };
-        s.append(d);
-    }
     s.append({"Recommended", "", "Visual Quality", "Graphics", "InternalResolution", "Rendering Resolution",
               "Higher multipliers sharpen the PSP's 480x272 framebuffer at the "
               "cost of GPU load. 2x or 3x is enough for most modern displays.",
@@ -273,14 +256,18 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
               SettingDef::Bool, "false", {}, 0, 0, 0});
 
     // ────────────────────────────────────────────────────────────────────────
-    // GRAPHICS — single scrolling page, no sub-tabs (mirrors upstream's
-    // CreateGraphicsSettings exactly: one ViewGroup with multiple ItemHeader
-    // sections in addWidget order).
+    // GRAPHICS — two sub-tabs: General (mirrors upstream's
+    // CreateGraphicsSettings ItemHeader sequence verbatim) + On-Screen
+    // Display (the bitmask Show* toggles, hosting OsdPreview to match the
+    // other adapters' OSD sub-tabs). Upstream PPSSPP renders all of this
+    // as one scrolling page; we split for parity with Dolphin / PCSX2 /
+    // DuckStation which all carve OSD off into its own sub-tab beside an
+    // OsdPreview.
     // ────────────────────────────────────────────────────────────────────────
 
     // ── Group: Rendering Mode ──
     // Backend: stored as "<int> (<NAME>)" via GPUBackendTranslator.
-    s.append({"Graphics", "", "Rendering Mode", "Graphics", "GraphicsBackend", "Backend",
+    s.append({"Graphics", "General","Rendering Mode", "Graphics", "GraphicsBackend", "Backend",
               "Graphics API used for rendering.",
               SettingDef::Combo, "3 (VULKAN)",
               {{"OpenGL", "0 (OPENGL)"},
@@ -288,7 +275,7 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
                {"Direct3D 11", "2 (DIRECT3D11)"},
 #endif
                {"Vulkan", "3 (VULKAN)"}}, 0, 0, 0});
-    s.append({"Graphics", "", "Rendering Mode", "Graphics", "InternalResolution", "Rendering Resolution",
+    s.append({"Graphics", "General","Rendering Mode", "Graphics", "InternalResolution", "Rendering Resolution",
               "Rendering resolution multiplier.",
               SettingDef::Combo, "0",
               {{"Auto (1:1)", "0"}, {"1x PSP", "1"}, {"2x PSP", "2"},
@@ -296,37 +283,37 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
                {"6x PSP", "6"}, {"7x PSP", "7"}, {"8x PSP", "8"},
                {"9x PSP", "9"}, {"10x PSP", "10"}}, 0, 0, 0,
               "", "", "!SoftwareRenderer && !SkipBufferEffects"});
-    s.append({"Graphics", "", "Rendering Mode", "Graphics", "SoftwareRenderer", "Software Rendering (slow)",
+    s.append({"Graphics", "General","Rendering Mode", "Graphics", "SoftwareRenderer", "Software Rendering (slow)",
               "Uses CPU rendering for maximum accuracy. Very slow.",
               SettingDef::Bool, "false", {}, 0, 0, 0});
-    s.append({"Graphics", "", "Rendering Mode", "Graphics", "MultiSampleLevel", "Antialiasing (MSAA)",
+    s.append({"Graphics", "General","Rendering Mode", "Graphics", "MultiSampleLevel", "Antialiasing (MSAA)",
               "Multisample anti-aliasing level.",
               SettingDef::Combo, "0",
               {{"Off", "0"}, {"2x", "1"}, {"4x", "2"}, {"8x", "3"}, {"16x", "4"}},
               0, 0, 0, "", "", "!SoftwareRenderer && !SkipBufferEffects"});
-    s.append({"Graphics", "", "Rendering Mode", "Graphics", "ReplaceTextures", "Replace textures",
+    s.append({"Graphics", "General","Rendering Mode", "Graphics", "ReplaceTextures", "Replace textures",
               "Allow custom texture replacement packs.",
               SettingDef::Bool, "true", {}, 0, 0, 0});
 
     // ── Group: Display ──
     // Full screen / Display layout & effects intentionally omitted (see header).
-    s.append({"Graphics", "", "Display", "Graphics", "VerticalSync", "VSync",
+    s.append({"Graphics", "General","Display", "Graphics", "VerticalSync", "VSync",
               "Synchronize rendering to display refresh rate.",
               SettingDef::Bool, "true", {}, 0, 0, 0});
-    s.append({"Graphics", "", "Display", "Graphics", "LowLatencyPresent", "Low latency display",
+    s.append({"Graphics", "General","Display", "Graphics", "LowLatencyPresent", "Low latency display",
               "Reduce display latency where the backend supports MAILBOX present mode.",
               SettingDef::Bool, "false", {}, 0, 0, 0,
               "", "", "VerticalSync"});
 
     // ── Group: Frame Rate Control ──
     // Frame Skipping is gated on !AutoFrameSkip upstream.
-    s.append({"Graphics", "", "Frame Rate Control", "Graphics", "FrameSkip", "Frame Skipping",
+    s.append({"Graphics", "General","Frame Rate Control", "Graphics", "FrameSkip", "Frame Skipping",
               "Number of frames to skip to maintain speed.",
               SettingDef::Combo, "0",
               {{"Off", "0"}, {"1", "1"}, {"2", "2"}, {"3", "3"},
                {"4", "4"}, {"5", "5"}, {"6", "6"}, {"7", "7"}, {"8", "8"}},
               0, 0, 0, "", "", "!AutoFrameSkip"});
-    s.append({"Graphics", "", "Frame Rate Control", "Graphics", "AutoFrameSkip", "Auto FrameSkip",
+    s.append({"Graphics", "General","Frame Rate Control", "Graphics", "AutoFrameSkip", "Auto FrameSkip",
               "Automatically skip frames to maintain speed.",
               SettingDef::Bool, "false", {}, 0, 0, 0});
     // iFpsLimit1 / iFpsLimit2 are stored as raw FPS, not percent — upstream
@@ -335,7 +322,7 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     // trip. See audit 2026-04-07. Upstream presents these as continuous
     // sliders with zero/negative-disable chrome we don't have yet — combo
     // is the deferred-chrome workaround.
-    s.append({"Graphics", "", "Frame Rate Control", "Graphics", "FrameRate", "Alternative speed",
+    s.append({"Graphics", "General","Frame Rate Control", "Graphics", "FrameRate", "Alternative speed",
               "Speed used when the alternative-speed hotkey is held.",
               SettingDef::Combo, "0",
               {{"Unlimited (No Cap)", "0"},
@@ -348,7 +335,7 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
                {"200% (120 FPS)","120"},
                {"300% (180 FPS)","180"},
                {"500% (300 FPS)","300"}}, 0, 0, 0});
-    s.append({"Graphics", "", "Frame Rate Control", "Graphics", "FrameRate2", "Alternative speed 2",
+    s.append({"Graphics", "General","Frame Rate Control", "Graphics", "FrameRate2", "Alternative speed 2",
               "Second alternative speed for toggling. Same FPS-vs-percent caveat as above.",
               SettingDef::Combo, "-1",
               {{"Disabled",         "-1"},
@@ -364,33 +351,33 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
                {"500% (300 FPS)","300"}}, 0, 0, 0});
 
     // ── Group: Speed Hacks ──
-    s.append({"Graphics", "", "Speed Hacks", "Graphics", "SkipBufferEffects", "Skip Buffer Effects",
+    s.append({"Graphics", "General","Speed Hacks", "Graphics", "SkipBufferEffects", "Skip Buffer Effects",
               "Faster, but graphics may be missing in some games.",
               SettingDef::Bool, "false", {}, 0, 0, 0,
               "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Speed Hacks", "Graphics", "DisableRangeCulling", "Disable culling",
+    s.append({"Graphics", "General","Speed Hacks", "Graphics", "DisableRangeCulling", "Disable culling",
               "Disables range culling.",
               SettingDef::Bool, "false", {}, 0, 0, 0,
               "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Speed Hacks", "Graphics", "SkipGPUReadbackMode", "Skip GPU Readbacks",
+    s.append({"Graphics", "General","Speed Hacks", "Graphics", "SkipGPUReadbackMode", "Skip GPU Readbacks",
               "Skipping GPU readbacks is faster but may break some games.",
               SettingDef::Combo, "0",
               {{"No", "0"}, {"Skip", "1"}, {"Copy to texture", "2"}}, 0, 0, 0,
               "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Speed Hacks", "Graphics", "DepthRasterMode", "Lens flare occlusion",
+    s.append({"Graphics", "General","Speed Hacks", "Graphics", "DepthRasterMode", "Lens flare occlusion",
               "Controls how the depth raster is used for lens flare occlusion.",
               SettingDef::Combo, "0",
               {{"Auto", "0"}, {"Low", "1"}, {"Off", "2"}, {"Always on", "3"}},
               0, 0, 0, "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Speed Hacks", "Graphics", "TextureBackoffCache", "Lazy texture caching (speedup)",
+    s.append({"Graphics", "General","Speed Hacks", "Graphics", "TextureBackoffCache", "Lazy texture caching (speedup)",
               "Faster, but can cause text problems in a few games.",
               SettingDef::Bool, "false", {}, 0, 0, 0,
               "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Speed Hacks", "Graphics", "SplineBezierQuality", "Spline/Bezier curves quality",
+    s.append({"Graphics", "General","Speed Hacks", "Graphics", "SplineBezierQuality", "Spline/Bezier curves quality",
               "Only used by some games, controls smoothness of curves.",
               SettingDef::Combo, "2",
               {{"Low", "0"}, {"Medium", "1"}, {"High", "2"}}, 0, 0, 0});
-    s.append({"Graphics", "", "Speed Hacks", "Graphics", "BloomHack", "Lower resolution for effects",
+    s.append({"Graphics", "General","Speed Hacks", "Graphics", "BloomHack", "Lower resolution for effects",
               "Reduces artifacts.",
               SettingDef::Combo, "0",
               {{"Off", "0"}, {"Safe", "1"}, {"Balanced", "2"}, {"Aggressive", "3"}},
@@ -398,23 +385,23 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
               "!SoftwareRenderer && InternalResolution!=1"});
 
     // ── Group: Performance ──
-    s.append({"Graphics", "", "Performance", "Graphics", "RenderDuplicateFrames", "Render duplicate frames to 60hz",
+    s.append({"Graphics", "General","Performance", "Graphics", "RenderDuplicateFrames", "Render duplicate frames to 60hz",
               "Can make framerate smoother in games that run at lower framerates.",
               SettingDef::Bool, "false", {}, 0, 0, 0,
               "", "", "!SkipBufferEffects && FrameSkip=0"});
-    s.append({"Graphics", "", "Performance", "Graphics", "InflightFrames", "Buffer graphics commands",
+    s.append({"Graphics", "General","Performance", "Graphics", "InflightFrames", "Buffer graphics commands",
               "Faster, but adds input lag.",
               SettingDef::Combo, "1",
               {{"No buffer", "0"}, {"Up to 1", "1"}, {"Up to 2", "2"}}, 0, 0, 0});
-    s.append({"Graphics", "", "Performance", "Graphics", "HardwareTransform", "Hardware Transform",
+    s.append({"Graphics", "General","Performance", "Graphics", "HardwareTransform", "Hardware Transform",
               "Uses hardware geometry transformation. Disable only for debugging.",
               SettingDef::Bool, "true", {}, 0, 0, 0,
               "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Performance", "Graphics", "SoftwareSkinning", "Software Skinning",
+    s.append({"Graphics", "General","Performance", "Graphics", "SoftwareSkinning", "Software Skinning",
               "Combine skinned model draws on the CPU, faster in most games.",
               SettingDef::Bool, "true", {}, 0, 0, 0,
               "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Performance", "Graphics", "HardwareTessellation", "Hardware Tessellation",
+    s.append({"Graphics", "General","Performance", "Graphics", "HardwareTessellation", "Hardware Tessellation",
               "Uses hardware to make curves.",
               SettingDef::Bool, "false", {}, 0, 0, 0,
               "", "", "!SoftwareRenderer && HardwareTransform"});
@@ -422,33 +409,33 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     // ── Group: Texture upscaling ──
     // GPU texture upscaler (sTextureShaderName) — submodal TextureShaderScreen
     // upstream, deferred until we have submodal-rendering infra.
-    s.append({"Graphics", "", "Texture upscaling", "Graphics", "TexScalingType", "CPU texture upscaler (slow)",
+    s.append({"Graphics", "General","Texture upscaling", "Graphics", "TexScalingType", "CPU texture upscaler (slow)",
               "Algorithm used for texture upscaling.",
               SettingDef::Combo, "0",
               {{"xBRZ", "0"}, {"Hybrid", "1"}, {"Bicubic", "2"}, {"Hybrid + Bicubic", "3"}},
               0, 0, 0, "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Texture upscaling", "Graphics", "TexScalingLevel", "Upscale Level",
+    s.append({"Graphics", "General","Texture upscaling", "Graphics", "TexScalingLevel", "Upscale Level",
               "CPU heavy - some scaling may be delayed to avoid stutter.",
               SettingDef::Combo, "1",
               {{"Off", "1"}, {"2x", "2"}, {"3x", "3"}, {"4x", "4"}, {"5x", "5"}},
               0, 0, 0, "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Texture upscaling", "Graphics", "TexDeposterize", "Deposterize",
+    s.append({"Graphics", "General","Texture upscaling", "Graphics", "TexDeposterize", "Deposterize",
               "Fixes visual banding glitches in upscaled textures.",
               SettingDef::Bool, "false", {}, 0, 0, 0,
               "", "", "!SoftwareRenderer"});
 
     // ── Group: Texture Filtering ──
-    s.append({"Graphics", "", "Texture Filtering", "Graphics", "AnisotropyLevel", "Anisotropic Filtering",
+    s.append({"Graphics", "General","Texture Filtering", "Graphics", "AnisotropyLevel", "Anisotropic Filtering",
               "Improves texture quality at oblique angles.",
               SettingDef::Combo, "0",
               {{"Off", "0"}, {"2x", "1"}, {"4x", "2"}, {"8x", "3"}, {"16x", "4"}},
               0, 0, 0, "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Texture Filtering", "Graphics", "TextureFiltering", "Texture Filter",
+    s.append({"Graphics", "General","Texture Filtering", "Graphics", "TextureFiltering", "Texture Filter",
               "Filtering applied to textures.",
               SettingDef::Combo, "1",
               {{"Auto", "1"}, {"Nearest", "2"}, {"Linear", "3"}, {"Auto Max Quality", "4"}},
               0, 0, 0, "", "", "!SoftwareRenderer"});
-    s.append({"Graphics", "", "Texture Filtering", "Graphics", "Smart2DTexFiltering", "Smart 2D texture filtering",
+    s.append({"Graphics", "General","Texture Filtering", "Graphics", "Smart2DTexFiltering", "Smart 2D texture filtering",
               "Smarter filtering for 2D textures.",
               SettingDef::Bool, "false", {}, 0, 0, 0,
               "", "", "!SoftwareRenderer"});
@@ -456,13 +443,13 @@ QVector<SettingDef> PPSSPPAdapter::settingsSchema() const {
     // ── Group: Overlay Information ──
     // iShowStatusFlags packs FPS_COUNTER(2), SPEED_COUNTER(4), BATTERY_PERCENT(8)
     // into one int. PPSSPP's own default is 0 (verified Core/Config.cpp).
-    s.append({"Graphics", "", "Overlay Information", "Graphics", "iShowStatusFlags", "Show FPS Counter",
+    s.append({"Graphics", "On-Screen Display", "Overlay Information", "Graphics", "iShowStatusFlags","Show FPS Counter",
               "Display the framerate counter in-game.",
               SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/2});
-    s.append({"Graphics", "", "Overlay Information", "Graphics", "iShowStatusFlags", "Show Speed",
+    s.append({"Graphics", "On-Screen Display", "Overlay Information", "Graphics", "iShowStatusFlags","Show Speed",
               "Display the emulation speed percentage in-game.",
               SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/4});
-    s.append({"Graphics", "", "Overlay Information", "Graphics", "iShowStatusFlags", "Show Battery %",
+    s.append({"Graphics", "On-Screen Display", "Overlay Information", "Graphics", "iShowStatusFlags","Show Battery %",
               "Display the host battery percentage in-game.",
               SettingDef::Bool, "0", {}, 0, 0, 0, "", "", "", /*bitmask=*/8});
 

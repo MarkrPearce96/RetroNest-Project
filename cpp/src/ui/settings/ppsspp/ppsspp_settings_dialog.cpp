@@ -31,7 +31,10 @@ void PpssppSettingsDialog::onCategoryActivated(const QString& category) {
     connect(page, &GenericSettingsPage::settingFocused,
             this, &PpssppSettingsDialog::setFocusedSetting);
 
-    // No PPSSPP category renders sub-tabs (upstream uses a single scrolling
-    // ItemHeader page per tab), so hasSubTabs is always false.
-    pushPage(page, /*hasSubTabs=*/false);
+    // Graphics has two sub-tabs (General + On-Screen Display) — pass
+    // hasSubTabs=true so the L1/R1 "switch tab" hint shows on the dialog
+    // chrome (mirrors duckstation_settings_dialog.cpp). Every other
+    // category is a single scrolling page upstream and stays that way.
+    const bool hasSubTabs = (category == "Graphics");
+    pushPage(page, hasSubTabs);
 }
