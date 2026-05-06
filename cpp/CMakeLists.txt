@@ -463,6 +463,12 @@ target_include_directories(test_setting_def_storage PRIVATE ${CMAKE_CURRENT_SOUR
 target_link_libraries(test_setting_def_storage PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME SettingDefStorage COMMAND test_setting_def_storage)
 
+add_executable(test_manifest_libretro_fields tests/test_manifest_libretro_fields.cpp
+    src/core/manifest_loader.cpp)
+target_include_directories(test_manifest_libretro_fields PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_manifest_libretro_fields PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME ManifestLibretroFields COMMAND test_manifest_libretro_fields)
+
 add_executable(test_ppsspp_schema
     tests/test_ppsspp_schema.cpp
     src/adapters/ppsspp_adapter.cpp
