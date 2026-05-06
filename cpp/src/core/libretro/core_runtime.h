@@ -29,10 +29,24 @@ public:
     explicit CoreRuntime(QObject* parent = nullptr);
     ~CoreRuntime() override;
 
+    /**
+     * Spawn the worker thread and begin libretro lifecycle. Returns false if
+     * already running. If start() returns true but the underlying runLoop fails
+     * (e.g. dlopen, retro_load_game), `errorOccurred` is emitted followed by
+     * `finished(true)`, and stop() must be called before start() can be invoked
+     * again.
+     */
     bool start(const StartConfig& cfg);
     void stop();
     void pause();
     void resume();
+    /**
+     * Serialize the current core state to `path`. Caller MUST have paused the
+     * runtime (via pause() or by being in the stop-requested state) before
+     * calling — retro_serialize is not reentrant with retro_run, so concurrent
+     * calls would be undefined behaviour. Returns false if the core is not
+     * loaded or serialization fails.
+     */
     bool saveState(const QString& path);
 
     InputRouter& input() { return m_input; }

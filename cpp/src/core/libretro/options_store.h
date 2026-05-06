@@ -1,5 +1,6 @@
 #pragma once
 #include <QHash>
+#include <QReadWriteLock>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -21,6 +22,7 @@ public:
     bool consumeDirty();
 
 private:
+    mutable QReadWriteLock m_lock;
     QString m_path;
     QHash<QString, QString> m_values;
     std::atomic<bool> m_dirty{false};

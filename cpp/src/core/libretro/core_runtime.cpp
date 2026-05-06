@@ -96,6 +96,9 @@ void CoreRuntime::resume() {
 }
 
 bool CoreRuntime::saveState(const QString& path) {
+    Q_ASSERT_X(m_paused.load() || m_stopRequested.load() || !m_thread,
+               "CoreRuntime::saveState",
+               "must pause or stop runtime before serializing");
     if (!m_loader.isOpen()) return false;
     size_t n = m_loader.symbols().retro_serialize_size();
     if (n == 0) return false;

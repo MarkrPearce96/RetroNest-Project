@@ -15,7 +15,7 @@ private slots:
     void initTestCase() { qputenv("SDL_AUDIODRIVER", "dummy"); }
     void testStartEmitsStartedThenStopEmitsFinished() {
         QTemporaryDir d;
-        QTemporaryFile rom; rom.open(); rom.write("data"); rom.close();
+        QTemporaryFile rom; QVERIFY(rom.open()); rom.write("data"); rom.close();
         CoreRuntime rt;
         QSignalSpy started(&rt, &CoreRuntime::started);
         QSignalSpy finished(&rt, &CoreRuntime::finished);
@@ -36,7 +36,7 @@ private slots:
     }
     void testFrameReadyEmittedFromCoreThread() {
         QTemporaryDir d;
-        QTemporaryFile rom; rom.open(); rom.write("data"); rom.close();
+        QTemporaryFile rom; QVERIFY(rom.open()); rom.write("data"); rom.close();
         CoreRuntime rt;
         QSignalSpy frames(&rt, &CoreRuntime::frameReady);
         CoreRuntime::StartConfig cfg;
