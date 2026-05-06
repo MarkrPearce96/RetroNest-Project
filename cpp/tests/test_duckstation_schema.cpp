@@ -159,9 +159,11 @@ private slots:
         // advancedTab "Advanced", pgxpTab "PGXP", tabTextureReplacements
         // "Texture Replacement", debugTab "Debugging"). The Debugging tab is
         // gated on QtHost::ShouldShowDebugOptions — dropped from our schema
-        // matching the PCSX2 precedent.
+        // matching the PCSX2 precedent. The PGXP sub-tab is also dropped
+        // (Mark, 2026-05-06): the per-knob toggles are niche and
+        // PGXPEnable / PGXPDepthBuffer remain reachable from Rendering.
         QCOMPARE(subcategoriesFor("Graphics"), QSet<QString>({
-            "Rendering", "Advanced", "PGXP", "Texture Replacement",
+            "Rendering", "Advanced", "Texture Replacement",
         }));
     }
 
@@ -193,16 +195,6 @@ private slots:
             // Rendering Options
             "Multisamples", "LineDetectMode", "UseThread", "MaxQueuedFrames",
             "EnableModulationCrop", "ScaledInterlacing", "UseSoftwareRendererForReadbacks",
-        }));
-    }
-
-    void testGraphicsPgxpFullCatalog() {
-        // PGXPTolerance + PGXPDepthThreshold deferred — float spinbox blocker.
-        QCOMPARE(keysFor("Graphics", "PGXP"), QSet<QString>({
-            "PGXPTextureCorrection", "PGXPColorCorrection",
-            "PGXPCulling", "PGXPPreserveProjFP", "PGXPCPU",
-            "PGXPVertexCache", "PGXPDisableOn2DPolygons",
-            "PGXPTransparentDepthTest",
         }));
     }
 

@@ -68,7 +68,6 @@ QString DuckStationAdapter::subcategoryIcon(const QString& category,
     if (category != "Graphics") return {};
     if (subcategory == "Rendering")           return QStringLiteral("\U0001F5BC");  // 🖼
     if (subcategory == "Advanced")            return QStringLiteral("\U0001F527");  // 🔧
-    if (subcategory == "PGXP")                return QStringLiteral("✨");        // ✨
     if (subcategory == "Texture Replacement") return QStringLiteral("\U0001F3A8");  // 🎨
     return {};
 }
@@ -709,44 +708,18 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               "Uses the software renderer for GPU readbacks.",
               SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
 
-    // ── Graphics / PGXP ──────────────────────────────────────────────────
+    // ── Graphics / PGXP — entire sub-tab dropped ─────────────────────────
     //
-    // Whole sub-tab gated on PGXPEnable upstream. The two float spinboxes
-    // (PGXPTolerance step 0.25, PGXPDepthThreshold step 1.0) are deferred:
-    // our slider/int widgets are integer-only, and the upstream
-    // QDoubleSpinBox semantics aren't yet supported as a SettingDef type.
-
-    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPTextureCorrection",
-                  "Perspective Correct Textures",
-                  "Corrects texture warping caused by PS1 affine mapping.",
-                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
-    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPColorCorrection",
-                  "Perspective Correct Colors",
-                  "Corrects vertex color interpolation under PGXP.",
-                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""},
-                 "PGXPEnable && PGXPTextureCorrection"));
-    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPCulling", "Culling Correction",
-                  "Uses high-precision vertices for back-face culling.",
-                  SettingDef::Bool, "true", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
-    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPPreserveProjFP",
-                  "Preserve Projection Precision",
-                  "Disables float precision rounding in PGXP projection.",
-                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
-    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPCPU", "CPU Mode",
-                  "Tracks PGXP across CPU registers (slower, fixes more games).",
-                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
-    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPVertexCache", "Vertex Cache",
-                  "Caches vertex positions seen on a per-frame basis.",
-                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
-    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPDisableOn2DPolygons",
-                  "Disable on 2D Polygons",
-                  "Skips PGXP processing for 2D polygon submission.",
-                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""}, "PGXPEnable"));
-    s.append(dep({"Graphics", "PGXP", "", "GPU", "PGXPTransparentDepthTest",
-                  "Depth Test Transparent Polygons",
-                  "Applies depth-test to transparent polygons under PGXP depth-buffer.",
-                  SettingDef::Bool, "false", {}, 0, 0, 0, "", ""},
-                 "PGXPEnable && PGXPDepthBuffer"));
+    // Mark removed the PGXP sub-tab 2026-05-06 — the per-knob toggles are
+    // niche power-user options (CPU Mode, Vertex Cache, Disable on 2D
+    // Polygons, Preserve Projection Precision …) that even DuckStation's
+    // standalone UI gates behind PGXPEnable + various sub-conditions, so
+    // the whole tab is effectively inert for normal use. The two PGXP
+    // toggles users actually care about — PGXP Geometry Correction
+    // (PGXPEnable) and PGXP Depth Buffer (PGXPDepthBuffer) — remain
+    // reachable in Graphics > Rendering. The float spinboxes
+    // (PGXPTolerance / PGXPDepthThreshold) were already deferred for the
+    // float-step blocker.
 
     // ── Graphics / Texture Replacement ───────────────────────────────────
     //
