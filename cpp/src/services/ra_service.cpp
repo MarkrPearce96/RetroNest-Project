@@ -1,6 +1,10 @@
 #include "ra_service.h"
 #include "core/paths.h"
 
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QRegularExpression>
 #include <QtConcurrent>
 #include <QDebug>
@@ -40,6 +44,62 @@ void RAService::signOut() {
     m_creds.clearUser();
     m_client->setCredentials("", "");
     emit signedOut();
+}
+
+void RAService::loginWithPassword(const QString& username, const QString& password) {
+    QNetworkRequest request(QUrl("https://retroachievements.org/dorequest.php"));
+    request.setHeader(QNetworkRequest::ContentTypeHeader,
+                      QByteArray("application/x-www-form-urlencoded"));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QByteArray("RetroNest/0.1"));
+
+    QByteArray body = "r=login2"
+                      "&u=" + QUrl::toPercentEncoding(username) +
+                      "&p=" + QUrl::toPercentEncoding(password);
+
+    QNetworkReply* reply = m_loginNam.post(request, body);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, username]() {
+        reply->deleteLater();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            emit loginFailed("Network error: " + reply->errorString());
+            return;
+        }
+
+        QByteArray raw = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(raw);
+        if (doc.isNull() || !doc.isObject()) {
+            emit loginFailed("Unexpected response from RetroAchievements");
+            return;
+        }
+
+        QJsonObject obj = doc.object();
+        if (!obj.contains("Success")) {
+            emit loginFailed("Unexpected response from RetroAchievements");
+            return;
+        }
+
+        if (!obj["Success"].toBool()) {
+            QString err = obj.contains("Error") ? obj["Error"].toString()
+                                                : QString("Login failed (HTTP %1)").arg(
+                                                      reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt());
+            emit loginFailed(err);
+            return;
+        }
+
+        QString token = obj["Token"].toString();
+        if (token.isEmpty()) {
+            emit loginFailed("RetroAchievements returned an empty token");
+            return;
+        }
+
+        m_creds.username   = username;
+        m_creds.loginToken = token;
+        m_creds.save();
+
+        qInfo() << "[RAService] loginWithPassword: token acquired for user" << username;
+        emit loginTokenChanged();
+    });
 }
 
 // ── Async Data Access ──

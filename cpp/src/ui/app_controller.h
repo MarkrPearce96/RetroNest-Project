@@ -167,6 +167,8 @@ public:
     Q_INVOKABLE void raSignOut();
     Q_INVOKABLE bool hasRACredentials() const;
     Q_INVOKABLE QString raUsername() const;
+    Q_INVOKABLE void raLoginWithPassword(const QString& username, const QString& password);
+    Q_INVOKABLE bool raHasLibretroToken() const;
     // Async fetches — connect to ra*Ready signals for results.
     Q_INVOKABLE void raRequestUserSummary();
     Q_INVOKABLE void raRequestUserGames();
@@ -208,6 +210,8 @@ signals:
                          const QString& latestVersion);
     void raLoginCompleted(bool success, const QString& message);
     void raSignedOut();
+    void raLoginTokenChanged();
+    void raLoginFailed(const QString& message);
     void raEmulatorLoginPrompt(const QString& emulatorName);
     void raUserSummaryReady(const QVariantMap& summary);
     void raUserGamesReady(const QVariantList& games);

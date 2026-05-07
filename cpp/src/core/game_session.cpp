@@ -143,7 +143,13 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     cfg.raConsoleId = lr->raConsoleId(systemId);
     if (m_raService) {
         cfg.raUsername = m_raService->credentials().username;
-        cfg.raToken    = m_raService->credentials().apiKey;
+        if (m_raService->credentials().loginToken.isEmpty()
+                && !m_raService->credentials().apiKey.isEmpty()) {
+            qInfo() << "[GameSession] No libretro RA login token; achievement unlocks will not "
+                       "be sent. Sign in via Settings -> RetroAchievements -> Sign in for "
+                       "libretro achievements.";
+        }
+        cfg.raToken    = m_raService->credentials().loginToken;
         cfg.raHardcore = m_raService->hardcoreMode();
     }
 

@@ -20,8 +20,9 @@ bool RACredentials::load() {
     QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
     f.close();
 
-    username = obj["username"].toString();
-    apiKey   = obj["apiKey"].toString();
+    username   = obj["username"].toString();
+    apiKey     = obj["apiKey"].toString();
+    loginToken = obj["loginToken"].toString();
 
     hardcoreMode  = obj["hardcoreMode"].toBool(false);
     notifications = obj["notifications"].toBool(true);
@@ -37,8 +38,9 @@ bool RACredentials::load() {
 
 bool RACredentials::save() const {
     QJsonObject obj;
-    obj["username"] = username;
-    obj["apiKey"]   = apiKey;
+    obj["username"]   = username;
+    obj["apiKey"]     = apiKey;
+    obj["loginToken"] = loginToken;
 
     obj["hardcoreMode"]  = hardcoreMode;
     obj["notifications"] = notifications;
@@ -64,6 +66,7 @@ bool RACredentials::save() const {
 void RACredentials::clearUser() {
     username.clear();
     apiKey.clear();
+    loginToken.clear();
     hardcoreMode = false;
     notifications = true;
     soundEffects = true;

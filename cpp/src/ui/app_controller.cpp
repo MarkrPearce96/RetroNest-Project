@@ -98,6 +98,8 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     // Forward RA signals
     connect(&m_raService, &RAService::loginCompleted, this, &AppController::raLoginCompleted);
     connect(&m_raService, &RAService::signedOut, this, &AppController::raSignedOut);
+    connect(&m_raService, &RAService::loginTokenChanged, this, &AppController::raLoginTokenChanged);
+    connect(&m_raService, &RAService::loginFailed, this, &AppController::raLoginFailed);
     connect(&m_raService, &RAService::userSummaryReady, this, &AppController::raUserSummaryReady);
     connect(&m_raService, &RAService::userGamesReady, this, &AppController::raUserGamesReady);
     connect(&m_raService, &RAService::gameDetailReady, this, &AppController::raGameDetailReady);
@@ -636,6 +638,12 @@ void AppController::raProceedAfterLoginPrompt() {
     // Re-call launchGame — prompt won't show again (already marked)
     launchGame(0, rom, emu, args);
 }
+void AppController::raLoginWithPassword(const QString& username, const QString& password) {
+    m_raService.loginWithPassword(username, password);
+}
+
+bool AppController::raHasLibretroToken() const { return m_raService.hasLibretroToken(); }
+
 bool AppController::raHardcoreMode() const { return m_raService.hardcoreMode(); }
 void AppController::raSetHardcoreMode(bool enabled) { m_raService.setHardcoreMode(enabled); }
 bool AppController::raNotifications() const { return m_raService.notifications(); }

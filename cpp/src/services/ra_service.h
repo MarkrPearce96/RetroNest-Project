@@ -4,6 +4,7 @@
 #include "core/ra_client.h"
 #include "ra_credentials.h"
 #include <QMutex>
+#include <QNetworkAccessManager>
 #include <QObject>
 #include <QString>
 #include <QVariantList>
@@ -21,7 +22,19 @@ public:
     void login(const QString& username, const QString& apiKey);
     void signOut();
 
+    /** Exchange username+password for a libretro login token via RA's login2
+     *  endpoint. The password is NEVER stored. On success, the token is
+     *  persisted into RACredentials::loginToken and loginTokenChanged() is
+     *  emitted. On failure, loginFailed() is emitted with a human-readable
+     *  message.
+     *
+     *  Architecturally clean: future work can fan out the password to
+     *  standalone-emulator RA login by adding a listener to loginTokenChanged()
+     *  and an additional method here — no surgery required. */
+    Q_INVOKABLE void loginWithPassword(const QString& username, const QString& password);
+
     bool hasCredentials() const { return m_creds.hasCredentials(); }
+    Q_INVOKABLE bool hasLibretroToken() const { return m_creds.hasLibretroToken(); }
     QString username() const { return m_creds.username; }
     const RACredentials& credentials() const { return m_creds; }
 
@@ -53,6 +66,10 @@ public slots:
 signals:
     void loginCompleted(bool success, const QString& message);
     void signedOut();
+    /** Emitted when loginWithPassword() succeeds and the token has been persisted. */
+    void loginTokenChanged();
+    /** Emitted when loginWithPassword() fails with a human-readable reason. */
+    void loginFailed(const QString& message);
     void userSummaryReady(const QVariantMap& summary);
     void userGamesReady(const QVariantList& games);
     void gameDetailReady(int raGameId, const QVariantMap& detail);
@@ -64,6 +81,7 @@ private:
     Database* m_db;
     RAClient* m_client;
     RACredentials m_creds;
+    QNetworkAccessManager m_loginNam;
 
     // Cached data for title lookup. Touched from worker threads (lookup +
     // pre-cache populator) and from the GUI thread, so guarded by m_cacheMutex.

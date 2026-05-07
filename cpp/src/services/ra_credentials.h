@@ -12,6 +12,7 @@ class RACredentials {
 public:
     QString username;
     QString apiKey;        // web API key from retroachievements.org/settings
+    QString loginToken;   // libretro/rcheevos token from login2 endpoint; never log this
 
     // Settings (persisted alongside credentials)
     bool hardcoreMode = false;
@@ -28,8 +29,11 @@ public:
     /** Clear credentials and remove the JSON file. */
     void clearUser();
 
-    /** True if credentials are set. */
+    /** True if web-API-key-based features are available. */
     bool hasCredentials() const { return !username.isEmpty() && !apiKey.isEmpty(); }
+
+    /** True if the libretro/rcheevos session token is available. */
+    bool hasLibretroToken() const { return !username.isEmpty() && !loginToken.isEmpty(); }
 
 private:
     static QString filePath();

@@ -21,6 +21,11 @@ Item {
     property bool notificationsEnabled: app.raNotifications()
     property bool soundsEnabled: app.raSoundEffects()
 
+    // Libretro login state
+    property bool libretroLoggingIn: false
+    property string libretroLoginError: ""
+    property bool libretroTokenPresent: app.raHasLibretroToken()
+
     onScreenStateChanged: {
         if (screenState === "dashboard") refreshTimer.start()
         if (screenState === "login") loginFocusIndex = 0
@@ -61,6 +66,7 @@ Item {
             screenState = "login"
             userSummary = {}
             userGames = []
+            libretroTokenPresent = false
         }
         function onRaUserSummaryReady(summary) {
             userSummary = summary
@@ -69,6 +75,17 @@ Item {
         function onRaUserGamesReady(games) {
             userGames = games
             if (--_pendingFetches <= 0) loading = false
+        }
+        function onRaLoginTokenChanged() {
+            libretroLoggingIn = false
+            libretroLoginError = ""
+            libretroTokenPresent = true
+            libretroPasswordField.text = ""
+        }
+        function onRaLoginFailed(message) {
+            libretroLoggingIn = false
+            libretroLoginError = message || "Sign-in failed"
+            libretroPasswordField.text = ""
         }
     }
 
@@ -96,6 +113,13 @@ Item {
         loggingIn = true
         loginError = ""
         app.raLogin(raUserField.text.trim(), raKeyField.text.trim())
+    }
+
+    function doLibretroLogin() {
+        libretroLoggingIn = true
+        libretroLoginError = ""
+        app.raLoginWithPassword(app.raUsername(), libretroPasswordField.text)
+        // Password is cleared by onRaLoginTokenChanged / onRaLoginFailed handlers
     }
 
     // ── Login State ──
@@ -979,6 +1003,130 @@ Item {
                                     app.raSetSoundEffects(soundsEnabled)
                                 }
                             }
+                        }
+                    }
+
+                    // Separator
+                    Rectangle { width: parent.width; height: 1; color: SettingsTheme.border }
+
+                    // ── Libretro sign-in ──────────────────────────────────
+                    Column {
+                        width: parent.width
+                        spacing: 8
+
+                        Text {
+                            text: "Libretro Achievements Sign-in"
+                            color: SettingsTheme.text
+                            font.pixelSize: 14
+                        }
+
+                        Text {
+                            text: "Required for achievement unlocks during in-process emulation. Not needed for standalone emulators."
+                            color: SettingsTheme.textMuted
+                            font.pixelSize: 11
+                            wrapMode: Text.WordWrap
+                            width: parent.width
+                        }
+
+                        // Password field
+                        Column {
+                            width: parent.width
+                            spacing: 4
+
+                            Text {
+                                text: "Password"
+                                color: SettingsTheme.textMuted
+                                font.pixelSize: 12
+                            }
+
+                            Rectangle {
+                                width: parent.width
+                                height: 40
+                                radius: 8
+                                color: SettingsTheme.base
+                                border.width: 1
+                                border.color: libretroPasswordField.activeFocus
+                                    ? SettingsTheme.accent : SettingsTheme.border
+
+                                TextInput {
+                                    id: libretroPasswordField
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    color: SettingsTheme.text
+                                    font.pixelSize: 14
+                                    verticalAlignment: TextInput.AlignVCenter
+                                    clip: true
+                                    echoMode: TextInput.Password
+                                    Keys.onReturnPressed: {
+                                        if (!libretroLoggingIn
+                                                && app.raUsername() !== ""
+                                                && libretroPasswordField.text !== "")
+                                            doLibretroLogin()
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: "Used once to obtain a libretro login token. Not stored."
+                                color: SettingsTheme.textFaint
+                                font.pixelSize: 10
+                                wrapMode: Text.WordWrap
+                                width: parent.width
+                            }
+                        }
+
+                        // Sign-in button
+                        Rectangle {
+                            width: parent.width
+                            height: 38
+                            radius: 8
+                            color: SettingsTheme.accent
+                            opacity: (libretroLoggingIn
+                                      || libretroPasswordField.text === ""
+                                      || app.raUsername() === "") ? 0.4 : 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: libretroLoggingIn ? "Signing in..." : "Sign in for libretro achievements"
+                                color: SettingsTheme.text
+                                font.pixelSize: 13
+                                font.weight: Font.DemiBold
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (!libretroLoggingIn
+                                            && libretroPasswordField.text !== ""
+                                            && app.raUsername() !== "")
+                                        doLibretroLogin()
+                                }
+                            }
+                        }
+
+                        // Status / error
+                        RowLayout {
+                            width: parent.width
+                            spacing: 6
+
+                            Text {
+                                text: libretroTokenPresent ? "✓ Signed in" : "○ Not signed in"
+                                color: libretroTokenPresent ? SettingsTheme.success : SettingsTheme.textMuted
+                                font.pixelSize: 12
+                                font.weight: Font.DemiBold
+                            }
+
+                            Item { Layout.fillWidth: true }
+                        }
+
+                        Text {
+                            visible: libretroLoginError !== ""
+                            text: libretroLoginError
+                            color: "#ef4444"
+                            font.pixelSize: 12
+                            wrapMode: Text.WordWrap
+                            width: parent.width
                         }
                     }
                 }
