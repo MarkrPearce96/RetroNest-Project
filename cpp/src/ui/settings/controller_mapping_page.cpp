@@ -78,6 +78,14 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
     auto* yShort = new QShortcut(QKeySequence(Qt::Key_M), this);
     connect(yShort, &QShortcut::activated, this, &ControllerMappingPage::onAutoMapRequested);
 
+    // Close (X / Square — Backspace from SDL face-button injection).
+    // Cards intercept Backspace via their own keyPressEvent (treated as
+    // Clear when a card is focused), so this shortcut only fires when
+    // focus is OUTSIDE a card — exactly the chrome-navigation case where
+    // X-to-close makes sense.
+    auto* xShort = new QShortcut(QKeySequence(Qt::Key_Backspace), this);
+    connect(xShort, &QShortcut::activated, this, &QDialog::accept);
+
     // Capture-completion routing.
     connect(m_inputManager, &SdlInputManager::bindingCaptured, this,
         [this](int devIdx, const QString& element, bool isAxis, bool positive){

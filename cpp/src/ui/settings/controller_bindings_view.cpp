@@ -285,9 +285,12 @@ protected:
             const int clearKey    = isPlayStation ? Qt::Key_Return : Qt::Key_Back;
 
             if (k == activateKey || (!isPlayStation && k == Qt::Key_Enter)) {
-                // Defer to SettingsCard's activate path so combo/slider/spinbox
-                // children are properly opened too.
-                SettingsCard::keyPressEvent(e);
+                // Emit directly. SettingsCard's base implementation only
+                // dispatches `activated` for Key_Return / Key_Enter, which
+                // misses the PS5 case where activate maps to Key_Back.
+                // BindingCard has no inner combo / slider / spinbox, so the
+                // signal-only path is correct.
+                emit activated();
                 return;
             }
             if (k == clearKey || k == Qt::Key_Backspace) {
