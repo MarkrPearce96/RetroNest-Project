@@ -26,7 +26,12 @@ ApplicationWindow {
         if (inGameMenu.visible) {
             app.activateEmulator();
             inGameMenu.close();
+            // Resume the libretro core (no-op for process emulators).
+            if (app.gameSession) app.gameSession.resumeEmulation();
         } else {
+            // Pause the libretro core BEFORE opening the menu so input events
+            // routed through the menu don't also reach the running game.
+            if (app.gameSession) app.gameSession.pauseEmulation();
             app.activateApp();
             inGameMenu.open();
         }

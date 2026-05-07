@@ -228,6 +228,23 @@ void GameSession::terminate() {
     }
 }
 
+void GameSession::pauseEmulation() {
+    if (m_backend != Backend::Libretro) return;
+    if (m_libretroAdapter && m_libretroAdapter->runtime())
+        m_libretroAdapter->runtime()->pause();
+    if (m_sdlInputManager)
+        m_sdlInputManager->clearEmulationMode();
+}
+
+void GameSession::resumeEmulation() {
+    if (m_backend != Backend::Libretro) return;
+    if (m_libretroAdapter && m_libretroAdapter->runtime()) {
+        if (m_sdlInputManager)
+            m_sdlInputManager->setEmulationMode(&m_libretroAdapter->runtime()->input());
+        m_libretroAdapter->runtime()->resume();
+    }
+}
+
 bool GameSession::isRunning() const {
     if (m_backend == Backend::Libretro)
         return m_libretroAdapter && m_libretroAdapter->runtime();

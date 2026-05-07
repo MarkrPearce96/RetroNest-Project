@@ -46,6 +46,16 @@ public:
     /** True when the running game uses the libretro (in-process) backend. */
     bool isLibretro() const { return m_backend == Backend::Libretro; }
 
+    /** Pause emulation for the in-game menu. Libretro path: stops the core
+     *  thread's retro_run loop and routes SDL events back to QML navigation
+     *  by clearing emulation mode. No-op for process emulators (they pause
+     *  via focus loss). */
+    Q_INVOKABLE void pauseEmulation();
+
+    /** Reverse pauseEmulation. Restores emulation-mode SDL routing and
+     *  resumes the core thread. */
+    Q_INVOKABLE void resumeEmulation();
+
     /** The adapter for the currently running emulator. Null if not running. */
     EmulatorAdapter* adapter() const { return m_adapter; }
 
