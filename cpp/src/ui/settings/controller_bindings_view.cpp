@@ -17,6 +17,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QResizeEvent>
+#include <QScrollArea>
 #include <QPainter>
 #include <QPainterPath>
 #include <QSvgRenderer>
@@ -24,6 +25,7 @@
 #include <QVBoxLayout>
 
 #include <cmath>
+#include <limits>
 #include <optional>
 
 namespace {
@@ -156,6 +158,89 @@ public:
     }
 
     QString currentText() const { return m_value->text(); }
+
+protected:
+    void keyPressEvent(QKeyEvent* e) override {
+        const int k = e->key();
+        if (k != Qt::Key_Left && k != Qt::Key_Right &&
+            k != Qt::Key_Up   && k != Qt::Key_Down) {
+            SettingsCard::keyPressEvent(e);
+            return;
+        }
+
+        // View-wide spatial navigation. Walk up to the topmost ControllerBindingsView
+        // ancestor and consider every BindingCard inside it as a candidate.
+        QWidget* root = this;
+        while (root->parentWidget()) root = root->parentWidget();
+
+        const auto allCards = root->findChildren<BindingCard*>();
+        if (allCards.size() < 2) {
+            SettingsCard::keyPressEvent(e);
+            return;
+        }
+
+        const QPoint myCenter = mapTo(root, rect().center());
+        const QRect  myRect   = QRect(mapTo(root, QPoint(0, 0)), size());
+
+        BindingCard* best = nullptr;
+        long long bestScore = std::numeric_limits<long long>::max();
+
+        auto rangesOverlap = [](int a0, int a1, int b0, int b1) {
+            return a0 < b1 && b0 < a1;
+        };
+
+        const bool vertical = (k == Qt::Key_Up || k == Qt::Key_Down);
+
+        for (BindingCard* s : allCards) {
+            if (s == this || !s->isVisible()) continue;
+
+            const QPoint c   = s->mapTo(root, s->rect().center());
+            const QRect  r   = QRect(s->mapTo(root, QPoint(0, 0)), s->size());
+            const int    dx  = c.x() - myCenter.x();
+            const int    dy  = c.y() - myCenter.y();
+
+            bool inDir = false;
+            switch (k) {
+                case Qt::Key_Left:  inDir = dx < 0; break;
+                case Qt::Key_Right: inDir = dx > 0; break;
+                case Qt::Key_Up:    inDir = dy < 0; break;
+                case Qt::Key_Down:  inDir = dy > 0; break;
+            }
+            if (!inDir) continue;
+
+            // Prefer candidates whose perpendicular extent overlaps ours
+            // (favours straight-line travel).
+            const bool perpOverlap = vertical
+                ? rangesOverlap(myRect.left(),  myRect.right(),  r.left(),  r.right())
+                : rangesOverlap(myRect.top(),   myRect.bottom(), r.top(),   r.bottom());
+
+            const long long adx = std::abs(static_cast<long long>(dx));
+            const long long ady = std::abs(static_cast<long long>(dy));
+            // Distance score weighted by direction; perpendicular overlap
+            // gets a steep bonus so off-axis cards aren't preferred.
+            long long score = vertical ? (ady * 2 + adx) : (adx * 2 + ady);
+            if (!perpOverlap) score += 10000;  // strongly de-prioritise off-axis
+            if (score < bestScore) {
+                bestScore = score;
+                best = s;
+            }
+        }
+
+        if (best) {
+            best->setFocus(Qt::TabFocusReason);
+            // Scroll the new focus into view if inside a scroll area.
+            QWidget* p = best->parentWidget();
+            while (p) {
+                if (auto* sa = qobject_cast<QScrollArea*>(p)) {
+                    sa->ensureWidgetVisible(best, 20, 40);
+                    break;
+                }
+                p = p->parentWidget();
+            }
+        } else {
+            SettingsCard::keyPressEvent(e);
+        }
+    }
 
 private:
     BindingDef m_def;
@@ -345,34 +430,36 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
     leftV->addWidget(m_nowValue);
     footerLay->addWidget(leftBlock, 1);
 
-    struct FaceHint { const char* label; const char* face; const char* bg; const char* fg; };
-    const FaceHint hints[] = {
-        {"Rebind",   "A", "#39c46b", "#0e2a14"},
-        {"Clear",    "B", "#e74c4c", "#2a0e0e"},
-        {"Auto-Map", "Y", "#ffd23a", "#2a210e"},
-        {"Close",    "X", "#3aa6ff", "#0e1f2a"},
-    };
     auto* hintsRow = new QHBoxLayout();
     hintsRow->setSpacing(24);
-    for (const auto& h : hints) {
+
+    auto buildHintCell = [&](FaceHintWidget& hint, const QString& verb) {
         auto* row = new QHBoxLayout();
         row->setSpacing(9);
-        auto* face = new QLabel(h.face, footer);
-        face->setFixedSize(28, 28);
-        face->setAlignment(Qt::AlignCenter);
-        face->setStyleSheet(QString(
-            "background: %1; color: %2; border-radius: 14px;"
-            "font-size: 13px; font-weight: 800;").arg(h.bg, h.fg));
-        auto* lbl = new QLabel(h.label, footer);
-        lbl->setStyleSheet(QStringLiteral(
+        hint.face = new QLabel(footer);
+        hint.face->setFixedSize(28, 28);
+        hint.face->setAlignment(Qt::AlignCenter);
+        hint.text = new QLabel(verb, footer);
+        hint.text->setStyleSheet(QStringLiteral(
             "color: #f2efe8; font-size: 13px; background: transparent;"));
-        row->addWidget(face);
-        row->addWidget(lbl);
+        row->addWidget(hint.face);
+        row->addWidget(hint.text);
         hintsRow->addLayout(row);
-    }
+    };
+    buildHintCell(m_hintRebind,  "Rebind");
+    buildHintCell(m_hintClear,   "Clear");
+    buildHintCell(m_hintAutoMap, "Auto-Map");
+    buildHintCell(m_hintClose,   "Close");
+
     footerLay->addLayout(hintsRow, 0);
 
     grid->addWidget(footer, kRowFooter, kColLeft, 1, 3);
+
+    if (m_inputManager) {
+        connect(m_inputManager, &SdlInputManager::controllerTypeChanged,
+                this, &ControllerBindingsView::updateFaceHints);
+    }
+    updateFaceHints();
 
     reloadBindings();
 }
@@ -502,6 +589,38 @@ void ControllerBindingsView::updateNowEditing(const BindingDef& b, const QString
 
 QString ControllerBindingsView::currentValueFor(const QString& key) const {
     return m_currentValues.value(key);
+}
+
+void ControllerBindingsView::updateFaceHints() {
+    if (!m_inputManager) return;
+    const int t = m_inputManager->controllerType();   // 0 Keyboard, 1 Xbox, 2 PlayStation
+
+    auto applyGlyph = [](QLabel* face, const QString& glyph,
+                          const QString& bg, const QString& fg, int fontSize) {
+        face->setText(glyph);
+        face->setStyleSheet(QString(
+            "background: %1; color: %2; border-radius: 14px;"
+            "font-size: %3px; font-weight: 800;").arg(bg, fg).arg(fontSize));
+    };
+
+    if (t == 2) {  // PlayStation — face glyphs at the SAME physical positions:
+        // Rebind  = bottom (Cross),    Clear = right (Circle),
+        // Auto-Map = top (Triangle),   Close = left (Square).
+        applyGlyph(m_hintRebind.face,  "✕", "#3aa6ff", "#ffffff", 16);
+        applyGlyph(m_hintClear.face,   "○", "#e74c4c", "#ffffff", 16);
+        applyGlyph(m_hintAutoMap.face, "△", "#39c46b", "#ffffff", 14);
+        applyGlyph(m_hintClose.face,   "□", "#cc7adb", "#ffffff", 14);
+    } else if (t == 1) {  // Xbox — A, B, Y, X
+        applyGlyph(m_hintRebind.face,  "A", "#39c46b", "#0e2a14", 13);
+        applyGlyph(m_hintClear.face,   "B", "#e74c4c", "#2a0e0e", 13);
+        applyGlyph(m_hintAutoMap.face, "Y", "#ffd23a", "#2a210e", 13);
+        applyGlyph(m_hintClose.face,   "X", "#3aa6ff", "#0e1f2a", 13);
+    } else {  // Keyboard — show key letters in a neutral grey.
+        applyGlyph(m_hintRebind.face,  "↵",  "#706c66", "#f2efe8", 14);
+        applyGlyph(m_hintClear.face,   "⌫",  "#706c66", "#f2efe8", 14);
+        applyGlyph(m_hintAutoMap.face, "M",       "#706c66", "#f2efe8", 13);
+        applyGlyph(m_hintClose.face,   "Esc",     "#706c66", "#f2efe8", 10);
+    }
 }
 
 void ControllerBindingsView::resizeEvent(QResizeEvent* event) {

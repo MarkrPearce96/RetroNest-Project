@@ -633,6 +633,7 @@ add_executable(test_controller_bindings_view
     src/core/paths.cpp
     src/core/manifest_loader.cpp
     src/core/database.cpp
+    src/core/sdl_input_manager.cpp
 )
 set_target_properties(test_controller_bindings_view PROPERTIES AUTOMOC ON)
 target_include_directories(test_controller_bindings_view PRIVATE

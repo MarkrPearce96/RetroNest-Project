@@ -75,6 +75,7 @@ private:
     void onCardFocused(const BindingDef& b);
     void updateNowEditing(const BindingDef& b, const QString& value);
     QString currentValueFor(const QString& key) const;
+    void updateFaceHints();
 
     SdlInputManager* m_inputManager;
     AppController*   m_appController;
@@ -90,4 +91,13 @@ private:
     QHash<QString, QString> m_currentValues;
 
     QHBoxLayout* m_shoulderRowLayout = nullptr;  // wraps Left + Right shoulders
+
+    struct FaceHintWidget {
+        QLabel* face = nullptr;   // colored circle with glyph
+        QLabel* text = nullptr;   // verb label (Rebind / Clear / Auto-Map / Close)
+    };
+    FaceHintWidget m_hintRebind;
+    FaceHintWidget m_hintClear;
+    FaceHintWidget m_hintAutoMap;
+    FaceHintWidget m_hintClose;
 };
