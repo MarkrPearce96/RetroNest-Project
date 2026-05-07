@@ -365,6 +365,12 @@ public:
         update();
     }
 
+    qreal aspectRatio() const {
+        const QSizeF vb = m_viewBox.size();
+        if (vb.width() <= 0 || vb.height() <= 0) return 1.46;
+        return vb.width() / vb.height();
+    }
+
     void setFocusedBinding(const BindingDef* b) {
         if (!b || b->spotlightR == 0) {
             m_focused.reset();
@@ -768,12 +774,23 @@ void ControllerBindingsView::showStatus(const QString& message) {
 void ControllerBindingsView::resizeEvent(QResizeEvent* event) {
     QWidget::resizeEvent(event);
     if (!m_imageArea) return;
-    // Image scales with the page. Use ~50% of the view width with a 1.46
-    // aspect ratio (the DualShock_2.svg viewBox is 974×665), clamped to
-    // sane bounds. Recomputed on every resize so dragging the dialog
-    // grows the controller proportionally.
-    const int maxW = qBound(kImageMinW, width() / 2, 1100);
-    const int maxH = static_cast<int>(maxW / 1.46);
+    // Image scales with the page. Driven by the loaded SVG's intrinsic
+    // aspect ratio so wide controllers (PSP, ~2.33:1) don't end up
+    // letterboxed inside a DualShock-shaped (~1.46:1) box.
+    //
+    // We start by picking ~50% of the view width and deriving the height,
+    // then clamp the height to a similar fraction of the view height. If
+    // the height clamp kicks in, recompute the width from the aspect so
+    // the box stays proportional. Recomputed on every resize so dragging
+    // the dialog grows the controller proportionally.
+    const qreal aspect = m_imageArea->aspectRatio();
+    int maxW = qBound(kImageMinW, width() / 2, 1100);
+    int maxH = static_cast<int>(maxW / aspect);
+    const int hCap = qMax(kImageMinH, height() * 6 / 10);
+    if (maxH > hCap) {
+        maxH = hCap;
+        maxW = static_cast<int>(maxH * aspect);
+    }
     m_imageArea->setMaximumSize(maxW, maxH);
 }
 
