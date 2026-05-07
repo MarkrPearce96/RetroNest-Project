@@ -262,41 +262,22 @@ protected:
             return;
         }
 
-        // ── Activate (Rebind) / Clear — controller-aware ─────────────────
-        //
-        // Walk up to the ControllerBindingsView ancestor to discover the
-        // active controller type. On PlayStation (macOS Japanese convention),
-        // SDL maps Cross (bottom, "Rebind" glyph) → Key_Back and
-        // Circle (right, "Clear" glyph) → Key_Return. We swap the keys so
-        // the action matches the displayed glyph.
-        //   Xbox / Keyboard: Key_Return/Enter → Rebind, Key_Back/Backspace → Clear
-        //   PlayStation:     Key_Back         → Rebind, Key_Return          → Clear
-        {
-            QWidget* w = parentWidget();
-            ControllerBindingsView* view = nullptr;
-            while (w && !(view = qobject_cast<ControllerBindingsView*>(w)))
-                w = w->parentWidget();
-            const int controllerType = (view && view->inputManager())
-                                           ? view->inputManager()->controllerType()
-                                           : 0;
-            const bool isPlayStation = (controllerType == 2);
-
-            const int activateKey = isPlayStation ? Qt::Key_Back   : Qt::Key_Return;
-            const int clearKey    = isPlayStation ? Qt::Key_Return : Qt::Key_Back;
-
-            if (k == activateKey || (!isPlayStation && k == Qt::Key_Enter)) {
-                // Emit directly. SettingsCard's base implementation only
-                // dispatches `activated` for Key_Return / Key_Enter, which
-                // misses the PS5 case where activate maps to Key_Back.
-                // BindingCard has no inner combo / slider / spinbox, so the
-                // signal-only path is correct.
-                emit activated();
-                return;
-            }
-            if (k == clearKey || k == Qt::Key_Backspace) {
-                emit clearRequested(m_def);
-                return;
-            }
+        // Activate (Rebind) and Clear key handling. SDL maps both
+        // Xbox-A and PS-Cross to SDL_BUTTON_A → Key_Return, and
+        // Xbox-B / PS-Circle to SDL_BUTTON_B → Key_Back. So Cross
+        // naturally triggers rebind and Circle triggers clear with
+        // no per-controller swap.
+        if (k == Qt::Key_Return || k == Qt::Key_Enter) {
+            // Emit directly — SettingsCard's base only emits when
+            // Key_Return / Key_Enter is pressed, but BindingCard has
+            // no inner combo/slider/spinbox so the signal is what we
+            // want either way.
+            emit activated();
+            return;
+        }
+        if (k == Qt::Key_Back || k == Qt::Key_Backspace) {
+            emit clearRequested(m_def);
+            return;
         }
 
         // Anything else → SettingsCard's default handler.
