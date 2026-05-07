@@ -377,6 +377,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/res/duckstation-4k.webp
         qml/AppUI/images/controllers/DualShock_2.svg
         qml/AppUI/images/controllers/analog_controller.svg
+        qml/AppUI/images/controllers/PSP.svg
     RESOURCE_PREFIX /
 )
 
@@ -527,6 +528,20 @@ set_target_properties(test_ppsspp_schema PROPERTIES AUTOMOC ON)
 target_include_directories(test_ppsspp_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_ppsspp_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME PPSSPPSchema COMMAND test_ppsspp_schema)
+
+add_executable(test_ppsspp_controller_schema
+    tests/test_ppsspp_controller_schema.cpp
+    src/adapters/ppsspp_adapter.cpp
+    src/adapters/emulator_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_ppsspp_controller_schema PROPERTIES AUTOMOC ON)
+target_include_directories(test_ppsspp_controller_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_ppsspp_controller_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_test(NAME PPSSPPControllerSchema COMMAND test_ppsspp_controller_schema)
 
 add_executable(test_dolphin_schema
     tests/test_dolphin_schema.cpp

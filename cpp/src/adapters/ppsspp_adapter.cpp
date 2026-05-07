@@ -50,13 +50,6 @@ QString PPSSPPAdapter::controllerBindingsSection(int /*port*/) const {
     return "ControlMapping";
 }
 
-QString PPSSPPAdapter::controllerSettingsSection(int /*port*/) const {
-    // PPSSPP reads deadzone/sensitivity from the [Control] section.
-    // Writing here directly removes the need for the Pad1→Control sync that
-    // syncToNativeConfig used to perform on every launch.
-    return "Control";
-}
-
 // ============================================================================
 // previewSpec — declare which preview widget the Recommended and Graphics →
 // On-Screen Display sub-tab pages render alongside their cards. Mirrors the
@@ -813,10 +806,6 @@ bool PPSSPPAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
     if (!ok)
         return false;
 
-    // Sync managed config → PPSSPP's native config in PSP/SYSTEM/
-    if (!syncToNativeConfig(mainPath))
-        return false;
-
     // Remove any malformed hotkey entries in controls.ini so a previously
     // corrupted binding (e.g. "Save State = Keyboard/d") doesn't crash PPSSPP
     // on next launch.
@@ -919,45 +908,6 @@ bool PPSSPPAdapter::patchExistingConfig(const QString& path,
     return true;
 }
 
-// ============================================================================
-// syncToNativeConfig — backwards-compat migration of [Pad1] → [Control]
-// ============================================================================
-//
-// Historic note: RetroNest used to write PPSSPP controller settings under
-// [Pad1], because saveControllerSettingForPort hard-coded "Pad{port}" as
-// the section. PPSSPP itself reads them from [Control], so on every launch
-// we copied [Pad1] → [Control].
-//
-// That bug was fixed by adding controllerSettingsSection(port) → "Control"
-// for PPSSPP, so new writes go directly to [Control]. This function now
-// only matters for users upgrading from a build with the old behavior:
-// it migrates any orphaned [Pad1] values into [Control] once, after which
-// it's a no-op.
-
-bool PPSSPPAdapter::syncToNativeConfig(const QString& mainIniPath) {
-    IniFile mainIni;
-    if (!mainIni.load(mainIniPath)) {
-        qWarning() << "[PPSSPP] Cannot read ppsspp.ini for sync:" << mainIniPath;
-        return false;
-    }
-
-    bool mainChanged = false;
-    for (const auto& def : controllerSettingDefs()) {
-        QString val = mainIni.value("Pad1", def.key);
-        if (!val.isEmpty() && mainIni.value("Control", def.key) != val) {
-            mainIni.setValue("Control", def.key, val);
-            mainChanged = true;
-        }
-    }
-
-    if (mainChanged) {
-        if (!mainIni.save(mainIniPath))
-            qWarning() << "[PPSSPP] Failed to migrate legacy [Pad1] settings to [Control]:" << mainIniPath;
-    }
-
-    return true;
-}
-
 void PPSSPPAdapter::scrubControlsIniHotkeys() {
     const QString path = controlsIniPath();
     if (!QFileInfo::exists(path)) return;
@@ -1020,53 +970,74 @@ ResolutionOptions PPSSPPAdapter::resolutionOptions() const {
 
 QVector<ControllerTypeDef> PPSSPPAdapter::controllerTypes() const {
     return {
-        {"NotConnected", "Not Connected", ""},
-        {"Standard",     "PSP Controller", ""},
+        {"Standard", "PSP Controller",
+         ":/AppUI/qml/AppUI/images/controllers/PSP.svg"},
     };
 }
 
-QVector<BindingDef> PPSSPPAdapter::controllerBindingDefs() const {
+QVector<BindingDef> PPSSPPAdapter::controllerBindingDefsForType(const QString& type) const {
+    if (type != "Standard") return {};
+
     // PPSSPP controls.ini format: {deviceId}-{keyCode}
     // Device 10 = DEVICE_ID_PAD_0 (generic gamepad)
     // Button keycodes: Android NKCODEs (19=DpadUp, 96=ButtonA, etc.)
     // Axis keycodes: 4000 + (axisId*2) + (negative ? 1 : 0)
+    //
+    // Spotlight coordinates are in PSP.svg's intrinsic viewBox
+    // (2367 × 1014). Centers calibrated against the SVG paths: D-Pad
+    // arms around (272, 457) ± 130 px, face buttons around (2108, 457)
+    // ± 135, single analog nub at (273, 767), shoulders at (409, 233) /
+    // (1960, 234), Select/Start at (1695, 947) / (1850, 948).
     return {
         // D-Pad
-        {BindingDef::Button, "Up",       "D-Pad",        "ControlMapping", "Up",       "10-19"},
-        {BindingDef::Button, "Down",     "D-Pad",        "ControlMapping", "Down",     "10-20"},
-        {BindingDef::Button, "Left",     "D-Pad",        "ControlMapping", "Left",     "10-21"},
-        {BindingDef::Button, "Right",    "D-Pad",        "ControlMapping", "Right",    "10-22"},
+        {BindingDef::Button, "Up",       "D-Pad",        "ControlMapping", "Up",       "10-19",
+            "DPad", 272, 327, 80},
+        {BindingDef::Button, "Down",     "D-Pad",        "ControlMapping", "Down",     "10-20",
+            "DPad", 272, 586, 80},
+        {BindingDef::Button, "Left",     "D-Pad",        "ControlMapping", "Left",     "10-21",
+            "DPad", 143, 456, 80},
+        {BindingDef::Button, "Right",    "D-Pad",        "ControlMapping", "Right",    "10-22",
+            "DPad", 399, 458, 80},
         // Face Buttons (GameController NKCODE + raw joystick button fallback)
         // Raw buttons: NKCODE_BUTTON_1(188)=Triangle, _2(189)=Cross, _3(190)=Circle, _4(191)=Square
-        {BindingDef::Button, "Cross",    "Face Buttons",  "ControlMapping", "Cross",    "10-96,10-189"},
-        {BindingDef::Button, "Circle",   "Face Buttons",  "ControlMapping", "Circle",   "10-97,10-190"},
-        {BindingDef::Button, "Square",   "Face Buttons",  "ControlMapping", "Square",   "10-99,10-191"},
-        {BindingDef::Button, "Triangle", "Face Buttons",  "ControlMapping", "Triangle", "10-100,10-188"},
-        // Triggers (raw: _7(194)=L1, _8(195)=R1)
-        {BindingDef::Button, "L", "Triggers", "ControlMapping", "L", "10-102,10-194"},
-        {BindingDef::Button, "R", "Triggers", "ControlMapping", "R", "10-103,10-195"},
+        {BindingDef::Button, "Cross",    "Face Buttons", "ControlMapping", "Cross",    "10-96,10-189",
+            "FaceButtons", 2108, 594, 70},
+        {BindingDef::Button, "Circle",   "Face Buttons", "ControlMapping", "Circle",   "10-97,10-190",
+            "FaceButtons", 2244, 458, 70},
+        {BindingDef::Button, "Square",   "Face Buttons", "ControlMapping", "Square",   "10-99,10-191",
+            "FaceButtons", 1972, 457, 70},
+        {BindingDef::Button, "Triangle", "Face Buttons", "ControlMapping", "Triangle", "10-100,10-188",
+            "FaceButtons", 2107, 320, 70},
+        // Shoulders — PSP only has L/R (no L2/R2). Raw: _7(194)=L1, _8(195)=R1.
+        {BindingDef::Button, "L", "Triggers", "ControlMapping", "L", "10-102,10-194",
+            "LeftShoulders", 409, 233, 60},
+        {BindingDef::Button, "R", "Triggers", "ControlMapping", "R", "10-103,10-195",
+            "RightShoulders", 1960, 234, 60},
         // System (raw: _9(196)=Select, _10(197)=Start)
-        {BindingDef::Button, "Start",  "System", "ControlMapping", "Start",  "10-108,10-197"},
-        {BindingDef::Button, "Select", "System", "ControlMapping", "Select", "10-109,10-196"},
-        // Analog Stick (axis keycodes: 4000 + axisId*2 + negative)
+        {BindingDef::Button, "Start",  "System", "ControlMapping", "Start",  "10-108,10-197",
+            "System", 1850, 948, 75},
+        {BindingDef::Button, "Select", "System", "ControlMapping", "Select", "10-109,10-196",
+            "System", 1695, 947, 75},
+        // Analog Stick — PSP has a single nub on the left, so the four
+        // axis directions all live in the LeftAnalog cardSlot. Spotlights
+        // offset ±60 px from the nub center (273, 767) on each axis.
         // Y-: up (4003), Y+: down (4002), X-: left (4001), X+: right (4000)
-        {BindingDef::Axis, "An.Up",    "Analog Stick", "ControlMapping", "An.Up",    "10-4003"},
-        {BindingDef::Axis, "An.Down",  "Analog Stick", "ControlMapping", "An.Down",  "10-4002"},
-        {BindingDef::Axis, "An.Left",  "Analog Stick", "ControlMapping", "An.Left",  "10-4001"},
-        {BindingDef::Axis, "An.Right", "Analog Stick", "ControlMapping", "An.Right", "10-4000"},
+        {BindingDef::Axis, "An.Up",    "Analog Stick", "ControlMapping", "An.Up",    "10-4003",
+            "LeftAnalog", 273, 707, 70},
+        {BindingDef::Axis, "An.Down",  "Analog Stick", "ControlMapping", "An.Down",  "10-4002",
+            "LeftAnalog", 273, 827, 70},
+        {BindingDef::Axis, "An.Left",  "Analog Stick", "ControlMapping", "An.Left",  "10-4001",
+            "LeftAnalog", 213, 767, 70},
+        {BindingDef::Axis, "An.Right", "Analog Stick", "ControlMapping", "An.Right", "10-4000",
+            "LeftAnalog", 333, 767, 70},
     };
 }
 
-QVector<SettingDef> PPSSPPAdapter::controllerSettingDefs() const {
-    return {
-        {"", "", "", "Control", "AnalogDeadzone",
-         "Analog Deadzone", "Sets the analog stick deadzone.",
-         SettingDef::Int, "15", {}, 0, 100, 1, "", "%"},
+QVector<SettingDef> PPSSPPAdapter::controllerSettingDefs() const { return {}; }
 
-        {"", "", "", "Control", "AnalogSensitivity",
-         "Analog Sensitivity", "Sets the analog stick sensitivity.",
-         SettingDef::Int, "110", {}, 0, 200, 1, "", "%"},
-    };
+QVector<SettingDef> PPSSPPAdapter::controllerSettingDefsForType(const QString& type) const {
+    Q_UNUSED(type);
+    return {};
 }
 
 // ============================================================================

@@ -28,14 +28,14 @@ public:
     QString configFilePath() const override;
     QString controllerBindingsConfigFilePath() const override;
     QString controllerBindingsSection(int port) const override;
-    QString controllerSettingsSection(int port) const override;
     QVector<BiosDef> biosFiles() const override;
     QVector<PathDef> pathsDefs() const override;
     ResolutionOptions resolutionOptions() const override;
-    QVector<BindingDef> controllerBindingDefs() const override;
     QVector<HotkeyDef> hotkeyBindingDefs() const override;
     QVector<ControllerTypeDef> controllerTypes() const override;
+    QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
     QVector<SettingDef> controllerSettingDefs() const override;
+    QVector<SettingDef> controllerSettingDefsForType(const QString& type) const override;
     bool supportsRetroAchievements() const override { return true; }
     RetroAchievementsKeyMap retroAchievementsKeyMap() const override;
     QVector<AssetMatchRule> assetMatchRules() const override;
@@ -62,8 +62,6 @@ private:
     bool patchExistingConfig(const QString& path,
                              const QString& biosPath,
                              const QString& savesPath);
-    bool syncToNativeConfig(const QString& mainIniPath);
-
     /**
      * Scrub any hotkey entries in controls.ini that aren't valid PPSSPP format
      * (deviceId-keyCode, optionally comma-separated alternates). Prevents the
