@@ -50,8 +50,9 @@ constexpr int kRowAnalogs = 2;
 constexpr int kRowBottom  = 3;
 constexpr int kRowFooter  = 4;
 
-constexpr int kCardWidth    = 160;
-constexpr int kCardHeight   = 56;   // fits two-line label + value stack
+constexpr int kCardHeight    = 36;   // inline label+value, single row
+constexpr int kCardMinWidth  = 140;  // horizontal strips can shrink to this
+constexpr int kColumnWidth   = 220;  // fixed width for vertical-stack columns
 constexpr int kImageMinW    = 480;
 constexpr int kImageMinH    = 340;   // 974/665 ≈ 1.46 aspect → 480/1.46 ≈ 329
 constexpr int kImageMaxW    = 640;
@@ -92,8 +93,9 @@ class ControllerBindingsView::BindingCard : public SettingsCard {
 public:
     explicit BindingCard(const BindingDef& def, QWidget* parent = nullptr)
         : SettingsCard(parent), m_def(def) {
-        setFixedSize(kCardWidth, kCardHeight);
         setObjectName("ControllerBindingCard");
+        setFixedHeight(kCardHeight);
+        setMinimumWidth(kCardMinWidth);
         setStyleSheet(QStringLiteral(
             "QFrame#ControllerBindingCard {"
             "  background-color: #4a4642;"
@@ -104,9 +106,9 @@ public:
             "  border: 1px solid #f59e0b;"
             "}"));
 
-        auto* lay = new QVBoxLayout(this);
-        lay->setContentsMargins(10, 6, 10, 6);
-        lay->setSpacing(2);
+        auto* lay = new QHBoxLayout(this);
+        lay->setContentsMargins(12, 4, 12, 4);
+        lay->setSpacing(10);
 
         m_label = new QLabel(def.label.toUpper(), this);
         m_label->setStyleSheet(QStringLiteral(
@@ -115,9 +117,11 @@ public:
 
         m_value = new QLabel("Not bound", this);
         m_value->setStyleSheet(QStringLiteral(
-            "color: #f2efe8; font-size: 13px; background: transparent;"));
+            "color: #f2efe8; font-size: 12px; background: transparent;"));
+        m_value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
         lay->addWidget(m_label);
+        lay->addStretch(1);
         lay->addWidget(m_value);
     }
 
@@ -127,12 +131,12 @@ public:
         if (v.isEmpty()) {
             m_value->setText("Not bound");
             m_value->setStyleSheet(QStringLiteral(
-                "color: #9a9690; font-size: 13px; font-style: italic;"
+                "color: #9a9690; font-size: 12px; font-style: italic;"
                 "background: transparent;"));
         } else {
             m_value->setText(v);
             m_value->setStyleSheet(QStringLiteral(
-                "color: #f2efe8; font-size: 13px; background: transparent;"));
+                "color: #f2efe8; font-size: 12px; background: transparent;"));
         }
     }
 
@@ -372,11 +376,14 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
     for (const QString& slot : slotOrder) {
         const auto pos = slotPositions.value(slot, SlotPos{kRowBottom, kColCenter});
 
+        const bool horizontal = (slot == "Shoulders" || slot == "System");
+
         auto* container = new QWidget(this);
         container->setStyleSheet("background: transparent;");
+        if (!horizontal) container->setFixedWidth(kColumnWidth);
         auto* v = new QVBoxLayout(container);
         v->setContentsMargins(0, 0, 0, 0);
-        v->setSpacing(8);
+        v->setSpacing(6);
 
         auto* header = new QLabel(sectionHeaderText(slot), container);
         header->setStyleSheet(QStringLiteral(
@@ -384,11 +391,10 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
             "letter-spacing: 1.8px; background: transparent;"));
         v->addWidget(header);
 
-        const bool horizontal = (slot == "Shoulders" || slot == "System");
         QBoxLayout* cardLay = horizontal
             ? static_cast<QBoxLayout*>(new QHBoxLayout())
             : static_cast<QBoxLayout*>(new QVBoxLayout());
-        cardLay->setSpacing(horizontal ? 8 : 14);
+        cardLay->setSpacing(horizontal ? 8 : 6);
         cardLay->setContentsMargins(0, 0, 0, 0);
 
         for (const auto& b : bySlot[slot]) {

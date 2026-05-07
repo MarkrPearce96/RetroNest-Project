@@ -23,8 +23,8 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
     , m_emuId(emuId)
 {
     setWindowTitle("Controller");
-    setMinimumSize(1320, 960);
-    resize(1320, 960);
+    setMinimumSize(1280, 780);
+    resize(1280, 780);
     setStyleSheet(QString("QDialog { background: %1; }")
                   .arg(SettingsDialogTheme::windowBg().name()));
 
