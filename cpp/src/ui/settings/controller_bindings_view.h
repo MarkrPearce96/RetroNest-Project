@@ -59,7 +59,7 @@ public:
     /// short-circuits its keyPressEvent so controller-button injections
     /// don't move focus or re-trigger activate during the rebind window.
     bool isCapturing() const { return m_capturing; }
-    void setCapturing(bool capturing) { m_capturing = capturing; }
+    void setCapturing(bool capturing);
 
 signals:
     /// Emitted when the user focuses a card (keyboard nav, mouse hover,
@@ -93,6 +93,7 @@ private:
     QString          m_emuId;
     int              m_port;
     bool             m_capturing = false;
+    BindingCard*     m_capturingCard = nullptr;
 
     ImageArea*       m_imageArea = nullptr;
     QLabel*          m_nowLabel  = nullptr;   // "NOW EDITING" small caps

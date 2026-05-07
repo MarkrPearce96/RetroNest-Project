@@ -157,6 +157,21 @@ public:
         }
     }
 
+    /// Show the "Press a button…" italic amber state while the dialog
+    /// captures the next button press for this binding. The next call
+    /// to `setCurrentValue` (driven by the view's `reloadBindings()`)
+    /// restores the real value display.
+    void setCapturingState(bool capturing) {
+        if (capturing) {
+            m_value->setText("Press a button…");
+            m_value->setStyleSheet(QStringLiteral(
+                "color: #f59e0b; font-size: 12px; font-style: italic;"
+                "font-weight: 600; background: transparent;"));
+        }
+        // When clearing, leave the current text — reloadBindings will
+        // overwrite it with the saved binding moments later.
+    }
+
     QString currentText() const { return m_value->text(); }
 
 signals:
@@ -508,6 +523,18 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
 
 ControllerBindingsView::~ControllerBindingsView() = default;
 
+void ControllerBindingsView::setCapturing(bool capturing) {
+    m_capturing = capturing;
+    if (!capturing && m_capturingCard) {
+        // reloadBindings() (called by the dialog right after) repaints
+        // every card with its real value, but make absolutely sure the
+        // capturing card's italic-amber state is cleared even if reload
+        // is delayed.
+        m_capturingCard->setCurrentValue(currentValueFor(m_capturingCard->def().key));
+        m_capturingCard = nullptr;
+    }
+}
+
 void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
     auto* grid = qobject_cast<QGridLayout*>(layout());
     Q_ASSERT(grid);
@@ -576,6 +603,10 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
                 onCardFocused(card->def());
             });
             connect(card, &SettingsCard::activated, this, [this, card](){
+                if (m_capturingCard && m_capturingCard != card)
+                    m_capturingCard->setCurrentValue(currentValueFor(m_capturingCard->def().key));
+                m_capturingCard = card;
+                card->setCapturingState(true);
                 emit rebindRequested(card->def());
             });
             connect(card, &BindingCard::clearRequested, this,
