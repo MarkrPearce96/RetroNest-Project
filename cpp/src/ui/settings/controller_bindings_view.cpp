@@ -453,27 +453,43 @@ private:
 ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
                                                 AppController* appController,
                                                 const QString& emuId,
+                                                const QString& controllerTypeId,
                                                 int port,
                                                 QWidget* parent)
     : QWidget(parent)
     , m_inputManager(inputManager)
     , m_appController(appController)
     , m_emuId(emuId)
+    , m_controllerTypeId(controllerTypeId)
     , m_port(port)
 {
     setStyleSheet(QStringLiteral("background: #585450;"));
 
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     Q_ASSERT(adapter);
-    const auto types = adapter->controllerTypes();
-    Q_ASSERT_X(types.size() == 1, "ControllerBindingsView",
-               "Adapter must declare exactly one controller type for the new view. "
-               "PCSX2 is the pilot in T4 — DuckStation/PPSSPP/Dolphin still declare "
-               "multiple types and won't satisfy this until their own follow-up specs.");
 
-    const QString typeId = types.front().id;
-    const QString svg    = types.front().svgResource;
-    m_slotTitleOverrides = types.front().slotTitleOverrides;
+    const auto adapterTypes = adapter->controllerTypes();
+
+    // Find the requested type. If the caller passed an empty id (legacy
+    // single-type adapters), pick the first entry — preserves prior behavior.
+    const ControllerTypeDef* matchedType = nullptr;
+    if (controllerTypeId.isEmpty() && !adapterTypes.isEmpty()) {
+        matchedType = &adapterTypes.first();
+    } else {
+        for (const auto& t : adapterTypes) {
+            if (t.id == controllerTypeId) {
+                matchedType = &t;
+                break;
+            }
+        }
+    }
+    Q_ASSERT_X(matchedType != nullptr, "ControllerBindingsView",
+               qPrintable(QString("controller type '%1' not found in adapter list for '%2'")
+                          .arg(controllerTypeId, emuId)));
+
+    const QString svg    = matchedType->svgResource;
+    m_slotTitleOverrides = matchedType->slotTitleOverrides;
+    const QString typeId = matchedType->id;
     m_bindings = adapter->controllerBindingDefsForType(typeId);
 
     auto* grid = new QGridLayout(this);
@@ -697,7 +713,8 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
 void ControllerBindingsView::reloadBindings() {
     // nullptr only in widget tests — production callers always pass a real AppController.
     if (m_appController) {
-        const QVariantList raw = m_appController->controllerBindingsForPort(m_emuId, m_port);
+        const QVariantList raw = m_appController->controllerBindingsForPort(
+            m_emuId, m_port, m_controllerTypeId);
         m_currentValues.clear();
         for (const auto& v : raw) {
             const auto map = v.toMap();

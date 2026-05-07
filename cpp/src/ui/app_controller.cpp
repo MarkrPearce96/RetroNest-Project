@@ -371,11 +371,21 @@ QString AppController::formatCapturedMouse(const QString& emuId, int qtButton) c
 QString AppController::formatCapturedWheel(const QString& emuId, int direction) const { return m_configService.formatCapturedWheel(emuId, direction); }
 
 void AppController::showControllerMapping(const QString& emuId) {
+    // Single-type emulators: pick the first/only controller type.
+    QString typeId;
+    const auto types = controllerTypes(emuId);
+    if (!types.isEmpty()) typeId = types.first().toMap().value("id").toString();
+    showControllerMapping(emuId, typeId);
+}
+
+void AppController::showControllerMapping(const QString& emuId,
+                                           const QString& controllerTypeId) {
     if (!m_inputManager) {
         qWarning() << "[AppController] No SdlInputManager set";
         return;
     }
-    auto* dialog = new ControllerMappingPage(m_inputManager, this, emuId);
+    auto* dialog = new ControllerMappingPage(m_inputManager, this, emuId,
+                                              controllerTypeId);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }
@@ -480,11 +490,30 @@ void AppController::resetHotkeys(const QString& emuId) { m_configService.resetHo
 
 QVariantList AppController::controllerTypes(const QString& emuId) const { return m_configService.controllerTypes(emuId); }
 QString AppController::controllerType(const QString& emuId, int port) const { return m_configService.controllerType(emuId, port); }
-QVariantList AppController::controllerBindingsForPort(const QString& emuId, int port) const { return m_configService.controllerBindingsForPort(emuId, port); }
-void AppController::saveBindingForPort(const QString& emuId, int port, const QString& key, const QString& value) { m_configService.saveBindingForPort(emuId, port, key, value); }
-void AppController::clearBindingForPort(const QString& emuId, int port, const QString& key) { m_configService.clearBindingForPort(emuId, port, key); }
-void AppController::clearAllBindingsForPort(const QString& emuId, int port) { m_configService.clearAllBindingsForPort(emuId, port); }
-void AppController::autoMapControllerForPort(const QString& emuId, int port, int deviceIndex) { m_configService.autoMapControllerForPort(emuId, port, deviceIndex); }
+QVariantList AppController::controllerBindingsForPort(const QString& emuId, int port,
+                                                       const QString& controllerTypeId) const {
+    return m_configService.controllerBindingsForPort(emuId, port, controllerTypeId);
+}
+void AppController::saveBindingForPort(const QString& emuId, int port,
+                                        const QString& controllerTypeId,
+                                        const QString& key, const QString& value,
+                                        int deviceIndex) {
+    m_configService.saveBindingForPort(emuId, port, controllerTypeId, key, value, deviceIndex);
+}
+void AppController::clearBindingForPort(const QString& emuId, int port,
+                                         const QString& controllerTypeId,
+                                         const QString& key) {
+    m_configService.clearBindingForPort(emuId, port, controllerTypeId, key);
+}
+void AppController::clearAllBindingsForPort(const QString& emuId, int port,
+                                             const QString& controllerTypeId) {
+    m_configService.clearAllBindingsForPort(emuId, port, controllerTypeId);
+}
+void AppController::autoMapControllerForPort(const QString& emuId, int port,
+                                              const QString& controllerTypeId,
+                                              int deviceIndex) {
+    m_configService.autoMapControllerForPort(emuId, port, controllerTypeId, deviceIndex);
+}
 
 // ── Scraper ───────────────────────────────────────────────
 

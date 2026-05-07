@@ -30,6 +30,7 @@ public:
     void setSdlInputManager(SdlInputManager* mgr) {
         m_inputManager = mgr;
         m_gameService.session()->setSdlInputManager(mgr);
+        m_configService.setSdlInputManager(mgr);
     }
     SdlInputManager* sdlInputManager() const { return m_inputManager; }
 
@@ -112,6 +113,8 @@ public:
     Q_INVOKABLE QString formatCapturedMouse(const QString& emuId, int qtButton) const;
     Q_INVOKABLE QString formatCapturedWheel(const QString& emuId, int direction) const;
     Q_INVOKABLE void showControllerMapping(const QString& emuId);
+    Q_INVOKABLE void showControllerMapping(const QString& emuId,
+                                            const QString& controllerTypeId);
     Q_INVOKABLE void showEmulatorSettings(const QString& emuId);
     Q_INVOKABLE void openNativeEmulatorSettings(const QString& emuId);
     Q_INVOKABLE void showHotkeySettings(const QString& emuId);
@@ -120,11 +123,20 @@ public:
     Q_INVOKABLE QVariantList controllerTypes(const QString& emuId) const;
     Q_INVOKABLE QString controllerType(const QString& emuId, int port) const;
     // Port-aware controller bindings
-    Q_INVOKABLE QVariantList controllerBindingsForPort(const QString& emuId, int port) const;
-    Q_INVOKABLE void saveBindingForPort(const QString& emuId, int port, const QString& key, const QString& value);
-    Q_INVOKABLE void clearBindingForPort(const QString& emuId, int port, const QString& key);
-    Q_INVOKABLE void clearAllBindingsForPort(const QString& emuId, int port);
-    Q_INVOKABLE void autoMapControllerForPort(const QString& emuId, int port, int deviceIndex);
+    Q_INVOKABLE QVariantList controllerBindingsForPort(const QString& emuId, int port,
+                                                        const QString& controllerTypeId) const;
+    Q_INVOKABLE void saveBindingForPort(const QString& emuId, int port,
+                                          const QString& controllerTypeId,
+                                          const QString& key, const QString& value,
+                                          int deviceIndex = -1);
+    Q_INVOKABLE void clearBindingForPort(const QString& emuId, int port,
+                                           const QString& controllerTypeId,
+                                           const QString& key);
+    Q_INVOKABLE void clearAllBindingsForPort(const QString& emuId, int port,
+                                                const QString& controllerTypeId);
+    Q_INVOKABLE void autoMapControllerForPort(const QString& emuId, int port,
+                                                const QString& controllerTypeId,
+                                                int deviceIndex);
 
     // Cursor visibility (for settings overlay)
     Q_INVOKABLE void setCursorVisible(bool visible);

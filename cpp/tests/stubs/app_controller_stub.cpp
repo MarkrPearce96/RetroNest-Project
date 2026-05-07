@@ -9,7 +9,8 @@
 #include "ui/app_controller.h"
 #include <QVariantList>
 
-QVariantList AppController::controllerBindingsForPort(const QString& /*emuId*/, int /*port*/) const {
+QVariantList AppController::controllerBindingsForPort(const QString& /*emuId*/, int /*port*/,
+                                                       const QString& /*controllerTypeId*/) const {
     // Never called in tests (AppController* is always nullptr in test context).
     return {};
 }

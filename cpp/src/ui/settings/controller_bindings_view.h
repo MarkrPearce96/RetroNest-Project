@@ -42,6 +42,7 @@ public:
     ControllerBindingsView(SdlInputManager* inputManager,
                            AppController* appController,
                            const QString& emuId,
+                           const QString& controllerTypeId,
                            int port,
                            QWidget* parent = nullptr);
     ~ControllerBindingsView() override;
@@ -94,6 +95,7 @@ private:
     SdlInputManager* m_inputManager;
     AppController*   m_appController;
     QString          m_emuId;
+    QString          m_controllerTypeId;
     int              m_port;
     QHash<QString, QString> m_slotTitleOverrides;
     bool             m_capturing = false;

@@ -16,11 +16,13 @@
 ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
                                               AppController* appController,
                                               const QString& emuId,
+                                              const QString& controllerTypeId,
                                               QWidget* parent)
     : QDialog(parent)
     , m_inputManager(inputManager)
     , m_appController(appController)
     , m_emuId(emuId)
+    , m_controllerTypeId(controllerTypeId)
 {
     setWindowTitle("Controller");
     setMinimumSize(1280, 780);
@@ -55,9 +57,20 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
     title->setStyleSheet(QStringLiteral(
         "color: #f59e0b; font-size: 14px; font-weight: 600;"
         "letter-spacing: 2px; background: transparent;"));
-    if (auto types = m_appController->controllerTypes(emuId); !types.isEmpty()) {
-        title->setText(types.first().toMap().value("displayName").toString().toUpper());
+    const auto types = m_appController->controllerTypes(emuId);
+    QString displayName;
+    if (!controllerTypeId.isEmpty()) {
+        for (const auto& v : types) {
+            const auto m = v.toMap();
+            if (m.value("id").toString() == controllerTypeId) {
+                displayName = m.value("displayName").toString();
+                break;
+            }
+        }
+    } else if (!types.isEmpty()) {
+        displayName = types.first().toMap().value("displayName").toString();
     }
+    if (!displayName.isEmpty()) title->setText(displayName.toUpper());
     headLay->addSpacing(14);
     headLay->addWidget(title);
     headLay->addStretch(1);
@@ -65,7 +78,8 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
     root->addWidget(head);
 
     // ─── Body: ControllerBindingsView ─────────────────
-    m_view = new ControllerBindingsView(inputManager, appController, emuId, /*port=*/1, this);
+    m_view = new ControllerBindingsView(inputManager, appController, emuId,
+                                          controllerTypeId, /*port=*/1, this);
     root->addWidget(m_view, 1);
 
     // ─── Wiring ───────────────────────────────────────
@@ -93,7 +107,9 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
             const QString formatted = m_appController->formatCapturedBinding(
                 m_emuId, devIdx, element, isAxis, positive);
             m_appController->saveBindingForPort(m_emuId, /*port=*/1,
-                                                  m_capturingKey, formatted);
+                                                  m_controllerTypeId,
+                                                  m_capturingKey, formatted,
+                                                  /*deviceIndex=*/devIdx);
             m_capturingKey.clear();
             m_view->reloadBindings();
             // Defer the capturing-flag clear so any lingering arrow-key
@@ -110,7 +126,9 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
         [this](const QString& keyString){
             if (m_capturingKey.isEmpty()) return;
             m_appController->saveBindingForPort(m_emuId, /*port=*/1,
-                                                  m_capturingKey, keyString);
+                                                  m_controllerTypeId,
+                                                  m_capturingKey, keyString,
+                                                  /*deviceIndex=*/-1);
             m_capturingKey.clear();
             m_view->reloadBindings();
             QTimer::singleShot(150, this, [this]() {
@@ -151,7 +169,8 @@ void ControllerMappingPage::onRebindRequested(const BindingDef& b) {
 }
 
 void ControllerMappingPage::onClearRequested(const BindingDef& b) {
-    m_appController->clearBindingForPort(m_emuId, /*port=*/1, b.key);
+    m_appController->clearBindingForPort(m_emuId, /*port=*/1,
+                                          m_controllerTypeId, b.key);
     m_view->reloadBindings();
 }
 
@@ -163,14 +182,14 @@ void ControllerMappingPage::onAutoMapRequested() {
         // Keyboard — no keyboard schema defaults, so clear and let the
         // user rebind manually. Notification spells out what happened
         // since the visible result is just "Not bound" everywhere.
-        m_appController->clearAllBindingsForPort(m_emuId, /*port=*/1);
+        m_appController->clearAllBindingsForPort(m_emuId, /*port=*/1, m_controllerTypeId);
         notification = "Bindings cleared — rebind each entry with a keyboard key.";
     } else {
         const QVariantList controllers = m_inputManager->connectedControllers();
         if (controllers.isEmpty()) {
             // controllerType reports a device but none is connected — odd
             // race. Clear and notify.
-            m_appController->clearAllBindingsForPort(m_emuId, /*port=*/1);
+            m_appController->clearAllBindingsForPort(m_emuId, /*port=*/1, m_controllerTypeId);
             notification = "No controller connected — bindings cleared.";
         } else {
             // Pick the device of the matching type, falling back to the
@@ -185,7 +204,8 @@ void ControllerMappingPage::onAutoMapRequested() {
                     break;
                 }
             }
-            m_appController->autoMapControllerForPort(m_emuId, /*port=*/1, devIdx);
+            m_appController->autoMapControllerForPort(m_emuId, /*port=*/1,
+                                                        m_controllerTypeId, devIdx);
             notification = QString("Auto-mapped to %1.").arg(deviceName);
         }
     }

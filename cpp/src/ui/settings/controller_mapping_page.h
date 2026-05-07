@@ -27,6 +27,7 @@ public:
     ControllerMappingPage(SdlInputManager* inputManager,
                           AppController* appController,
                           const QString& emuId,
+                          const QString& controllerTypeId,
                           QWidget* parent = nullptr);
 
 private:
@@ -37,6 +38,7 @@ private:
     SdlInputManager*         m_inputManager;
     AppController*           m_appController;
     QString                  m_emuId;
+    QString                  m_controllerTypeId;
     ControllerBindingsView*  m_view = nullptr;
     QString                  m_capturingKey;   // INI key currently capturing
     QShortcut*               m_autoMapShortcut = nullptr;

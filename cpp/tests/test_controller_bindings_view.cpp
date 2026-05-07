@@ -38,6 +38,7 @@ private slots:
         ControllerBindingsView view(/*inputManager=*/nullptr,
                                     /*appController=*/nullptr,
                                     "pcsx2",
+                                    /*controllerTypeId=*/"",
                                     /*port=*/1);
         view.resize(1280, 720);
         view.show();
@@ -53,7 +54,7 @@ private slots:
     // reloadBindings() with nullptr AppController must not crash.
     // ----------------------------------------------------------------
     void reloadBindingsDoesNotCrash() {
-        ControllerBindingsView view(nullptr, nullptr, "pcsx2", 1);
+        ControllerBindingsView view(nullptr, nullptr, "pcsx2", "", 1);
         view.reloadBindings();
         view.reloadBindings();
         view.reloadBindings();
@@ -67,7 +68,7 @@ private slots:
     // focus-delivery quirks in headless test environments.
     // ----------------------------------------------------------------
     void bindingFocusedSignalFires() {
-        ControllerBindingsView view(nullptr, nullptr, "pcsx2", 1);
+        ControllerBindingsView view(nullptr, nullptr, "pcsx2", "", 1);
         view.resize(1280, 720);
         view.show();
         QVERIFY(QTest::qWaitForWindowExposed(&view));

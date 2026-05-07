@@ -8,6 +8,8 @@
 #include <QVariantMap>
 #include <memory>
 
+class SdlInputManager;
+
 class IniFile;
 
 // ConfigService — owns all per-emulator settings/path/hotkey/binding/profile
@@ -20,6 +22,7 @@ class ConfigService : public QObject {
     Q_OBJECT
 public:
     explicit ConfigService(ManifestLoader* loader, QObject* parent = nullptr);
+    void setSdlInputManager(SdlInputManager* mgr) { m_inputManager = mgr; }
     ~ConfigService() override;
 
     // Settings (per-emulator)
@@ -59,12 +62,20 @@ public:
     void setControllerType(const QString& emuId, int port, const QString& type);
 
     // Controller bindings (port-aware)
-    QVariantList controllerBindingsForPort(const QString& emuId, int port) const;
+    QVariantList controllerBindingsForPort(const QString& emuId, int port,
+                                            const QString& controllerTypeId) const;
     void saveBindingForPort(const QString& emuId, int port,
-                             const QString& key, const QString& value);
-    void clearBindingForPort(const QString& emuId, int port, const QString& key);
-    void clearAllBindingsForPort(const QString& emuId, int port);
-    void autoMapControllerForPort(const QString& emuId, int port, int deviceIndex);
+                             const QString& controllerTypeId,
+                             const QString& key, const QString& value,
+                             int deviceIndex = -1);
+    void clearBindingForPort(const QString& emuId, int port,
+                              const QString& controllerTypeId,
+                              const QString& key);
+    void clearAllBindingsForPort(const QString& emuId, int port,
+                                  const QString& controllerTypeId);
+    void autoMapControllerForPort(const QString& emuId, int port,
+                                   const QString& controllerTypeId,
+                                   int deviceIndex);
     void restoreDefaultsForPort(const QString& emuId, int port);
 
     // Capture-formatting helpers (delegated to adapter)
@@ -80,6 +91,7 @@ signals:
 
 private:
     ManifestLoader* m_loader;
+    SdlInputManager* m_inputManager = nullptr;
 
     // Settings cache — single-entry, since only one settings dialog is open
     // at a time. Populated by beginSettingsSession, dropped by end.

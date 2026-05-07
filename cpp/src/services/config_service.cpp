@@ -546,31 +546,20 @@ void ConfigService::setControllerType(const QString& emuId, int port, const QStr
 
 // ── Port-Aware Controller Bindings/Settings ─────────────────
 
-QVariantList ConfigService::controllerBindingsForPort(const QString& emuId, int port) const {
+QVariantList ConfigService::controllerBindingsForPort(const QString& emuId, int port,
+                                                       const QString& controllerTypeId) const {
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return {};
 
-    QString mainConfigPath = adapter->configFilePath();
-    IniFile mainIni;
-    if (!mainConfigPath.isEmpty())
-        mainIni.load(mainConfigPath);
-
-    QString type = mainIni.value(QString("Pad%1").arg(port), "Type");
-    if (type.isEmpty()) {
-        const auto types = adapter->controllerTypes();
-        type = types.isEmpty() ? QString("DualShock2") : types.first().id;
-    }
-
-    // Bindings may live in a different file/section (e.g. PPSSPP's controls.ini).
-    QString bindingsPath = adapter->controllerBindingsConfigFilePath();
+    QString bindingsPath = adapter->controllerBindingsConfigFilePath(controllerTypeId);
     IniFile bindingsIni;
     if (!bindingsPath.isEmpty())
         bindingsIni.load(bindingsPath);
 
-    QString section = adapter->controllerBindingsSection(port);
+    QString section = adapter->controllerBindingsSection(port, controllerTypeId);
 
     QVariantList list;
-    for (const auto& def : adapter->controllerBindingDefsForType(type)) {
+    for (const auto& def : adapter->controllerBindingDefsForType(controllerTypeId)) {
         QVariantMap item;
         item["label"] = def.label;
         item["group"] = def.group;
@@ -586,40 +575,47 @@ QVariantList ConfigService::controllerBindingsForPort(const QString& emuId, int 
 
 
 void ConfigService::saveBindingForPort(const QString& emuId, int port,
-                                        const QString& key, const QString& value) {
+                                        const QString& controllerTypeId,
+                                        const QString& key, const QString& value,
+                                        int deviceIndex) {
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return;
 
-    QString configPath = adapter->controllerBindingsConfigFilePath();
+    QString configPath = adapter->controllerBindingsConfigFilePath(controllerTypeId);
     if (configPath.isEmpty()) return;
 
     IniFile ini;
     ini.load(configPath);
-    QString section = adapter->controllerBindingsSection(port);
+    QString section = adapter->controllerBindingsSection(port, controllerTypeId);
     ini.setValue(section, key, value);
+
+    if (deviceIndex >= 0)
+        adapter->writeBindingDeviceHeader(ini, section, deviceIndex, m_inputManager);
 
     if (!ini.save(configPath))
         emit statusMessage("Failed to save binding.");
 }
 
-void ConfigService::clearBindingForPort(const QString& emuId, int port, const QString& key) {
-    saveBindingForPort(emuId, port, key, "");
+void ConfigService::clearBindingForPort(const QString& emuId, int port,
+                                         const QString& controllerTypeId,
+                                         const QString& key) {
+    saveBindingForPort(emuId, port, controllerTypeId, key, "", /*deviceIndex=*/-1);
 }
 
-void ConfigService::clearAllBindingsForPort(const QString& emuId, int port) {
+void ConfigService::clearAllBindingsForPort(const QString& emuId, int port,
+                                             const QString& controllerTypeId) {
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return;
 
-    QString configPath = adapter->controllerBindingsConfigFilePath();
+    QString configPath = adapter->controllerBindingsConfigFilePath(controllerTypeId);
     if (configPath.isEmpty()) return;
 
-    QString type = controllerType(emuId, port);
-    QString section = adapter->controllerBindingsSection(port);
+    QString section = adapter->controllerBindingsSection(port, controllerTypeId);
 
     IniFile ini;
     ini.load(configPath);
 
-    for (const auto& def : adapter->controllerBindingDefsForType(type))
+    for (const auto& def : adapter->controllerBindingDefsForType(controllerTypeId))
         ini.setValue(section, def.key, "");
 
     if (ini.save(configPath))
@@ -628,29 +624,28 @@ void ConfigService::clearAllBindingsForPort(const QString& emuId, int port) {
         emit statusMessage("Failed to clear bindings.");
 }
 
-void ConfigService::autoMapControllerForPort(const QString& emuId, int port, int deviceIndex) {
+void ConfigService::autoMapControllerForPort(const QString& emuId, int port,
+                                              const QString& controllerTypeId,
+                                              int deviceIndex) {
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return;
 
-    QString configPath = adapter->controllerBindingsConfigFilePath();
+    QString configPath = adapter->controllerBindingsConfigFilePath(controllerTypeId);
     if (configPath.isEmpty()) return;
 
-    QString type = controllerType(emuId, port);
-    QString section = adapter->controllerBindingsSection(port);
+    QString section = adapter->controllerBindingsSection(port, controllerTypeId);
 
     IniFile ini;
     ini.load(configPath);
 
-    for (const auto& def : adapter->controllerBindingDefsForType(type)) {
-        // Always rewrite the SDL-0/ prefix to the requested device, even when
-        // deviceIndex == 0 (no-op replace). Skipping the replace at device 0
-        // was fragile — defaults that happen not to use SDL-0/ as baseline
-        // would silently produce wrong bindings for device 0.
+    for (const auto& def : adapter->controllerBindingDefsForType(controllerTypeId)) {
         QString mapped = def.defaultValue;
         if (!mapped.isEmpty())
             mapped.replace("SDL-0/", QString("SDL-%1/").arg(deviceIndex));
         ini.setValue(section, def.key, mapped);
     }
+
+    adapter->writeBindingDeviceHeader(ini, section, deviceIndex, m_inputManager);
 
     if (ini.save(configPath))
         emit statusMessage("Controller auto-mapped.");
@@ -662,14 +657,15 @@ void ConfigService::restoreDefaultsForPort(const QString& emuId, int port) {
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return;
 
-    QString type = controllerType(emuId, port);
+    const auto types = adapter->controllerTypes();
 
-    QString bindingsPath = adapter->controllerBindingsConfigFilePath();
-    if (!bindingsPath.isEmpty()) {
+    for (const auto& t : types) {
+        QString bindingsPath = adapter->controllerBindingsConfigFilePath(t.id);
+        if (bindingsPath.isEmpty()) continue;
         IniFile bindingsIni;
         bindingsIni.load(bindingsPath);
-        QString bindingsSection = adapter->controllerBindingsSection(port);
-        for (const auto& def : adapter->controllerBindingDefsForType(type))
+        QString bindingsSection = adapter->controllerBindingsSection(port, t.id);
+        for (const auto& def : adapter->controllerBindingDefsForType(t.id))
             bindingsIni.setValue(bindingsSection, def.key, def.defaultValue);
         bindingsIni.save(bindingsPath);
     }
@@ -679,6 +675,7 @@ void ConfigService::restoreDefaultsForPort(const QString& emuId, int port) {
         IniFile ini;
         ini.load(configPath);
         QString section = adapter->controllerSettingsSection(port);
+        QString type = controllerType(emuId, port);
         for (const auto& def : adapter->controllerSettingDefsForType(type))
             ini.setValue(section, def.key, def.defaultValue);
         ini.save(configPath);
