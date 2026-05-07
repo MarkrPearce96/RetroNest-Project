@@ -120,18 +120,23 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
             });
         });
 
-    // Cancel-capture cleanup. SdlInputManager::cancelCapture() (Escape
-    // during capture) flips capturing without firing bindingCaptured /
-    // keyboardCaptured. Re-enable shortcuts and clear the dialog's
-    // capture flag so the next press doesn't accidentally rebind.
+    // Cancel-capture cleanup. SdlInputManager::cancelCapture (Escape
+    // during capture) flips m_capturing without firing bindingCaptured
+    // / keyboardCaptured. Defer the cleanup by 50 ms so successful
+    // captures (which fire those signals AFTER capturingChanged) run
+    // their handlers first, clear m_capturingKey, and the bail-early
+    // check below sees nothing to do.
     connect(m_inputManager, &SdlInputManager::capturingChanged, this,
         [this]() {
             if (m_inputManager->isCapturing()) return;   // entry, not exit
-            if (m_capturingKey.isEmpty()) return;        // already cleaned up
-            m_capturingKey.clear();
-            m_view->setCapturing(false);
-            if (m_autoMapShortcut) m_autoMapShortcut->setEnabled(true);
-            if (m_closeShortcut)   m_closeShortcut->setEnabled(true);
+            QTimer::singleShot(50, this, [this]() {
+                if (m_capturingKey.isEmpty()) return;     // success handler cleaned up
+                // Real cancel — Escape was pressed, no signal followed.
+                m_capturingKey.clear();
+                m_view->setCapturing(false);
+                if (m_autoMapShortcut) m_autoMapShortcut->setEnabled(true);
+                if (m_closeShortcut)   m_closeShortcut->setEnabled(true);
+            });
         });
 }
 

@@ -271,6 +271,7 @@ protected:
                     }
                     p = p->parentWidget();
                 }
+                e->accept();
             } else {
                 SettingsCard::keyPressEvent(e);
             }
@@ -288,10 +289,12 @@ protected:
             // no inner combo/slider/spinbox so the signal is what we
             // want either way.
             emit activated();
+            e->accept();
             return;
         }
         if (k == Qt::Key_Back || k == Qt::Key_Backspace) {
             emit clearRequested(m_def);
+            e->accept();
             return;
         }
 
