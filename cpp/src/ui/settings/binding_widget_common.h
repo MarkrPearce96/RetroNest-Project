@@ -48,23 +48,3 @@ protected:
     }
 };
 
-// ── Helper: create a styled label ──────────────────────────
-inline QLabel* makeLabel(QWidget* parent, const QString& text,
-                         int fontSize = 12, bool bold = false) {
-    auto* lbl = new QLabel(text, parent);
-    lbl->setStyleSheet(QString("color: %1; font-size: %2px; font-weight: %3;"
-        " background: transparent; border: none;")
-        .arg(bold ? kTextPrimary : kTextSecondary)
-        .arg(fontSize).arg(bold ? "bold" : "normal"));
-    lbl->adjustSize();
-    return lbl;
-}
-
-// ── Helper: create a styled box ────────────────────────────
-inline QWidget* makeBox(QWidget* parent) {
-    auto* box = new QWidget(parent);
-    box->setStyleSheet(QString("background: %1; border: 1px solid %2; border-radius: 8px;")
-        .arg(kBoxColor, kBoxBorder));
-    box->lower();
-    return box;
-}

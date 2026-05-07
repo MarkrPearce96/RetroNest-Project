@@ -80,7 +80,6 @@ signals:
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
-    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     class ImageArea;        // forward — defined in .cpp

@@ -59,8 +59,6 @@ constexpr int kCardStackedWidth    = 110;  // each stacked card in a horizontal 
 constexpr int kColumnWidth         = 220;  // fixed width for vertical-stack columns
 constexpr int kImageMinW    = 480;
 constexpr int kImageMinH    = 340;   // 974/665 ≈ 1.46 aspect → 480/1.46 ≈ 329
-constexpr int kImageMaxW    = 640;
-constexpr int kImageMaxH    = 440;
 constexpr int kFooterHeight = 130;
 
 QString sectionHeaderText(const QString& slot) {
@@ -641,7 +639,6 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
             if (b.key.isEmpty()) continue;
             auto* card = new BindingCard(b, cardStyle, container);
             cardLay->addWidget(card);
-            card->installEventFilter(this);
             connect(card, &SettingsCard::focused, this, [this, card](const SettingDef&){
                 onCardFocused(card->def());
             });
@@ -763,14 +760,6 @@ void ControllerBindingsView::resizeEvent(QResizeEvent* event) {
     const int maxW = qBound(kImageMinW, width() / 2, 1100);
     const int maxH = static_cast<int>(maxW / 1.46);
     m_imageArea->setMaximumSize(maxW, maxH);
-}
-
-bool ControllerBindingsView::eventFilter(QObject* watched, QEvent* event) {
-    // Card-level activate/clear handling is owned by
-    // BindingCard::keyPressEvent (controller-aware). This eventFilter is
-    // currently a no-op but kept as a hook for future view-wide event
-    // intercepts.
-    return QWidget::eventFilter(watched, event);
 }
 
 // Inner classes defined in this .cpp file carry Q_OBJECT, so their moc

@@ -241,12 +241,12 @@ public:
 
     /**
      * Return controller-specific settings (deadzone, sensitivity, vibration, etc.).
-     * Displayed under the "Settings" sub-tab in the controller mapping page.
-     *
-     * Note: this is the type-agnostic legacy entry. Production code paths from
-     * QML go through controllerSettingsForPort() → controllerSettingDefsForType().
-     * Override this method only if your emulator has a single controller type,
-     * or as an internal helper called by your controllerSettingDefsForType().
+     * Historically exposed via the now-deleted Settings sub-tab on the
+     * controller mapping page; today, the only consumer is
+     * `ConfigService::resetEmulatorToDefaults` which iterates the per-type
+     * defaults via `controllerSettingDefsForType()`. Override this method only
+     * if your emulator has a single controller type, or as an internal helper
+     * called by your `controllerSettingDefsForType()`.
      */
     virtual QVector<SettingDef> controllerSettingDefs() const { return {}; }
 
