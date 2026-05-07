@@ -1596,70 +1596,72 @@ QVector<BindingDef> PCSX2Adapter::controllerBindingDefsForType(const QString& ty
 
     // DualShock 2 — 28 bindings across 6 cardSlots.
     // Spotlight coordinates are in the DualShock_2.svg intrinsic viewBox
-    // (974 × 664.8). Values calibrated visually against the artwork —
-    // adjust if the SVG is replaced.
+    // (974 × 664.8) — calibrated against the labeled SVG elements
+    // (D-Pad cluster around (193, 335), sticks at (354, 499) and
+    // (620, 499), face cluster around (780, 335)). Adjust if the
+    // SVG is replaced.
     return {
         // D-Pad
         {BindingDef::Button, "Up",    "D-Pad", "Pad", "Up",    "SDL-0/DPadUp",
-            "DPad",  217, 235, 38},
+            "DPad",  193, 240, 50},
         {BindingDef::Button, "Right", "D-Pad", "Pad", "Right", "SDL-0/DPadRight",
-            "DPad",  267, 285, 38},
+            "DPad",  270, 335, 50},
         {BindingDef::Button, "Down",  "D-Pad", "Pad", "Down",  "SDL-0/DPadDown",
-            "DPad",  217, 335, 38},
+            "DPad",  193, 430, 50},
         {BindingDef::Button, "Left",  "D-Pad", "Pad", "Left",  "SDL-0/DPadLeft",
-            "DPad",  167, 285, 38},
+            "DPad",  115, 335, 50},
 
         // Left Analog
         {BindingDef::Axis, "Left Stick Up",    "Left Stick", "Pad", "LUp",    "SDL-0/-LeftY",
-            "LeftAnalog", 357, 425, 50},
+            "LeftAnalog", 354, 448, 40},
         {BindingDef::Axis, "Left Stick Right", "Left Stick", "Pad", "LRight", "SDL-0/+LeftX",
-            "LeftAnalog", 407, 475, 50},
+            "LeftAnalog", 404, 498, 40},
         {BindingDef::Axis, "Left Stick Down",  "Left Stick", "Pad", "LDown",  "SDL-0/+LeftY",
-            "LeftAnalog", 357, 525, 50},
+            "LeftAnalog", 354, 548, 40},
         {BindingDef::Axis, "Left Stick Left",  "Left Stick", "Pad", "LLeft",  "SDL-0/-LeftX",
-            "LeftAnalog", 307, 475, 50},
+            "LeftAnalog", 304, 498, 40},
         {BindingDef::Button, "L3", "Left Stick", "Pad", "L3", "SDL-0/LeftStick",
-            "LeftAnalog", 357, 475, 32},
+            "LeftAnalog", 354, 498, 60},
 
         // Face Buttons
         {BindingDef::Button, "Triangle", "Face Buttons", "Pad", "Triangle", "SDL-0/FaceNorth",
-            "FaceButtons", 757, 235, 36},
+            "FaceButtons", 780, 252, 25},
         {BindingDef::Button, "Circle",   "Face Buttons", "Pad", "Circle",   "SDL-0/FaceEast",
-            "FaceButtons", 807, 285, 36},
+            "FaceButtons", 864, 334, 24},
         {BindingDef::Button, "Cross",    "Face Buttons", "Pad", "Cross",    "SDL-0/FaceSouth",
-            "FaceButtons", 757, 335, 36},
+            "FaceButtons", 780, 418, 25},
         {BindingDef::Button, "Square",   "Face Buttons", "Pad", "Square",   "SDL-0/FaceWest",
-            "FaceButtons", 707, 285, 36},
+            "FaceButtons", 697, 335, 25},
 
         // Right Analog
         {BindingDef::Axis, "Right Stick Up",    "Right Stick", "Pad", "RUp",    "SDL-0/-RightY",
-            "RightAnalog", 617, 425, 50},
+            "RightAnalog", 620, 448, 40},
         {BindingDef::Axis, "Right Stick Right", "Right Stick", "Pad", "RRight", "SDL-0/+RightX",
-            "RightAnalog", 667, 475, 50},
+            "RightAnalog", 670, 498, 40},
         {BindingDef::Axis, "Right Stick Down",  "Right Stick", "Pad", "RDown",  "SDL-0/+RightY",
-            "RightAnalog", 617, 525, 50},
+            "RightAnalog", 620, 548, 40},
         {BindingDef::Axis, "Right Stick Left",  "Right Stick", "Pad", "RLeft",  "SDL-0/-RightX",
-            "RightAnalog", 567, 475, 50},
+            "RightAnalog", 570, 498, 40},
         {BindingDef::Button, "R3", "Right Stick", "Pad", "R3", "SDL-0/RightStick",
-            "RightAnalog", 617, 475, 32},
+            "RightAnalog", 620, 498, 60},
 
         // Shoulders
         {BindingDef::Button, "L2", "Shoulders", "Pad", "L2", "SDL-0/+LeftTrigger",
-            "Shoulders", 217, 95, 40},
+            "Shoulders", 200, 80, 35},
         {BindingDef::Button, "L1", "Shoulders", "Pad", "L1", "SDL-0/LeftShoulder",
-            "Shoulders", 217, 145, 36},
+            "Shoulders", 200, 150, 35},
         {BindingDef::Button, "R1", "Shoulders", "Pad", "R1", "SDL-0/RightShoulder",
-            "Shoulders", 757, 145, 36},
+            "Shoulders", 774, 150, 35},
         {BindingDef::Button, "R2", "Shoulders", "Pad", "R2", "SDL-0/+RightTrigger",
-            "Shoulders", 757, 95, 40},
+            "Shoulders", 774, 80, 35},
 
         // System
         {BindingDef::Button, "Select",  "System", "Pad", "Select",  "SDL-0/Back",
-            "System",  427, 295, 22},
+            "System",  392, 330, 22},
         {BindingDef::Button, "Start",   "System", "Pad", "Start",   "SDL-0/Start",
-            "System",  547, 295, 22},
+            "System",  582, 333, 22},
         {BindingDef::Button, "Analog",  "System", "Pad", "Analog",  "SDL-0/Guide",
-            "System",  487, 365, 18},
+            "System",  487, 432, 18},
 
         // Abstract bindings — no spotlight (no physical button on artwork).
         {BindingDef::Button, "Pressure Modifier", "System", "Pad", "PressureModifier", "",

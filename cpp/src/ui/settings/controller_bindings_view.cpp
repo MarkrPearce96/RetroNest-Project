@@ -50,6 +50,7 @@ constexpr int kRowBottom  = 3;
 constexpr int kRowFooter  = 4;
 
 constexpr int kCardWidth    = 160;
+constexpr int kCardHeight   = 56;   // fits two-line label + value stack
 constexpr int kImageMinW    = 480;
 constexpr int kImageMinH    = 360;
 constexpr int kFooterHeight = 130;
@@ -88,8 +89,7 @@ class ControllerBindingsView::BindingCard : public SettingsCard {
 public:
     explicit BindingCard(const BindingDef& def, QWidget* parent = nullptr)
         : SettingsCard(parent), m_def(def) {
-        pinToReferenceHeight();
-        setFixedWidth(kCardWidth);
+        setFixedSize(kCardWidth, kCardHeight);
         setStyleSheet(SettingsDialogTheme::cardQss());
 
         auto* lay = new QVBoxLayout(this);
@@ -262,9 +262,14 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
 
     // Footer.
     auto* footer = new QFrame(this);
+    footer->setObjectName("ControllerBindingsFooter");
+    footer->setAttribute(Qt::WA_StyledBackground, true);
     footer->setFixedHeight(kFooterHeight);
     footer->setStyleSheet(QStringLiteral(
-        "background: #4a4642; border-left: 3px solid #f59e0b;"));
+        "QFrame#ControllerBindingsFooter {"
+        "  background: #4a4642;"
+        "  border-left: 3px solid #f59e0b;"
+        "}"));
 
     auto* footerLay = new QHBoxLayout(footer);
     footerLay->setContentsMargins(28, 0, 28, 0);

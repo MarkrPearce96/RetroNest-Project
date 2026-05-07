@@ -34,9 +34,14 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
 
     // ─── Top chrome: amber title strip ────────────────
     auto* head = new QFrame(this);
+    head->setObjectName("ControllerMappingHead");
+    head->setAttribute(Qt::WA_StyledBackground, true);
     head->setFixedHeight(56);
     head->setStyleSheet(QStringLiteral(
-        "background: #4a4642; border-bottom: 1px solid #3a3632;"));
+        "QFrame#ControllerMappingHead {"
+        "  background: #4a4642;"
+        "  border-bottom: 1px solid #3a3632;"
+        "}"));
     auto* headLay = new QHBoxLayout(head);
     headLay->setContentsMargins(24, 0, 24, 0);
 
