@@ -3,6 +3,7 @@
 #include <QDialog>
 #include <QString>
 
+class QShortcut;
 class SdlInputManager;
 class AppController;
 class ControllerBindingsView;
@@ -38,4 +39,6 @@ private:
     QString                  m_emuId;
     ControllerBindingsView*  m_view = nullptr;
     QString                  m_capturingKey;   // INI key currently capturing
+    QShortcut*               m_autoMapShortcut = nullptr;
+    QShortcut*               m_closeShortcut   = nullptr;
 };

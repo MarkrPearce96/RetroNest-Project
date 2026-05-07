@@ -75,16 +75,16 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
             &ControllerMappingPage::onClearRequested);
 
     // Auto-Map (Y / M)
-    auto* yShort = new QShortcut(QKeySequence(Qt::Key_M), this);
-    connect(yShort, &QShortcut::activated, this, &ControllerMappingPage::onAutoMapRequested);
+    m_autoMapShortcut = new QShortcut(QKeySequence(Qt::Key_M), this);
+    connect(m_autoMapShortcut, &QShortcut::activated, this, &ControllerMappingPage::onAutoMapRequested);
 
     // Close (X / Square — Backspace from SDL face-button injection).
     // Cards intercept Backspace via their own keyPressEvent (treated as
     // Clear when a card is focused), so this shortcut only fires when
     // focus is OUTSIDE a card — exactly the chrome-navigation case where
     // X-to-close makes sense.
-    auto* xShort = new QShortcut(QKeySequence(Qt::Key_Backspace), this);
-    connect(xShort, &QShortcut::activated, this, &QDialog::accept);
+    m_closeShortcut = new QShortcut(QKeySequence(Qt::Key_Backspace), this);
+    connect(m_closeShortcut, &QShortcut::activated, this, &QDialog::accept);
 
     // Capture-completion routing.
     connect(m_inputManager, &SdlInputManager::bindingCaptured, this,
@@ -102,6 +102,8 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
             // dropped by BindingCard's keyPressEvent guard.
             QTimer::singleShot(150, this, [this]() {
                 m_view->setCapturing(false);
+                if (m_autoMapShortcut) m_autoMapShortcut->setEnabled(true);
+                if (m_closeShortcut)   m_closeShortcut->setEnabled(true);
             });
         });
     connect(m_inputManager, &SdlInputManager::keyboardCaptured, this,
@@ -113,13 +115,33 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
             m_view->reloadBindings();
             QTimer::singleShot(150, this, [this]() {
                 m_view->setCapturing(false);
+                if (m_autoMapShortcut) m_autoMapShortcut->setEnabled(true);
+                if (m_closeShortcut)   m_closeShortcut->setEnabled(true);
             });
+        });
+
+    // Cancel-capture cleanup. SdlInputManager::cancelCapture() (Escape
+    // during capture) flips capturing without firing bindingCaptured /
+    // keyboardCaptured. Re-enable shortcuts and clear the dialog's
+    // capture flag so the next press doesn't accidentally rebind.
+    connect(m_inputManager, &SdlInputManager::capturingChanged, this,
+        [this]() {
+            if (m_inputManager->isCapturing()) return;   // entry, not exit
+            if (m_capturingKey.isEmpty()) return;        // already cleaned up
+            m_capturingKey.clear();
+            m_view->setCapturing(false);
+            if (m_autoMapShortcut) m_autoMapShortcut->setEnabled(true);
+            if (m_closeShortcut)   m_closeShortcut->setEnabled(true);
         });
 }
 
 void ControllerMappingPage::onRebindRequested(const BindingDef& b) {
     m_capturingKey = b.key;
     m_view->setCapturing(true);
+    // Disable dialog-level shortcuts so the user can bind M / Backspace
+    // (or other shortcut keys) without firing Auto-Map / Close instead.
+    if (m_autoMapShortcut) m_autoMapShortcut->setEnabled(false);
+    if (m_closeShortcut)   m_closeShortcut->setEnabled(false);
     m_inputManager->startCapture();
 }
 
