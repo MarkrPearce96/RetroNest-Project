@@ -1,10 +1,8 @@
 #include "app_controller.h"
 #include "adapters/adapter_registry.h"
-#include "core/ini_file.h"
 #include "core/macos_fullscreen.h"
 #include "core/paths.h"
 #include "core/scraper.h"
-#include "core/setting_def.h"
 
 #include <QCursor>
 #include "settings/controller_mapping_page.h"
@@ -13,7 +11,6 @@
 #include "settings/ppsspp/ppsspp_settings_dialog.h"
 #include "settings/dolphin/dolphin_settings_dialog.h"
 #include "settings/hotkey_settings_page.h"
-#include "core/sdl_input_manager.h"
 
 #include <QFileDialog>
 #include <QFileInfo>

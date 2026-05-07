@@ -8,7 +8,6 @@
 #include "services/emulator_service.h"
 #include "services/ra_service.h"
 #include "services/config_service.h"
-#include "adapters/emulator_adapter.h"
 #include <QObject>
 #include <QGuiApplication>
 #include <QVariantList>
