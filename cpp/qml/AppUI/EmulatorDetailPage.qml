@@ -28,7 +28,8 @@ Item {
 
     // ── Keyboard / controller navigation ────────────────────────────────
     Keys.onPressed: function(event) {
-        var maxIndex = root.emuInfo.installed ? (actionOffset + 5) : 0
+        var actionRows = root.emuId === "dolphin" ? 7 : 6
+        var maxIndex = root.emuInfo.installed ? (actionOffset + actionRows - 1) : 0
 
         if (event.key === Qt.Key_Up) {
             root.focusIndex = Math.max(0, root.focusIndex - 1)
@@ -56,13 +57,25 @@ Item {
             return
         }
         var idx = root.focusIndex - actionOffset
-        switch (idx) {
-        case 0: app.showEmulatorSettings(root.emuId); break
-        case 1: app.showControllerMapping(root.emuId); break
-        case 2: app.showHotkeySettings(root.emuId); break
-        case 3: root.beginInstall(); break
-        case 4: resetDialog.open(); break
-        case 5: uninstallDialog.open(); break
+        if (root.emuId === "dolphin") {
+            switch (idx) {
+            case 0: app.showEmulatorSettings(root.emuId); break
+            case 1: app.showControllerMapping(root.emuId, "GCPad1"); break
+            case 2: app.showControllerMapping(root.emuId, "Wiimote1"); break
+            case 3: app.showHotkeySettings(root.emuId); break
+            case 4: root.beginInstall(); break
+            case 5: resetDialog.open(); break
+            case 6: uninstallDialog.open(); break
+            }
+        } else {
+            switch (idx) {
+            case 0: app.showEmulatorSettings(root.emuId); break
+            case 1: app.showControllerMapping(root.emuId); break
+            case 2: app.showHotkeySettings(root.emuId); break
+            case 3: root.beginInstall(); break
+            case 4: resetDialog.open(); break
+            case 5: uninstallDialog.open(); break
+            }
         }
     }
 
@@ -348,6 +361,7 @@ Item {
                     }
 
                     DetailButton {
+                        visible: root.emuId !== "dolphin"
                         label: "Controller Mapping"
                         bgColor: SettingsTheme.card
                         textColor: SettingsTheme.text
@@ -356,10 +370,28 @@ Item {
                     }
 
                     DetailButton {
-                        label: "Hotkeys"
+                        visible: root.emuId === "dolphin"
+                        label: "GameCube Controller"
+                        bgColor: SettingsTheme.card
+                        textColor: SettingsTheme.text
+                        isFocused: root.focusIndex === root.actionOffset + 1
+                        onClicked: app.showControllerMapping(root.emuId, "GCPad1")
+                    }
+
+                    DetailButton {
+                        visible: root.emuId === "dolphin"
+                        label: "Wii Remote"
                         bgColor: SettingsTheme.card
                         textColor: SettingsTheme.text
                         isFocused: root.focusIndex === root.actionOffset + 2
+                        onClicked: app.showControllerMapping(root.emuId, "Wiimote1")
+                    }
+
+                    DetailButton {
+                        label: "Hotkeys"
+                        bgColor: SettingsTheme.card
+                        textColor: SettingsTheme.text
+                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 3 : 2)
                         onClicked: app.showHotkeySettings(root.emuId)
                     }
 
@@ -367,7 +399,7 @@ Item {
                         label: "Reinstall / Update"
                         bgColor: SettingsTheme.accentDim
                         textColor: SettingsTheme.accent
-                        isFocused: root.focusIndex === root.actionOffset + 3
+                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 4 : 3)
                         onClicked: root.beginInstall()
                     }
 
@@ -375,7 +407,7 @@ Item {
                         label: "Reset Configuration"
                         bgColor: SettingsTheme.card
                         textColor: SettingsTheme.text
-                        isFocused: root.focusIndex === root.actionOffset + 4
+                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 5 : 4)
                         onClicked: resetDialog.open()
                     }
 
@@ -383,7 +415,7 @@ Item {
                         label: "Uninstall"
                         bgColor: SettingsTheme.errorDim
                         textColor: SettingsTheme.error
-                        isFocused: root.focusIndex === root.actionOffset + 5
+                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 6 : 5)
                         onClicked: uninstallDialog.open()
                     }
                 }
