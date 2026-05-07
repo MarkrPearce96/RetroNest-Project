@@ -92,25 +92,11 @@ set(SOURCES
     src/ui/theme_context.cpp
     src/ui/settings/controller_mapping_page.cpp
     src/ui/settings/controller_bindings_view.cpp
-    src/ui/settings/bindings_widget_base.cpp
-    src/ui/settings/ds2_bindings_widget.cpp
-    src/ui/settings/guitar_bindings_widget.cpp
-    src/ui/settings/jogcon_bindings_widget.cpp
-    src/ui/settings/negcon_bindings_widget.cpp
-    src/ui/settings/popn_bindings_widget.cpp
-    src/ui/settings/ds_jogcon_bindings_widget.cpp
-    src/ui/settings/psp_bindings_widget.cpp
-    src/ui/settings/digital_bindings_widget.cpp
-    src/ui/settings/analog_bindings_widget.cpp
-    src/ui/settings/analog_joystick_bindings_widget.cpp
-    src/ui/settings/ds_negcon_bindings_widget.cpp
-    src/ui/settings/ds_negcon_rumble_bindings_widget.cpp
     src/ui/settings/emulator_settings_dialog_base.cpp
     src/ui/settings/emulator_category_hub_base.cpp
     src/ui/settings/generic_settings_page.cpp
     src/ui/settings/settings_page_builder.cpp
     src/ui/settings/hotkey_settings_page.cpp
-    src/ui/settings/controller_settings_widget.cpp
     src/core/sdl_input_manager.cpp
     src/core/macos_fullscreen.mm
     src/ui/settings/widgets/settings_card.cpp
@@ -181,25 +167,11 @@ set(HEADERS
     src/ui/theme_manager.h
     src/ui/theme_context.h
     src/ui/settings/controller_mapping_page.h
-    src/ui/settings/bindings_widget_base.h
-    src/ui/settings/ds2_bindings_widget.h
-    src/ui/settings/guitar_bindings_widget.h
-    src/ui/settings/jogcon_bindings_widget.h
-    src/ui/settings/negcon_bindings_widget.h
-    src/ui/settings/popn_bindings_widget.h
-    src/ui/settings/ds_jogcon_bindings_widget.h
-    src/ui/settings/psp_bindings_widget.h
-    src/ui/settings/digital_bindings_widget.h
-    src/ui/settings/analog_bindings_widget.h
-    src/ui/settings/analog_joystick_bindings_widget.h
-    src/ui/settings/ds_negcon_bindings_widget.h
-    src/ui/settings/ds_negcon_rumble_bindings_widget.h
     src/ui/settings/emulator_settings_dialog_base.h
     src/ui/settings/emulator_category_hub_base.h
     src/ui/settings/generic_settings_page.h
     src/ui/settings/settings_page_builder.h
     src/ui/settings/hotkey_settings_page.h
-    src/ui/settings/controller_settings_widget.h
     src/core/sdl_input_manager.h
     src/core/binding_def.h
     src/ui/settings/binding_display.h
