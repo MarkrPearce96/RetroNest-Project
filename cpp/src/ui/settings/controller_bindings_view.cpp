@@ -52,7 +52,9 @@ constexpr int kRowFooter  = 4;
 constexpr int kCardWidth    = 160;
 constexpr int kCardHeight   = 56;   // fits two-line label + value stack
 constexpr int kImageMinW    = 480;
-constexpr int kImageMinH    = 360;
+constexpr int kImageMinH    = 340;   // 974/665 ≈ 1.46 aspect → 480/1.46 ≈ 329
+constexpr int kImageMaxW    = 640;
+constexpr int kImageMaxH    = 440;
 constexpr int kFooterHeight = 130;
 
 QString sectionHeaderText(const QString& slot) {
@@ -90,7 +92,16 @@ public:
     explicit BindingCard(const BindingDef& def, QWidget* parent = nullptr)
         : SettingsCard(parent), m_def(def) {
         setFixedSize(kCardWidth, kCardHeight);
-        setStyleSheet(SettingsDialogTheme::cardQss());
+        setObjectName("ControllerBindingCard");
+        setStyleSheet(QStringLiteral(
+            "QFrame#ControllerBindingCard {"
+            "  background-color: #4a4642;"
+            "  border: 1px solid #706c66;"
+            "  border-radius: 8px;"
+            "}"
+            "QFrame#ControllerBindingCard[focused=\"true\"] {"
+            "  border: 1px solid #f59e0b;"
+            "}"));
 
         auto* lay = new QVBoxLayout(this);
         lay->setContentsMargins(10, 6, 10, 6);
@@ -132,13 +143,15 @@ private:
     QLabel* m_value;
 };
 
-// ─── ImageArea — controller SVG + dim overlay + amber pulse ring ─────
+// ─── ImageArea — controller SVG + amber highlight + pulse ring ───────
 
 class ControllerBindingsView::ImageArea : public QWidget {
     Q_OBJECT
 public:
     explicit ImageArea(QWidget* parent = nullptr) : QWidget(parent) {
         setMinimumSize(kImageMinW, kImageMinH);
+        setMaximumSize(kImageMaxW, kImageMaxH);
+        setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
         m_pulseTimer.setInterval(33);   // ~30 fps
         connect(&m_pulseTimer, &QTimer::timeout, this, [this](){ update(); });
         m_pulseClock.start();
@@ -178,33 +191,39 @@ protected:
         const qreal originY = (height() - renderH) / 2.0;
         const QRectF imageRect(originX, originY, renderW, renderH);
 
+        // 1. SVG.
         m_renderer.render(&p, imageRect);
 
         if (!m_focused.has_value() || m_focused->spotlightR == 0) return;
 
-        // Spotlight: dark overlay with radial-gradient cutout.
+        // 2. Spotlight target in widget coords.
         const qreal cx = originX + m_focused->spotlightX * scale;
         const qreal cy = originY + m_focused->spotlightY * scale;
         const qreal r  = m_focused->spotlightR * scale;
 
-        QRadialGradient grad(QPointF(cx, cy), r * 1.5);
-        grad.setColorAt(0.00, QColor(0, 0, 0,   0));
-        grad.setColorAt(0.55, QColor(0, 0, 0,   0));
-        grad.setColorAt(1.00, QColor(0, 0, 0, 158));   // ~62% alpha
-        p.fillRect(imageRect, grad);
+        // 3. Subtle amber-tinted highlight ON the focused button (no dimming
+        //    elsewhere — the controller stays bright at full brightness,
+        //    OpenEmu-style).
+        QRadialGradient highlight(QPointF(cx, cy), r * 1.4);
+        highlight.setColorAt(0.00, QColor(245, 158, 11, 70));   // ~28% amber at center
+        highlight.setColorAt(0.70, QColor(245, 158, 11, 30));   // ~12% amber midway
+        highlight.setColorAt(1.00, QColor(245, 158, 11,  0));   // fully transparent at edge
+        p.setBrush(highlight);
+        p.setPen(Qt::NoPen);
+        p.drawEllipse(QPointF(cx, cy), r * 1.4, r * 1.4);
 
-        // Amber pulse ring on top.
+        // 4. Amber pulse ring on top.
         const qreal phaseT = std::sin(m_pulseClock.elapsed() / 254.6) * 0.5 + 0.5;
-        const qreal ringR = r * 1.4 + phaseT * 2.0;
+        const qreal ringR = r * 1.2 + phaseT * 2.0;
         const int ringAlpha = 217 + int(phaseT * 38);
 
-        // Glow layer.
+        // Glow layer (wider, semi-transparent).
         QPen glowPen(QColor(245, 158, 11, 96), 8);
         p.setPen(glowPen);
         p.setBrush(Qt::NoBrush);
         p.drawEllipse(QPointF(cx, cy), ringR, ringR);
 
-        // Sharp ring.
+        // Sharp ring on top.
         QPen ringPen(QColor(245, 158, 11, ringAlpha), 3);
         p.setPen(ringPen);
         p.drawEllipse(QPointF(cx, cy), ringR, ringR);
@@ -256,7 +275,7 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
 
     m_imageArea = new ImageArea(this);
     m_imageArea->setControllerSvg(svg);
-    grid->addWidget(m_imageArea, kRowTop, kColCenter, kRowBottom - kRowTop + 1, 1);
+    grid->addWidget(m_imageArea, kRowTop, kColCenter, kRowBottom - kRowTop + 1, 1, Qt::AlignCenter);
 
     buildSlots(m_bindings);
 
@@ -369,7 +388,7 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
         QBoxLayout* cardLay = horizontal
             ? static_cast<QBoxLayout*>(new QHBoxLayout())
             : static_cast<QBoxLayout*>(new QVBoxLayout());
-        cardLay->setSpacing(8);
+        cardLay->setSpacing(horizontal ? 8 : 10);
         cardLay->setContentsMargins(0, 0, 0, 0);
 
         for (const auto& b : bySlot[slot]) {
