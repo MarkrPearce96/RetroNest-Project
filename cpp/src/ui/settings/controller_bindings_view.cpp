@@ -159,87 +159,129 @@ public:
 
     QString currentText() const { return m_value->text(); }
 
+signals:
+    /// Emitted when the user requests a clear on this card (controller-aware).
+    void clearRequested(const BindingDef& b);
+
 protected:
     void keyPressEvent(QKeyEvent* e) override {
         const int k = e->key();
-        if (k != Qt::Key_Left && k != Qt::Key_Right &&
-            k != Qt::Key_Up   && k != Qt::Key_Down) {
-            SettingsCard::keyPressEvent(e);
-            return;
-        }
 
-        // View-wide spatial navigation. Walk up to the topmost ControllerBindingsView
-        // ancestor and consider every BindingCard inside it as a candidate.
-        QWidget* root = this;
-        while (root->parentWidget()) root = root->parentWidget();
+        // ── Arrow keys: spatial navigation ───────────────────────────────
+        if (k == Qt::Key_Left || k == Qt::Key_Right ||
+            k == Qt::Key_Up   || k == Qt::Key_Down) {
 
-        const auto allCards = root->findChildren<BindingCard*>();
-        if (allCards.size() < 2) {
-            SettingsCard::keyPressEvent(e);
-            return;
-        }
+            // View-wide spatial navigation. Walk up to the topmost ControllerBindingsView
+            // ancestor and consider every BindingCard inside it as a candidate.
+            QWidget* root = this;
+            while (root->parentWidget()) root = root->parentWidget();
 
-        const QPoint myCenter = mapTo(root, rect().center());
-        const QRect  myRect   = QRect(mapTo(root, QPoint(0, 0)), size());
-
-        BindingCard* best = nullptr;
-        long long bestScore = std::numeric_limits<long long>::max();
-
-        auto rangesOverlap = [](int a0, int a1, int b0, int b1) {
-            return a0 < b1 && b0 < a1;
-        };
-
-        const bool vertical = (k == Qt::Key_Up || k == Qt::Key_Down);
-
-        for (BindingCard* s : allCards) {
-            if (s == this || !s->isVisible()) continue;
-
-            const QPoint c   = s->mapTo(root, s->rect().center());
-            const QRect  r   = QRect(s->mapTo(root, QPoint(0, 0)), s->size());
-            const int    dx  = c.x() - myCenter.x();
-            const int    dy  = c.y() - myCenter.y();
-
-            bool inDir = false;
-            switch (k) {
-                case Qt::Key_Left:  inDir = dx < 0; break;
-                case Qt::Key_Right: inDir = dx > 0; break;
-                case Qt::Key_Up:    inDir = dy < 0; break;
-                case Qt::Key_Down:  inDir = dy > 0; break;
+            const auto allCards = root->findChildren<BindingCard*>();
+            if (allCards.size() < 2) {
+                SettingsCard::keyPressEvent(e);
+                return;
             }
-            if (!inDir) continue;
 
-            // Prefer candidates whose perpendicular extent overlaps ours
-            // (favours straight-line travel).
-            const bool perpOverlap = vertical
-                ? rangesOverlap(myRect.left(),  myRect.right(),  r.left(),  r.right())
-                : rangesOverlap(myRect.top(),   myRect.bottom(), r.top(),   r.bottom());
+            const QPoint myCenter = mapTo(root, rect().center());
+            const QRect  myRect   = QRect(mapTo(root, QPoint(0, 0)), size());
 
-            const long long adx = std::abs(static_cast<long long>(dx));
-            const long long ady = std::abs(static_cast<long long>(dy));
-            // Distance score weighted by direction; perpendicular overlap
-            // gets a steep bonus so off-axis cards aren't preferred.
-            long long score = vertical ? (ady * 2 + adx) : (adx * 2 + ady);
-            if (!perpOverlap) score += 10000;  // strongly de-prioritise off-axis
-            if (score < bestScore) {
-                bestScore = score;
-                best = s;
-            }
-        }
+            BindingCard* best = nullptr;
+            long long bestScore = std::numeric_limits<long long>::max();
 
-        if (best) {
-            best->setFocus(Qt::TabFocusReason);
-            // Scroll the new focus into view if inside a scroll area.
-            QWidget* p = best->parentWidget();
-            while (p) {
-                if (auto* sa = qobject_cast<QScrollArea*>(p)) {
-                    sa->ensureWidgetVisible(best, 20, 40);
-                    break;
+            auto rangesOverlap = [](int a0, int a1, int b0, int b1) {
+                return a0 < b1 && b0 < a1;
+            };
+
+            const bool vertical = (k == Qt::Key_Up || k == Qt::Key_Down);
+
+            for (BindingCard* s : allCards) {
+                if (s == this || !s->isVisible()) continue;
+
+                const QPoint c   = s->mapTo(root, s->rect().center());
+                const QRect  r   = QRect(s->mapTo(root, QPoint(0, 0)), s->size());
+                const int    dx  = c.x() - myCenter.x();
+                const int    dy  = c.y() - myCenter.y();
+
+                bool inDir = false;
+                switch (k) {
+                    case Qt::Key_Left:  inDir = dx < 0; break;
+                    case Qt::Key_Right: inDir = dx > 0; break;
+                    case Qt::Key_Up:    inDir = dy < 0; break;
+                    case Qt::Key_Down:  inDir = dy > 0; break;
                 }
-                p = p->parentWidget();
+                if (!inDir) continue;
+
+                // Prefer candidates whose perpendicular extent overlaps ours
+                // (favours straight-line travel).
+                const bool perpOverlap = vertical
+                    ? rangesOverlap(myRect.left(),  myRect.right(),  r.left(),  r.right())
+                    : rangesOverlap(myRect.top(),   myRect.bottom(), r.top(),   r.bottom());
+
+                const long long adx = std::abs(static_cast<long long>(dx));
+                const long long ady = std::abs(static_cast<long long>(dy));
+                // Distance score weighted by direction; perpendicular overlap
+                // gets a steep bonus so off-axis cards aren't preferred.
+                long long score = vertical ? (ady * 2 + adx) : (adx * 2 + ady);
+                if (!perpOverlap) score += 10000;  // strongly de-prioritise off-axis
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = s;
+                }
             }
-        } else {
-            SettingsCard::keyPressEvent(e);
+
+            if (best) {
+                best->setFocus(Qt::TabFocusReason);
+                // Scroll the new focus into view if inside a scroll area.
+                QWidget* p = best->parentWidget();
+                while (p) {
+                    if (auto* sa = qobject_cast<QScrollArea*>(p)) {
+                        sa->ensureWidgetVisible(best, 20, 40);
+                        break;
+                    }
+                    p = p->parentWidget();
+                }
+            } else {
+                SettingsCard::keyPressEvent(e);
+            }
+            return;
         }
+
+        // ── Activate (Rebind) / Clear — controller-aware ─────────────────
+        //
+        // Walk up to the ControllerBindingsView ancestor to discover the
+        // active controller type. On PlayStation (macOS Japanese convention),
+        // SDL maps Cross (bottom, "Rebind" glyph) → Key_Back and
+        // Circle (right, "Clear" glyph) → Key_Return. We swap the keys so
+        // the action matches the displayed glyph.
+        //   Xbox / Keyboard: Key_Return/Enter → Rebind, Key_Back/Backspace → Clear
+        //   PlayStation:     Key_Back         → Rebind, Key_Return          → Clear
+        {
+            QWidget* w = parentWidget();
+            ControllerBindingsView* view = nullptr;
+            while (w && !(view = qobject_cast<ControllerBindingsView*>(w)))
+                w = w->parentWidget();
+            const int controllerType = (view && view->inputManager())
+                                           ? view->inputManager()->controllerType()
+                                           : 0;
+            const bool isPlayStation = (controllerType == 2);
+
+            const int activateKey = isPlayStation ? Qt::Key_Back   : Qt::Key_Return;
+            const int clearKey    = isPlayStation ? Qt::Key_Return : Qt::Key_Back;
+
+            if (k == activateKey || (!isPlayStation && k == Qt::Key_Enter)) {
+                // Defer to SettingsCard's activate path so combo/slider/spinbox
+                // children are properly opened too.
+                SettingsCard::keyPressEvent(e);
+                return;
+            }
+            if (k == clearKey || k == Qt::Key_Backspace) {
+                emit clearRequested(m_def);
+                return;
+            }
+        }
+
+        // Anything else → SettingsCard's default handler.
+        SettingsCard::keyPressEvent(e);
     }
 
 private:
@@ -536,6 +578,8 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
             connect(card, &SettingsCard::activated, this, [this, card](){
                 emit rebindRequested(card->def());
             });
+            connect(card, &BindingCard::clearRequested, this,
+                    &ControllerBindingsView::clearRequested);
         }
         if (horizontal) cardLay->addStretch(1);
         v->addLayout(cardLay);
@@ -636,16 +680,10 @@ void ControllerBindingsView::resizeEvent(QResizeEvent* event) {
 }
 
 bool ControllerBindingsView::eventFilter(QObject* watched, QEvent* event) {
-    if (event->type() == QEvent::KeyPress) {
-        auto* card = qobject_cast<BindingCard*>(watched);
-        if (!card || !card->hasFocus()) return QWidget::eventFilter(watched, event);
-
-        const auto* ke = static_cast<QKeyEvent*>(event);
-        if (ke->key() == Qt::Key_Backspace || ke->key() == Qt::Key_Back) {
-            emit clearRequested(card->def());
-            return true;
-        }
-    }
+    // Card-level activate/clear handling is owned by
+    // BindingCard::keyPressEvent (controller-aware). This eventFilter is
+    // currently a no-op but kept as a hook for future view-wide event
+    // intercepts.
     return QWidget::eventFilter(watched, event);
 }
 

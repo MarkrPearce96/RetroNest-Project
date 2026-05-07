@@ -50,6 +50,11 @@ public:
     /// Call after rebind / clear / auto-map flows.
     void reloadBindings();
 
+    /// Accessor used by `BindingCard::keyPressEvent` to make activate/clear
+    /// key handling controller-aware (PS5 swaps Key_Return ↔ Key_Back due
+    /// to SDL's Japanese-convention mapping on macOS).
+    SdlInputManager* inputManager() const { return m_inputManager; }
+
 signals:
     /// Emitted when the user focuses a card (keyboard nav, mouse hover,
     /// or programmatic). `b.spotlightR == 0` means "no physical button".
