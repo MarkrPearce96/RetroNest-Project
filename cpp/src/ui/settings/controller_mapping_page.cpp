@@ -9,8 +9,8 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QMenu>
 #include <QShortcut>
+#include <QTimer>
 #include <QVBoxLayout>
 
 ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
@@ -95,8 +95,14 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
             m_appController->saveBindingForPort(m_emuId, /*port=*/1,
                                                   m_capturingKey, formatted);
             m_capturingKey.clear();
-            m_view->setCapturing(false);
             m_view->reloadBindings();
+            // Defer the capturing-flag clear so any lingering arrow-key
+            // injections from the same SDL input (e.g. analog axis push
+            // also fires Key_Right) are still seen as "in capture" and
+            // dropped by BindingCard's keyPressEvent guard.
+            QTimer::singleShot(150, this, [this]() {
+                m_view->setCapturing(false);
+            });
         });
     connect(m_inputManager, &SdlInputManager::keyboardCaptured, this,
         [this](const QString& keyString){
@@ -104,8 +110,10 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
             m_appController->saveBindingForPort(m_emuId, /*port=*/1,
                                                   m_capturingKey, keyString);
             m_capturingKey.clear();
-            m_view->setCapturing(false);
             m_view->reloadBindings();
+            QTimer::singleShot(150, this, [this]() {
+                m_view->setCapturing(false);
+            });
         });
 }
 
@@ -121,27 +129,17 @@ void ControllerMappingPage::onClearRequested(const BindingDef& b) {
 }
 
 void ControllerMappingPage::onAutoMapRequested() {
-    QMenu menu(this);
-    menu.setStyleSheet(QStringLiteral(
-        "QMenu { background: #4a4642; color: #f2efe8;"
-        "        border: 1px solid #706c66; }"
-        "QMenu::item { padding: 8px 24px; }"
-        "QMenu::item:selected { background: #f59e0b; color: #1a1816; }"));
-
-    menu.addAction("Keyboard", [this]() {
-        m_appController->clearAllBindingsForPort(m_emuId, /*port=*/1);
-        m_view->reloadBindings();
-    });
-
+    // Couch-friendly: skip the popup and auto-map the first connected
+    // controller directly. If none is connected, fall back to clearing
+    // all bindings — the user can then enter rebind on each card and
+    // assign keyboard keys manually.
     const QVariantList controllers = m_inputManager->connectedControllers();
-    for (const auto& c : controllers) {
-        const auto map = c.toMap();
+    if (!controllers.isEmpty()) {
+        const auto map = controllers.first().toMap();
         const int devIdx = map["deviceIndex"].toInt();
-        const QString name = map["name"].toString();
-        menu.addAction(QString("SDL-%1: %2").arg(devIdx).arg(name), [this, devIdx]() {
-            m_appController->autoMapControllerForPort(m_emuId, /*port=*/1, devIdx);
-            m_view->reloadBindings();
-        });
+        m_appController->autoMapControllerForPort(m_emuId, /*port=*/1, devIdx);
+    } else {
+        m_appController->clearAllBindingsForPort(m_emuId, /*port=*/1);
     }
-    menu.exec(QCursor::pos());
+    m_view->reloadBindings();
 }
