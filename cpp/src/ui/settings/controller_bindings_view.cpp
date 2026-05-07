@@ -165,6 +165,22 @@ signals:
 
 protected:
     void keyPressEvent(QKeyEvent* e) override {
+        // Walk up to the view to check capture state.
+        QWidget* w = parentWidget();
+        ControllerBindingsView* view = nullptr;
+        while (w && !(view = qobject_cast<ControllerBindingsView*>(w)))
+            w = w->parentWidget();
+
+        // While the dialog is in capture mode, the SdlInputManager will
+        // emit bindingCaptured() for the next physical button press. The
+        // card's own arrow / activate / clear handling would otherwise
+        // move focus or re-trigger activate — which causes the capture
+        // to never see the press. Be silent until capture finishes.
+        if (view && view->isCapturing()) {
+            e->accept();
+            return;
+        }
+
         const int k = e->key();
 
         // ── Arrow keys: spatial navigation ───────────────────────────────

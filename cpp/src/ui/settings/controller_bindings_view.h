@@ -55,6 +55,12 @@ public:
     /// to SDL's Japanese-convention mapping on macOS).
     SdlInputManager* inputManager() const { return m_inputManager; }
 
+    /// Mirror of the dialog's capture state. While true, BindingCard
+    /// short-circuits its keyPressEvent so controller-button injections
+    /// don't move focus or re-trigger activate during the rebind window.
+    bool isCapturing() const { return m_capturing; }
+    void setCapturing(bool capturing) { m_capturing = capturing; }
+
 signals:
     /// Emitted when the user focuses a card (keyboard nav, mouse hover,
     /// or programmatic). `b.spotlightR == 0` means "no physical button".
@@ -86,6 +92,7 @@ private:
     AppController*   m_appController;
     QString          m_emuId;
     int              m_port;
+    bool             m_capturing = false;
 
     ImageArea*       m_imageArea = nullptr;
     QLabel*          m_nowLabel  = nullptr;   // "NOW EDITING" small caps

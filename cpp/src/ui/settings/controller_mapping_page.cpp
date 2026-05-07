@@ -87,6 +87,7 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
             m_appController->saveBindingForPort(m_emuId, /*port=*/1,
                                                   m_capturingKey, formatted);
             m_capturingKey.clear();
+            m_view->setCapturing(false);
             m_view->reloadBindings();
         });
     connect(m_inputManager, &SdlInputManager::keyboardCaptured, this,
@@ -95,12 +96,14 @@ ControllerMappingPage::ControllerMappingPage(SdlInputManager* inputManager,
             m_appController->saveBindingForPort(m_emuId, /*port=*/1,
                                                   m_capturingKey, keyString);
             m_capturingKey.clear();
+            m_view->setCapturing(false);
             m_view->reloadBindings();
         });
 }
 
 void ControllerMappingPage::onRebindRequested(const BindingDef& b) {
     m_capturingKey = b.key;
+    m_view->setCapturing(true);
     m_inputManager->startCapture();
 }
 
