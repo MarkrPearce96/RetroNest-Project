@@ -1,5 +1,7 @@
 #include "sdl_input_manager.h"
 #include <QDebug>
+#include <QKeyEvent>
+#include <QKeySequence>
 #include <QSet>
 #include <QVariantMap>
 #include <cmath>
@@ -167,12 +169,50 @@ void SdlInputManager::setWindow(QWindow* window) {
 }
 
 bool SdlInputManager::eventFilter(QObject* obj, QEvent* event) {
-    // Detect real keyboard presses (not injected by us) to switch back to keyboard mode
-    if (event->type() == QEvent::KeyPress && m_lastInputWasController &&
-        !m_capturing && !m_injectingKey) {
-        m_lastInputWasController = false;
-        emit lastInputWasControllerChanged();
-        emit controllerTypeChanged();
+    if (event->type() == QEvent::KeyPress && !m_injectingKey) {
+        auto* ke = static_cast<QKeyEvent*>(event);
+        const int key = ke->key();
+
+        // Capture mode: turn the next non-modifier keypress into a
+        // "Keyboard/<name>" binding string. Mirrors the SDL_KEYDOWN
+        // path in pollEvents() — SDL only sees the keypress when an
+        // SDL window has focus, which our QDialog doesn't have on
+        // macOS, so this Qt-side path is the only reliable one for
+        // keyboard captures from inside Qt dialogs.
+        if (m_capturing) {
+            // Skip pure-modifier keys (user is still building a chord).
+            if (key == Qt::Key_Shift || key == Qt::Key_Control ||
+                key == Qt::Key_Alt   || key == Qt::Key_Meta) {
+                return false;
+            }
+            // Escape cancels capture instead of binding.
+            if (key == Qt::Key_Escape) {
+                cancelCapture();
+                return true;
+            }
+            // Build a "Keyboard/<name>" string matching the format
+            // emitted by the SDL_KEYDOWN path.
+            const QString keyStr = QKeySequence(key).toString();
+            const auto mods = ke->modifiers();
+            QString full;
+            if      (mods & Qt::AltModifier)     full = "Keyboard/Alt & Keyboard/"     + keyStr;
+            else if (mods & Qt::ShiftModifier)   full = "Keyboard/Shift & Keyboard/"   + keyStr;
+            else if (mods & Qt::ControlModifier) full = "Keyboard/Control & Keyboard/" + keyStr;
+            else                                 full = "Keyboard/" + keyStr;
+
+            m_capturing = false;
+            emit capturingChanged();
+            emit keyboardCaptured(full);
+            return true;   // consume — don't propagate to widgets / shortcuts.
+        }
+
+        // Outside capture: detect a real keyboard press to switch back
+        // from controller-mode (preserves the existing behaviour).
+        if (m_lastInputWasController) {
+            m_lastInputWasController = false;
+            emit lastInputWasControllerChanged();
+            emit controllerTypeChanged();
+        }
     }
     return QObject::eventFilter(obj, event);
 }
