@@ -50,6 +50,10 @@ public:
     /// Call after rebind / clear / auto-map flows.
     void reloadBindings();
 
+    /// Show a transient status message near the top of the view (2.5 s).
+    /// Used by the host dialog to confirm Auto-Map, etc.
+    void showStatus(const QString& message);
+
     /// Accessor used by `BindingCard::keyPressEvent` to make activate/clear
     /// key handling controller-aware (PS5 swaps Key_Return ↔ Key_Back due
     /// to SDL's Japanese-convention mapping on macOS).
@@ -104,6 +108,9 @@ private:
     QHash<QString, QString> m_currentValues;
 
     QHBoxLayout* m_shoulderRowLayout = nullptr;  // wraps Left + Right shoulders
+
+    QLabel*  m_statusBanner = nullptr;
+    QTimer*  m_statusTimer  = nullptr;
 
     struct FaceHintWidget {
         QLabel* face = nullptr;   // colored circle with glyph

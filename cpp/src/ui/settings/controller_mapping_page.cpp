@@ -129,17 +129,39 @@ void ControllerMappingPage::onClearRequested(const BindingDef& b) {
 }
 
 void ControllerMappingPage::onAutoMapRequested() {
-    // Couch-friendly: skip the popup and auto-map the first connected
-    // controller directly. If none is connected, fall back to clearing
-    // all bindings — the user can then enter rebind on each card and
-    // assign keyboard keys manually.
-    const QVariantList controllers = m_inputManager->connectedControllers();
-    if (!controllers.isEmpty()) {
-        const auto map = controllers.first().toMap();
-        const int devIdx = map["deviceIndex"].toInt();
-        m_appController->autoMapControllerForPort(m_emuId, /*port=*/1, devIdx);
-    } else {
+    const int activeType = m_inputManager->controllerType();
+    QString notification;
+
+    if (activeType == 0) {
+        // Keyboard — no keyboard schema defaults, so clear and let the
+        // user rebind manually. Notification spells out what happened
+        // since the visible result is just "Not bound" everywhere.
         m_appController->clearAllBindingsForPort(m_emuId, /*port=*/1);
+        notification = "Bindings cleared — rebind each entry with a keyboard key.";
+    } else {
+        const QVariantList controllers = m_inputManager->connectedControllers();
+        if (controllers.isEmpty()) {
+            // controllerType reports a device but none is connected — odd
+            // race. Clear and notify.
+            m_appController->clearAllBindingsForPort(m_emuId, /*port=*/1);
+            notification = "No controller connected — bindings cleared.";
+        } else {
+            // Pick the device of the matching type, falling back to the
+            // first connected device.
+            int devIdx = controllers.first().toMap()["deviceIndex"].toInt();
+            QString deviceName = controllers.first().toMap()["name"].toString();
+            for (const auto& c : controllers) {
+                const auto map = c.toMap();
+                if (m_inputManager->controllerTypeForDevice(map["deviceIndex"].toInt()) == activeType) {
+                    devIdx = map["deviceIndex"].toInt();
+                    deviceName = map["name"].toString();
+                    break;
+                }
+            }
+            m_appController->autoMapControllerForPort(m_emuId, /*port=*/1, devIdx);
+            notification = QString("Auto-mapped to %1.").arg(deviceName);
+        }
     }
     m_view->reloadBindings();
+    m_view->showStatus(notification);
 }

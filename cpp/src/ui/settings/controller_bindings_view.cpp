@@ -519,6 +519,22 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
     updateFaceHints();
 
     reloadBindings();
+
+    // Transient status banner (Auto-Map confirmations, etc.). Hidden
+    // by default; positioned center-top of the body in showStatus().
+    m_statusBanner = new QLabel(this);
+    m_statusBanner->setAlignment(Qt::AlignCenter);
+    m_statusBanner->setStyleSheet(QStringLiteral(
+        "QLabel { background: #f59e0b; color: #1a1816;"
+        "         font-size: 13px; font-weight: 700;"
+        "         padding: 10px 24px; border-radius: 8px; }"));
+    m_statusBanner->hide();
+
+    m_statusTimer = new QTimer(this);
+    m_statusTimer->setSingleShot(true);
+    connect(m_statusTimer, &QTimer::timeout, this, [this]() {
+        if (m_statusBanner) m_statusBanner->hide();
+    });
 }
 
 ControllerBindingsView::~ControllerBindingsView() = default;
@@ -696,6 +712,18 @@ void ControllerBindingsView::updateFaceHints() {
         applyGlyph(m_hintAutoMap.face, "M",       "#706c66", "#f2efe8", 13);
         applyGlyph(m_hintClose.face,   "Esc",     "#706c66", "#f2efe8", 10);
     }
+}
+
+void ControllerBindingsView::showStatus(const QString& message) {
+    if (!m_statusBanner) return;
+    m_statusBanner->setText(message);
+    m_statusBanner->adjustSize();
+    // Centered horizontally, ~70px from the top of the view.
+    int x = qMax(0, (width() - m_statusBanner->width()) / 2);
+    m_statusBanner->move(x, 70);
+    m_statusBanner->show();
+    m_statusBanner->raise();
+    if (m_statusTimer) m_statusTimer->start(2500);
 }
 
 void ControllerBindingsView::resizeEvent(QResizeEvent* event) {
