@@ -95,6 +95,7 @@ private:
     AppController*   m_appController;
     QString          m_emuId;
     int              m_port;
+    QHash<QString, QString> m_slotTitleOverrides;
     bool             m_capturing = false;
     BindingCard*     m_capturingCard = nullptr;
 

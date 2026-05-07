@@ -61,7 +61,10 @@ constexpr int kImageMinW    = 480;
 constexpr int kImageMinH    = 340;   // 974/665 ≈ 1.46 aspect → 480/1.46 ≈ 329
 constexpr int kFooterHeight = 130;
 
-QString sectionHeaderText(const QString& slot) {
+QString sectionHeaderText(const QString& slot,
+                          const QHash<QString, QString>& overrides = {}) {
+    if (auto it = overrides.constFind(slot); it != overrides.constEnd())
+        return it.value();
     if (slot == "DPad")             return "D-PAD";
     if (slot == "FaceButtons")      return "FACE BUTTONS";
     if (slot == "LeftAnalog")       return "LEFT ANALOG";
@@ -470,6 +473,7 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
 
     const QString typeId = types.front().id;
     const QString svg    = types.front().svgResource;
+    m_slotTitleOverrides = types.front().slotTitleOverrides;
     m_bindings = adapter->controllerBindingDefsForType(typeId);
 
     auto* grid = new QGridLayout(this);
@@ -642,7 +646,7 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
         v->setContentsMargins(0, 0, 0, 0);
         v->setSpacing(6);
 
-        auto* header = new QLabel(sectionHeaderText(slot), container);
+        auto* header = new QLabel(sectionHeaderText(slot, m_slotTitleOverrides), container);
         header->setStyleSheet(QStringLiteral(
             "color: #f59e0b; font-size: 10px; font-weight: 600;"
             "letter-spacing: 1.8px; background: transparent;"));
