@@ -518,7 +518,12 @@ ApplicationWindow {
         anchors.bottomMargin: 20
         anchors.horizontalCenter: parent.horizontalCenter
         z: 50
+        // Hide while a libretro game is rendering in our window (EmulationView
+        // is on top of the stack). Process-backed emulators show their own
+        // window, so the app hints over our background window are harmless.
+        // The InGameMenu owns its own hints when open.
         visible: !settingsOverlay.visible && !gameActionPopup.visible
+                 && !(mainStack.currentItem && mainStack.currentItem.isEmulationView)
         hints: {
             if (window.showingEmptyState)
                 return [{action: "start", label: "Settings"}]
