@@ -237,7 +237,9 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
     Q_ASSERT(adapter);
     const auto types = adapter->controllerTypes();
     Q_ASSERT_X(types.size() == 1, "ControllerBindingsView",
-               "Adapter must declare exactly one controller type for the new view.");
+               "Adapter must declare exactly one controller type for the new view. "
+               "PCSX2 is the pilot in T4 — DuckStation/PPSSPP/Dolphin still declare "
+               "multiple types and won't satisfy this until their own follow-up specs.");
 
     const QString typeId = types.front().id;
     const QString svg    = types.front().svgResource;
@@ -430,7 +432,7 @@ bool ControllerBindingsView::eventFilter(QObject* watched, QEvent* event) {
         if (!card || !card->hasFocus()) return QWidget::eventFilter(watched, event);
 
         const auto* ke = static_cast<QKeyEvent*>(event);
-        if (ke->key() == Qt::Key_Backspace || ke->key() == Qt::Key_B) {
+        if (ke->key() == Qt::Key_Backspace || ke->key() == Qt::Key_Back) {
             emit clearRequested(card->def());
             return true;
         }
