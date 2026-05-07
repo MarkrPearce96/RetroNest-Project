@@ -1,79 +1,41 @@
 #pragma once
 
 #include <QDialog>
-#include <QComboBox>
-#include <QListWidget>
-#include <QStackedWidget>
-#include <QToolButton>
-#include <QPushButton>
-#include <QLabel>
 #include <QString>
 
 class SdlInputManager;
 class AppController;
-class ControllerSettingsWidget;
+class ControllerBindingsView;
+struct BindingDef;
 
 /**
- * ControllerMappingPage — full controller settings dialog matching PCSX2 native.
+ * ControllerMappingPage — host dialog for the schema-driven
+ * controller mapping view. Provides the outer frame (sizing,
+ * ESC-to-close, top-chrome title) and wires keyboard / gamepad
+ * face-button shortcuts to the embedded ControllerBindingsView's
+ * focused-binding + AppController flows:
  *
- * Layout: left sidebar (port list) | right content (toolbar + stacked bindings/settings)
- * Bottom: profile management bar.
+ *   A / Enter      → rebind focused binding
+ *   B / Esc        → clear focused binding (or close if none focused)
+ *   Y / M          → open Auto-Map menu (Keyboard + connected SDL devices)
+ *   X              → close
  */
 class ControllerMappingPage : public QDialog {
     Q_OBJECT
-
 public:
     ControllerMappingPage(SdlInputManager* inputManager,
                           AppController* appController,
                           const QString& emuId,
                           QWidget* parent = nullptr);
 
-private slots:
-    void onPortChanged(int row);
-    void onTypeChanged(int index);
-    void onBindingsClicked();
-    void onSettingsClicked();
-    void onAutoMap();
-    void onClearMapping();
-    void onRestoreDefaults();
-    void onNewProfile();
-    void onApplyProfile();
-    void onRenameProfile();
-    void onDeleteProfile();
-
 private:
-    void buildUI();
-    void loadPort(int port);
-    void switchTab(int tab); // 0 = bindings, 1 = settings
-    QWidget* createBindingsWidget(const QString& type);
-    void updateSidebar();
-    void refreshProfiles();
+    void onAutoMapRequested();
+    void onRebindRequested(const BindingDef& b);
+    void onClearRequested(const BindingDef& b);
 
-    SdlInputManager* m_inputManager;
-    AppController* m_appController;
-    QString m_emuId;
-    int m_currentPort = 1;
-    int m_currentTab = 0;
-    QString m_currentType;
-
-    // Sidebar
-    QListWidget* m_portList = nullptr;
-
-    // Toolbar
-    QComboBox* m_typeCombo = nullptr;
-    QToolButton* m_bindingsBtn = nullptr;
-    QToolButton* m_settingsBtn = nullptr;
-    QToolButton* m_autoMapBtn = nullptr;
-    QToolButton* m_clearMapBtn = nullptr;
-
-    // Content
-    QStackedWidget* m_contentStack = nullptr;
-    QWidget* m_bindingsWidget = nullptr;
-    ControllerSettingsWidget* m_settingsWidget = nullptr;
-
-    // Profile bar
-    QComboBox* m_profileCombo = nullptr;
-    QPushButton* m_applyProfileBtn = nullptr;
-    QPushButton* m_renameProfileBtn = nullptr;
-    QPushButton* m_deleteProfileBtn = nullptr;
+    SdlInputManager*         m_inputManager;
+    AppController*           m_appController;
+    QString                  m_emuId;
+    ControllerBindingsView*  m_view = nullptr;
+    QString                  m_capturingKey;   // INI key currently capturing
 };
