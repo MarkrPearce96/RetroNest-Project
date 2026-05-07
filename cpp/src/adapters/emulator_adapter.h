@@ -15,7 +15,7 @@
 #include <QVector>
 
 class IniFile;
-class SdlInputManager;
+class QObject;
 
 /**
  * ResolutionOption — a friendly label + INI value pair for resolution selection.
@@ -245,7 +245,7 @@ public:
     virtual void writeBindingDeviceHeader(IniFile& ini,
                                           const QString& section,
                                           int deviceIndex,
-                                          SdlInputManager* input) const {
+                                          QObject* input) const {
         Q_UNUSED(ini); Q_UNUSED(section);
         Q_UNUSED(deviceIndex); Q_UNUSED(input);
     }

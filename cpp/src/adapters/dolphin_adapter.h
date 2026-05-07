@@ -3,7 +3,6 @@
 #include "emulator_adapter.h"
 
 class IniFile;
-class SdlInputManager;
 
 /**
  * DolphinAdapter — adapter for Dolphin (GameCube + Wii).
@@ -76,7 +75,7 @@ public:
                           bool isAxis, bool positive) const override;
 
     void writeBindingDeviceHeader(IniFile& ini, const QString& section,
-                                  int deviceIndex, SdlInputManager* input) const override;
+                                  int deviceIndex, QObject* input) const override;
 
     QVector<HotkeyDef> hotkeyBindingDefs() const override { return {}; }
 

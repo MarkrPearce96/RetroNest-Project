@@ -4,6 +4,7 @@
 #include "core/ini_file.h"
 #include "core/paths.h"
 #include "core/setting_def.h"
+#include "core/sdl_input_manager.h"
 
 #include <QDebug>
 #include <QDir>

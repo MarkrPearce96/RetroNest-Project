@@ -2270,16 +2270,10 @@ QString DolphinAdapter::formatBinding(int /*deviceIndex*/, const QString& elemen
 // ============================================================================
 
 void DolphinAdapter::writeBindingDeviceHeader(IniFile& ini, const QString& section,
-                                               int deviceIndex, SdlInputManager* input) const {
+                                               int deviceIndex, QObject* input) const {
     if (deviceIndex < 0 || !input) return;
 
-    // Access connectedControllers via Qt property to avoid including
-    // sdl_input_manager.h (which requires SDL2 and Qt::Gui — heavyweight
-    // deps that the lightweight test targets don't link).
-    // SdlInputManager inherits QObject as its first base, so the pointer
-    // identity holds and the reinterpret_cast is safe.
-    const QObject* obj = reinterpret_cast<const QObject*>(input);
-    const QVariantList controllers = obj->property("connectedControllers").toList();
+    const QVariantList controllers = input->property("connectedControllers").toList();
 
     QString deviceName;
     for (const auto& v : controllers) {
