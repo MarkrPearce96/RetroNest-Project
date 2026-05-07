@@ -290,7 +290,13 @@ protected:
             e->accept();
             return;
         }
-        if (k == Qt::Key_Back || k == Qt::Key_Backspace) {
+        // Clear:
+        //  - Key_Back: only source is Circle (B) injection → always clear
+        //  - Key_Backspace: keyboard Backspace clears, but synthetic
+        //    Backspace from Square (X) injection should fall through to
+        //    the dialog's Close shortcut, so gate on spontaneous().
+        if (k == Qt::Key_Back ||
+            (k == Qt::Key_Backspace && e->spontaneous())) {
             emit clearRequested(m_def);
             e->accept();
             return;
@@ -308,6 +314,15 @@ protected:
         if (e->type() == QEvent::ShortcutOverride) {
             auto* ke = static_cast<QKeyEvent*>(e);
             const int k = ke->key();
+
+            // Backspace: only veto for real keyboard presses. Square (X)
+            // injects a synthetic Qt::Key_Backspace — that's non-spontaneous
+            // and should fall through to the dialog's Backspace shortcut
+            // so the controller user can exit the mapping page.
+            // Key_Back (Circle) always clears, so we always veto it here.
+            if (k == Qt::Key_Backspace && !ke->spontaneous())
+                return SettingsCard::event(e);
+
             // Same set of keys keyPressEvent claims — keep in sync.
             if (k == Qt::Key_Backspace ||
                 k == Qt::Key_Back      ||

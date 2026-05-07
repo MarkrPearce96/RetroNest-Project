@@ -1275,7 +1275,8 @@ bool DuckStationAdapter::createDefaultConfig(const QString& path,
         "TogglePause =",
         "ToggleFullscreen =",
         "",
-        "[Controller1]",
+        "[Pad1]",
+        "Type = AnalogController",
         "",
     };
 
@@ -1316,15 +1317,13 @@ bool DuckStationAdapter::patchExistingConfig(const QString& path,
         {"Hotkeys", "OpenPauseMenu",    ""},
         {"Hotkeys", "TogglePause",     ""},
         {"Hotkeys", "ToggleFullscreen", ""},
+
+        // Without [Pad1].Type DuckStation registers zero bindings — see
+        // Controller::GetSettingsSection / Settings::Load in upstream.
+        {"Pad1", "Type", "AnalogController"},
     };
     if (patchIniKeys(content, patches))
         changed = true;
-
-    // Ensure [Controller1] section exists for controller bindings
-    if (!content.contains("[Controller1]")) {
-        content.append("\n[Controller1]\n");
-        changed = true;
-    }
 
     if (changed && !writeConfigFile(path, content, "DuckStation"))
         return false;
@@ -1385,10 +1384,21 @@ QString DuckStationAdapter::formatBinding(int deviceIndex, const QString& elemen
     // DuckStation: buttons use "SDL-0/A" (no prefix), full axes use
     // "SDL-0/LeftX" (no polarity), triggers use "SDL-0/+LeftTrigger".
     // Only trigger axes get the polarity prefix.
+    //
+    // SdlInputManager emits canonical FaceSouth/East/West/North for the
+    // face buttons, but DuckStation's SDL parser only recognises the
+    // Xbox-style A/B/X/Y names. Translate before formatting; a non-matching
+    // string would silently parse as no binding.
     Q_UNUSED(positive);
-    if (isAxis && element.contains("Trigger"))
-        return QString("SDL-%1/+%2").arg(deviceIndex).arg(element);
-    return QString("SDL-%1/%2").arg(deviceIndex).arg(element);
+    QString name = element;
+    if      (name == "FaceSouth") name = "A";
+    else if (name == "FaceEast")  name = "B";
+    else if (name == "FaceWest")  name = "X";
+    else if (name == "FaceNorth") name = "Y";
+
+    if (isAxis && name.contains("Trigger"))
+        return QString("SDL-%1/+%2").arg(deviceIndex).arg(name);
+    return QString("SDL-%1/%2").arg(deviceIndex).arg(name);
 }
 
 QStringList DuckStationAdapter::resumeLaunchArgs(const QString& /*stateFilePath*/) const {
@@ -1402,304 +1412,100 @@ QStringList DuckStationAdapter::resumeLaunchArgs(const QString& /*stateFilePath*
 
 QVector<ControllerTypeDef> DuckStationAdapter::controllerTypes() const {
     return {
-        {"None",              "Not Connected",    ""},
-        {"DigitalController", "Digital Controller",":/AppUI/qml/AppUI/images/controllers/digital_controller.svg"},
-        {"AnalogController",  "Analog Controller", ":/AppUI/qml/AppUI/images/controllers/analog_controller.svg"},
-        {"AnalogJoystick",    "Analog Joystick",   ":/AppUI/qml/AppUI/images/controllers/analog_joystick.svg"},
-        {"NeGcon",            "NeGcon",            ":/AppUI/qml/AppUI/images/controllers/ds_negcon.svg"},
-        {"NeGconRumble",      "NeGcon (Rumble)",   ":/AppUI/qml/AppUI/images/controllers/ds_negcon.svg"},
-        {"JogCon",            "JogCon",            ":/AppUI/qml/AppUI/images/controllers/Jogcon.svg"},
-        {"PopnController",    "Pop'n Controller",  ":/AppUI/qml/AppUI/images/controllers/Popn.svg"},
+        {"AnalogController", "Analog Controller",
+         ":/AppUI/qml/AppUI/images/controllers/analog_controller.svg"},
     };
 }
 
 QVector<BindingDef> DuckStationAdapter::controllerBindingDefs() const {
-    return {
-        // D-Pad
-        {BindingDef::Button, "Up",       "D-Pad",        "Controller1", "Up",    "SDL-0/DPadUp"},
-        {BindingDef::Button, "Down",     "D-Pad",        "Controller1", "Down",  "SDL-0/DPadDown"},
-        {BindingDef::Button, "Left",     "D-Pad",        "Controller1", "Left",  "SDL-0/DPadLeft"},
-        {BindingDef::Button, "Right",    "D-Pad",        "Controller1", "Right", "SDL-0/DPadRight"},
-        // Face Buttons
-        {BindingDef::Button, "Cross",    "Face Buttons",  "Controller1", "Cross",    "SDL-0/A"},
-        {BindingDef::Button, "Circle",   "Face Buttons",  "Controller1", "Circle",   "SDL-0/B"},
-        {BindingDef::Button, "Square",   "Face Buttons",  "Controller1", "Square",   "SDL-0/X"},
-        {BindingDef::Button, "Triangle", "Face Buttons",  "Controller1", "Triangle", "SDL-0/Y"},
-        // Shoulders
-        {BindingDef::Button, "L1", "Shoulders", "Controller1", "L1", "SDL-0/LeftShoulder"},
-        {BindingDef::Button, "R1", "Shoulders", "Controller1", "R1", "SDL-0/RightShoulder"},
-        // Triggers
-        {BindingDef::Axis,   "L2", "Triggers", "Controller1", "L2", "SDL-0/+LeftTrigger"},
-        {BindingDef::Axis,   "R2", "Triggers", "Controller1", "R2", "SDL-0/+RightTrigger"},
-        // Stick Buttons
-        {BindingDef::Button, "L3", "Stick Buttons", "Controller1", "L3", "SDL-0/LeftStick"},
-        {BindingDef::Button, "R3", "Stick Buttons", "Controller1", "R3", "SDL-0/RightStick"},
-        // Left Stick (half-axes)
-        {BindingDef::Axis, "Left Stick Left",  "Left Stick",  "Controller1", "LLeft",  "SDL-0/LeftX"},
-        {BindingDef::Axis, "Left Stick Right", "Left Stick",  "Controller1", "LRight", "SDL-0/LeftX"},
-        {BindingDef::Axis, "Left Stick Up",    "Left Stick",  "Controller1", "LUp",    "SDL-0/LeftY"},
-        {BindingDef::Axis, "Left Stick Down",  "Left Stick",  "Controller1", "LDown",  "SDL-0/LeftY"},
-        // Right Stick (half-axes)
-        {BindingDef::Axis, "Right Stick Left",  "Right Stick", "Controller1", "RLeft",  "SDL-0/RightX"},
-        {BindingDef::Axis, "Right Stick Right", "Right Stick", "Controller1", "RRight", "SDL-0/RightX"},
-        {BindingDef::Axis, "Right Stick Up",    "Right Stick", "Controller1", "RUp",    "SDL-0/RightY"},
-        {BindingDef::Axis, "Right Stick Down",  "Right Stick", "Controller1", "RDown",  "SDL-0/RightY"},
-        // System
-        {BindingDef::Button, "Start",  "System", "Controller1", "Start",  "SDL-0/Start"},
-        {BindingDef::Button, "Select", "System", "Controller1", "Select", "SDL-0/Back"},
-        // Toggle
-        {BindingDef::Button, "Analog", "System", "Controller1", "Analog", ""},
-        // Motors
-        {BindingDef::Axis,   "LargeMotor", "Motors", "Controller1", "LargeMotor", ""},
-        {BindingDef::Axis,   "SmallMotor", "Motors", "Controller1", "SmallMotor", ""},
-    };
+    return controllerBindingDefsForType("AnalogController");
 }
 
 QVector<BindingDef> DuckStationAdapter::controllerBindingDefsForType(const QString& type) const {
-    if (type == "AnalogController")
-        return controllerBindingDefs(); // default layout is AnalogController
+    if (type != "AnalogController") return {};
 
-    if (type == "DigitalController") {
-        return {
-            {BindingDef::Button, "Up",       "D-Pad",        "Controller1", "Up",       "SDL-0/DPadUp"},
-            {BindingDef::Button, "Down",     "D-Pad",        "Controller1", "Down",     "SDL-0/DPadDown"},
-            {BindingDef::Button, "Left",     "D-Pad",        "Controller1", "Left",     "SDL-0/DPadLeft"},
-            {BindingDef::Button, "Right",    "D-Pad",        "Controller1", "Right",    "SDL-0/DPadRight"},
-            {BindingDef::Button, "Cross",    "Face Buttons",  "Controller1", "Cross",    "SDL-0/A"},
-            {BindingDef::Button, "Circle",   "Face Buttons",  "Controller1", "Circle",   "SDL-0/B"},
-            {BindingDef::Button, "Square",   "Face Buttons",  "Controller1", "Square",   "SDL-0/X"},
-            {BindingDef::Button, "Triangle", "Face Buttons",  "Controller1", "Triangle", "SDL-0/Y"},
-            {BindingDef::Button, "L1", "Shoulders", "Controller1", "L1", "SDL-0/LeftShoulder"},
-            {BindingDef::Button, "R1", "Shoulders", "Controller1", "R1", "SDL-0/RightShoulder"},
-            {BindingDef::Button, "L2", "Triggers",  "Controller1", "L2", "SDL-0/+LeftTrigger"},
-            {BindingDef::Button, "R2", "Triggers",  "Controller1", "R2", "SDL-0/+RightTrigger"},
-            {BindingDef::Button, "Start",  "System", "Controller1", "Start",  "SDL-0/Start"},
-            {BindingDef::Button, "Select", "System", "Controller1", "Select", "SDL-0/Back"},
-        };
-    }
+    // AnalogController — 27 bindings across 7 cardSlots.
+    // Spotlight coordinates are in the analog_controller.svg intrinsic
+    // viewBox (12174.6 × 8309.6). The SVG's content is wrapped in a
+    // parent transform="translate(-934.33, -774.13)", so display coords =
+    // raw - (934, 774). Centers calibrated against the labeled SVG
+    // elements: D-Pad cluster around (2417, 4201), face buttons around
+    // (9758, 4192), Botões2 face circles cx/cy (Square 9642/4966 raw,
+    // Triangle 10692/3917, Cross 10692/6016, Circle 11741/4966), sticks
+    // at (4429, 6233) and (7746, 6233), shoulder shapes at top.
+    return {
+        // D-Pad
+        {BindingDef::Button, "Up",    "D-Pad", "Pad1", "Up",    "SDL-0/DPadUp",
+            "DPad", 2417, 3560, 450},
+        {BindingDef::Button, "Right", "D-Pad", "Pad1", "Right", "SDL-0/DPadRight",
+            "DPad", 3387, 4201, 450},
+        {BindingDef::Button, "Down",  "D-Pad", "Pad1", "Down",  "SDL-0/DPadDown",
+            "DPad", 2417, 4842, 450},
+        {BindingDef::Button, "Left",  "D-Pad", "Pad1", "Left",  "SDL-0/DPadLeft",
+            "DPad", 1447, 4201, 450},
 
-    if (type == "AnalogJoystick") {
-        return {
-            {BindingDef::Button, "Up",       "D-Pad",        "Controller1", "Up",       "SDL-0/DPadUp"},
-            {BindingDef::Button, "Down",     "D-Pad",        "Controller1", "Down",     "SDL-0/DPadDown"},
-            {BindingDef::Button, "Left",     "D-Pad",        "Controller1", "Left",     "SDL-0/DPadLeft"},
-            {BindingDef::Button, "Right",    "D-Pad",        "Controller1", "Right",    "SDL-0/DPadRight"},
-            {BindingDef::Button, "Cross",    "Face Buttons",  "Controller1", "Cross",    "SDL-0/A"},
-            {BindingDef::Button, "Circle",   "Face Buttons",  "Controller1", "Circle",   "SDL-0/B"},
-            {BindingDef::Button, "Square",   "Face Buttons",  "Controller1", "Square",   "SDL-0/X"},
-            {BindingDef::Button, "Triangle", "Face Buttons",  "Controller1", "Triangle", "SDL-0/Y"},
-            {BindingDef::Button, "L1", "Shoulders", "Controller1", "L1", "SDL-0/LeftShoulder"},
-            {BindingDef::Button, "R1", "Shoulders", "Controller1", "R1", "SDL-0/RightShoulder"},
-            {BindingDef::Axis,   "L2", "Triggers",  "Controller1", "L2", "SDL-0/+LeftTrigger"},
-            {BindingDef::Axis,   "R2", "Triggers",  "Controller1", "R2", "SDL-0/+RightTrigger"},
-            {BindingDef::Button, "L3", "Stick Buttons", "Controller1", "L3", "SDL-0/LeftStick"},
-            {BindingDef::Button, "R3", "Stick Buttons", "Controller1", "R3", "SDL-0/RightStick"},
-            {BindingDef::Axis, "Left Stick Left",  "Left Stick",  "Controller1", "LLeft",  "SDL-0/LeftX"},
-            {BindingDef::Axis, "Left Stick Right", "Left Stick",  "Controller1", "LRight", "SDL-0/LeftX"},
-            {BindingDef::Axis, "Left Stick Up",    "Left Stick",  "Controller1", "LUp",    "SDL-0/LeftY"},
-            {BindingDef::Axis, "Left Stick Down",  "Left Stick",  "Controller1", "LDown",  "SDL-0/LeftY"},
-            {BindingDef::Axis, "Right Stick Left",  "Right Stick", "Controller1", "RLeft",  "SDL-0/RightX"},
-            {BindingDef::Axis, "Right Stick Right", "Right Stick", "Controller1", "RRight", "SDL-0/RightX"},
-            {BindingDef::Axis, "Right Stick Up",    "Right Stick", "Controller1", "RUp",    "SDL-0/RightY"},
-            {BindingDef::Axis, "Right Stick Down",  "Right Stick", "Controller1", "RDown",  "SDL-0/RightY"},
-            {BindingDef::Button, "Start",  "System", "Controller1", "Start",  "SDL-0/Start"},
-            {BindingDef::Button, "Select", "System", "Controller1", "Select", "SDL-0/Back"},
-            {BindingDef::Button, "Mode",   "System", "Controller1", "Mode",   ""},
-        };
-    }
+        // Left Analog
+        {BindingDef::Axis, "Left Stick Up",    "Left Stick", "Pad1", "LUp",    "SDL-0/LeftY",
+            "LeftAnalog", 4429, 5533, 350},
+        {BindingDef::Axis, "Left Stick Right", "Left Stick", "Pad1", "LRight", "SDL-0/LeftX",
+            "LeftAnalog", 5129, 6233, 350},
+        {BindingDef::Axis, "Left Stick Down",  "Left Stick", "Pad1", "LDown",  "SDL-0/LeftY",
+            "LeftAnalog", 4429, 6933, 350},
+        {BindingDef::Axis, "Left Stick Left",  "Left Stick", "Pad1", "LLeft",  "SDL-0/LeftX",
+            "LeftAnalog", 3729, 6233, 350},
+        {BindingDef::Button, "L3", "Stick Buttons", "Pad1", "L3", "SDL-0/LeftStick",
+            "LeftAnalog", 4429, 6233, 700},
 
-    if (type == "NeGcon") {
-        return {
-            {BindingDef::Button, "Up",    "D-Pad",   "Controller1", "Up",    "SDL-0/DPadUp"},
-            {BindingDef::Button, "Down",  "D-Pad",   "Controller1", "Down",  "SDL-0/DPadDown"},
-            {BindingDef::Button, "Left",  "D-Pad",   "Controller1", "Left",  "SDL-0/DPadLeft"},
-            {BindingDef::Button, "Right", "D-Pad",   "Controller1", "Right", "SDL-0/DPadRight"},
-            {BindingDef::Button, "A",     "Buttons",  "Controller1", "A",     "SDL-0/A"},
-            {BindingDef::Button, "B",     "Buttons",  "Controller1", "B",     "SDL-0/B"},
-            {BindingDef::Button, "R",     "Buttons",  "Controller1", "R",     "SDL-0/RightShoulder"},
-            {BindingDef::Button, "Start", "System",   "Controller1", "Start", "SDL-0/Start"},
-            {BindingDef::Axis,   "Steering Left",  "Steering", "Controller1", "SteeringLeft",  "SDL-0/LeftX"},
-            {BindingDef::Axis,   "Steering Right", "Steering", "Controller1", "SteeringRight", "SDL-0/LeftX"},
-            {BindingDef::Axis,   "I",  "Analog Buttons", "Controller1", "I",  "SDL-0/+RightTrigger"},
-            {BindingDef::Axis,   "II", "Analog Buttons", "Controller1", "II", "SDL-0/+LeftTrigger"},
-            {BindingDef::Axis,   "L",  "Analog Buttons", "Controller1", "L",  "SDL-0/LeftShoulder"},
-        };
-    }
+        // Face Buttons
+        {BindingDef::Button, "Triangle", "Face Buttons", "Pad1", "Triangle", "SDL-0/Y",
+            "FaceButtons", 9758, 3143, 520},
+        {BindingDef::Button, "Circle",   "Face Buttons", "Pad1", "Circle",   "SDL-0/B",
+            "FaceButtons", 10807, 4192, 520},
+        {BindingDef::Button, "Cross",    "Face Buttons", "Pad1", "Cross",    "SDL-0/A",
+            "FaceButtons", 9758, 5242, 520},
+        {BindingDef::Button, "Square",   "Face Buttons", "Pad1", "Square",   "SDL-0/X",
+            "FaceButtons", 8708, 4192, 520},
 
-    if (type == "NeGconRumble") {
-        return {
-            {BindingDef::Button, "Up",    "D-Pad",   "Controller1", "Up",    "SDL-0/DPadUp"},
-            {BindingDef::Button, "Down",  "D-Pad",   "Controller1", "Down",  "SDL-0/DPadDown"},
-            {BindingDef::Button, "Left",  "D-Pad",   "Controller1", "Left",  "SDL-0/DPadLeft"},
-            {BindingDef::Button, "Right", "D-Pad",   "Controller1", "Right", "SDL-0/DPadRight"},
-            {BindingDef::Button, "A",     "Buttons",  "Controller1", "A",     "SDL-0/A"},
-            {BindingDef::Button, "B",     "Buttons",  "Controller1", "B",     "SDL-0/B"},
-            {BindingDef::Button, "R",     "Buttons",  "Controller1", "R",     "SDL-0/RightShoulder"},
-            {BindingDef::Button, "Start", "System",   "Controller1", "Start", "SDL-0/Start"},
-            {BindingDef::Button, "Analog","System",   "Controller1", "Analog",""},
-            {BindingDef::Axis,   "Steering Left",  "Steering", "Controller1", "SteeringLeft",  "SDL-0/LeftX"},
-            {BindingDef::Axis,   "Steering Right", "Steering", "Controller1", "SteeringRight", "SDL-0/LeftX"},
-            {BindingDef::Axis,   "I",  "Analog Buttons", "Controller1", "I",  "SDL-0/+RightTrigger"},
-            {BindingDef::Axis,   "II", "Analog Buttons", "Controller1", "II", "SDL-0/+LeftTrigger"},
-            {BindingDef::Axis,   "L",  "Analog Buttons", "Controller1", "L",  "SDL-0/LeftShoulder"},
-            {BindingDef::Axis,   "LargeMotor", "Motors", "Controller1", "LargeMotor", ""},
-            {BindingDef::Axis,   "SmallMotor", "Motors", "Controller1", "SmallMotor", ""},
-        };
-    }
+        // Right Analog
+        {BindingDef::Axis, "Right Stick Up",    "Right Stick", "Pad1", "RUp",    "SDL-0/RightY",
+            "RightAnalog", 7746, 5533, 350},
+        {BindingDef::Axis, "Right Stick Right", "Right Stick", "Pad1", "RRight", "SDL-0/RightX",
+            "RightAnalog", 8446, 6233, 350},
+        {BindingDef::Axis, "Right Stick Down",  "Right Stick", "Pad1", "RDown",  "SDL-0/RightY",
+            "RightAnalog", 7746, 6933, 350},
+        {BindingDef::Axis, "Right Stick Left",  "Right Stick", "Pad1", "RLeft",  "SDL-0/RightX",
+            "RightAnalog", 7046, 6233, 350},
+        {BindingDef::Button, "R3", "Stick Buttons", "Pad1", "R3", "SDL-0/RightStick",
+            "RightAnalog", 7746, 6233, 700},
 
-    if (type == "JogCon") {
-        return {
-            {BindingDef::Button, "Up",       "D-Pad",        "Controller1", "Up",       "SDL-0/DPadUp"},
-            {BindingDef::Button, "Down",     "D-Pad",        "Controller1", "Down",     "SDL-0/DPadDown"},
-            {BindingDef::Button, "Left",     "D-Pad",        "Controller1", "Left",     "SDL-0/DPadLeft"},
-            {BindingDef::Button, "Right",    "D-Pad",        "Controller1", "Right",    "SDL-0/DPadRight"},
-            {BindingDef::Button, "Cross",    "Face Buttons",  "Controller1", "Cross",    "SDL-0/A"},
-            {BindingDef::Button, "Circle",   "Face Buttons",  "Controller1", "Circle",   "SDL-0/B"},
-            {BindingDef::Button, "Square",   "Face Buttons",  "Controller1", "Square",   "SDL-0/X"},
-            {BindingDef::Button, "Triangle", "Face Buttons",  "Controller1", "Triangle", "SDL-0/Y"},
-            {BindingDef::Button, "L1", "Shoulders", "Controller1", "L1", "SDL-0/LeftShoulder"},
-            {BindingDef::Button, "R1", "Shoulders", "Controller1", "R1", "SDL-0/RightShoulder"},
-            {BindingDef::Axis,   "L2", "Triggers",  "Controller1", "L2", "SDL-0/+LeftTrigger"},
-            {BindingDef::Axis,   "R2", "Triggers",  "Controller1", "R2", "SDL-0/+RightTrigger"},
-            {BindingDef::Button, "Start",  "System", "Controller1", "Start",  "SDL-0/Start"},
-            {BindingDef::Button, "Select", "System", "Controller1", "Select", "SDL-0/Back"},
-            {BindingDef::Button, "Mode",   "System", "Controller1", "Mode",   ""},
-            {BindingDef::Axis,   "Steering Left",  "Steering", "Controller1", "SteeringLeft",  "SDL-0/LeftX"},
-            {BindingDef::Axis,   "Steering Right", "Steering", "Controller1", "SteeringRight", "SDL-0/LeftX"},
-            {BindingDef::Axis,   "Motor",          "Motors",   "Controller1", "Motor",          ""},
-        };
-    }
+        // Shoulders
+        {BindingDef::Axis,   "L2", "Triggers",  "Pad1", "L2", "SDL-0/+LeftTrigger",
+            "LeftShoulders", 2697, 331, 550},
+        {BindingDef::Button, "L1", "Shoulders", "Pad1", "L1", "SDL-0/LeftShoulder",
+            "LeftShoulders", 2516, 1091, 550},
+        {BindingDef::Button, "R1", "Shoulders", "Pad1", "R1", "SDL-0/RightShoulder",
+            "RightShoulders", 9659, 1091, 550},
+        {BindingDef::Axis,   "R2", "Triggers",  "Pad1", "R2", "SDL-0/+RightTrigger",
+            "RightShoulders", 9479, 331, 550},
 
-    if (type == "PopnController") {
-        return {
-            {BindingDef::Button, "Left White",   "Buttons", "Controller1", "LeftWhite",    ""},
-            {BindingDef::Button, "Left Yellow",  "Buttons", "Controller1", "LeftYellow",   ""},
-            {BindingDef::Button, "Left Green",   "Buttons", "Controller1", "LeftGreen",    ""},
-            {BindingDef::Button, "Left Blue",    "Buttons", "Controller1", "LeftBlue",     ""},
-            {BindingDef::Button, "Middle Red",   "Buttons", "Controller1", "MiddleRed",    ""},
-            {BindingDef::Button, "Right Blue",   "Buttons", "Controller1", "RightBlue",    ""},
-            {BindingDef::Button, "Right Green",  "Buttons", "Controller1", "RightGreen",   ""},
-            {BindingDef::Button, "Right Yellow", "Buttons", "Controller1", "RightYellow",  ""},
-            {BindingDef::Button, "Right White",  "Buttons", "Controller1", "RightWhite",   ""},
-            {BindingDef::Button, "Select", "System", "Controller1", "Select", "SDL-0/Back"},
-            {BindingDef::Button, "Start",  "System", "Controller1", "Start",  "SDL-0/Start"},
-        };
-    }
+        // System
+        {BindingDef::Button, "Select", "System", "Pad1", "Select", "SDL-0/Back",
+            "System", 4910, 4130, 300},
+        {BindingDef::Button, "Start",  "System", "Pad1", "Start",  "SDL-0/Start",
+            "System", 7261, 4159, 270},
+        {BindingDef::Button, "Analog", "System", "Pad1", "Analog", "",
+            "System", 6145, 5395, 240},
 
-    // None or unknown
-    return {};
+        // Abstract bindings — no spotlight (no physical button on artwork).
+        {BindingDef::Axis, "LargeMotor", "Motors", "Pad1", "LargeMotor", "",
+            "System", 0, 0, 0},
+        {BindingDef::Axis, "SmallMotor", "Motors", "Pad1", "SmallMotor", "",
+            "System", 0, 0, 0},
+    };
 }
 
 QVector<SettingDef> DuckStationAdapter::controllerSettingDefsForType(const QString& type) const {
-    const QVector<QPair<QString,QString>> invertOpts = {
-        {"None", "0"}, {"Horizontal Flip", "1"}, {"Vertical Flip", "2"}, {"Both", "3"},
-    };
-
-    if (type == "AnalogController") {
-        return {
-            {"", "", "", "Controller1", "ForceAnalogOnReset",
-             "Force Analog On Reset", "Automatically enables analog mode on reset.",
-             SettingDef::Bool, "true", {}, 0, 0, 0, "", ""},
-            {"", "", "", "Controller1", "AnalogDPadInDigitalMode",
-             "Use Analog Sticks for D-Pad in Digital Mode", "",
-             SettingDef::Bool, "true", {}, 0, 0, 0, "", ""},
-            {"", "", "", "Controller1", "AnalogDeadzone",
-             "Analog Deadzone", "",
-             SettingDef::Float, "0", {}, 0.0, 1.0, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "AnalogSensitivity",
-             "Analog Sensitivity", "",
-             SettingDef::Float, "1.33", {}, 0.01, 2.0, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "ButtonDeadzone",
-             "Button/Trigger Deadzone", "",
-             SettingDef::Float, "0.25", {}, 0.01, 1.0, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "InvertLeftStick",
-             "Invert Left Stick", "",
-             SettingDef::Combo, "0", invertOpts, 0, 0, 0, "", ""},
-            {"", "", "", "Controller1", "InvertRightStick",
-             "Invert Right Stick", "",
-             SettingDef::Combo, "0", invertOpts, 0, 0, 0, "", ""},
-            {"", "", "", "Controller1", "LargeMotorVibrationBias",
-             "Large Motor Vibration Bias", "",
-             SettingDef::Int, "8", {}, -255, 255, 1, "slider", ""},
-            {"", "", "", "Controller1", "SmallMotorVibrationBias",
-             "Small Motor Vibration Bias", "",
-             SettingDef::Int, "8", {}, -255, 255, 1, "slider", ""},
-        };
-    }
-
-    if (type == "AnalogJoystick") {
-        return {
-            {"", "", "", "Controller1", "AnalogDeadzone",
-             "Analog Deadzone", "",
-             SettingDef::Float, "0", {}, 0.0, 1.0, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "AnalogSensitivity",
-             "Analog Sensitivity", "",
-             SettingDef::Float, "1.33", {}, 0.01, 2.0, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "InvertLeftStick",
-             "Invert Left Stick", "",
-             SettingDef::Combo, "0", invertOpts, 0, 0, 0, "", ""},
-            {"", "", "", "Controller1", "InvertRightStick",
-             "Invert Right Stick", "",
-             SettingDef::Combo, "0", invertOpts, 0, 0, 0, "", ""},
-        };
-    }
-
-    if (type == "NeGcon") {
-        return {
-            {"", "", "Steering", "Controller1", "SteeringDeadzone",    "Deadzone",    "", SettingDef::Float, "0",   {}, 0.0,   0.99, 0.01, "slider", ""},
-            {"", "", "Steering", "Controller1", "SteeringSaturation",  "Saturation",  "", SettingDef::Float, "1",   {}, 0.01,  1.0,  0.01, "slider", ""},
-            {"", "", "Steering", "Controller1", "SteeringLinearity",   "Linearity",   "", SettingDef::Float, "0",   {}, -2.0,  2.0,  0.01, "slider", ""},
-            {"", "", "Steering", "Controller1", "SteeringScaling",     "Scaling",     "", SettingDef::Float, "1",   {}, 0.01, 10.0,  0.01, "slider", ""},
-            {"", "", "I Button", "Controller1", "IDeadzone",     "Deadzone",    "", SettingDef::Float, "0",   {}, 0.0,   0.99, 0.01, "slider", ""},
-            {"", "", "I Button", "Controller1", "ISaturation",   "Saturation",  "", SettingDef::Float, "1",   {}, 0.01,  1.0,  0.01, "slider", ""},
-            {"", "", "I Button", "Controller1", "ILinearity",    "Linearity",   "", SettingDef::Float, "0",   {}, -2.0,  2.0,  0.01, "slider", ""},
-            {"", "", "I Button", "Controller1", "IScaling",      "Scaling",     "", SettingDef::Float, "1",   {}, 0.01, 10.0,  0.01, "slider", ""},
-            {"", "", "II Button","Controller1", "IIDeadzone",    "Deadzone",    "", SettingDef::Float, "0",   {}, 0.0,   0.99, 0.01, "slider", ""},
-            {"", "", "II Button","Controller1", "IISaturation",  "Saturation",  "", SettingDef::Float, "1",   {}, 0.01,  1.0,  0.01, "slider", ""},
-            {"", "", "II Button","Controller1", "IILinearity",   "Linearity",   "", SettingDef::Float, "0",   {}, -2.0,  2.0,  0.01, "slider", ""},
-            {"", "", "II Button","Controller1", "IIScaling",     "Scaling",     "", SettingDef::Float, "1",   {}, 0.01, 10.0,  0.01, "slider", ""},
-            {"", "", "L Trigger","Controller1", "LDeadzone",     "Deadzone",    "", SettingDef::Float, "0",   {}, 0.0,   0.99, 0.01, "slider", ""},
-            {"", "", "L Trigger","Controller1", "LSaturation",   "Saturation",  "", SettingDef::Float, "1",   {}, 0.01,  1.0,  0.01, "slider", ""},
-            {"", "", "L Trigger","Controller1", "LLinearity",    "Linearity",   "", SettingDef::Float, "0",   {}, -2.0,  2.0,  0.01, "slider", ""},
-            {"", "", "L Trigger","Controller1", "LScaling",      "Scaling",     "", SettingDef::Float, "1",   {}, 0.01, 10.0,  0.01, "slider", ""},
-        };
-    }
-
-    if (type == "NeGconRumble") {
-        return {
-            {"", "", "", "Controller1", "SteeringDeadzone",
-             "Steering Deadzone", "",
-             SettingDef::Float, "0", {}, 0.0, 0.99, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "SteeringSensitivity",
-             "Steering Sensitivity", "",
-             SettingDef::Float, "1", {}, 0.01, 2.0, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "LargeMotorVibrationBias",
-             "Large Motor Vibration Bias", "",
-             SettingDef::Int, "8", {}, -255, 255, 1, "slider", ""},
-            {"", "", "", "Controller1", "SmallMotorVibrationBias",
-             "Small Motor Vibration Bias", "",
-             SettingDef::Int, "8", {}, -255, 255, 1, "slider", ""},
-        };
-    }
-
-    if (type == "JogCon") {
-        return {
-            {"", "", "", "Controller1", "AnalogDeadzone",
-             "Analog Deadzone", "",
-             SettingDef::Float, "0", {}, 0.0, 1.0, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "AnalogSensitivity",
-             "Analog Sensitivity", "",
-             SettingDef::Float, "1.33", {}, 0.01, 2.0, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "ButtonDeadzone",
-             "Button Deadzone", "",
-             SettingDef::Float, "0.25", {}, 0.01, 1.0, 0.01, "slider", ""},
-            {"", "", "", "Controller1", "SteeringHoldDeadzone",
-             "Steering Hold Deadzone", "",
-             SettingDef::Float, "0.03", {}, 0.01, 1.0, 0.01, "slider", ""},
-        };
-    }
-
-    // DigitalController, PopnController, None — no settings
+    Q_UNUSED(type);
     return {};
 }
 

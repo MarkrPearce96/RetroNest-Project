@@ -516,7 +516,14 @@ QString ConfigService::controllerType(const QString& emuId, int port) const {
     ini.load(configPath);
     QString section = QString("Pad%1").arg(port);
     QString type = ini.value(section, "Type");
-    return type.isEmpty() ? "DualShock2" : type;
+    if (!type.isEmpty()) return type;
+
+    // INI hasn't been patched yet (e.g. user opened the binding dialog before
+    // the first game launch). Fall back to the adapter's primary type instead
+    // of a hard-coded "DualShock2" so DuckStation/PPSSPP/etc. don't return an
+    // empty bindings list and render every card as "Not bound".
+    const auto types = adapter->controllerTypes();
+    return types.isEmpty() ? QString("DualShock2") : types.first().id;
 }
 
 void ConfigService::setControllerType(const QString& emuId, int port, const QString& type) {
@@ -549,7 +556,10 @@ QVariantList ConfigService::controllerBindingsForPort(const QString& emuId, int 
         mainIni.load(mainConfigPath);
 
     QString type = mainIni.value(QString("Pad%1").arg(port), "Type");
-    if (type.isEmpty()) type = "DualShock2";
+    if (type.isEmpty()) {
+        const auto types = adapter->controllerTypes();
+        type = types.isEmpty() ? QString("DualShock2") : types.first().id;
+    }
 
     // Bindings may live in a different file/section (e.g. PPSSPP's controls.ini).
     QString bindingsPath = adapter->controllerBindingsConfigFilePath();

@@ -376,14 +376,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/res/duckstation-1440p.webp
         qml/AppUI/images/res/duckstation-4k.webp
         qml/AppUI/images/controllers/DualShock_2.svg
-        qml/AppUI/images/controllers/Guitar.svg
-        qml/AppUI/images/controllers/Jogcon.svg
-        qml/AppUI/images/controllers/Negcon.svg
-        qml/AppUI/images/controllers/Popn.svg
-        qml/AppUI/images/controllers/digital_controller.svg
         qml/AppUI/images/controllers/analog_controller.svg
-        qml/AppUI/images/controllers/ds_negcon.svg
-        qml/AppUI/images/controllers/analog_joystick.svg
     RESOURCE_PREFIX /
 )
 
@@ -562,6 +555,20 @@ set_target_properties(test_duckstation_schema PROPERTIES AUTOMOC ON)
 target_include_directories(test_duckstation_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_duckstation_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME DuckStationSchema COMMAND test_duckstation_schema)
+
+add_executable(test_duckstation_controller_schema
+    tests/test_duckstation_controller_schema.cpp
+    src/adapters/duckstation_adapter.cpp
+    src/adapters/emulator_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_duckstation_controller_schema PROPERTIES AUTOMOC ON)
+target_include_directories(test_duckstation_controller_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_duckstation_controller_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_test(NAME DuckStationControllerSchema COMMAND test_duckstation_controller_schema)
 
 add_executable(test_pcsx2_preview_spec
     tests/test_pcsx2_preview_spec.cpp
