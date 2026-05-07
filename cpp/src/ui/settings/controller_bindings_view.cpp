@@ -44,11 +44,12 @@ namespace {
 constexpr int kColLeft    = 0;
 constexpr int kColCenter  = 1;
 constexpr int kColRight   = 2;
-constexpr int kRowTop     = 0;
-constexpr int kRowDpadFB  = 1;
-constexpr int kRowAnalogs = 2;
-constexpr int kRowBottom  = 3;
-constexpr int kRowFooter  = 4;
+constexpr int kRowShoulderHeader = 0;   // single shared "SHOULDERS" label
+constexpr int kRowTop            = 1;   // L2/L1 + R1/R2 card pairs
+constexpr int kRowDpadFB         = 2;
+constexpr int kRowAnalogs        = 3;
+constexpr int kRowBottom         = 4;
+constexpr int kRowFooter         = 5;
 
 constexpr int kCardHeightInline    = 36;   // label-left + value-right
 constexpr int kCardHeightStacked   = 56;   // label-top + value-below
@@ -293,9 +294,20 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
     grid->setColumnStretch(kColRight,  0);
     grid->setRowStretch(kRowAnalogs, 1);
 
+    // Shared "SHOULDERS" section header above both LeftShoulders and
+    // RightShoulders clusters. Each card cluster's own per-section
+    // header is suppressed in buildSlots so this is the only one
+    // rendered for the shoulder rows.
+    auto* shoulderHeader = new QLabel("SHOULDERS", this);
+    shoulderHeader->setStyleSheet(QStringLiteral(
+        "color: #f59e0b; font-size: 10px; font-weight: 600;"
+        "letter-spacing: 1.8px; background: transparent;"));
+    shoulderHeader->setAlignment(Qt::AlignCenter);
+    grid->addWidget(shoulderHeader, kRowShoulderHeader, kColLeft, 1, 3);
+
     m_imageArea = new ImageArea(this);
     m_imageArea->setControllerSvg(svg);
-    grid->addWidget(m_imageArea, kRowTop, kColCenter, kRowBottom - kRowTop + 1, 1, Qt::AlignCenter);
+    grid->addWidget(m_imageArea, kRowDpadFB, kColCenter, kRowBottom - kRowDpadFB + 1, 1, Qt::AlignCenter);
 
     buildSlots(m_bindings);
 
@@ -412,11 +424,15 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
         v->setContentsMargins(0, 0, 0, 0);
         v->setSpacing(6);
 
-        auto* header = new QLabel(sectionHeaderText(slot), container);
-        header->setStyleSheet(QStringLiteral(
-            "color: #f59e0b; font-size: 10px; font-weight: 600;"
-            "letter-spacing: 1.8px; background: transparent;"));
-        v->addWidget(header);
+        const bool sharedHeader =
+            (slot == "LeftShoulders" || slot == "RightShoulders");
+        if (!sharedHeader) {
+            auto* header = new QLabel(sectionHeaderText(slot), container);
+            header->setStyleSheet(QStringLiteral(
+                "color: #f59e0b; font-size: 10px; font-weight: 600;"
+                "letter-spacing: 1.8px; background: transparent;"));
+            v->addWidget(header);
+        }
 
         QBoxLayout* cardLay = horizontal
             ? static_cast<QBoxLayout*>(new QHBoxLayout())
