@@ -16,9 +16,11 @@ class QHBoxLayout;
 /**
  * ControllerBindingsView — schema-driven controller mapping page.
  *
- * Loads `adapter->controllerTypes()` (expects exactly one entry —
- * the emulator's primary controller), reads its `BindingDef` list
- * via `adapter->controllerBindingDefsForType(type)`, and renders:
+ * Loads `adapter->controllerTypes()` and picks the entry matching
+ * the `controllerTypeId` ctor arg (or the first/only entry if the id
+ * is empty — preserves single-type adapters). Reads that type's
+ * `BindingDef` list via `adapter->controllerBindingDefsForType(type)`
+ * and renders:
  *
  *   • a centered SVG illustration of the controller
  *   • six fixed grid slots of `SettingsCard`-shaped binding cards
