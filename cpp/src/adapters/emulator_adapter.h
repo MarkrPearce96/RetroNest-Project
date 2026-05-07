@@ -14,6 +14,9 @@
 #include <QStringList>
 #include <QVector>
 
+class IniFile;
+class SdlInputManager;
+
 /**
  * ResolutionOption — a friendly label + INI value pair for resolution selection.
  */
@@ -225,6 +228,26 @@ public:
     virtual QString controllerBindingsSection(int port, const QString& controllerTypeId) const {
         Q_UNUSED(controllerTypeId);
         return controllerBindingsSection(port);
+    }
+
+    /**
+     * Optional hook called after `ConfigService` writes per-binding values
+     * into `section` of the bindings file. Default is a no-op — most
+     * emulators encode the device in each binding string (e.g. "SDL-0/A").
+     *
+     * Dolphin overrides this to write a section-wide
+     * `Device = SDL/{deviceIndex}/{deviceName}` line, since Dolphin's
+     * INI format keeps the device separate from the per-key element name.
+     *
+     * `deviceIndex < 0` means "no device captured" (e.g. clear-all flow,
+     * or a keyboard-only capture). Adapters should treat `< 0` as a no-op.
+     */
+    virtual void writeBindingDeviceHeader(IniFile& ini,
+                                          const QString& section,
+                                          int deviceIndex,
+                                          SdlInputManager* input) const {
+        Q_UNUSED(ini); Q_UNUSED(section);
+        Q_UNUSED(deviceIndex); Q_UNUSED(input);
     }
 
     /**
