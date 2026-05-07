@@ -1417,10 +1417,6 @@ QVector<ControllerTypeDef> DuckStationAdapter::controllerTypes() const {
     };
 }
 
-QVector<BindingDef> DuckStationAdapter::controllerBindingDefs() const {
-    return controllerBindingDefsForType("AnalogController");
-}
-
 QVector<BindingDef> DuckStationAdapter::controllerBindingDefsForType(const QString& type) const {
     if (type != "AnalogController") return {};
 

@@ -31,7 +31,6 @@ public:
     QVector<PathDef> pathsDefs() const override;
     ResolutionOptions resolutionOptions() const override;
     AspectRatioOptions aspectRatioOptions() const override;
-    QVector<BindingDef> controllerBindingDefs() const override;
     QVector<HotkeyDef> hotkeyBindingDefs() const override;
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
