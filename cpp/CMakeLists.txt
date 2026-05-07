@@ -615,6 +615,19 @@ target_include_directories(test_pcsx2_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 target_link_libraries(test_pcsx2_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME Pcsx2Schema COMMAND test_pcsx2_schema)
 
+add_executable(test_pcsx2_controller_schema
+    tests/test_pcsx2_controller_schema.cpp
+    src/adapters/pcsx2_adapter.cpp
+    src/adapters/emulator_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_pcsx2_controller_schema PROPERTIES AUTOMOC ON)
+target_include_directories(test_pcsx2_controller_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_pcsx2_controller_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_test(NAME Pcsx2ControllerSchema COMMAND test_pcsx2_controller_schema)
+
 add_executable(test_quick_settings_file_field
     tests/test_quick_settings_file_field.cpp
     src/services/config_service.cpp
