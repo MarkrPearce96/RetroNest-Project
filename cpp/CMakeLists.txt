@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 
 add_compile_options(-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Sql Qml Quick QuickControls2 Concurrent Multimedia)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Sql Qml Quick QuickControls2 Concurrent Multimedia Svg)
 find_package(SDL2 REQUIRED)
 
 include(FetchContent)
@@ -91,6 +91,7 @@ set(SOURCES
     src/ui/theme_manager.cpp
     src/ui/theme_context.cpp
     src/ui/settings/controller_mapping_page.cpp
+    src/ui/settings/controller_bindings_view.cpp
     src/ui/settings/bindings_widget_base.cpp
     src/ui/settings/ds2_bindings_widget.cpp
     src/ui/settings/guitar_bindings_widget.cpp
@@ -285,6 +286,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::QuickControls2
     Qt6::Concurrent
     Qt6::Multimedia
+    Qt6::Svg
     ${SDL2_LIBRARIES}
     ${CMAKE_DL_LIBS}
     chdr-static
@@ -627,6 +629,50 @@ set_target_properties(test_pcsx2_controller_schema PROPERTIES AUTOMOC ON)
 target_include_directories(test_pcsx2_controller_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_pcsx2_controller_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME Pcsx2ControllerSchema COMMAND test_pcsx2_controller_schema)
+
+add_executable(test_controller_bindings_view
+    tests/test_controller_bindings_view.cpp
+    tests/stubs/app_controller_stub.cpp
+    src/ui/settings/controller_bindings_view.cpp
+    src/ui/settings/widgets/settings_card.cpp
+    src/ui/settings/widgets/settings_combo_row.cpp
+    src/ui/settings/widgets/settings_toggle.cpp
+    src/ui/settings/widgets/settings_slider_row.cpp
+    src/adapters/emulator_adapter.cpp
+    src/adapters/adapter_registry.cpp
+    src/adapters/pcsx2_adapter.cpp
+    src/adapters/duckstation_adapter.cpp
+    src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
+    src/adapters/libretro/libretro_adapter.cpp
+    src/adapters/libretro/mgba_libretro_adapter.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/rcheevos_runtime.cpp
+    src/core/libretro/retro_log.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+    src/core/manifest_loader.cpp
+    src/core/database.cpp
+)
+set_target_properties(test_controller_bindings_view PROPERTIES AUTOMOC ON)
+target_include_directories(test_controller_bindings_view PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS}
+)
+target_link_libraries(test_controller_bindings_view PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg Qt6::Network Qt6::Sql Qt6::Test
+    chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS}
+)
+add_test(NAME ControllerBindingsView COMMAND test_controller_bindings_view)
 
 add_executable(test_quick_settings_file_field
     tests/test_quick_settings_file_field.cpp
