@@ -1647,13 +1647,13 @@ QVector<BindingDef> PCSX2Adapter::controllerBindingDefsForType(const QString& ty
 
         // Shoulders
         {BindingDef::Button, "L2", "Shoulders", "Pad", "L2", "SDL-0/+LeftTrigger",
-            "Shoulders", 200, 80, 35},
+            "LeftShoulders", 200, 80, 35},
         {BindingDef::Button, "L1", "Shoulders", "Pad", "L1", "SDL-0/LeftShoulder",
-            "Shoulders", 200, 150, 35},
+            "LeftShoulders", 200, 150, 35},
         {BindingDef::Button, "R1", "Shoulders", "Pad", "R1", "SDL-0/RightShoulder",
-            "Shoulders", 774, 150, 35},
+            "RightShoulders", 774, 150, 35},
         {BindingDef::Button, "R2", "Shoulders", "Pad", "R2", "SDL-0/+RightTrigger",
-            "Shoulders", 774, 80, 35},
+            "RightShoulders", 774, 80, 35},
 
         // System
         {BindingDef::Button, "Select",  "System", "Pad", "Select",  "SDL-0/Back",

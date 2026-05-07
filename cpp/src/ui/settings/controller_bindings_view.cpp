@@ -50,9 +50,11 @@ constexpr int kRowAnalogs = 2;
 constexpr int kRowBottom  = 3;
 constexpr int kRowFooter  = 4;
 
-constexpr int kCardHeight    = 36;   // inline label+value, single row
-constexpr int kCardMinWidth  = 140;  // horizontal strips can shrink to this
-constexpr int kColumnWidth   = 220;  // fixed width for vertical-stack columns
+constexpr int kCardHeightInline    = 36;   // label-left + value-right
+constexpr int kCardHeightStacked   = 56;   // label-top + value-below
+constexpr int kCardMinWidth        = 140;  // inline cards shrink to this in horizontal strips
+constexpr int kCardStackedWidth    = 110;  // each stacked card in a horizontal strip
+constexpr int kColumnWidth         = 220;  // fixed width for vertical-stack columns
 constexpr int kImageMinW    = 480;
 constexpr int kImageMinH    = 340;   // 974/665 ≈ 1.46 aspect → 480/1.46 ≈ 329
 constexpr int kImageMaxW    = 640;
@@ -60,12 +62,14 @@ constexpr int kImageMaxH    = 440;
 constexpr int kFooterHeight = 130;
 
 QString sectionHeaderText(const QString& slot) {
-    if (slot == "DPad")         return "D-PAD";
-    if (slot == "FaceButtons")  return "FACE BUTTONS";
-    if (slot == "LeftAnalog")   return "LEFT ANALOG";
-    if (slot == "RightAnalog")  return "RIGHT ANALOG";
-    if (slot == "Shoulders")    return "SHOULDERS";
-    if (slot == "System")       return "SYSTEM";
+    if (slot == "DPad")             return "D-PAD";
+    if (slot == "FaceButtons")      return "FACE BUTTONS";
+    if (slot == "LeftAnalog")       return "LEFT ANALOG";
+    if (slot == "RightAnalog")      return "RIGHT ANALOG";
+    if (slot == "Shoulders")        return "SHOULDERS";
+    if (slot == "LeftShoulders")    return "SHOULDERS";
+    if (slot == "RightShoulders")   return "SHOULDERS";
+    if (slot == "System")           return "SYSTEM";
     return slot.toUpper();
 }
 
@@ -91,11 +95,14 @@ QString resolveSlot(const BindingDef& b) {
 class ControllerBindingsView::BindingCard : public SettingsCard {
     Q_OBJECT
 public:
-    explicit BindingCard(const BindingDef& def, QWidget* parent = nullptr)
-        : SettingsCard(parent), m_def(def) {
+    enum class Style { Inline, Stacked };
+
+    BindingCard(const BindingDef& def, Style style, QWidget* parent = nullptr)
+        : SettingsCard(parent), m_def(def), m_style(style) {
         setObjectName("ControllerBindingCard");
-        setFixedHeight(kCardHeight);
-        setMinimumWidth(kCardMinWidth);
+        setFixedHeight(style == Style::Inline ? kCardHeightInline : kCardHeightStacked);
+        if (style == Style::Inline) setMinimumWidth(kCardMinWidth);
+        else                        setFixedWidth(kCardStackedWidth);
         setStyleSheet(QStringLiteral(
             "QFrame#ControllerBindingCard {"
             "  background-color: #4a4642;"
@@ -106,10 +113,6 @@ public:
             "  border: 1px solid #f59e0b;"
             "}"));
 
-        auto* lay = new QHBoxLayout(this);
-        lay->setContentsMargins(12, 4, 12, 4);
-        lay->setSpacing(10);
-
         m_label = new QLabel(def.label.toUpper(), this);
         m_label->setStyleSheet(QStringLiteral(
             "color: #d0ccc4; font-size: 9px; font-weight: 600;"
@@ -118,11 +121,23 @@ public:
         m_value = new QLabel("Not bound", this);
         m_value->setStyleSheet(QStringLiteral(
             "color: #f2efe8; font-size: 12px; background: transparent;"));
-        m_value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-        lay->addWidget(m_label);
-        lay->addStretch(1);
-        lay->addWidget(m_value);
+        if (style == Style::Inline) {
+            auto* lay = new QHBoxLayout(this);
+            lay->setContentsMargins(12, 4, 12, 4);
+            lay->setSpacing(10);
+            m_value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            lay->addWidget(m_label);
+            lay->addStretch(1);
+            lay->addWidget(m_value);
+        } else {  // Stacked
+            auto* lay = new QVBoxLayout(this);
+            lay->setContentsMargins(12, 6, 12, 6);
+            lay->setSpacing(2);
+            m_value->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            lay->addWidget(m_label);
+            lay->addWidget(m_value);
+        }
     }
 
     const BindingDef& def() const { return m_def; }
@@ -144,8 +159,9 @@ public:
 
 private:
     BindingDef m_def;
-    QLabel* m_label;
-    QLabel* m_value;
+    Style      m_style;
+    QLabel*    m_label;
+    QLabel*    m_value;
 };
 
 // ─── ImageArea — controller SVG + amber highlight + pulse ring ───────
@@ -357,12 +373,14 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
 
     struct SlotPos { int row; int col; };
     static const QHash<QString, SlotPos> slotPositions{
-        {"DPad",         {kRowDpadFB,  kColLeft}},
-        {"LeftAnalog",   {kRowAnalogs, kColLeft}},
-        {"FaceButtons",  {kRowDpadFB,  kColRight}},
-        {"RightAnalog",  {kRowAnalogs, kColRight}},
-        {"Shoulders",    {kRowTop,     kColCenter}},
-        {"System",       {kRowBottom,  kColCenter}},
+        {"DPad",            {kRowDpadFB,  kColLeft}},
+        {"LeftAnalog",      {kRowAnalogs, kColLeft}},
+        {"FaceButtons",     {kRowDpadFB,  kColRight}},
+        {"RightAnalog",     {kRowAnalogs, kColRight}},
+        {"LeftShoulders",   {kRowTop,     kColLeft}},
+        {"RightShoulders",  {kRowTop,     kColRight}},
+        {"Shoulders",       {kRowTop,     kColCenter}},   // legacy fallback
+        {"System",          {kRowBottom,  kColCenter}},
     };
 
     QHash<QString, QVector<BindingDef>> bySlot;
@@ -376,7 +394,16 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
     for (const QString& slot : slotOrder) {
         const auto pos = slotPositions.value(slot, SlotPos{kRowBottom, kColCenter});
 
-        const bool horizontal = (slot == "Shoulders" || slot == "System");
+        // Slots that lay their cards out as a horizontal strip with stacked
+        // (label-top, value-below) cards: the four shoulder-column slots
+        // and the system bottom strip. Side-column clusters are vertical
+        // stacks of inline cards.
+        const bool horizontal =
+            (slot == "Shoulders" || slot == "System" ||
+             slot == "LeftShoulders" || slot == "RightShoulders");
+        const BindingCard::Style cardStyle = horizontal
+            ? BindingCard::Style::Stacked
+            : BindingCard::Style::Inline;
 
         auto* container = new QWidget(this);
         container->setStyleSheet("background: transparent;");
@@ -401,7 +428,7 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
             // Skip bindings with no INI key (kept in the schema for save/restore
             // but have no card on the page — e.g. some legacy abstract entries).
             if (b.key.isEmpty()) continue;
-            auto* card = new BindingCard(b, container);
+            auto* card = new BindingCard(b, cardStyle, container);
             cardLay->addWidget(card);
             card->installEventFilter(this);
             connect(card, &SettingsCard::focused, this, [this, card](const SettingDef&){

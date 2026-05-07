@@ -44,7 +44,7 @@ private slots:
         // the new field to be populated explicitly.
         const QSet<QString> validSlots{
             "DPad", "FaceButtons", "LeftAnalog", "RightAnalog",
-            "Shoulders", "System",
+            "Shoulders", "LeftShoulders", "RightShoulders", "System",
         };
         for (const auto& b : bindings) {
             QVERIFY2(!b.cardSlot.isEmpty(),
