@@ -4,10 +4,16 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QDebug>
+#include <QHash>
+#include <QObject>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QVariantList>
 
+#include "core/binding_def.h"
+#include "core/controller_type_def.h"
 #include "core/github_client.h"
+#include "core/ini_file.h"
 #include "core/paths.h"
 
 namespace {
@@ -2023,4 +2029,271 @@ QString DolphinAdapter::subcategoryIcon(const QString& category,
     if (subcategory == "Advanced")          return QStringLiteral("\U0001F527");  // 🔧
     if (subcategory == "On-Screen Display") return QStringLiteral("\U0001F4CA");  // 📊
     return {};
+}
+
+// ============================================================================
+// Controller binding helpers (anonymous namespace)
+// ============================================================================
+
+namespace {
+
+QVector<BindingDef> wiimoteBindings() {
+    return {
+        // D-Pad
+        {BindingDef::Button, "Up",    "D-Pad", "Wiimote1", "D-Pad/Up",    "`Pad N`",
+            "DPad", 1, 1, 1},
+        {BindingDef::Button, "Down",  "D-Pad", "Wiimote1", "D-Pad/Down",  "`Pad S`",
+            "DPad", 1, 1, 1},
+        {BindingDef::Button, "Left",  "D-Pad", "Wiimote1", "D-Pad/Left",  "`Pad W`",
+            "DPad", 1, 1, 1},
+        {BindingDef::Button, "Right", "D-Pad", "Wiimote1", "D-Pad/Right", "`Pad E`",
+            "DPad", 1, 1, 1},
+
+        // Buttons
+        {BindingDef::Button, "A", "Buttons", "Wiimote1", "Buttons/A", "`Button S`",
+            "FaceButtons", 1, 1, 1},
+        {BindingDef::Button, "B", "Buttons", "Wiimote1", "Buttons/B", "`Button E`",
+            "FaceButtons", 1, 1, 1},
+        {BindingDef::Button, "1", "Buttons", "Wiimote1", "Buttons/1", "`Button W`",
+            "FaceButtons", 1, 1, 1},
+        {BindingDef::Button, "2", "Buttons", "Wiimote1", "Buttons/2", "`Button N`",
+            "FaceButtons", 1, 1, 1},
+
+        // Tilt → LeftAnalog (override title TILT)
+        {BindingDef::Axis, "Tilt Forward",  "Tilt", "Wiimote1", "Tilt/Forward",  "`Left Y-`",
+            "LeftAnalog", 1, 1, 1},
+        {BindingDef::Axis, "Tilt Backward", "Tilt", "Wiimote1", "Tilt/Backward", "`Left Y+`",
+            "LeftAnalog", 1, 1, 1},
+        {BindingDef::Axis, "Tilt Left",     "Tilt", "Wiimote1", "Tilt/Left",     "`Left X-`",
+            "LeftAnalog", 1, 1, 1},
+        {BindingDef::Axis, "Tilt Right",    "Tilt", "Wiimote1", "Tilt/Right",    "`Left X+`",
+            "LeftAnalog", 1, 1, 1},
+
+        // IR → RightAnalog (override title IR POINTING)
+        {BindingDef::Axis, "IR Up",    "IR", "Wiimote1", "IR/Up",    "`Right Y-`",
+            "RightAnalog", 1, 1, 1},
+        {BindingDef::Axis, "IR Down",  "IR", "Wiimote1", "IR/Down",  "`Right Y+`",
+            "RightAnalog", 1, 1, 1},
+        {BindingDef::Axis, "IR Left",  "IR", "Wiimote1", "IR/Left",  "`Right X-`",
+            "RightAnalog", 1, 1, 1},
+        {BindingDef::Axis, "IR Right", "IR", "Wiimote1", "IR/Right", "`Right X+`",
+            "RightAnalog", 1, 1, 1},
+
+        // Shake → LeftShoulders (override title SHAKE) — abstract, no spotlight
+        {BindingDef::Button, "Shake X", "Shake", "Wiimote1", "Shake/X", "`Shoulder L`",
+            "LeftShoulders", 0, 0, 0},
+        {BindingDef::Button, "Shake Y", "Shake", "Wiimote1", "Shake/Y", "`Shoulder L`",
+            "LeftShoulders", 0, 0, 0},
+        {BindingDef::Button, "Shake Z", "Shake", "Wiimote1", "Shake/Z", "`Shoulder L`",
+            "LeftShoulders", 0, 0, 0},
+
+        // System
+        {BindingDef::Button, "Minus", "System", "Wiimote1", "Buttons/-",    "`Back`",
+            "System", 1, 1, 1},
+        {BindingDef::Button, "Plus",  "System", "Wiimote1", "Buttons/+",    "`Start`",
+            "System", 1, 1, 1},
+        {BindingDef::Button, "Home",  "System", "Wiimote1", "Buttons/Home", "`Guide`",
+            "System", 1, 1, 1},
+        {BindingDef::Axis,   "Rumble/Motor", "System", "Wiimote1", "Rumble/Motor", "`Motor`",
+            "System", 0, 0, 0},
+    };
+}
+
+QVector<BindingDef> gcPadBindings() {
+    return {
+        // D-Pad
+        {BindingDef::Button, "Up",    "D-Pad", "GCPad1", "D-Pad/Up",    "`Pad N`",
+            "DPad", 1, 1, 1},
+        {BindingDef::Button, "Down",  "D-Pad", "GCPad1", "D-Pad/Down",  "`Pad S`",
+            "DPad", 1, 1, 1},
+        {BindingDef::Button, "Left",  "D-Pad", "GCPad1", "D-Pad/Left",  "`Pad W`",
+            "DPad", 1, 1, 1},
+        {BindingDef::Button, "Right", "D-Pad", "GCPad1", "D-Pad/Right", "`Pad E`",
+            "DPad", 1, 1, 1},
+
+        // Face Buttons
+        {BindingDef::Button, "A", "Face Buttons", "GCPad1", "Buttons/A", "`Button S`",
+            "FaceButtons", 1, 1, 1},
+        {BindingDef::Button, "B", "Face Buttons", "GCPad1", "Buttons/B", "`Button E`",
+            "FaceButtons", 1, 1, 1},
+        {BindingDef::Button, "X", "Face Buttons", "GCPad1", "Buttons/X", "`Button W`",
+            "FaceButtons", 1, 1, 1},
+        {BindingDef::Button, "Y", "Face Buttons", "GCPad1", "Buttons/Y", "`Button N`",
+            "FaceButtons", 1, 1, 1},
+
+        // Main Stick
+        {BindingDef::Axis, "Main Stick Up",    "Main Stick", "GCPad1", "Main Stick/Up",    "`Left Y-`",
+            "LeftAnalog", 1, 1, 1},
+        {BindingDef::Axis, "Main Stick Down",  "Main Stick", "GCPad1", "Main Stick/Down",  "`Left Y+`",
+            "LeftAnalog", 1, 1, 1},
+        {BindingDef::Axis, "Main Stick Left",  "Main Stick", "GCPad1", "Main Stick/Left",  "`Left X-`",
+            "LeftAnalog", 1, 1, 1},
+        {BindingDef::Axis, "Main Stick Right", "Main Stick", "GCPad1", "Main Stick/Right", "`Left X+`",
+            "LeftAnalog", 1, 1, 1},
+
+        // C-Stick
+        {BindingDef::Axis, "C-Stick Up",    "C-Stick", "GCPad1", "C-Stick/Up",    "`Right Y-`",
+            "RightAnalog", 1, 1, 1},
+        {BindingDef::Axis, "C-Stick Down",  "C-Stick", "GCPad1", "C-Stick/Down",  "`Right Y+`",
+            "RightAnalog", 1, 1, 1},
+        {BindingDef::Axis, "C-Stick Left",  "C-Stick", "GCPad1", "C-Stick/Left",  "`Right X-`",
+            "RightAnalog", 1, 1, 1},
+        {BindingDef::Axis, "C-Stick Right", "C-Stick", "GCPad1", "C-Stick/Right", "`Right X+`",
+            "RightAnalog", 1, 1, 1},
+
+        // Triggers / shoulder
+        {BindingDef::Button, "L (digital)", "Triggers", "GCPad1", "Triggers/L",        "`Trigger L`",
+            "LeftShoulders", 1, 1, 1},
+        {BindingDef::Axis,   "L-Analog",    "Triggers", "GCPad1", "Triggers/L-Analog", "`Trigger L`",
+            "LeftShoulders", 1, 1, 1},
+        {BindingDef::Button, "R (digital)", "Triggers", "GCPad1", "Triggers/R",        "`Trigger R`",
+            "RightShoulders", 1, 1, 1},
+        {BindingDef::Axis,   "R-Analog",    "Triggers", "GCPad1", "Triggers/R-Analog", "`Trigger R`",
+            "RightShoulders", 1, 1, 1},
+        {BindingDef::Button, "Z",           "Buttons",  "GCPad1", "Buttons/Z",         "`Shoulder R`",
+            "RightShoulders", 1, 1, 1},
+
+        // System
+        {BindingDef::Button, "Start", "System", "GCPad1", "Buttons/Start", "`Start`",
+            "System", 1, 1, 1},
+        {BindingDef::Axis,   "Rumble/Motor", "System", "GCPad1", "Rumble/Motor", "`Motor`",
+            "System", 0, 0, 0},
+    };
+}
+
+}  // namespace
+
+// ============================================================================
+// Controller types
+// ============================================================================
+
+QVector<ControllerTypeDef> DolphinAdapter::controllerTypes() const {
+    ControllerTypeDef gcpad{
+        "GCPad1", "GameCube Controller",
+        ":/AppUI/qml/AppUI/images/controllers/GameCube.svg",
+        /*slotTitleOverrides=*/{}
+    };
+    ControllerTypeDef wii{
+        "Wiimote1", "Wii Remote",
+        ":/AppUI/qml/AppUI/images/controllers/Wii.svg",
+        /*slotTitleOverrides=*/{
+            {"LeftAnalog",    "TILT"},
+            {"RightAnalog",   "IR POINTING"},
+            {"LeftShoulders", "SHAKE"},
+        }
+    };
+    return {gcpad, wii};
+}
+
+QVector<BindingDef> DolphinAdapter::controllerBindingDefs() const {
+    return controllerBindingDefsForType("GCPad1");
+}
+
+// ============================================================================
+// Type-aware bindings dispatch
+// ============================================================================
+
+QVector<BindingDef> DolphinAdapter::controllerBindingDefsForType(const QString& type) const {
+    if (type == "GCPad1")   return gcPadBindings();
+    if (type == "Wiimote1") return wiimoteBindings();
+    return {};
+}
+
+// ============================================================================
+// Type-aware bindings-storage routing
+// ============================================================================
+
+QString DolphinAdapter::controllerBindingsConfigFilePath(const QString& controllerTypeId) const {
+    if (controllerTypeId == "Wiimote1") return wiimoteIniPath();
+    return gcpadIniPath();  // default for "GCPad1" or empty
+}
+
+QString DolphinAdapter::controllerBindingsSection(int port, const QString& controllerTypeId) const {
+    Q_UNUSED(port);  // v1: port always 1
+    return controllerTypeId.isEmpty() ? "GCPad1" : controllerTypeId;
+}
+
+// ============================================================================
+// formatBinding — Dolphin expression syntax: bare element name in backticks,
+// device communicated separately via the section's Device = line (see
+// writeBindingDeviceHeader). Axis polarity is encoded in the element name
+// for sticks; triggers stay polarity-less ("Trigger L" not "+Trigger L").
+// ============================================================================
+
+QString DolphinAdapter::formatBinding(int /*deviceIndex*/, const QString& element,
+                                       bool isAxis, bool positive) const {
+    // Stick axes: "Left X-" / "Left X+" etc. Triggers / non-stick axes stay
+    // polarity-less.
+    static const QHash<QString, QString> stickAxisRoot{
+        {"LeftX",  "Left X"},
+        {"LeftY",  "Left Y"},
+        {"RightX", "Right X"},
+        {"RightY", "Right Y"},
+    };
+    if (isAxis) {
+        if (auto it = stickAxisRoot.constFind(element); it != stickAxisRoot.constEnd()) {
+            const QString polarity = positive ? "+" : "-";
+            return QString("`%1%2`").arg(it.value(), polarity);
+        }
+        // Non-stick axis (Trigger L/R)
+        if (element == "LeftTrigger")  return "`Trigger L`";
+        if (element == "RightTrigger") return "`Trigger R`";
+    }
+
+    static const QHash<QString, QString> buttonNames{
+        {"FaceSouth",     "Button S"},
+        {"FaceEast",      "Button E"},
+        {"FaceWest",      "Button W"},
+        {"FaceNorth",     "Button N"},
+        {"DPadUp",        "Pad N"},
+        {"DPadDown",      "Pad S"},
+        {"DPadLeft",      "Pad W"},
+        {"DPadRight",     "Pad E"},
+        {"LeftShoulder",  "Shoulder L"},
+        {"RightShoulder", "Shoulder R"},
+        {"LeftStick",     "Thumb L"},
+        {"RightStick",    "Thumb R"},
+        {"Back",          "Back"},
+        {"Start",         "Start"},
+        {"Guide",         "Guide"},
+    };
+    if (auto it = buttonNames.constFind(element); it != buttonNames.constEnd())
+        return QString("`%1`").arg(it.value());
+
+    qWarning() << "[DolphinAdapter] unknown SDL element for formatBinding:" << element;
+    return {};
+}
+
+// ============================================================================
+// writeBindingDeviceHeader — writes "Device = SDL/{idx}/{name}" into the
+// active section so Dolphin knows which physical device to use.
+// ============================================================================
+
+void DolphinAdapter::writeBindingDeviceHeader(IniFile& ini, const QString& section,
+                                               int deviceIndex, SdlInputManager* input) const {
+    if (deviceIndex < 0 || !input) return;
+
+    // Access connectedControllers via Qt property to avoid including
+    // sdl_input_manager.h (which requires SDL2 and Qt::Gui — heavyweight
+    // deps that the lightweight test targets don't link).
+    // SdlInputManager inherits QObject as its first base, so the pointer
+    // identity holds and the reinterpret_cast is safe.
+    const QObject* obj = reinterpret_cast<const QObject*>(input);
+    const QVariantList controllers = obj->property("connectedControllers").toList();
+
+    QString deviceName;
+    for (const auto& v : controllers) {
+        const auto m = v.toMap();
+        if (m.value("deviceIndex").toInt() == deviceIndex) {
+            deviceName = m.value("name").toString();
+            break;
+        }
+    }
+    if (deviceName.isEmpty()) {
+        // Couldn't resolve — leave the existing Device line untouched rather
+        // than writing "SDL/N/" with a blank name (would break Dolphin's
+        // parser).
+        return;
+    }
+    ini.setValue(section, "Device", QString("SDL/%1/%2").arg(deviceIndex).arg(deviceName));
 }

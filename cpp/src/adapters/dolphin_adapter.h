@@ -2,6 +2,9 @@
 
 #include "emulator_adapter.h"
 
+class IniFile;
+class SdlInputManager;
+
 /**
  * DolphinAdapter — adapter for Dolphin (GameCube + Wii).
  *
@@ -18,10 +21,13 @@
  * Resolution and aspect ratio are routed to GFX.ini via the framework's
  * ResolutionOptions::iniFilePath / IniPatch::iniFilePath overrides.
  *
- * Controllers: default profiles are baked into GCPadNew.ini and WiimoteNew.ini
- * at install time (create-only — never overwritten on subsequent launches).
- * controllerTypes() returns empty so Dolphin does not appear in the in-app
- * controller mapping page; users remap through Dolphin's native UI.
+ * Controllers — Dolphin exposes two: GameCube + Wii Remote. Each
+ * routes bindings into its own INI file and section:
+ *   GCPad1   → GCPadNew.ini   [GCPad1]
+ *   Wiimote1 → WiimoteNew.ini [Wiimote1]
+ * Default profiles are still baked at install time (create-only,
+ * never overwritten); the in-app schema-driven UI writes through to
+ * the same files from then on.
  *
  * In-game menu: pause-on-focus-loss only (no save-on-exit, no resume).
  */
@@ -46,9 +52,31 @@ public:
     ResolutionOptions resolutionOptions() const override;
     AspectRatioOptions aspectRatioOptions() const override;
 
-    // Controllers: empty (no in-app remap UI for v1) — defaults baked into INIs.
-    QVector<ControllerTypeDef> controllerTypes() const override { return {}; }
-    QVector<BindingDef> controllerBindingDefs() const override { return {}; }
+    /**
+     * Controllers — Dolphin exposes two: GameCube + Wii Remote. Each
+     * routes bindings into its own INI file and section:
+     *   GCPad1   → GCPadNew.ini   [GCPad1]
+     *   Wiimote1 → WiimoteNew.ini [Wiimote1]
+     * Default profiles are still baked at install time (create-only,
+     * never overwritten); the in-app schema-driven UI writes through to
+     * the same files from then on.
+     */
+    QVector<ControllerTypeDef> controllerTypes() const override;
+    QVector<BindingDef> controllerBindingDefs() const override;
+    QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
+    QVector<SettingDef> controllerSettingDefs() const override { return {}; }
+    QVector<SettingDef> controllerSettingDefsForType(const QString& type) const override {
+        Q_UNUSED(type); return {};
+    }
+
+    QString controllerBindingsConfigFilePath(const QString& controllerTypeId) const override;
+    QString controllerBindingsSection(int port, const QString& controllerTypeId) const override;
+
+    QString formatBinding(int deviceIndex, const QString& element,
+                          bool isAxis, bool positive) const override;
+
+    void writeBindingDeviceHeader(IniFile& ini, const QString& section,
+                                  int deviceIndex, SdlInputManager* input) const override;
 
     QVector<HotkeyDef> hotkeyBindingDefs() const override { return {}; }
 

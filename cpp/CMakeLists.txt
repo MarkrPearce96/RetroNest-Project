@@ -422,7 +422,7 @@ add_executable(test_format_binding
 )
 set_target_properties(test_format_binding PROPERTIES AUTOMOC ON)
 target_include_directories(test_format_binding PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_format_binding PRIVATE Qt6::Core Qt6::Network Qt6::Test chdr-static)
+target_link_libraries(test_format_binding PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static)
 add_test(NAME FormatBinding COMMAND test_format_binding)
 
 add_executable(test_rom_scanner
@@ -554,8 +554,22 @@ add_executable(test_dolphin_schema
 )
 set_target_properties(test_dolphin_schema PROPERTIES AUTOMOC ON)
 target_include_directories(test_dolphin_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_dolphin_schema PRIVATE Qt6::Core Qt6::Network Qt6::Test chdr-static)
+target_link_libraries(test_dolphin_schema PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static)
 add_test(NAME DolphinSchema COMMAND test_dolphin_schema)
+
+add_executable(test_dolphin_controller_schema
+    tests/test_dolphin_controller_schema.cpp
+    src/adapters/dolphin_adapter.cpp
+    src/adapters/emulator_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_dolphin_controller_schema PROPERTIES AUTOMOC ON)
+target_include_directories(test_dolphin_controller_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_dolphin_controller_schema PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static)
+add_test(NAME DolphinControllerSchema COMMAND test_dolphin_controller_schema)
 
 add_executable(test_duckstation_schema
     tests/test_duckstation_schema.cpp
