@@ -37,6 +37,8 @@ add_library(rcheevos_static STATIC ${RCHEEVOS_SOURCES})
 # PUBLIC so consumers (only ${PROJECT_NAME}) get rcheevos headers automatically (e.g. rcheevos_runtime.cpp).
 target_include_directories(rcheevos_static PUBLIC ${rcheevos_SOURCE_DIR}/include)
 target_include_directories(rcheevos_static PRIVATE ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+# Enable hash-based game identification (rc_client_begin_identify_and_load_game).
+target_compile_definitions(rcheevos_static PUBLIC RC_CLIENT_SUPPORTS_HASH)
 
 # ScreenScraper developer credentials (build-time, not in repo)
 set(SCREENSCRAPER_DEV_ID "" CACHE STRING "ScreenScraper dev ID")
@@ -780,7 +782,7 @@ target_include_directories(test_core_runtime PRIVATE
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
     ${SDL2_INCLUDE_DIRS})
 target_link_libraries(test_core_runtime PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES} rcheevos_static)
+    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES} rcheevos_static)
 add_dependencies(test_core_runtime fake_libretro_core)
 add_test(NAME CoreRuntime COMMAND test_core_runtime)
 

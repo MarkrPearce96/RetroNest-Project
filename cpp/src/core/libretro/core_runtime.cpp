@@ -189,7 +189,7 @@ void CoreRuntime::runLoop() {
 
     // rcheevos session — best-effort; failure is non-fatal.
     m_rcheevos.beginSession(s, m_cfg.romPath, m_cfg.raConsoleId,
-                            m_cfg.raToken, m_cfg.raHardcore);
+                            m_cfg.raUsername, m_cfg.raToken, m_cfg.raHardcore);
 
     emit started();
 

@@ -26,6 +26,7 @@ public:
         QString optionsJsonPath;
         QString resumeStatePath;   // optional; if non-empty, retro_unserialize after load
         int raConsoleId = 0;
+        QString raUsername;
         QString raToken;
         bool raHardcore = false;
     };

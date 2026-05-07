@@ -24,6 +24,11 @@ public:
     QStringList resumeLaunchArgs(const QString&) const override { return {}; }
     QString findResumeFile(const QString& serial) const override;
 
+    /** Push RA pref changes into the live RcheevosRuntime instead of INI-patching. */
+    void patchRetroAchievements(const QString& username, const QString& token,
+                                bool enabled, bool hardcore,
+                                bool notifications, bool sounds) override;
+
     // Override from Task 5.2's virtual on EmulatorAdapter.
     // NOTE: returns nullptr when no game is running (m_runtime == nullptr).
     // The settings UI will show defaults until a game has run at least once.

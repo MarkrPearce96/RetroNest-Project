@@ -142,7 +142,8 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     // Fix 3: Populate RA fields
     cfg.raConsoleId = lr->raConsoleId(systemId);
     if (m_raService) {
-        cfg.raToken   = m_raService->credentials().apiKey;
+        cfg.raUsername = m_raService->credentials().username;
+        cfg.raToken    = m_raService->credentials().apiKey;
         cfg.raHardcore = m_raService->hardcoreMode();
     }
 

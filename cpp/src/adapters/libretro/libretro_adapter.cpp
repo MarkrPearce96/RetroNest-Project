@@ -87,3 +87,15 @@ void LibretroAdapter::prepareRuntime() {
 void LibretroAdapter::releaseRuntime() {
     m_runtime.reset();
 }
+
+void LibretroAdapter::patchRetroAchievements(const QString& /*username*/,
+                                              const QString& /*token*/,
+                                              bool enabled, bool hardcore,
+                                              bool /*notifications*/, bool /*sounds*/) {
+    // rcheevos v12 doesn't expose notification / sound-effect knobs separately
+    // from the client; those prefs only affect the standalone emulator UIs.
+    if (m_runtime) {
+        m_runtime->rcheevos().setEnabled(enabled);
+        m_runtime->rcheevos().setHardcore(hardcore);
+    }
+}
