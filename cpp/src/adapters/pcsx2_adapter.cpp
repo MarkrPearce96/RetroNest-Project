@@ -1517,49 +1517,7 @@ QVector<BiosDef> PCSX2Adapter::biosFiles() const {
 // ============================================================================
 
 QVector<SettingDef> PCSX2Adapter::controllerSettingDefs() const {
-    return {
-        {"", "", "", "Pad1", "InvertL",
-         "Invert Left Stick", "Inverts the direction of the left analog stick.",
-         SettingDef::Combo, "0",
-         {{"Not Inverted", "0"}, {"Invert X Axis", "1"}, {"Invert Y Axis", "2"}, {"Invert Both Axes", "3"}},
-         0, 3, 1, "", ""},
-
-        {"", "", "", "Pad1", "InvertR",
-         "Invert Right Stick", "Inverts the direction of the right analog stick.",
-         SettingDef::Combo, "0",
-         {{"Not Inverted", "0"}, {"Invert X Axis", "1"}, {"Invert Y Axis", "2"}, {"Invert Both Axes", "3"}},
-         0, 3, 1, "", ""},
-
-        {"", "", "", "Pad1", "Deadzone",
-         "Analog Deadzone", "Sets the analog stick deadzone, i.e. the fraction of the stick movement which will be ignored.",
-         SettingDef::Int, "0",
-         {}, 0, 100, 1, "", "%"},
-
-        {"", "", "", "Pad1", "AxisScale",
-         "Analog Sensitivity", "Sets the analog stick axis scaling factor. A value between 130% and 140% is recommended when using recent controllers, e.g. DualShock 4, Xbox One Controller.",
-         SettingDef::Int, "133",
-         {}, 0, 200, 1, "", "%"},
-
-        {"", "", "", "Pad1", "LargeMotorScale",
-         "Large Motor Vibration Scale", "Increases or decreases the intensity of low frequency vibration sent by the game.",
-         SettingDef::Int, "100",
-         {}, 0, 200, 1, "", "%"},
-
-        {"", "", "", "Pad1", "SmallMotorScale",
-         "Small Motor Vibration Scale", "Increases or decreases the intensity of high frequency vibration sent by the game.",
-         SettingDef::Int, "100",
-         {}, 0, 200, 1, "", "%"},
-
-        {"", "", "", "Pad1", "ButtonDeadzone",
-         "Button/Trigger Deadzone", "Sets the deadzone for activating buttons/triggers, i.e. the fraction of the trigger which will be ignored.",
-         SettingDef::Int, "0",
-         {}, 0, 100, 1, "", "%"},
-
-        {"", "", "", "Pad1", "PressureModifier",
-         "Pressure Modifier Amount", "Sets the pressure when the modifier button is held.",
-         SettingDef::Int, "50",
-         {}, 0, 100, 1, "", "%"},
-    };
+    return {};
 }
 
 // ============================================================================
@@ -1567,43 +1525,7 @@ QVector<SettingDef> PCSX2Adapter::controllerSettingDefs() const {
 // ============================================================================
 
 QVector<BindingDef> PCSX2Adapter::controllerBindingDefs() const {
-    return {
-        // D-Pad
-        {BindingDef::Button, "Up",       "D-Pad",        "Pad1", "Up",    "SDL-0/DPadUp"},
-        {BindingDef::Button, "Down",     "D-Pad",        "Pad1", "Down",  "SDL-0/DPadDown"},
-        {BindingDef::Button, "Left",     "D-Pad",        "Pad1", "Left",  "SDL-0/DPadLeft"},
-        {BindingDef::Button, "Right",    "D-Pad",        "Pad1", "Right", "SDL-0/DPadRight"},
-        // Face Buttons
-        {BindingDef::Button, "Cross",    "Face Buttons",  "Pad1", "Cross",    "SDL-0/FaceSouth"},
-        {BindingDef::Button, "Circle",   "Face Buttons",  "Pad1", "Circle",   "SDL-0/FaceEast"},
-        {BindingDef::Button, "Square",   "Face Buttons",  "Pad1", "Square",   "SDL-0/FaceWest"},
-        {BindingDef::Button, "Triangle", "Face Buttons",  "Pad1", "Triangle", "SDL-0/FaceNorth"},
-        // Shoulders
-        {BindingDef::Button, "L1", "Shoulders", "Pad1", "L1", "SDL-0/LeftShoulder"},
-        {BindingDef::Button, "R1", "Shoulders", "Pad1", "R1", "SDL-0/RightShoulder"},
-        // Triggers
-        {BindingDef::Axis,   "L2", "Triggers", "Pad1", "L2", "SDL-0/+LeftTrigger"},
-        {BindingDef::Axis,   "R2", "Triggers", "Pad1", "R2", "SDL-0/+RightTrigger"},
-        // Stick Buttons
-        {BindingDef::Button, "L3", "Stick Buttons", "Pad1", "L3", "SDL-0/LeftStick"},
-        {BindingDef::Button, "R3", "Stick Buttons", "Pad1", "R3", "SDL-0/RightStick"},
-        // Left Stick
-        {BindingDef::Axis, "Left Stick Up",    "Left Stick",  "Pad1", "LUp",    "SDL-0/-LeftY"},
-        {BindingDef::Axis, "Left Stick Down",  "Left Stick",  "Pad1", "LDown",  "SDL-0/+LeftY"},
-        {BindingDef::Axis, "Left Stick Left",  "Left Stick",  "Pad1", "LLeft",  "SDL-0/-LeftX"},
-        {BindingDef::Axis, "Left Stick Right", "Left Stick",  "Pad1", "LRight", "SDL-0/+LeftX"},
-        // Right Stick
-        {BindingDef::Axis, "Right Stick Up",    "Right Stick", "Pad1", "RUp",    "SDL-0/-RightY"},
-        {BindingDef::Axis, "Right Stick Down",  "Right Stick", "Pad1", "RDown",  "SDL-0/+RightY"},
-        {BindingDef::Axis, "Right Stick Left",  "Right Stick", "Pad1", "RLeft",  "SDL-0/-RightX"},
-        {BindingDef::Axis, "Right Stick Right", "Right Stick", "Pad1", "RRight", "SDL-0/+RightX"},
-        // Start/Select
-        {BindingDef::Button, "Start",  "System", "Pad1", "Start",  "SDL-0/Start"},
-        {BindingDef::Button, "Select", "System", "Pad1", "Select", "SDL-0/Back"},
-        // Pressure/Analog
-        {BindingDef::Button, "Pressure Modifier", "System", "Pad1", "PressureModifier", ""},
-        {BindingDef::Button, "Analog",            "System", "Pad1", "Analog",           ""},
-    };
+    return controllerBindingDefsForType("DualShock2");
 }
 
 QVector<HotkeyDef> PCSX2Adapter::hotkeyBindingDefs() const {
@@ -1664,136 +1586,93 @@ QVector<HotkeyDef> PCSX2Adapter::hotkeyBindingDefs() const {
 
 QVector<ControllerTypeDef> PCSX2Adapter::controllerTypes() const {
     return {
-        {"NotConnected", "Not Connected", ""},
-        {"DualShock2",   "DualShock 2",   ":/AppUI/qml/AppUI/images/controllers/DualShock_2.svg"},
-        {"Guitar",       "Guitar",        ":/AppUI/qml/AppUI/images/controllers/Guitar.svg"},
-        {"Jogcon",       "Jogcon",        ":/AppUI/qml/AppUI/images/controllers/Jogcon.svg"},
-        {"Negcon",       "NeGcon",        ":/AppUI/qml/AppUI/images/controllers/Negcon.svg"},
-        {"Popn",         "Pop'n Music",   ":/AppUI/qml/AppUI/images/controllers/Popn.svg"},
+        {"DualShock2", "DualShock 2",
+         ":/AppUI/qml/AppUI/images/controllers/DualShock_2.svg"},
     };
 }
 
 QVector<BindingDef> PCSX2Adapter::controllerBindingDefsForType(const QString& type) const {
-    if (type == "DualShock2")
-        return controllerBindingDefs(); // existing DS2 bindings
+    if (type != "DualShock2") return {};
 
-    if (type == "Guitar") {
-        return {
-            {BindingDef::Button, "Strum Up",    "Strum",   "Pad", "Up",     "SDL-0/DPadUp"},
-            {BindingDef::Button, "Strum Down",  "Strum",   "Pad", "Down",   "SDL-0/DPadDown"},
-            {BindingDef::Button, "Select",      "System",  "Pad", "Select", "SDL-0/Back"},
-            {BindingDef::Button, "Start",       "System",  "Pad", "Start",  "SDL-0/Start"},
-            {BindingDef::Button, "Green",       "Frets",   "Pad", "Green",  "SDL-0/FaceSouth"},
-            {BindingDef::Button, "Red",         "Frets",   "Pad", "Red",    "SDL-0/FaceEast"},
-            {BindingDef::Button, "Yellow",      "Frets",   "Pad", "Yellow", "SDL-0/FaceNorth"},
-            {BindingDef::Button, "Blue",        "Frets",   "Pad", "Blue",   "SDL-0/FaceWest"},
-            {BindingDef::Button, "Orange",      "Frets",   "Pad", "Orange", "SDL-0/LeftShoulder"},
-            {BindingDef::Axis,   "Whammy",      "Analog",  "Pad", "Whammy", "SDL-0/+LeftY"},
-            {BindingDef::Button, "Tilt",        "Analog",  "Pad", "Tilt",   "SDL-0/LeftTrigger"},
-        };
-    }
+    // DualShock 2 — 28 bindings across 6 cardSlots.
+    // Spotlight coordinates are in the DualShock_2.svg intrinsic viewBox
+    // (974 × 664.8). Values calibrated visually against the artwork —
+    // adjust if the SVG is replaced.
+    return {
+        // D-Pad
+        {BindingDef::Button, "Up",    "D-Pad", "Pad", "Up",    "SDL-0/DPadUp",
+            "DPad",  217, 235, 38},
+        {BindingDef::Button, "Right", "D-Pad", "Pad", "Right", "SDL-0/DPadRight",
+            "DPad",  267, 285, 38},
+        {BindingDef::Button, "Down",  "D-Pad", "Pad", "Down",  "SDL-0/DPadDown",
+            "DPad",  217, 335, 38},
+        {BindingDef::Button, "Left",  "D-Pad", "Pad", "Left",  "SDL-0/DPadLeft",
+            "DPad",  167, 285, 38},
 
-    if (type == "Jogcon") {
-        return {
-            {BindingDef::Button, "Up",       "D-Pad",        "Pad", "Up",        "SDL-0/DPadUp"},
-            {BindingDef::Button, "Down",     "D-Pad",        "Pad", "Down",      "SDL-0/DPadDown"},
-            {BindingDef::Button, "Left",     "D-Pad",        "Pad", "Left",      "SDL-0/DPadLeft"},
-            {BindingDef::Button, "Right",    "D-Pad",        "Pad", "Right",     "SDL-0/DPadRight"},
-            {BindingDef::Button, "Triangle", "Face Buttons", "Pad", "Triangle",  "SDL-0/FaceNorth"},
-            {BindingDef::Button, "Circle",   "Face Buttons", "Pad", "Circle",    "SDL-0/FaceEast"},
-            {BindingDef::Button, "Cross",    "Face Buttons", "Pad", "Cross",     "SDL-0/FaceSouth"},
-            {BindingDef::Button, "Square",   "Face Buttons", "Pad", "Square",    "SDL-0/FaceWest"},
-            {BindingDef::Button, "Select",   "System",       "Pad", "Select",    "SDL-0/Back"},
-            {BindingDef::Button, "Start",    "System",       "Pad", "Start",     "SDL-0/Start"},
-            {BindingDef::Button, "L1",       "Shoulders",    "Pad", "L1",        "SDL-0/LeftShoulder"},
-            {BindingDef::Button, "L2",       "Shoulders",    "Pad", "L2",        "SDL-0/LeftTrigger"},
-            {BindingDef::Button, "R1",       "Shoulders",    "Pad", "R1",        "SDL-0/RightShoulder"},
-            {BindingDef::Button, "R2",       "Shoulders",    "Pad", "R2",        "SDL-0/RightTrigger"},
-            {BindingDef::Axis,   "Dial Left",  "Dial",       "Pad", "DialLeft",  "SDL-0/-LeftX"},
-            {BindingDef::Axis,   "Dial Right", "Dial",       "Pad", "DialRight", "SDL-0/+LeftX"},
-            {BindingDef::Axis,   "LargeMotor",  "Motors", "Pad", "LargeMotor", ""},
-            {BindingDef::Axis,   "SmallMotor",  "Motors", "Pad", "SmallMotor", ""},
-        };
-    }
+        // Left Analog
+        {BindingDef::Axis, "Left Stick Up",    "Left Stick", "Pad", "LUp",    "SDL-0/-LeftY",
+            "LeftAnalog", 357, 425, 50},
+        {BindingDef::Axis, "Left Stick Right", "Left Stick", "Pad", "LRight", "SDL-0/+LeftX",
+            "LeftAnalog", 407, 475, 50},
+        {BindingDef::Axis, "Left Stick Down",  "Left Stick", "Pad", "LDown",  "SDL-0/+LeftY",
+            "LeftAnalog", 357, 525, 50},
+        {BindingDef::Axis, "Left Stick Left",  "Left Stick", "Pad", "LLeft",  "SDL-0/-LeftX",
+            "LeftAnalog", 307, 475, 50},
+        {BindingDef::Button, "L3", "Left Stick", "Pad", "L3", "SDL-0/LeftStick",
+            "LeftAnalog", 357, 475, 32},
 
-    if (type == "Negcon") {
-        return {
-            {BindingDef::Button, "Up",    "D-Pad",        "Pad", "Up",         "SDL-0/DPadUp"},
-            {BindingDef::Button, "Down",  "D-Pad",        "Pad", "Down",       "SDL-0/DPadDown"},
-            {BindingDef::Button, "Left",  "D-Pad",        "Pad", "Left",       "SDL-0/DPadLeft"},
-            {BindingDef::Button, "Right", "D-Pad",        "Pad", "Right",      "SDL-0/DPadRight"},
-            {BindingDef::Button, "A",     "Face Buttons",  "Pad", "A",          "SDL-0/FaceSouth"},
-            {BindingDef::Button, "B",     "Face Buttons",  "Pad", "B",          "SDL-0/FaceEast"},
-            {BindingDef::Button, "I",     "Face Buttons",  "Pad", "I",          "SDL-0/FaceWest"},
-            {BindingDef::Button, "II",    "Face Buttons",  "Pad", "II",         "SDL-0/FaceNorth"},
-            {BindingDef::Button, "Start", "System",        "Pad", "Start",      "SDL-0/Start"},
-            {BindingDef::Button, "L",     "Shoulders",     "Pad", "L",          "SDL-0/LeftShoulder"},
-            {BindingDef::Button, "R",     "Shoulders",     "Pad", "R",          "SDL-0/RightShoulder"},
-            {BindingDef::Axis,   "Twist Left",  "Twist",   "Pad", "TwistLeft",  "SDL-0/-LeftX"},
-            {BindingDef::Axis,   "Twist Right", "Twist",   "Pad", "TwistRight", "SDL-0/+LeftX"},
-            {BindingDef::Axis,   "LargeMotor",  "Motors",  "Pad", "LargeMotor", ""},
-            {BindingDef::Axis,   "SmallMotor",  "Motors",  "Pad", "SmallMotor", ""},
-        };
-    }
+        // Face Buttons
+        {BindingDef::Button, "Triangle", "Face Buttons", "Pad", "Triangle", "SDL-0/FaceNorth",
+            "FaceButtons", 757, 235, 36},
+        {BindingDef::Button, "Circle",   "Face Buttons", "Pad", "Circle",   "SDL-0/FaceEast",
+            "FaceButtons", 807, 285, 36},
+        {BindingDef::Button, "Cross",    "Face Buttons", "Pad", "Cross",    "SDL-0/FaceSouth",
+            "FaceButtons", 757, 335, 36},
+        {BindingDef::Button, "Square",   "Face Buttons", "Pad", "Square",   "SDL-0/FaceWest",
+            "FaceButtons", 707, 285, 36},
 
-    if (type == "Popn") {
-        return {
-            {BindingDef::Button, "Yellow Left",  "Buttons", "Pad", "YellowL",  ""},
-            {BindingDef::Button, "Yellow Right", "Buttons", "Pad", "YellowR", ""},
-            {BindingDef::Button, "Blue Left",    "Buttons", "Pad", "BlueL",    ""},
-            {BindingDef::Button, "Blue Right",   "Buttons", "Pad", "BlueR",   ""},
-            {BindingDef::Button, "White Left",   "Buttons", "Pad", "WhiteL",   ""},
-            {BindingDef::Button, "White Right",  "Buttons", "Pad", "WhiteR",  ""},
-            {BindingDef::Button, "Green Left",   "Buttons", "Pad", "GreenL",   ""},
-            {BindingDef::Button, "Green Right",  "Buttons", "Pad", "GreenR",  ""},
-            {BindingDef::Button, "Red",          "Buttons", "Pad", "Red",         ""},
-            {BindingDef::Button, "Start",        "System",  "Pad", "Start",       "SDL-0/Start"},
-            {BindingDef::Button, "Select",       "System",  "Pad", "Select",      "SDL-0/Back"},
-        };
-    }
+        // Right Analog
+        {BindingDef::Axis, "Right Stick Up",    "Right Stick", "Pad", "RUp",    "SDL-0/-RightY",
+            "RightAnalog", 617, 425, 50},
+        {BindingDef::Axis, "Right Stick Right", "Right Stick", "Pad", "RRight", "SDL-0/+RightX",
+            "RightAnalog", 667, 475, 50},
+        {BindingDef::Axis, "Right Stick Down",  "Right Stick", "Pad", "RDown",  "SDL-0/+RightY",
+            "RightAnalog", 617, 525, 50},
+        {BindingDef::Axis, "Right Stick Left",  "Right Stick", "Pad", "RLeft",  "SDL-0/-RightX",
+            "RightAnalog", 567, 475, 50},
+        {BindingDef::Button, "R3", "Right Stick", "Pad", "R3", "SDL-0/RightStick",
+            "RightAnalog", 617, 475, 32},
 
-    // NotConnected or unknown
-    return {};
+        // Shoulders
+        {BindingDef::Button, "L2", "Shoulders", "Pad", "L2", "SDL-0/+LeftTrigger",
+            "Shoulders", 217, 95, 40},
+        {BindingDef::Button, "L1", "Shoulders", "Pad", "L1", "SDL-0/LeftShoulder",
+            "Shoulders", 217, 145, 36},
+        {BindingDef::Button, "R1", "Shoulders", "Pad", "R1", "SDL-0/RightShoulder",
+            "Shoulders", 757, 145, 36},
+        {BindingDef::Button, "R2", "Shoulders", "Pad", "R2", "SDL-0/+RightTrigger",
+            "Shoulders", 757, 95, 40},
+
+        // System
+        {BindingDef::Button, "Select",  "System", "Pad", "Select",  "SDL-0/Back",
+            "System",  427, 295, 22},
+        {BindingDef::Button, "Start",   "System", "Pad", "Start",   "SDL-0/Start",
+            "System",  547, 295, 22},
+        {BindingDef::Button, "Analog",  "System", "Pad", "Analog",  "SDL-0/Guide",
+            "System",  487, 365, 18},
+
+        // Abstract bindings — no spotlight (no physical button on artwork).
+        {BindingDef::Button, "Pressure Modifier", "System", "Pad", "PressureModifier", "",
+            "System",  0, 0, 0},
+        {BindingDef::Axis,   "LargeMotor",        "Motors", "Pad", "LargeMotor", "",
+            "System",  0, 0, 0},
+        {BindingDef::Axis,   "SmallMotor",        "Motors", "Pad", "SmallMotor", "",
+            "System",  0, 0, 0},
+    };
 }
 
 QVector<SettingDef> PCSX2Adapter::controllerSettingDefsForType(const QString& type) const {
-    if (type == "DualShock2")
-        return controllerSettingDefs(); // existing 8 settings
-
-    if (type == "Guitar") {
-        return {
-            {"", "", "", "Pad", "Deadzone",
-             "Whammy Bar Deadzone", "Sets the whammy bar deadzone.",
-             SettingDef::Int, "0", {}, 0, 100, 1, "", "%"},
-            {"", "", "", "Pad", "AxisScale",
-             "Whammy Bar Sensitivity", "Sets the whammy bar axis scaling factor.",
-             SettingDef::Int, "100", {}, 0, 200, 1, "", "%"},
-        };
-    }
-
-    if (type == "Jogcon") {
-        return {
-            {"", "", "", "Pad", "Deadzone",
-             "Dial Deadzone", "Sets the dial deadzone.",
-             SettingDef::Int, "0", {}, 0, 100, 1, "", "%"},
-            {"", "", "", "Pad", "AxisScale",
-             "Dial Sensitivity", "Sets the dial axis scaling factor.",
-             SettingDef::Int, "100", {}, 0, 200, 1, "", "%"},
-        };
-    }
-
-    if (type == "Negcon") {
-        return {
-            {"", "", "", "Pad", "Deadzone",
-             "Twist Deadzone", "Sets the twist axis deadzone.",
-             SettingDef::Int, "0", {}, 0, 100, 1, "", "%"},
-            {"", "", "", "Pad", "AxisScale",
-             "Twist Sensitivity", "Sets the twist axis scaling factor.",
-             SettingDef::Int, "100", {}, 0, 200, 1, "", "%"},
-        };
-    }
-
-    // Popn, NotConnected — no settings
+    Q_UNUSED(type);
     return {};
 }
 
