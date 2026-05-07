@@ -52,6 +52,64 @@ static QString keyName(SDL_Keycode key) {
     return QString("Key%1").arg(key);
 }
 
+// Qt::Key code -> key name in the same canonical format that SDL's
+// keyName() emits. PCSX2 (and other adapters) expect "Comma", "Period",
+// "Slash", "Escape", "Delete" — not Qt's QKeySequence::toString output
+// of ",", ".", "/", "Esc", "Del".
+static QString qtKeyToCanonicalName(int qtKey) {
+    switch (qtKey) {
+    // Punctuation that QKeySequence renders as the literal character.
+    case Qt::Key_Comma:        return "Comma";
+    case Qt::Key_Period:       return "Period";
+    case Qt::Key_Slash:        return "Slash";
+    case Qt::Key_Backslash:    return "Backslash";
+    case Qt::Key_Semicolon:    return "Semicolon";
+    case Qt::Key_Apostrophe:   return "Apostrophe";
+    case Qt::Key_QuoteLeft:    return "Grave";       // backtick
+    case Qt::Key_BracketLeft:  return "LeftBracket";
+    case Qt::Key_BracketRight: return "RightBracket";
+    case Qt::Key_Minus:        return "Minus";
+    case Qt::Key_Equal:        return "Equals";
+    case Qt::Key_Plus:         return "Plus";
+
+    // Names where QKeySequence abbreviates differently than SDL.
+    case Qt::Key_Escape:       return "Escape";
+    case Qt::Key_Delete:       return "Delete";
+    case Qt::Key_Backspace:    return "Backspace";
+    case Qt::Key_Return:
+    case Qt::Key_Enter:        return "Return";
+    case Qt::Key_Tab:          return "Tab";
+    case Qt::Key_Backtab:      return "Tab";
+    case Qt::Key_Space:        return "Space";
+
+    // Modifier keys (return canonical single-name even if user pressed L/R variant).
+    case Qt::Key_Shift:        return "Shift";
+    case Qt::Key_Control:      return "Control";
+    case Qt::Key_Alt:          return "Alt";
+    case Qt::Key_Meta:         return "Meta";
+
+    // Arrow / nav keys (Qt and SDL agree; here for clarity).
+    case Qt::Key_Up:           return "Up";
+    case Qt::Key_Down:         return "Down";
+    case Qt::Key_Left:         return "Left";
+    case Qt::Key_Right:        return "Right";
+    case Qt::Key_Home:         return "Home";
+    case Qt::Key_End:          return "End";
+    case Qt::Key_PageUp:       return "PageUp";
+    case Qt::Key_PageDown:     return "PageDown";
+    case Qt::Key_Insert:       return "Insert";
+
+    default: break;
+    }
+
+    // Function keys: F1..F35 in Qt's enum.
+    if (qtKey >= Qt::Key_F1 && qtKey <= Qt::Key_F35)
+        return QString("F%1").arg(qtKey - Qt::Key_F1 + 1);
+
+    // Letters / digits — QKeySequence renders these the same as SDL.
+    return QKeySequence(qtKey).toString();
+}
+
 // Controller button -> Qt key mapping
 static int mapButtonToKey(SDL_GameControllerButton btn) {
     switch (btn) {
@@ -192,7 +250,7 @@ bool SdlInputManager::eventFilter(QObject* obj, QEvent* event) {
             }
             // Build a "Keyboard/<name>" string matching the format
             // emitted by the SDL_KEYDOWN path.
-            const QString keyStr = QKeySequence(key).toString();
+            const QString keyStr = qtKeyToCanonicalName(key);
             const auto mods = ke->modifiers();
             QString full;
             if      (mods & Qt::AltModifier)     full = "Keyboard/Alt & Keyboard/"     + keyStr;
