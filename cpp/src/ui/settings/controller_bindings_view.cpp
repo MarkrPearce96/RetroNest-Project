@@ -33,7 +33,7 @@ namespace {
 // 5×3 QGridLayout:
 //
 //   ┌─────────┬───────────────────┬─────────┐
-//   │ (─)     │ Shoulders strip   │ (─)     │  row 0
+//   │ (─)     │ [L2|L1] ← → [R1|R2]       │  row 0  ← shoulder row (center col only)
 //   │ D-Pad   │                   │ Face    │  row 1
 //   │ L-Stick │   Image area      │ R-Stick │  row 2
 //   │ (─)     │ System strip      │ (─)     │  row 3
@@ -44,12 +44,11 @@ namespace {
 constexpr int kColLeft    = 0;
 constexpr int kColCenter  = 1;
 constexpr int kColRight   = 2;
-constexpr int kRowShoulderHeader = 0;   // single shared "SHOULDERS" label
-constexpr int kRowTop            = 1;   // L2/L1 + R1/R2 card pairs
-constexpr int kRowDpadFB         = 2;
-constexpr int kRowAnalogs        = 3;
-constexpr int kRowBottom         = 4;
-constexpr int kRowFooter         = 5;
+constexpr int kRowTop     = 0;
+constexpr int kRowDpadFB  = 1;
+constexpr int kRowAnalogs = 2;
+constexpr int kRowBottom  = 3;
+constexpr int kRowFooter  = 4;
 
 constexpr int kCardHeightInline    = 36;   // label-left + value-right
 constexpr int kCardHeightStacked   = 56;   // label-top + value-below
@@ -294,20 +293,21 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
     grid->setColumnStretch(kColRight,  0);
     grid->setRowStretch(kRowAnalogs, 1);
 
-    // Shared "SHOULDERS" section header above both LeftShoulders and
-    // RightShoulders clusters. Each card cluster's own per-section
-    // header is suppressed in buildSlots so this is the only one
-    // rendered for the shoulder rows.
-    auto* shoulderHeader = new QLabel("SHOULDERS", this);
-    shoulderHeader->setStyleSheet(QStringLiteral(
-        "color: #f59e0b; font-size: 10px; font-weight: 600;"
-        "letter-spacing: 1.8px; background: transparent;"));
-    shoulderHeader->setAlignment(Qt::AlignCenter);
-    grid->addWidget(shoulderHeader, kRowShoulderHeader, kColLeft, 1, 3);
-
     m_imageArea = new ImageArea(this);
     m_imageArea->setControllerSvg(svg);
     grid->addWidget(m_imageArea, kRowDpadFB, kColCenter, kRowBottom - kRowDpadFB + 1, 1, Qt::AlignCenter);
+
+    // ── Shoulder-pair top row ─────────────────────────────────────────
+    // The L2/L1 (LeftShoulders) and R1/R2 (RightShoulders) clusters
+    // both live in the top of the center column, side-by-side with
+    // a stretch between them — so the cards visually sit above the
+    // L1/L2 and R1/R2 buttons on the controller artwork below.
+    auto* shoulderRow = new QWidget(this);
+    shoulderRow->setStyleSheet("background: transparent;");
+    m_shoulderRowLayout = new QHBoxLayout(shoulderRow);
+    m_shoulderRowLayout->setContentsMargins(0, 0, 0, 0);
+    m_shoulderRowLayout->setSpacing(20);
+    grid->addWidget(shoulderRow, kRowTop, kColCenter, Qt::AlignTop);
 
     buildSlots(m_bindings);
 
@@ -424,15 +424,11 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
         v->setContentsMargins(0, 0, 0, 0);
         v->setSpacing(6);
 
-        const bool sharedHeader =
-            (slot == "LeftShoulders" || slot == "RightShoulders");
-        if (!sharedHeader) {
-            auto* header = new QLabel(sectionHeaderText(slot), container);
-            header->setStyleSheet(QStringLiteral(
-                "color: #f59e0b; font-size: 10px; font-weight: 600;"
-                "letter-spacing: 1.8px; background: transparent;"));
-            v->addWidget(header);
-        }
+        auto* header = new QLabel(sectionHeaderText(slot), container);
+        header->setStyleSheet(QStringLiteral(
+            "color: #f59e0b; font-size: 10px; font-weight: 600;"
+            "letter-spacing: 1.8px; background: transparent;"));
+        v->addWidget(header);
 
         QBoxLayout* cardLay = horizontal
             ? static_cast<QBoxLayout*>(new QHBoxLayout())
@@ -458,7 +454,16 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
         v->addLayout(cardLay);
         if (!horizontal) v->addStretch(1);
 
-        grid->addWidget(container, pos.row, pos.col);
+        if (slot == "LeftShoulders") {
+            // Pin to the left of the shoulder row + add a stretch after,
+            // so RightShoulders can pin to the right.
+            m_shoulderRowLayout->addWidget(container);
+            m_shoulderRowLayout->addStretch(1);
+        } else if (slot == "RightShoulders") {
+            m_shoulderRowLayout->addWidget(container);
+        } else {
+            grid->addWidget(container, pos.row, pos.col);
+        }
     }
 }
 

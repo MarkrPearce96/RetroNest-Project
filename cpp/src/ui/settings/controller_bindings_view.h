@@ -11,6 +11,7 @@ class AppController;
 class SdlInputManager;
 class QLabel;
 class QGridLayout;
+class QHBoxLayout;
 
 /**
  * ControllerBindingsView — schema-driven controller mapping page.
@@ -87,4 +88,6 @@ private:
     QVector<BindingDef> m_bindings;
     // Map from key → currentValue, refreshed by reloadBindings().
     QHash<QString, QString> m_currentValues;
+
+    QHBoxLayout* m_shoulderRowLayout = nullptr;  // wraps Left + Right shoulders
 };
