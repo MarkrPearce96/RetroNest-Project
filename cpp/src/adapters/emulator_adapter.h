@@ -207,6 +207,27 @@ public:
     }
 
     /**
+     * Type-aware overload: where bindings for `controllerTypeId` are stored.
+     * Default delegates to the no-arg form; override when an emulator routes
+     * different controller types to different files (e.g. Dolphin: GameCube
+     * → GCPadNew.ini, Wii Remote → WiimoteNew.ini).
+     */
+    virtual QString controllerBindingsConfigFilePath(const QString& controllerTypeId) const {
+        Q_UNUSED(controllerTypeId);
+        return controllerBindingsConfigFilePath();
+    }
+
+    /**
+     * Type-aware overload: section name for `controllerTypeId` at `port`.
+     * Default delegates to the port-only form; override when the section
+     * depends on the controller type (e.g. Dolphin: "GCPad1" vs "Wiimote1").
+     */
+    virtual QString controllerBindingsSection(int port, const QString& controllerTypeId) const {
+        Q_UNUSED(controllerTypeId);
+        return controllerBindingsSection(port);
+    }
+
+    /**
      * Return the INI section name where controller settings (deadzone,
      * sensitivity, vibration) for a given port are stored. Default mirrors
      * controllerBindingsSection. Override when the emulator reads settings
