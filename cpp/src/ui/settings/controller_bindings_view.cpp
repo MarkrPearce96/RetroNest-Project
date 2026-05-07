@@ -16,6 +16,7 @@
 #include <QHash>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QResizeEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QSvgRenderer>
@@ -150,7 +151,6 @@ class ControllerBindingsView::ImageArea : public QWidget {
 public:
     explicit ImageArea(QWidget* parent = nullptr) : QWidget(parent) {
         setMinimumSize(kImageMinW, kImageMinH);
-        setMaximumSize(kImageMaxW, kImageMaxH);
         setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
         m_pulseTimer.setInterval(33);   // ~30 fps
         connect(&m_pulseTimer, &QTimer::timeout, this, [this](){ update(); });
@@ -376,7 +376,7 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
         container->setStyleSheet("background: transparent;");
         auto* v = new QVBoxLayout(container);
         v->setContentsMargins(0, 0, 0, 0);
-        v->setSpacing(6);
+        v->setSpacing(8);
 
         auto* header = new QLabel(sectionHeaderText(slot), container);
         header->setStyleSheet(QStringLiteral(
@@ -388,7 +388,7 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
         QBoxLayout* cardLay = horizontal
             ? static_cast<QBoxLayout*>(new QHBoxLayout())
             : static_cast<QBoxLayout*>(new QVBoxLayout());
-        cardLay->setSpacing(horizontal ? 8 : 10);
+        cardLay->setSpacing(horizontal ? 8 : 14);
         cardLay->setContentsMargins(0, 0, 0, 0);
 
         for (const auto& b : bySlot[slot]) {
@@ -448,6 +448,18 @@ void ControllerBindingsView::updateNowEditing(const BindingDef& b, const QString
 
 QString ControllerBindingsView::currentValueFor(const QString& key) const {
     return m_currentValues.value(key);
+}
+
+void ControllerBindingsView::resizeEvent(QResizeEvent* event) {
+    QWidget::resizeEvent(event);
+    if (!m_imageArea) return;
+    // Image scales with the page. Use ~50% of the view width with a 1.46
+    // aspect ratio (the DualShock_2.svg viewBox is 974×665), clamped to
+    // sane bounds. Recomputed on every resize so dragging the dialog
+    // grows the controller proportionally.
+    const int maxW = qBound(kImageMinW, width() / 2, 1100);
+    const int maxH = static_cast<int>(maxW / 1.46);
+    m_imageArea->setMaximumSize(maxW, maxH);
 }
 
 bool ControllerBindingsView::eventFilter(QObject* watched, QEvent* event) {

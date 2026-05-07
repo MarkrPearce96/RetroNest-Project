@@ -63,6 +63,7 @@ signals:
     void clearRequested(const BindingDef& b);
 
 protected:
+    void resizeEvent(QResizeEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
