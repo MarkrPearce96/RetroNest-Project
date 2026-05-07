@@ -302,6 +302,30 @@ protected:
         SettingsCard::keyPressEvent(e);
     }
 
+    bool event(QEvent* e) override {
+        // Veto dialog-level QShortcut activation for keys we handle in
+        // keyPressEvent. Without this, Qt fires QShortcut(Backspace) =
+        // Close before our clear handler runs, so Backspace on a focused
+        // card closes the dialog instead of clearing the binding.
+        if (e->type() == QEvent::ShortcutOverride) {
+            auto* ke = static_cast<QKeyEvent*>(e);
+            const int k = ke->key();
+            // Same set of keys keyPressEvent claims — keep in sync.
+            if (k == Qt::Key_Backspace ||
+                k == Qt::Key_Back      ||
+                k == Qt::Key_Return    ||
+                k == Qt::Key_Enter     ||
+                k == Qt::Key_Up        ||
+                k == Qt::Key_Down      ||
+                k == Qt::Key_Left      ||
+                k == Qt::Key_Right) {
+                ke->accept();
+                return true;   // suppress shortcut, let keyPressEvent run
+            }
+        }
+        return SettingsCard::event(e);
+    }
+
 private:
     BindingDef m_def;
     Style      m_style;
