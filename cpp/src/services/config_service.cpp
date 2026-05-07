@@ -11,7 +11,7 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QMap>
-#include <QRegularExpression>
+
 
 // Returns iniFilePath if non-empty, else adapter->configFilePath().
 // Used by quick-settings paths so adapters can target a non-main INI file
@@ -573,50 +573,7 @@ QVariantList ConfigService::controllerBindingsForPort(const QString& emuId, int 
     return list;
 }
 
-QVariantList ConfigService::controllerSettingsForPort(const QString& emuId, int port) const {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return {};
 
-    QString configPath = adapter->configFilePath();
-    IniFile ini;
-    if (!configPath.isEmpty())
-        ini.load(configPath);
-
-    QString type = ini.value(QString("Pad%1").arg(port), "Type");
-    if (type.isEmpty()) type = "DualShock2";
-
-    // Settings section may differ from Pad{port} (e.g. PPSSPP uses [Control]).
-    QString section = adapter->controllerSettingsSection(port);
-
-    QVariantList list;
-    for (const auto& def : adapter->controllerSettingDefsForType(type)) {
-        QVariantMap item;
-        item["label"] = def.label;
-        item["tooltip"] = def.tooltip;
-        item["section"] = section;
-        item["key"] = def.key;
-        item["defaultValue"] = def.defaultValue;
-        item["type"] = static_cast<int>(def.type);
-        item["suffix"] = def.suffix;
-        item["minVal"] = def.minVal;
-        item["maxVal"] = def.maxVal;
-        item["step"] = def.step;
-
-        QVariantList opts;
-        for (const auto& opt : def.options) {
-            QVariantMap o;
-            o["label"] = opt.first;
-            o["value"] = opt.second;
-            opts.append(o);
-        }
-        item["options"] = opts;
-
-        QString val = ini.value(section, def.key);
-        item["currentValue"] = val.isEmpty() ? def.defaultValue : val;
-        list.append(item);
-    }
-    return list;
-}
 
 void ConfigService::saveBindingForPort(const QString& emuId, int port,
                                         const QString& key, const QString& value) {
@@ -691,25 +648,6 @@ void ConfigService::autoMapControllerForPort(const QString& emuId, int port, int
         emit statusMessage("Failed to auto-map controller.");
 }
 
-void ConfigService::saveControllerSettingForPort(const QString& emuId, int port,
-                                                  const QString& key, const QString& value) {
-    // Controller settings (deadzone, sensitivity) live in the main config file.
-    // Most emulators use Pad{port}; some (PPSSPP) use a different section.
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
-
-    IniFile ini;
-    ini.load(configPath);
-    QString section = adapter->controllerSettingsSection(port);
-    ini.setValue(section, key, value);
-
-    if (!ini.save(configPath))
-        emit statusMessage("Failed to save controller setting.");
-}
-
 void ConfigService::restoreDefaultsForPort(const QString& emuId, int port) {
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return;
@@ -739,111 +677,4 @@ void ConfigService::restoreDefaultsForPort(const QString& emuId, int port) {
     emit statusMessage("Controller defaults restored.");
 }
 
-// ── Controller Profiles ─────────────────────────────────────
 
-QStringList ConfigService::controllerProfiles(const QString& emuId) const {
-    Q_UNUSED(emuId);
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QDir dir(profileDir);
-    QStringList profiles;
-    if (dir.exists()) {
-        for (const auto& entry : dir.entryList({"*.ini"}, QDir::Files))
-            profiles.append(entry.chopped(4)); // remove .ini
-    }
-    return profiles;
-}
-
-static QString sanitizeProfileName(const QString& name) {
-    QString safe = name;
-    safe.remove(QRegularExpression("[/\\\\:*?\"<>|.]"));
-    return safe.trimmed();
-}
-
-void ConfigService::createControllerProfile(const QString& emuId, const QString& name) {
-    QString safeName = sanitizeProfileName(name);
-    if (safeName.isEmpty()) return;
-
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QDir().mkpath(profileDir);
-
-    QString srcPath = adapter->configFilePath();
-    QString dstPath = profileDir + "/" + safeName + ".ini";
-
-    if (srcPath.isEmpty()) return;
-
-    IniFile src;
-    src.load(srcPath);
-
-    IniFile dst;
-    for (int port = 1; port <= 2; port++) {
-        QString section = QString("Pad%1").arg(port);
-        for (const auto& key : src.keys(section))
-            dst.setValue(section, key, src.value(section, key));
-    }
-
-    if (dst.save(dstPath))
-        emit statusMessage(QString("Profile '%1' created.").arg(safeName));
-    else
-        emit statusMessage("Failed to create profile.");
-}
-
-void ConfigService::applyControllerProfile(const QString& emuId, const QString& name) {
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QString profilePath = profileDir + "/" + name + ".ini";
-    QString configPath = adapter->configFilePath();
-
-    if (configPath.isEmpty() || !QFileInfo::exists(profilePath)) return;
-
-    IniFile profile;
-    profile.load(profilePath);
-
-    IniFile config;
-    config.load(configPath);
-
-    for (int port = 1; port <= 2; port++) {
-        QString section = QString("Pad%1").arg(port);
-        for (const auto& key : profile.keys(section))
-            config.setValue(section, key, profile.value(section, key));
-    }
-
-    if (config.save(configPath))
-        emit statusMessage(QString("Profile '%1' applied.").arg(name));
-    else
-        emit statusMessage("Failed to apply profile.");
-}
-
-void ConfigService::renameControllerProfile(const QString& emuId, const QString& oldName,
-                                             const QString& newName) {
-    Q_UNUSED(emuId);
-    QString safeNewName = sanitizeProfileName(newName);
-    if (safeNewName.isEmpty()) return;
-
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QString oldPath = profileDir + "/" + oldName + ".ini";
-    QString newPath = profileDir + "/" + safeNewName + ".ini";
-
-    if (QFile::rename(oldPath, newPath))
-        emit statusMessage(QString("Profile renamed to '%1'.").arg(safeNewName));
-    else
-        emit statusMessage("Failed to rename profile.");
-}
-
-void ConfigService::deleteControllerProfile(const QString& emuId, const QString& name) {
-    Q_UNUSED(emuId);
-    QString safeName = sanitizeProfileName(name);
-    if (safeName.isEmpty()) return;
-
-    QString profileDir = Paths::configDir() + "/controller_profiles";
-    QString path = profileDir + "/" + safeName + ".ini";
-
-    if (QFile::remove(path))
-        emit statusMessage(QString("Profile '%1' deleted.").arg(safeName));
-    else
-        emit statusMessage("Failed to delete profile.");
-}

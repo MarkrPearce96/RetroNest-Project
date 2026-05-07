@@ -483,22 +483,11 @@ void AppController::resetHotkeys(const QString& emuId) { m_configService.resetHo
 
 QVariantList AppController::controllerTypes(const QString& emuId) const { return m_configService.controllerTypes(emuId); }
 QString AppController::controllerType(const QString& emuId, int port) const { return m_configService.controllerType(emuId, port); }
-void AppController::setControllerType(const QString& emuId, int port, const QString& type) { m_configService.setControllerType(emuId, port, type); }
-
 QVariantList AppController::controllerBindingsForPort(const QString& emuId, int port) const { return m_configService.controllerBindingsForPort(emuId, port); }
-QVariantList AppController::controllerSettingsForPort(const QString& emuId, int port) const { return m_configService.controllerSettingsForPort(emuId, port); }
 void AppController::saveBindingForPort(const QString& emuId, int port, const QString& key, const QString& value) { m_configService.saveBindingForPort(emuId, port, key, value); }
 void AppController::clearBindingForPort(const QString& emuId, int port, const QString& key) { m_configService.clearBindingForPort(emuId, port, key); }
 void AppController::clearAllBindingsForPort(const QString& emuId, int port) { m_configService.clearAllBindingsForPort(emuId, port); }
 void AppController::autoMapControllerForPort(const QString& emuId, int port, int deviceIndex) { m_configService.autoMapControllerForPort(emuId, port, deviceIndex); }
-void AppController::saveControllerSettingForPort(const QString& emuId, int port, const QString& key, const QString& value) { m_configService.saveControllerSettingForPort(emuId, port, key, value); }
-void AppController::restoreDefaultsForPort(const QString& emuId, int port) { m_configService.restoreDefaultsForPort(emuId, port); }
-
-QStringList AppController::controllerProfiles(const QString& emuId) const { return m_configService.controllerProfiles(emuId); }
-void AppController::createControllerProfile(const QString& emuId, const QString& name) { m_configService.createControllerProfile(emuId, name); }
-void AppController::applyControllerProfile(const QString& emuId, const QString& name) { m_configService.applyControllerProfile(emuId, name); }
-void AppController::renameControllerProfile(const QString& emuId, const QString& oldName, const QString& newName) { m_configService.renameControllerProfile(emuId, oldName, newName); }
-void AppController::deleteControllerProfile(const QString& emuId, const QString& name) { m_configService.deleteControllerProfile(emuId, name); }
 
 // ── Scraper ───────────────────────────────────────────────
 

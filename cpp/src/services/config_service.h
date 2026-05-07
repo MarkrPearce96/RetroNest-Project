@@ -58,25 +58,14 @@ public:
     QString controllerType(const QString& emuId, int port) const;
     void setControllerType(const QString& emuId, int port, const QString& type);
 
-    // Controller bindings + settings (port-aware)
+    // Controller bindings (port-aware)
     QVariantList controllerBindingsForPort(const QString& emuId, int port) const;
-    QVariantList controllerSettingsForPort(const QString& emuId, int port) const;
     void saveBindingForPort(const QString& emuId, int port,
                              const QString& key, const QString& value);
     void clearBindingForPort(const QString& emuId, int port, const QString& key);
     void clearAllBindingsForPort(const QString& emuId, int port);
     void autoMapControllerForPort(const QString& emuId, int port, int deviceIndex);
-    void saveControllerSettingForPort(const QString& emuId, int port,
-                                       const QString& key, const QString& value);
     void restoreDefaultsForPort(const QString& emuId, int port);
-
-    // Controller profiles
-    QStringList controllerProfiles(const QString& emuId) const;
-    void createControllerProfile(const QString& emuId, const QString& name);
-    void applyControllerProfile(const QString& emuId, const QString& name);
-    void renameControllerProfile(const QString& emuId, const QString& oldName,
-                                  const QString& newName);
-    void deleteControllerProfile(const QString& emuId, const QString& name);
 
     // Capture-formatting helpers (delegated to adapter)
     QString formatCapturedBinding(const QString& emuId, int deviceIndex,

@@ -120,25 +120,12 @@ public:
     // Controller types (per-emulator)
     Q_INVOKABLE QVariantList controllerTypes(const QString& emuId) const;
     Q_INVOKABLE QString controllerType(const QString& emuId, int port) const;
-    Q_INVOKABLE void setControllerType(const QString& emuId, int port, const QString& type);
-
     // Port-aware controller bindings
     Q_INVOKABLE QVariantList controllerBindingsForPort(const QString& emuId, int port) const;
-    Q_INVOKABLE QVariantList controllerSettingsForPort(const QString& emuId, int port) const;
     Q_INVOKABLE void saveBindingForPort(const QString& emuId, int port, const QString& key, const QString& value);
     Q_INVOKABLE void clearBindingForPort(const QString& emuId, int port, const QString& key);
     Q_INVOKABLE void clearAllBindingsForPort(const QString& emuId, int port);
     Q_INVOKABLE void autoMapControllerForPort(const QString& emuId, int port, int deviceIndex);
-    Q_INVOKABLE void saveControllerSettingForPort(const QString& emuId, int port,
-                                                   const QString& key, const QString& value);
-    Q_INVOKABLE void restoreDefaultsForPort(const QString& emuId, int port);
-
-    // Profile management
-    Q_INVOKABLE QStringList controllerProfiles(const QString& emuId) const;
-    Q_INVOKABLE void createControllerProfile(const QString& emuId, const QString& name);
-    Q_INVOKABLE void applyControllerProfile(const QString& emuId, const QString& name);
-    Q_INVOKABLE void renameControllerProfile(const QString& emuId, const QString& oldName, const QString& newName);
-    Q_INVOKABLE void deleteControllerProfile(const QString& emuId, const QString& name);
 
     // Cursor visibility (for settings overlay)
     Q_INVOKABLE void setCursorVisible(bool visible);
