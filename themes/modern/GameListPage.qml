@@ -36,6 +36,24 @@ Item {
         }
     }
 
+    // Stop the preview video (video + audio) while ANY game is running.
+    // Covers both libretro (in-window) and process-backed (external window)
+    // launches via themeContext.gameRunning. Re-arm the delay timer when the
+    // game ends so the preview picks back up on the same selection.
+    Connections {
+        target: themeContext
+        function onGameRunningChanged() {
+            if (themeContext.gameRunning) {
+                root.showVideo = false
+                videoPlayer.stop()
+                videoPlayer.source = ""
+                videoDelayTimer.stop()
+            } else if (root.selectedDetails && root.selectedDetails.id !== undefined) {
+                videoDelayTimer.restart()
+            }
+        }
+    }
+
     // ── Helpers ──
     function selectCurrentGame() {
         root.showVideo = false
