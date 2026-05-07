@@ -388,6 +388,7 @@ void ControllerBindingsView::buildSlots(const QVector<BindingDef>& bindings) {
 }
 
 void ControllerBindingsView::reloadBindings() {
+    // nullptr only in widget tests — production callers always pass a real AppController.
     if (m_appController) {
         const QVariantList raw = m_appController->controllerBindingsForPort(m_emuId, m_port);
         m_currentValues.clear();
