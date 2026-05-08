@@ -169,13 +169,6 @@ void GenericHotkeyPage::buildLayout() {
                     if (auto it = m_rowByKey.constFind(d.key); it != m_rowByKey.constEnd())
                         (*it)->setBindingDisplay(QString());
                 });
-        // Drop dangling references when a row is destroyed (e.g. dialog tear-down
-        // or future dynamic re-layout). Keeps m_focusedRow / m_rowByKey honest.
-        const QString rowKey = def.key;
-        connect(row, &QObject::destroyed, this, [this, row, rowKey]{
-            if (m_focusedRow == row) m_focusedRow = nullptr;
-            if (m_rowByKey.value(rowKey) == row) m_rowByKey.remove(rowKey);
-        });
         currentCardLayout->addWidget(row);
         m_rowByKey.insert(def.key, row);
     }
