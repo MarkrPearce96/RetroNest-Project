@@ -380,7 +380,7 @@ Item {
 
                     DetailButton {
                         visible: root.emuId === "dolphin"
-                        label: "Wii Remote"
+                        label: "Wii Classic Controller"
                         bgColor: SettingsTheme.card
                         textColor: SettingsTheme.text
                         isFocused: root.focusIndex === root.actionOffset + 2

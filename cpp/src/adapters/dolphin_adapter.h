@@ -11,7 +11,7 @@ class IniFile;
  *   - Dolphin.ini       (Interface, Display, Core, General — the "main" file)
  *   - GFX.ini           (graphics — resolution + aspect live here)
  *   - GCPadNew.ini      (GameCube controller bindings)
- *   - WiimoteNew.ini    (Wii Remote bindings)
+ *   - WiimoteNew.ini    (Wii Remote / Classic Controller bindings)
  *   - Hotkeys.ini       (native hotkeys; we clear conflicting ones)
  *   - RetroAchievements.ini (RA settings)
  *
@@ -20,13 +20,7 @@ class IniFile;
  * Resolution and aspect ratio are routed to GFX.ini via the framework's
  * ResolutionOptions::iniFilePath / IniPatch::iniFilePath overrides.
  *
- * Controllers — Dolphin exposes two: GameCube + Wii Remote. Each
- * routes bindings into its own INI file and section:
- *   GCPad1   → GCPadNew.ini   [GCPad1]
- *   Wiimote1 → WiimoteNew.ini [Wiimote1]
- * Default profiles are still baked at install time (create-only,
- * never overwritten); the in-app schema-driven UI writes through to
- * the same files from then on.
+ * Controllers — see the controllerTypes() doc comment below.
  *
  * In-game menu: pause-on-focus-loss only (no save-on-exit, no resume).
  */
@@ -52,13 +46,17 @@ public:
     AspectRatioOptions aspectRatioOptions() const override;
 
     /**
-     * Controllers — Dolphin exposes two: GameCube + Wii Remote. Each
-     * routes bindings into its own INI file and section:
-     *   GCPad1   → GCPadNew.ini   [GCPad1]
-     *   Wiimote1 → WiimoteNew.ini [Wiimote1]
-     * Default profiles are still baked at install time (create-only,
-     * never overwritten); the in-app schema-driven UI writes through to
-     * the same files from then on.
+     * Controllers — Dolphin exposes two: GameCube + Wii Classic Controller.
+     * Each routes bindings into its own INI file and section:
+     *   GCPad1   → GCPadNew.ini   [GCPad1]    keys: D-Pad/, Buttons/, etc.
+     *   Wiimote1 → WiimoteNew.ini [Wiimote1]  keys: Classic/D-Pad/, Classic/Buttons/, etc.
+     * The Wii section is named "Wiimote1" because Dolphin reads Classic
+     * Controller bindings from the Wiimote section when Extension=Classic.
+     * The bare Wii Remote (motion + pointer) isn't exposed as a separate
+     * type — most users play with a regular gamepad, so the Classic
+     * extension is the practical default. Default profiles are baked at
+     * install time (create-only, never overwritten); the in-app schema-
+     * driven UI writes through to the same files from then on.
      */
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<BindingDef> controllerBindingDefs() const override;

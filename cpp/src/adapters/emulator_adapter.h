@@ -213,7 +213,7 @@ public:
      * Type-aware overload: where bindings for `controllerTypeId` are stored.
      * Default delegates to the no-arg form; override when an emulator routes
      * different controller types to different files (e.g. Dolphin: GameCube
-     * → GCPadNew.ini, Wii Remote → WiimoteNew.ini).
+     * → GCPadNew.ini, Wii Classic Controller → WiimoteNew.ini).
      */
     virtual QString controllerBindingsConfigFilePath(const QString& controllerTypeId) const {
         Q_UNUSED(controllerTypeId);

@@ -7,9 +7,9 @@
  * ControllerTypeDef — describes an available controller type for an emulator.
  *
  * `slotTitleOverrides` lets an emulator override the per-slot title rendered
- * by ControllerBindingsView (e.g. the Wii Remote shows "TILT" instead of
- * "LEFT ANALOG" above its tilt-axis bindings). Empty map → use the view's
- * built-in titles.
+ * by ControllerBindingsView. Empty map → use the view's built-in titles
+ * ("LEFT ANALOG", "SHOULDERS", etc.). Useful when a controller's stick or
+ * shoulder cluster has a domain-specific name (e.g. motion-mapped axes).
  */
 struct ControllerTypeDef {
     QString id;
