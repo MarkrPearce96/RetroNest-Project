@@ -2038,52 +2038,56 @@ QString DolphinAdapter::subcategoryIcon(const QString& category,
 namespace {
 
 QVector<BindingDef> wiimoteBindings() {
-    // Wii Remote SVG: viewBox 0 0 777 1614 (portrait, held vertically)
-    // D-Pad cross centre anchored at (387, 390) from arm-path translates
-    // A button: blue highlight cluster at y≈753-779, centre (388, 768)
-    // 1/2 buttons: translate(410,1116) and translate(410,1243) → centres (420,1140) (420,1265)
-    // −/+/Home row: translate(358,218)/(411,217) arms + translate(383,229) centre nub
-    // IR sensor grill: translate(265,52) cluster, centre (388, 72)
+    // Wii Remote SVG: viewBox 0 0 387 1505 (portrait, held vertically)
+    // Calibrated against the rendered PNG via per-color blob centroids:
+    //   Power button:     centre (77, 69)   [decorative — no binding]
+    //   D-Pad cross:      cluster centre (190, 250); arm tips at
+    //                       up=(191,194)  down=(191,310)
+    //                       left=(133,250) right=(248,251)
+    //   A button:         centre (189, 473), bbox 116x116
+    //   −/Home/+ row:     (87, 722) / (189, 722) / (294, 723)
+    //   1 button:         centre (193, 1099), bbox 84x85
+    //   2 button:         centre (192, 1225), bbox 84x85
     return {
-        // D-Pad — cluster centre (387, 390); arm offset 65
+        // D-Pad — arm tips
         {BindingDef::Button, "Up",    "D-Pad", "Wiimote1", "D-Pad/Up",    "`Pad N`",
-            "DPad", 387, 325, 55},
+            "DPad", 191, 194, 32},
         {BindingDef::Button, "Down",  "D-Pad", "Wiimote1", "D-Pad/Down",  "`Pad S`",
-            "DPad", 387, 455, 55},
+            "DPad", 191, 310, 32},
         {BindingDef::Button, "Left",  "D-Pad", "Wiimote1", "D-Pad/Left",  "`Pad W`",
-            "DPad", 322, 390, 55},
+            "DPad", 133, 250, 32},
         {BindingDef::Button, "Right", "D-Pad", "Wiimote1", "D-Pad/Right", "`Pad E`",
-            "DPad", 452, 390, 55},
+            "DPad", 248, 251, 32},
 
         // Buttons
         {BindingDef::Button, "A", "Buttons", "Wiimote1", "Buttons/A", "`Button S`",
-            "FaceButtons", 388, 768, 70},    // large round button, blue highlight cluster y≈753-779
+            "FaceButtons", 189, 473, 58},   // large round A
         {BindingDef::Button, "B", "Buttons", "Wiimote1", "Buttons/B", "`Button E`",
-            "FaceButtons", 490, 750, 50},    // underside trigger, eyeballed (not directly visible)
+            "FaceButtons", 189, 473, 58},   // back trigger — no front-view artwork; share A's centre
         {BindingDef::Button, "1", "Buttons", "Wiimote1", "Buttons/1", "`Button W`",
-            "FaceButtons", 420, 1140, 40},   // translate(410,1116) arm
+            "FaceButtons", 193, 1099, 42},
         {BindingDef::Button, "2", "Buttons", "Wiimote1", "Buttons/2", "`Button N`",
-            "FaceButtons", 420, 1265, 40},   // translate(410,1243) arm
+            "FaceButtons", 192, 1225, 42},
 
-        // Tilt → LeftAnalog — no physical button; spotlight Wiimote body centre (388, 807)
+        // Tilt → LeftAnalog — no physical button; spotlight grip area between 1/2 buttons
         {BindingDef::Axis, "Tilt Forward",  "Tilt", "Wiimote1", "Tilt/Forward",  "`Left Y-`",
-            "LeftAnalog", 388, 720, 60},
+            "LeftAnalog", 192, 1062, 50},
         {BindingDef::Axis, "Tilt Backward", "Tilt", "Wiimote1", "Tilt/Backward", "`Left Y+`",
-            "LeftAnalog", 388, 895, 60},
+            "LeftAnalog", 192, 1262, 50},
         {BindingDef::Axis, "Tilt Left",     "Tilt", "Wiimote1", "Tilt/Left",     "`Left X-`",
-            "LeftAnalog", 320, 807, 60},
+            "LeftAnalog", 92,  1162, 50},
         {BindingDef::Axis, "Tilt Right",    "Tilt", "Wiimote1", "Tilt/Right",    "`Left X+`",
-            "LeftAnalog", 455, 807, 60},
+            "LeftAnalog", 292, 1162, 50},
 
-        // IR → RightAnalog — spotlight IR sensor grill at top (388, 72)
+        // IR → RightAnalog — spotlight top of Wiimote where IR sensor sits
         {BindingDef::Axis, "IR Up",    "IR", "Wiimote1", "IR/Up",    "`Right Y-`",
-            "RightAnalog", 388, 30, 55},
+            "RightAnalog", 190, 30, 40},
         {BindingDef::Axis, "IR Down",  "IR", "Wiimote1", "IR/Down",  "`Right Y+`",
-            "RightAnalog", 388, 120, 55},
+            "RightAnalog", 190, 130, 40},
         {BindingDef::Axis, "IR Left",  "IR", "Wiimote1", "IR/Left",  "`Right X-`",
-            "RightAnalog", 330, 72, 55},
+            "RightAnalog", 140, 80, 40},
         {BindingDef::Axis, "IR Right", "IR", "Wiimote1", "IR/Right", "`Right X+`",
-            "RightAnalog", 445, 72, 55},
+            "RightAnalog", 240, 80, 40},
 
         // Shake → LeftShoulders — abstract, no spotlight
         {BindingDef::Button, "Shake X", "Shake", "Wiimote1", "Shake/X", "`Shoulder L`",
@@ -2093,86 +2097,89 @@ QVector<BindingDef> wiimoteBindings() {
         {BindingDef::Button, "Shake Z", "Shake", "Wiimote1", "Shake/Z", "`Shoulder L`",
             "LeftShoulders", 0, 0, 0},
 
-        // System — −/+/Home row at y≈217-250
+        // System — −/Home/+ row at y≈722
         {BindingDef::Button, "Minus", "System", "Wiimote1", "Buttons/-",    "`Back`",
-            "System", 370, 230, 35},   // translate(358,218) arm, centre x=370
+            "System", 87, 722, 30},
         {BindingDef::Button, "Plus",  "System", "Wiimote1", "Buttons/+",    "`Start`",
-            "System", 423, 230, 35},   // translate(411,217) arm, centre x=423
+            "System", 294, 723, 30},
         {BindingDef::Button, "Home",  "System", "Wiimote1", "Buttons/Home", "`Guide`",
-            "System", 388, 244, 35},   // translate(383,229) centre nub
+            "System", 189, 722, 30},
         {BindingDef::Axis,   "Rumble/Motor", "System", "Wiimote1", "Rumble/Motor", "`Motor`",
             "System", 0, 0, 0},
     };
 }
 
 QVector<BindingDef> gcPadBindings() {
-    // GameCube SVG: viewBox 0 0 1802 1361 (landscape)
-    // D-Pad: blue/purple cluster centre (885, 395), paths range x=[811,958] y=[353,443]
-    // Main Stick: dense grey cluster centre (765, 635), range x=[675,830] y=[545,726]
-    // C-Stick: yellow paths centre (1195, 868), range x=[1143,1242] y=[800,936]
-    // A button: teal-green paths at (1429,431)/(1441,458), centre (1430, 460)
-    // B button: red paths cluster centre (1245, 545)
-    // X/Y: grey, flanking A; X right ≈(1510,460), Y above ≈(1430,375)
-    // L trigger: left-side cluster centre (205, 185)
-    // R trigger: right-side cluster centre (1660, 230)
-    // Z: small top-right cluster centre (1340, 100)
-    // Start: pale oval cluster centre (1050, 640)
+    // GameCube SVG: viewBox 0 0 1799 1368 (landscape)
+    // Calibrated against the rendered PNG via per-color blob centroids:
+    //   Main Stick:  centre (367, 438),  bbox 286x285  (large gray cluster)
+    //   C-Stick:     centre (1162, 822), bbox 252x255  (yellow)
+    //   A button:    centre (1430, 438), bbox 198x198  (teal #47a596)
+    //   B button:    centre (1233, 543), bbox 127x126  (red #c93a45)
+    //   X button:    centre (1626, 403), bbox 109x187  (gray)
+    //   Y button:    centre (1390, 250), bbox 183x110  (gray)
+    //   D-Pad cluster: centre (632, 821), arm centres at
+    //                    left=(557,820)  right=(707,821)  (up/down inferred ±81)
+    //   L shoulder:  centre (290, 100)   (top-left ear)
+    //   R shoulder:  centre (1517, 78)   (top-right ear)
+    //   Z:           estimated (1430, 100) — same color as body, eyeballed
+    //   Start:       estimated (920, 420) — small dot below "START/PAUSE" label
     return {
-        // D-Pad — cluster centre (885, 395); arm offset 70
+        // D-Pad — cluster centre (632, 821); arm centres confirmed at left/right
         {BindingDef::Button, "Up",    "D-Pad", "GCPad1", "D-Pad/Up",    "`Pad N`",
-            "DPad", 885, 325, 60},
+            "DPad", 632, 740, 50},
         {BindingDef::Button, "Down",  "D-Pad", "GCPad1", "D-Pad/Down",  "`Pad S`",
-            "DPad", 885, 465, 60},
+            "DPad", 632, 902, 50},
         {BindingDef::Button, "Left",  "D-Pad", "GCPad1", "D-Pad/Left",  "`Pad W`",
-            "DPad", 815, 395, 60},
+            "DPad", 557, 820, 50},
         {BindingDef::Button, "Right", "D-Pad", "GCPad1", "D-Pad/Right", "`Pad E`",
-            "DPad", 955, 395, 60},
+            "DPad", 707, 821, 50},
 
         // Face Buttons
         {BindingDef::Button, "A", "Face Buttons", "GCPad1", "Buttons/A", "`Button S`",
-            "FaceButtons", 1430, 460, 100},  // large teal-green button, centre of cluster
+            "FaceButtons", 1430, 438, 90},
         {BindingDef::Button, "B", "Face Buttons", "GCPad1", "Buttons/B", "`Button E`",
-            "FaceButtons", 1245, 545, 50},   // red cluster centre (1223-1288, 520-575)
+            "FaceButtons", 1233, 543, 60},
         {BindingDef::Button, "X", "Face Buttons", "GCPad1", "Buttons/X", "`Button W`",
-            "FaceButtons", 1515, 460, 65},   // grey, right of A
+            "FaceButtons", 1626, 403, 65},
         {BindingDef::Button, "Y", "Face Buttons", "GCPad1", "Buttons/Y", "`Button N`",
-            "FaceButtons", 1430, 375, 65},   // grey, above A
+            "FaceButtons", 1390, 250, 65},
 
-        // Main Stick — cluster centre (765, 635); direction offset 90
+        // Main Stick — cluster centre (367, 438); direction offset 80
         {BindingDef::Axis, "Main Stick Up",    "Main Stick", "GCPad1", "Main Stick/Up",    "`Left Y-`",
-            "LeftAnalog", 765, 545, 90},
+            "LeftAnalog", 367, 358, 70},
         {BindingDef::Axis, "Main Stick Down",  "Main Stick", "GCPad1", "Main Stick/Down",  "`Left Y+`",
-            "LeftAnalog", 765, 725, 90},
+            "LeftAnalog", 367, 518, 70},
         {BindingDef::Axis, "Main Stick Left",  "Main Stick", "GCPad1", "Main Stick/Left",  "`Left X-`",
-            "LeftAnalog", 675, 635, 90},
+            "LeftAnalog", 287, 438, 70},
         {BindingDef::Axis, "Main Stick Right", "Main Stick", "GCPad1", "Main Stick/Right", "`Left X+`",
-            "LeftAnalog", 855, 635, 90},
+            "LeftAnalog", 447, 438, 70},
 
-        // C-Stick — yellow cluster centre (1195, 868); direction offset 88
+        // C-Stick — yellow cluster centre (1162, 822); direction offset 80
         {BindingDef::Axis, "C-Stick Up",    "C-Stick", "GCPad1", "C-Stick/Up",    "`Right Y-`",
-            "RightAnalog", 1195, 780, 80},
+            "RightAnalog", 1162, 742, 70},
         {BindingDef::Axis, "C-Stick Down",  "C-Stick", "GCPad1", "C-Stick/Down",  "`Right Y+`",
-            "RightAnalog", 1195, 956, 80},
+            "RightAnalog", 1162, 902, 70},
         {BindingDef::Axis, "C-Stick Left",  "C-Stick", "GCPad1", "C-Stick/Left",  "`Right X-`",
-            "RightAnalog", 1107, 868, 80},
+            "RightAnalog", 1082, 822, 70},
         {BindingDef::Axis, "C-Stick Right", "C-Stick", "GCPad1", "C-Stick/Right", "`Right X+`",
-            "RightAnalog", 1283, 868, 80},
+            "RightAnalog", 1242, 822, 70},
 
         // Triggers / shoulder — L and L-Analog share the same physical trigger
         {BindingDef::Button, "L (digital)", "Triggers", "GCPad1", "Triggers/L",        "`Trigger L`",
-            "LeftShoulders", 205, 185, 120},
+            "LeftShoulders", 290, 100, 80},
         {BindingDef::Axis,   "L-Analog",    "Triggers", "GCPad1", "Triggers/L-Analog", "`Trigger L`",
-            "LeftShoulders", 205, 185, 120},
+            "LeftShoulders", 290, 100, 80},
         {BindingDef::Button, "R (digital)", "Triggers", "GCPad1", "Triggers/R",        "`Trigger R`",
-            "RightShoulders", 1660, 230, 130},
+            "RightShoulders", 1517, 78, 80},
         {BindingDef::Axis,   "R-Analog",    "Triggers", "GCPad1", "Triggers/R-Analog", "`Trigger R`",
-            "RightShoulders", 1660, 230, 130},
+            "RightShoulders", 1517, 78, 80},
         {BindingDef::Button, "Z",           "Buttons",  "GCPad1", "Buttons/Z",         "`Shoulder R`",
-            "RightShoulders", 1340, 100, 65},  // small top-right cluster at y≈48-152
+            "RightShoulders", 1430, 100, 50},
 
         // System
         {BindingDef::Button, "Start", "System", "GCPad1", "Buttons/Start", "`Start`",
-            "System", 1050, 640, 65},    // pale oval cluster centre (974-1104, 564-718)
+            "System", 920, 420, 35},
         {BindingDef::Axis,   "Rumble/Motor", "System", "GCPad1", "Rumble/Motor", "`Motor`",
             "System", 0, 0, 0},
     };
