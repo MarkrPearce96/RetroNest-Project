@@ -2222,10 +2222,6 @@ QVector<ControllerTypeDef> DolphinAdapter::controllerTypes() const {
     return {gcpad, wii};
 }
 
-QVector<BindingDef> DolphinAdapter::controllerBindingDefs() const {
-    return controllerBindingDefsForType("GCPad1");
-}
-
 // ============================================================================
 // Type-aware bindings dispatch
 // ============================================================================

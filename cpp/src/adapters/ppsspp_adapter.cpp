@@ -1033,8 +1033,6 @@ QVector<BindingDef> PPSSPPAdapter::controllerBindingDefsForType(const QString& t
     };
 }
 
-QVector<SettingDef> PPSSPPAdapter::controllerSettingDefs() const { return {}; }
-
 QVector<SettingDef> PPSSPPAdapter::controllerSettingDefsForType(const QString& type) const {
     Q_UNUSED(type);
     return {};

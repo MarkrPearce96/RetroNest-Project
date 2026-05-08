@@ -284,43 +284,31 @@ public:
     virtual AspectRatioOptions aspectRatioOptions() const { return {}; }
 
     /**
-     * Return controller-specific settings (deadzone, sensitivity, vibration, etc.).
-     * Historically exposed via the now-deleted Settings sub-tab on the
-     * controller mapping page; today, the only consumer is
-     * `ConfigService::resetEmulatorToDefaults` which iterates the per-type
-     * defaults via `controllerSettingDefsForType()`. Override this method only
-     * if your emulator has a single controller type, or as an internal helper
-     * called by your `controllerSettingDefsForType()`.
-     */
-    virtual QVector<SettingDef> controllerSettingDefs() const { return {}; }
-
-    /**
-     * Return controller button/axis binding definitions for this emulator.
-     */
-    virtual QVector<BindingDef> controllerBindingDefs() const { return {}; }
-
-    /**
      * Return available controller types for this emulator.
-     * First entry is typically "NotConnected".
+     * Default empty — adapters that expose a controller mapping page
+     * return one or more `ControllerTypeDef`s.
      */
     virtual QVector<ControllerTypeDef> controllerTypes() const { return {}; }
 
     /**
      * Return controller bindings for a specific controller type.
-     * Default delegates to the type-agnostic controllerBindingDefs().
+     * Default empty. Override per type to expose bindings on the
+     * controller mapping page.
      */
     virtual QVector<BindingDef> controllerBindingDefsForType(const QString& type) const {
         Q_UNUSED(type);
-        return controllerBindingDefs();
+        return {};
     }
 
     /**
-     * Return controller settings for a specific controller type.
-     * Default delegates to the type-agnostic controllerSettingDefs().
+     * Return controller-specific settings for a given type (deadzone,
+     * sensitivity, vibration, etc.). Default empty. Used by
+     * `ConfigService::restoreDefaultsForPort` when resetting an
+     * emulator's stored controller-settings section.
      */
     virtual QVector<SettingDef> controllerSettingDefsForType(const QString& type) const {
         Q_UNUSED(type);
-        return controllerSettingDefs();
+        return {};
     }
 
     /**

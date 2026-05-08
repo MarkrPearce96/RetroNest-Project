@@ -32,7 +32,6 @@ private slots:
     }
 
     void testNoControllerSettings() {
-        QVERIFY(adapter_.controllerSettingDefs().isEmpty());
         QVERIFY(adapter_.controllerSettingDefsForType("Standard").isEmpty());
     }
 

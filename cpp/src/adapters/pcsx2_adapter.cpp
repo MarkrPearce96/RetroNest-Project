@@ -1512,22 +1512,6 @@ QVector<BiosDef> PCSX2Adapter::biosFiles() const {
     };
 }
 
-// ============================================================================
-// Controller settings (Settings sub-tab)
-// ============================================================================
-
-QVector<SettingDef> PCSX2Adapter::controllerSettingDefs() const {
-    return {};
-}
-
-// ============================================================================
-// Controller bindings
-// ============================================================================
-
-QVector<BindingDef> PCSX2Adapter::controllerBindingDefs() const {
-    return controllerBindingDefsForType("DualShock2");
-}
-
 QVector<HotkeyDef> PCSX2Adapter::hotkeyBindingDefs() const {
     return {
         // ── Speed Control ──

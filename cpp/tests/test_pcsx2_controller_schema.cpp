@@ -31,7 +31,6 @@ private slots:
     }
 
     void testNoControllerSettings() {
-        QVERIFY(adapter_.controllerSettingDefs().isEmpty());
         QVERIFY(adapter_.controllerSettingDefsForType("DualShock2").isEmpty());
     }
 

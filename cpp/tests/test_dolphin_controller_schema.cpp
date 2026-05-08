@@ -42,7 +42,6 @@ private slots:
     }
 
     void testNoControllerSettings() {
-        QVERIFY(adapter_.controllerSettingDefs().isEmpty());
         QVERIFY(adapter_.controllerSettingDefsForType("GCPad1").isEmpty());
         QVERIFY(adapter_.controllerSettingDefsForType("Wiimote1").isEmpty());
     }

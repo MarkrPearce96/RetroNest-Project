@@ -59,12 +59,7 @@ public:
      * driven UI writes through to the same files from then on.
      */
     QVector<ControllerTypeDef> controllerTypes() const override;
-    QVector<BindingDef> controllerBindingDefs() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
-    QVector<SettingDef> controllerSettingDefs() const override { return {}; }
-    QVector<SettingDef> controllerSettingDefsForType(const QString& type) const override {
-        Q_UNUSED(type); return {};
-    }
 
     QString controllerBindingsConfigFilePath(const QString& controllerTypeId) const override;
     QString controllerBindingsSection(int port, const QString& controllerTypeId) const override;
