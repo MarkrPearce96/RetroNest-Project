@@ -66,6 +66,11 @@ private slots:
         const HotkeyDef* openAchievements = findKey(defs, "OpenAchievementsList");
         QVERIFY(openAchievements);
         QCOMPARE(openAchievements->group, QStringLiteral("Navigation"));
+
+        // Default value retained from our curated F-key set.
+        const HotkeyDef* toggleTurbo = findKey(defs, "ToggleTurbo");
+        QVERIFY(toggleTurbo);
+        QCOMPARE(toggleTurbo->defaultValue, QStringLiteral("Keyboard/Period"));
     }
 
     void duckstation_completeness() {
@@ -107,6 +112,10 @@ private slots:
         const HotkeyDef* toggleOSD = findKey(defs, "ToggleOSD");
         QVERIFY(toggleOSD);
         QCOMPARE(toggleOSD->group, QStringLiteral("Graphics"));
+
+        const HotkeyDef* vramView = findKey(defs, "ToggleVRAMView");
+        QVERIFY(vramView);
+        QCOMPARE(vramView->group, QStringLiteral("Debugging"));
 
         // Default value preserved on FastForward.
         const HotkeyDef* fastForward = findKey(defs, "FastForward");
