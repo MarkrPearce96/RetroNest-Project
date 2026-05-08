@@ -3,6 +3,9 @@
 #include "core/macos_fullscreen.h"
 #include "core/paths.h"
 #include "core/scraper.h"
+#include "in_game_menu_panel.h"
+
+#include <QQmlEngine>
 
 #include <QCursor>
 #include "settings/controller_mapping_page.h"
@@ -673,3 +676,55 @@ bool AppController::raNotifications() const { return m_raService.notifications()
 void AppController::raSetNotifications(bool enabled) { m_raService.setNotifications(enabled); }
 bool AppController::raSoundEffects() const { return m_raService.soundEffects(); }
 void AppController::raSetSoundEffects(bool enabled) { m_raService.setSoundEffects(enabled); }
+
+void AppController::setQmlEngine(QQmlEngine* engine) {
+    m_qmlEngine = engine;
+}
+
+void AppController::openInGameMenuPanel() {
+    if (!m_qmlEngine) {
+        qWarning() << "[AppController] openInGameMenuPanel before QML engine set";
+        return;
+    }
+    if (!m_inGameMenuPanel) {
+        m_inGameMenuPanel = new InGameMenuPanel(m_qmlEngine, this);
+        connect(m_inGameMenuPanel, &InGameMenuPanel::resumeRequested,
+                this, [this]() {
+                    closeInGameMenuPanel();
+                });
+        connect(m_inGameMenuPanel, &InGameMenuPanel::achievementsRequested,
+                this, [this](int raGameId, const QString& title) {
+                    closeInGameMenuPanel();
+                    // Bring our app forward so the settings overlay
+                    // (in the main window) is visible.
+                    MacFullscreen::activateOurApp();
+                    emit inGameMenuPanelAchievementsRequested(raGameId, title);
+                });
+        connect(m_inGameMenuPanel, &InGameMenuPanel::exitWithSaveRequested,
+                this, [this]() {
+                    closeInGameMenuPanel();
+                    saveAndStopGame(1);
+                });
+        connect(m_inGameMenuPanel, &InGameMenuPanel::exitWithoutSaveRequested,
+                this, [this]() {
+                    closeInGameMenuPanel();
+                    stopGame();
+                });
+        connect(m_inGameMenuPanel, &InGameMenuPanel::visibilityChanged,
+                this, &AppController::inGameMenuPanelVisibleChanged);
+    }
+
+    int64_t pid = 0;
+    if (auto* sess = gameSession()) {
+        pid = sess->pid();
+    }
+    m_inGameMenuPanel->showOverEmulator(pid);
+}
+
+void AppController::closeInGameMenuPanel() {
+    if (m_inGameMenuPanel) m_inGameMenuPanel->hide();
+}
+
+bool AppController::inGameMenuPanelVisible() const {
+    return m_inGameMenuPanel && m_inGameMenuPanel->isVisible();
+}

@@ -14,6 +14,7 @@
 #include <QStringList>
 
 class SdlInputManager;
+class InGameMenuPanel;
 
 class AppController : public QObject {
     Q_OBJECT
@@ -23,6 +24,7 @@ class AppController : public QObject {
     Q_PROPERTY(int currentTab READ currentTab WRITE setCurrentTab NOTIFY currentTabChanged)
     Q_PROPERTY(int settingsCategory READ settingsCategory WRITE setSettingsCategory NOTIFY settingsCategoryChanged)
     Q_PROPERTY(bool gameRunning READ isGameRunning NOTIFY gameRunningChanged)
+    Q_PROPERTY(bool inGameMenuPanelVisible READ inGameMenuPanelVisible NOTIFY inGameMenuPanelVisibleChanged)
     Q_PROPERTY(GameSession* gameSession READ gameSession CONSTANT)
 
 public:
@@ -70,6 +72,16 @@ public:
     // macOS Space switching (show our app over fullscreen emulator)
     Q_INVOKABLE void activateApp();
     Q_INVOKABLE void activateEmulator();
+
+    // In-game menu panel (external emulators)
+    Q_INVOKABLE void openInGameMenuPanel();
+    Q_INVOKABLE void closeInGameMenuPanel();
+    bool inGameMenuPanelVisible() const;
+
+    // Inject the QML engine after construction so the panel can be
+    // built lazily on first open. Called from main.cpp after the
+    // engine is loaded.
+    void setQmlEngine(class QQmlEngine* engine);
 
     // Emulator settings
     Q_INVOKABLE QVariantList allEmulatorStatus() const;
@@ -190,6 +202,8 @@ signals:
     void settingsCategoryChanged();
     void gamesChanged();
     void gameRunningChanged();
+    void inGameMenuPanelVisibleChanged();
+    void inGameMenuPanelAchievementsRequested(int raGameId, const QString& gameTitle);
     void gameStarted();
     /** Emitted instead of gameStarted() when the backend is libretro (in-process). */
     void gameStartedLibretro();
@@ -246,4 +260,7 @@ private:
     // stack, and naive paired push/pop is imbalanced by rapid
     // open/close cycles during the settings overlay slide-out animation.
     bool m_cursorVisible = false;
+
+    QQmlEngine* m_qmlEngine = nullptr;
+    InGameMenuPanel* m_inGameMenuPanel = nullptr;
 };

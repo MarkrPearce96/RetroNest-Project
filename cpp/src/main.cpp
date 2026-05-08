@@ -191,6 +191,7 @@ int main(int argc, char* argv[]) {
         engine.rootContext()->setContextProperty("SettingsTheme", &settingsTheme);
         engine.rootContext()->setContextProperty("Theme", &theme);
         engine.rootContext()->setContextProperty("app", &appController);
+        appController.setQmlEngine(&engine);
         engine.rootContext()->setContextProperty("gameModel", &gameModel);
         engine.rootContext()->setContextProperty("inputManager", &inputManager);
         engine.rootContext()->setContextProperty("themeManager", &themeManager);
