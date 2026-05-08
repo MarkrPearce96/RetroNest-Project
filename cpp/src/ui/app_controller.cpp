@@ -10,6 +10,7 @@
 #include "settings/duckstation/duckstation_settings_dialog.h"
 #include "settings/ppsspp/ppsspp_settings_dialog.h"
 #include "settings/dolphin/dolphin_settings_dialog.h"
+#include "settings/mgba/mgba_settings_dialog.h"
 #include "settings/hotkey_settings_dialog.h"
 
 #include <QFileDialog>
@@ -411,6 +412,12 @@ void AppController::showEmulatorSettings(const QString& emuId) {
     }
     if (emuId == QLatin1String("dolphin")) {
         auto* dialog = new DolphinSettingsDialog(this, emuId);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->show();
+        return;
+    }
+    if (emuId == QLatin1String("mgba")) {
+        auto* dialog = new MgbaSettingsDialog(this, emuId);
         dialog->setAttribute(Qt::WA_DeleteOnClose);
         dialog->show();
         return;

@@ -115,6 +115,8 @@ set(SOURCES
     src/ui/settings/pcsx2/pcsx2_category_hub.cpp
     src/ui/settings/dolphin/dolphin_settings_dialog.cpp
     src/ui/settings/dolphin/dolphin_category_hub.cpp
+    src/ui/settings/mgba/mgba_settings_dialog.cpp
+    src/ui/settings/mgba/mgba_category_hub.cpp
     src/ui/settings/duckstation/duckstation_settings_dialog.cpp
     src/ui/settings/duckstation/duckstation_category_hub.cpp
     # PPSSPP settings — schema-driven via GenericSettingsPage; no bespoke pages.
@@ -185,6 +187,9 @@ set(HEADERS
     # Dolphin settings
     src/ui/settings/dolphin/dolphin_settings_dialog.h
     src/ui/settings/dolphin/dolphin_category_hub.h
+    # mGBA settings
+    src/ui/settings/mgba/mgba_settings_dialog.h
+    src/ui/settings/mgba/mgba_category_hub.h
     # DuckStation settings
     src/ui/settings/duckstation/duckstation_settings_dialog.h
     src/ui/settings/duckstation/duckstation_category_hub.h
