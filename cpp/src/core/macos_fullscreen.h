@@ -28,11 +28,11 @@ void registerGlobalHotkey(HotkeyCallback callback);
 // Unregister the global hotkey.
 void unregisterGlobalHotkey();
 
-// Locate the NSScreen displaying the main window of `pid`.
-// Returns a pointer to the NSScreen for the emulator's window, or
-// nullptr if the process / window cannot be located. The pointer
-// type is opaque (void*) so this header stays C++-only — callers in
-// .mm files cast it to NSScreen*.
+// Locate the NSScreen displaying the frontmost large on-screen window
+// owned by `pid`. Returns a pointer to the NSScreen, or nullptr if the
+// process / window cannot be located. The pointer type is opaque
+// (void*) so this header stays C++-only — callers in .mm files cast
+// it to NSScreen*.
 void* screenForProcess(int64_t pid);
 
 // Apply NSPanel-style configuration to the NSWindow backing a Qt
