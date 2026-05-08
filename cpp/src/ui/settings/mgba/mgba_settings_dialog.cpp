@@ -3,6 +3,7 @@
 #include "ui/settings/generic_settings_page.h"
 #include "ui/settings/settings_dialog_theme.h"
 #include "ui/app_controller.h"
+#include "adapters/adapter_registry.h"
 #include "adapters/libretro/mgba_libretro_adapter.h"
 
 MgbaSettingsDialog::MgbaSettingsDialog(AppController* app,
@@ -18,13 +19,18 @@ MgbaSettingsDialog::MgbaSettingsDialog(AppController* app,
 }
 
 void MgbaSettingsDialog::onCategoryActivated(const QString& category) {
-    MgbaLibretroAdapter adapter;
+    // CRITICAL: use the long-lived registered adapter, NOT a stack-local one.
+    // The page holds the adapter pointer and dereferences it at write time
+    // (libretroOptionsStore() / frontendSettingsStore()). A stack-local
+    // adapter would die at end of this function leaving a dangling pointer.
+    auto* adapter = AdapterRegistry::instance().adapterFor("mgba");
+    if (!adapter) return;
 
     QVector<SettingDef> slice;
-    for (const auto& d : adapter.settingsSchema())
+    for (const auto& d : adapter->settingsSchema())
         if (d.category == category) slice.append(d);
 
-    auto* page = new GenericSettingsPage(this, std::move(slice), &adapter);
+    auto* page = new GenericSettingsPage(this, std::move(slice), adapter);
     connect(page, &GenericSettingsPage::settingFocused,
             this, &MgbaSettingsDialog::setFocusedSetting);
 
