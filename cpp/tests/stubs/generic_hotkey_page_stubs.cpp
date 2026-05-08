@@ -1,16 +1,17 @@
 // Linker stubs for test_generic_hotkey_page.
 //
 // GenericHotkeyPage references AppController::{hotkeyBindings,saveHotkey,
-// clearHotkey,resetHotkeys}, and pulling in src/core/sdl_input_manager.cpp
-// drags InputRouter::setButtonPressed into the link. The page guards every
-// AppController call behind a nullptr check, and the test passes nullptr
-// for both AppController and SdlInputManager — none of these stubs are
-// reached at runtime; they exist only to satisfy ld.
+// clearHotkey,resetHotkeys}. The page guards every AppController call behind a
+// nullptr check, and the test passes nullptr for both AppController and
+// SdlInputManager — none of these stubs are reached at runtime; they exist
+// only to satisfy ld.
+//
+// InputRouter is now provided by src/core/libretro/input_router.cpp which is
+// linked directly into this test target (see CMakeLists.txt).
 //
 // Mirrors the pattern in tests/stubs/app_controller_stub.cpp.
 
 #include "ui/app_controller.h"
-#include "core/libretro/input_router.h"
 #include <QVariantList>
 
 QVariantList AppController::hotkeyBindings(const QString& /*emuId*/) const {
@@ -43,5 +44,3 @@ QString AppController::formatCapturedMouse(const QString& /*emuId*/, int /*qtBut
 QString AppController::formatCapturedWheel(const QString& /*emuId*/, int /*direction*/) const {
     return {};
 }
-
-void InputRouter::setButtonPressed(int /*port*/, RetroPadSlot /*slot*/, bool /*down*/) {}

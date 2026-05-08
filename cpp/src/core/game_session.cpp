@@ -2,7 +2,9 @@
 #include "paths.h"
 #include "adapters/emulator_adapter.h"
 #include "adapters/libretro/libretro_adapter.h"
+#include "core/ini_file.h"
 #include "core/libretro/frontend_settings_store.h"
+#include "core/libretro/input_router.h"
 #include "core/libretro/rcheevos_runtime.h"
 #include "core/sdl_input_manager.h"
 #include "services/ra_service.h"
@@ -203,6 +205,37 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
 
     if (!rt->start(cfg))
         return false;
+
+    // Populate the InputRouter from persisted bindings in controls.ini so that
+    // user remappings are reflected at runtime. ensureConfig() seeds the file
+    // with defaults before we ever reach this point.
+    {
+        InputRouter& router = rt->input();
+        router.clearBindings();
+        const QString iniPath = lr->controllerBindingsConfigFilePath();
+        IniFile ini;
+        if (ini.load(iniPath)) {
+            const QString section = lr->controllerBindingsSection(/*port=*/1);
+            for (const auto& def : lr->controllerBindingDefsForType(/*type=*/{})) {
+                const QString val = ini.value(section, def.key);
+                if (val.isEmpty()) continue;
+                // Parse "SDL-{idx}/{element}" — ignore non-SDL bindings
+                if (!val.startsWith(QStringLiteral("SDL-"))) continue;
+                const int slashAt = val.indexOf('/', 4);
+                if (slashAt < 0) continue;
+                bool ok = false;
+                const int deviceIdx = val.mid(4, slashAt - 4).toInt(&ok);
+                if (!ok) continue;
+                const QString element = val.mid(slashAt + 1);
+                const RetroPadSlot slot = retroPadSlotFromKey(def.key);
+                if (slot != RetroPadSlot::None)
+                    router.bind(deviceIdx, element, slot);
+            }
+        } else {
+            qWarning() << "[GameSession] Could not load controls.ini from" << iniPath
+                       << "— controller input may not work";
+        }
+    }
 
     // Fix 1: Switch SDL input into emulation mode so button events feed the InputRouter
     if (m_sdlInputManager)

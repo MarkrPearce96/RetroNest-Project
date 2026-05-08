@@ -733,6 +733,7 @@ add_executable(test_generic_hotkey_page
     src/ui/settings/widgets/hotkey_binding_row.cpp
     src/ui/settings/widgets/settings_section_header.cpp
     src/core/sdl_input_manager.cpp
+    src/core/libretro/input_router.cpp
 )
 set_target_properties(test_generic_hotkey_page PROPERTIES AUTOMOC ON)
 target_include_directories(test_generic_hotkey_page PRIVATE

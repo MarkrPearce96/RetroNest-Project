@@ -51,6 +51,14 @@ public:
     void prepareRuntime();
     void releaseRuntime();
 
+    // Controller-mapping INI: {root}/emulators/libretro/{coreId}/controls.ini
+    // These overrides make ConfigService::saveBindingForPort / controllerBindingsForPort
+    // work transparently for all libretro adapters.
+    QString controllerBindingsConfigFilePath() const override;
+    QString controllerBindingsSection(int port) const override;
+    QString controllerBindingsConfigFilePath(const QString& controllerTypeId) const override;
+    QString controllerBindingsSection(int port, const QString& controllerTypeId) const override;
+
     /** Per-core: e.g. "mgba". Used to compute paths under emulators/libretro/. */
     virtual QString coreId() const = 0;
 
@@ -72,7 +80,8 @@ protected:
     static QString coreDylibPath(const EmulatorManifest& manifest);
     /** Static path: {root}/emulators/libretro/{coreId}/options.json */
     QString optionsJsonPath() const;
-    QString controlsJsonPath() const;
+    /** Static path: {root}/emulators/libretro/{coreId}/controls.ini */
+    QString controlsIniPath() const;
     /** Static path: {root}/emulators/libretro/{coreId}/frontend.json */
     QString frontendJsonPath() const;
 

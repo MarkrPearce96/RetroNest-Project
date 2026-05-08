@@ -3,6 +3,7 @@
 #include <QString>
 #include <array>
 #include <atomic>
+#include <QtGlobal>
 
 enum class RetroPadSlot : int {
     None   = -1,
@@ -24,6 +25,31 @@ enum class RetroPadSlot : int {
     R3     = 15,
     Count  = 16
 };
+
+/**
+ * Map a binding action key string (as stored in controls.ini) to the
+ * corresponding RetroPadSlot enum value.  Returns RetroPadSlot::None for
+ * unrecognised keys so callers can skip them silently.
+ */
+inline RetroPadSlot retroPadSlotFromKey(const QString& key) {
+    if (key == QStringLiteral("B"))      return RetroPadSlot::B;
+    if (key == QStringLiteral("Y"))      return RetroPadSlot::Y;
+    if (key == QStringLiteral("Select")) return RetroPadSlot::Select;
+    if (key == QStringLiteral("Start"))  return RetroPadSlot::Start;
+    if (key == QStringLiteral("Up"))     return RetroPadSlot::Up;
+    if (key == QStringLiteral("Down"))   return RetroPadSlot::Down;
+    if (key == QStringLiteral("Left"))   return RetroPadSlot::Left;
+    if (key == QStringLiteral("Right"))  return RetroPadSlot::Right;
+    if (key == QStringLiteral("A"))      return RetroPadSlot::A;
+    if (key == QStringLiteral("X"))      return RetroPadSlot::X;
+    if (key == QStringLiteral("L"))      return RetroPadSlot::L;
+    if (key == QStringLiteral("R"))      return RetroPadSlot::R;
+    if (key == QStringLiteral("L2"))     return RetroPadSlot::L2;
+    if (key == QStringLiteral("R2"))     return RetroPadSlot::R2;
+    if (key == QStringLiteral("L3"))     return RetroPadSlot::L3;
+    if (key == QStringLiteral("R3"))     return RetroPadSlot::R3;
+    return RetroPadSlot::None;
+}
 
 class InputRouter {
 public:

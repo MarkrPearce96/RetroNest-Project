@@ -19,6 +19,13 @@ MgbaSettingsDialog::MgbaSettingsDialog(AppController* app,
 }
 
 void MgbaSettingsDialog::onCategoryActivated(const QString& category) {
+    // Controller card: delegate to AppController which opens the shared
+    // ControllerMappingPage (works for any emulator with controllerTypes() non-empty).
+    if (category == QStringLiteral("__controller__")) {
+        m_app->showControllerMapping(m_emuId);
+        return;
+    }
+
     // CRITICAL: use the long-lived registered adapter, NOT a stack-local one.
     // The page holds the adapter pointer and dereferences it at write time
     // (libretroOptionsStore() / frontendSettingsStore()). A stack-local

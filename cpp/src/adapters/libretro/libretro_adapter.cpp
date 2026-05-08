@@ -1,5 +1,6 @@
 #include "libretro_adapter.h"
 #include "core/paths.h"
+#include "core/ini_file.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QNetworkAccessManager>
@@ -16,8 +17,24 @@ QString LibretroAdapter::optionsJsonPath() const {
     return Paths::emulatorsDir("libretro") + "/" + coreId() + "/options.json";
 }
 
-QString LibretroAdapter::controlsJsonPath() const {
-    return Paths::emulatorsDir("libretro") + "/" + coreId() + "/controls.json";
+QString LibretroAdapter::controlsIniPath() const {
+    return Paths::emulatorsDir("libretro") + "/" + coreId() + "/controls.ini";
+}
+
+QString LibretroAdapter::controllerBindingsConfigFilePath() const {
+    return controlsIniPath();
+}
+
+QString LibretroAdapter::controllerBindingsSection(int port) const {
+    return QString("Pad%1").arg(port);
+}
+
+QString LibretroAdapter::controllerBindingsConfigFilePath(const QString& /*typeId*/) const {
+    return controllerBindingsConfigFilePath();
+}
+
+QString LibretroAdapter::controllerBindingsSection(int port, const QString& /*typeId*/) const {
+    return controllerBindingsSection(port);
 }
 
 QString LibretroAdapter::frontendJsonPath() const {
@@ -29,6 +46,43 @@ bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
                                    const QString& savesPath) {
     QDir().mkpath(savesPath);
     QDir().mkpath(QFileInfo(optionsJsonPath()).absolutePath());
+
+    // Seed controls.ini with default RetroPad bindings if it doesn't exist yet.
+    // Users can override these via the Controller mapping page; we never overwrite
+    // an existing file so user edits are preserved across ensureConfig calls.
+    const QString iniPath = controlsIniPath();
+    if (!QFileInfo::exists(iniPath)) {
+        // Build defaults from controllerBindingDefsForType. The canonical SDL element
+        // names here fold the old hardcoded X↔Y swap: libretro RetroPad A=south,
+        // B=east, X=west, Y=north — SDL physical buttons map straight through.
+        const QMap<QString, QString> defaults = {
+            { "A",      "SDL-0/FaceSouth"   },
+            { "B",      "SDL-0/FaceEast"    },
+            { "X",      "SDL-0/FaceWest"    },
+            { "Y",      "SDL-0/FaceNorth"   },
+            { "L",      "SDL-0/LeftShoulder" },
+            { "R",      "SDL-0/RightShoulder"},
+            { "Select", "SDL-0/Back"        },
+            { "Start",  "SDL-0/Start"       },
+            { "Up",     "SDL-0/DPadUp"      },
+            { "Down",   "SDL-0/DPadDown"    },
+            { "Left",   "SDL-0/DPadLeft"    },
+            { "Right",  "SDL-0/DPadRight"   },
+        };
+        const QString section = controllerBindingsSection(1);
+        IniFile ini;
+        // Walk binding defs in declared order so keys appear in a stable order.
+        for (const auto& def : controllerBindingDefsForType({})) {
+            const auto it = defaults.constFind(def.key);
+            if (it != defaults.constEnd())
+                ini.setValue(section, def.key, it.value());
+        }
+        if (!ini.save(iniPath))
+            qWarning() << "[LibretroAdapter] Failed to write default controls.ini to" << iniPath;
+        else
+            qInfo() << "[LibretroAdapter] Wrote default controls.ini to" << iniPath;
+    }
+
     return true;
 }
 

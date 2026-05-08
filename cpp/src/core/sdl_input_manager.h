@@ -4,7 +4,6 @@
 #include <QTimer>
 #include <QVariantList>
 #include <QMap>
-#include <QHash>
 #include <QWindow>
 #include <QGuiApplication>
 #include <QKeyEvent>
@@ -112,8 +111,7 @@ private:
     ControllerType m_activeControllerType = Xbox;
     QMap<SDL_JoystickID, ControllerType> m_controllerTypes;
 
-    // Emulation mode: non-null while a libretro game is running
+    // Emulation mode: non-null while a libretro game is running.
+    // Button routing uses InputRouter::lookup() — no separate hardcoded map.
     InputRouter* m_emulationTarget = nullptr;
-    // Hardcoded SDL button → RetroPad slot mapping (set once in setEmulationMode)
-    QHash<SDL_GameControllerButton, RetroPadSlot> m_emulationMap;
 };

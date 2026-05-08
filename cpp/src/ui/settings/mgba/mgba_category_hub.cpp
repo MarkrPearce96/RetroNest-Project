@@ -28,13 +28,16 @@ MgbaCategoryHub::MgbaCategoryHub(QWidget* parent)
                              "Low-pass filter",
                              countSettings("Audio"), "Audio"),         1, 2);
 
-    // Row 2: Input · Emulation
+    // Row 2: Input · Emulation · Controller
     grid->addWidget(makeCard(QStringLiteral("\U0001F3AE"), "Input",
                              "Solar sensor, GBP rumble, opposing input",
                              countSettings("Input"), "Input"),         2, 0);
     grid->addWidget(makeCard(QStringLiteral("\U000026A1"), "Emulation",
                              "Idle-loop removal, frameskip",
                              countSettings("Emulation"), "Emulation"), 2, 1);
+    grid->addWidget(makeCard(QStringLiteral("\U0001F579"), "Controller",
+                             "Map RetroPad buttons to your gamepad",
+                             /*count=*/0, "__controller__"),            2, 2);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
