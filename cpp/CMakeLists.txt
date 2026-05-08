@@ -107,6 +107,7 @@ set(SOURCES
     src/ui/settings/widgets/settings_slider_row.cpp
     src/ui/settings/widgets/settings_description_bar.cpp
     src/ui/settings/widgets/settings_graphics_sub_tab_bar.cpp
+    src/ui/settings/widgets/hotkey_binding_row.cpp
     src/ui/settings/widgets/preview/aspect_ratio_preview.cpp
     src/ui/settings/widgets/preview/osd_preview.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
@@ -193,6 +194,7 @@ set(HEADERS
     src/ui/settings/widgets/settings_slider_row.h
     src/ui/settings/widgets/settings_description_bar.h
     src/ui/settings/widgets/settings_graphics_sub_tab_bar.h
+    src/ui/settings/widgets/hotkey_binding_row.h
     src/ui/settings/widgets/preview/aspect_ratio_preview.h
     src/ui/settings/widgets/preview/osd_preview.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
@@ -684,6 +686,19 @@ target_link_libraries(test_controller_bindings_view PRIVATE
     chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS}
 )
 add_test(NAME ControllerBindingsView COMMAND test_controller_bindings_view)
+
+add_executable(test_hotkey_binding_row
+    tests/test_hotkey_binding_row.cpp
+    src/ui/settings/widgets/hotkey_binding_row.cpp
+)
+set_target_properties(test_hotkey_binding_row PROPERTIES AUTOMOC ON)
+target_include_directories(test_hotkey_binding_row PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_link_libraries(test_hotkey_binding_row PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test
+)
+add_test(NAME HotkeyBindingRow COMMAND test_hotkey_binding_row)
 
 add_executable(test_quick_settings_file_field
     tests/test_quick_settings_file_field.cpp

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QMetaType>
 
 /**
  * BindingDef — describes a single controller button/axis binding.
@@ -51,3 +52,5 @@ struct HotkeyDef {
     QString key;          // "TogglePause"
     QString defaultValue; // "Keyboard/Space"
 };
+
+Q_DECLARE_METATYPE(HotkeyDef)
