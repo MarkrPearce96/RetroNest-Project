@@ -11,8 +11,11 @@
 #include <QFrame>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QMouseEvent>
 #include <QScrollArea>
 #include <QVBoxLayout>
+#include <QWheelEvent>
+#include <cmath>
 
 namespace {
 
@@ -75,7 +78,20 @@ GenericHotkeyPage::GenericHotkeyPage(SdlInputManager* inputManager,
     m_captureTimer = new QTimer(this);
     m_captureTimer->setInterval(1000);
     connect(m_captureTimer, &QTimer::timeout, this, [this]{
-        if (--m_captureCountdown <= 0) stopCapture(true);
+        if (--m_captureCountdown <= 0) {
+            stopCapture(true);
+            return;
+        }
+        // Refresh "<captured> [N]" / "Press a button... [N]" each tick so the
+        // countdown stays visible — mirrors legacy timer body.
+        if (auto it = m_rowByKey.constFind(m_capturingKey);
+            it != m_rowByKey.constEnd()) {
+            const QString prefix = m_capturedBindings.isEmpty()
+                ? QStringLiteral("Press a button...")
+                : m_capturedBindings.join(QStringLiteral(" + "));
+            (*it)->setCapturingText(
+                prefix + QStringLiteral(" [%1]").arg(m_captureCountdown));
+        }
     });
 
     if (m_inputManager) {
@@ -153,6 +169,13 @@ void GenericHotkeyPage::buildLayout() {
                     if (auto it = m_rowByKey.constFind(d.key); it != m_rowByKey.constEnd())
                         (*it)->setBindingDisplay(QString());
                 });
+        // Drop dangling references when a row is destroyed (e.g. dialog tear-down
+        // or future dynamic re-layout). Keeps m_focusedRow / m_rowByKey honest.
+        const QString rowKey = def.key;
+        connect(row, &QObject::destroyed, this, [this, row, rowKey]{
+            if (m_focusedRow == row) m_focusedRow = nullptr;
+            if (m_rowByKey.value(rowKey) == row) m_rowByKey.remove(rowKey);
+        });
         currentCardLayout->addWidget(row);
         m_rowByKey.insert(def.key, row);
     }
@@ -221,8 +244,18 @@ void GenericHotkeyPage::startCapture(const HotkeyDef& def, bool append) {
     if (auto it = m_rowByKey.constFind(def.key); it != m_rowByKey.constEnd())
         (*it)->setCapturing(true);
 
-    if (m_inputManager) m_inputManager->startCapture();
-    if (auto* w = window()) w->installEventFilter(this);
+    // Multi-capture mode lets SDL accumulate several controller events for
+    // chord support — mirrors legacy hotkey_settings_page.
+    if (m_inputManager) {
+        m_inputManager->setCaptureMode(true);
+        m_inputManager->startCapture();
+    }
+
+    // Grab keyboard so the page receives raw key events while capturing,
+    // and install the event filter on ourselves (matches legacy semantics).
+    grabKeyboard();
+    installEventFilter(this);
+
     m_captureTimer->start();
 }
 
@@ -231,12 +264,13 @@ void GenericHotkeyPage::stopCapture(bool save) {
     // SdlInputManager exposes cancelCapture() (no public stopCapture) — both
     // legacy code paths used cancelCapture() to tear down the capture state.
     if (m_inputManager) m_inputManager->cancelCapture();
-    if (auto* w = window()) w->removeEventFilter(this);
+    releaseKeyboard();
+    removeEventFilter(this);
 
-    const QString key = m_capturingKey;
-    m_capturingKey.clear();
-
-    if (auto it = m_rowByKey.constFind(key); it != m_rowByKey.constEnd())
+    // Reset the row visual immediately, but keep m_capturingKey / m_appendMode
+    // alive so finishCapture() can consume them (legacy snapshots both before
+    // delegating to finishCapture).
+    if (auto it = m_rowByKey.constFind(m_capturingKey); it != m_rowByKey.constEnd())
         (*it)->setCapturing(false);
 
     if (save && !m_capturedBindings.isEmpty()) {
@@ -245,6 +279,8 @@ void GenericHotkeyPage::stopCapture(bool save) {
         loadBindings();  // refresh display from stored value
     }
 
+    m_capturingKey.clear();
+    m_appendMode = false;
     m_capturedBindings.clear();
 }
 
@@ -252,50 +288,155 @@ void GenericHotkeyPage::onBindingCaptured(int deviceIndex, const QString& elemen
                                           bool isAxis, bool positive) {
     if (m_capturingKey.isEmpty()) return;
 
-    QString formatted;
-    if (isAxis) {
-        formatted = QStringLiteral("SDL-%1/%2%3")
-                        .arg(deviceIndex)
-                        .arg(positive ? '+' : '-')
-                        .arg(element);
-    } else {
-        formatted = QStringLiteral("SDL-%1/%2").arg(deviceIndex).arg(element);
+    // Route through the adapter so PCSX2 / DuckStation / PPSSPP each produce
+    // their native binding format (PPSSPP uses numeric "10-19", not "SDL-x/y").
+    const QString formatted = m_appController
+        ? m_appController->formatCapturedBinding(
+              m_emuId, deviceIndex, element, isAxis, positive)
+        : QString();
+    if (formatted.isEmpty()) return;
+
+    if (!m_capturedBindings.contains(formatted))
+        m_capturedBindings.append(formatted);
+
+    // Refresh the capturing button with "<captured> [N]" — legacy parity.
+    if (auto it = m_rowByKey.constFind(m_capturingKey);
+        it != m_rowByKey.constEnd()) {
+        const QString display = m_capturedBindings.join(QStringLiteral(" + "));
+        (*it)->setCapturingText(
+            display + QStringLiteral(" [%1]").arg(m_captureCountdown));
     }
 
-    if (m_appendMode) m_capturedBindings.append(formatted);
-    else              m_capturedBindings = QStringList{formatted};
-
-    if (!m_appendMode) stopCapture(true);
+    // Don't auto-stop on first controller binding — let the timer or the
+    // SDL captureButtonReleased signal end the capture so chords work.
 }
 
 void GenericHotkeyPage::onKeyboardCaptured(const QString& keyString) {
-    if (m_capturingKey.isEmpty()) return;
-
-    if (m_appendMode) m_capturedBindings.append(keyString);
-    else              m_capturedBindings = QStringList{keyString};
-
-    if (!m_appendMode) stopCapture(true);
+    // Keyboard capture is handled by eventFilter() against the raw Qt key
+    // event so we can use modifiers and adapter formatting; SDL keyboard
+    // signals are intentionally ignored here (legacy behavior).
+    Q_UNUSED(keyString);
 }
 
 void GenericHotkeyPage::finishCapture(const QString& formatted) {
-    if (!m_focusedRow || !m_appController) return;
-    const HotkeyDef d = m_focusedRow->def();
-    m_appController->saveHotkey(m_emuId, d.section, d.key, formatted);
-    m_currentValues[d.key] = formatted;
-    m_focusedRow->setBindingDisplay(currentDisplayFor(d.key));
-    emit bindingFocused(d, currentDisplayFor(d.key));
+    if (!m_appController) return;
+
+    // Resolve the row by INI key — m_focusedRow may have been moved by other
+    // UI events, but m_capturingKey was set at startCapture() time.
+    const QString key = m_capturingKey;
+    auto it = m_rowByKey.constFind(key);
+    if (it == m_rowByKey.constEnd()) return;
+    HotkeyBindingRow* row = *it;
+    const HotkeyDef d = row->def();
+
+    // Append with " & " separator (PCSX2 chord format) when shift-clicking.
+    const QString existing = m_currentValues.value(key);
+    const bool doAppend = m_appendMode && !existing.isEmpty();
+    const QString value = doAppend ? existing + QStringLiteral(" & ") + formatted
+                                   : formatted;
+
+    m_appController->saveHotkey(m_emuId, d.section, key, value);
+    m_currentValues[key] = value;
+    row->setBindingDisplay(currentDisplayFor(key));
+    emit bindingFocused(d, currentDisplayFor(key));
 }
 
 bool GenericHotkeyPage::eventFilter(QObject* obj, QEvent* event) {
     if (m_capturingKey.isEmpty()) return QWidget::eventFilter(obj, event);
 
+    // Redraws the capturing button with "<captured> [N]" countdown text.
+    auto refreshCaptureDisplay = [this]() {
+        if (auto it = m_rowByKey.constFind(m_capturingKey);
+            it != m_rowByKey.constEnd()) {
+            const QString display = m_capturedBindings.join(QStringLiteral(" + "));
+            (*it)->setCapturingText(
+                display + QStringLiteral(" [%1]").arg(m_captureCountdown));
+        }
+    };
+
     if (event->type() == QEvent::KeyPress) {
-        auto* ke = static_cast<QKeyEvent*>(event);
-        if (isModifierKey(ke->key())) return false;  // wait for the real key
-        if (ke->key() == Qt::Key_Escape) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->isAutoRepeat()) return true;
+
+        const int key = keyEvent->key();
+
+        // Escape cancels capture
+        if (key == Qt::Key_Escape) {
             stopCapture(false);
             return true;
         }
+
+        if (isModifierKey(key)) return true;
+
+        // Adapter-formatted keyboard binding (e.g. PCSX2 "Keyboard/D",
+        // PPSSPP "1-32") — empty string means unsupported, swallow event.
+        const QString binding = m_appController
+            ? m_appController->formatCapturedKeyboard(
+                  m_emuId, key, static_cast<int>(keyEvent->modifiers()))
+            : QString();
+        if (binding.isEmpty()) return true;
+
+        if (!m_capturedBindings.contains(binding))
+            m_capturedBindings.append(binding);
+
+        refreshCaptureDisplay();
+        return true;  // wait for release before committing
     }
+
+    if (event->type() == QEvent::KeyRelease) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->isAutoRepeat()) return true;
+        if (isModifierKey(keyEvent->key())) return true;
+
+        if (!m_capturedBindings.isEmpty()) stopCapture(true);
+        return true;
+    }
+
+    if (event->type() == QEvent::MouseButtonPress
+        || event->type() == QEvent::MouseButtonDblClick) {
+        auto* mouseEvent = static_cast<QMouseEvent*>(event);
+        // Ignore left click — that's how capture was started.
+        if (mouseEvent->button() == Qt::LeftButton) return true;
+
+        const QString binding = m_appController
+            ? m_appController->formatCapturedMouse(
+                  m_emuId, static_cast<int>(mouseEvent->button()))
+            : QString();
+        if (binding.isEmpty()) return true;
+
+        if (!m_capturedBindings.contains(binding))
+            m_capturedBindings.append(binding);
+
+        refreshCaptureDisplay();
+        return true;
+    }
+
+    if (event->type() == QEvent::MouseButtonRelease) {
+        if (!m_capturedBindings.isEmpty()) stopCapture(true);
+        return true;
+    }
+
+    if (event->type() == QEvent::Wheel) {
+        auto* wheelEvent = static_cast<QWheelEvent*>(event);
+        const QPoint delta = wheelEvent->angleDelta();
+        // Direction encoding: 0=up, 1=down, 2=left, 3=right.
+        int direction = -1;
+        if (std::abs(delta.y()) > std::abs(delta.x())) {
+            direction = delta.y() > 0 ? 0 : 1;
+        } else if (delta.x() != 0) {
+            direction = delta.x() > 0 ? 3 : 2;
+        }
+
+        if (direction >= 0 && m_appController) {
+            const QString binding = m_appController->formatCapturedWheel(m_emuId, direction);
+            if (!binding.isEmpty()) {
+                m_capturedBindings.clear();  // wheel replaces, doesn't accumulate
+                m_capturedBindings.append(binding);
+                stopCapture(true);
+            }
+        }
+        return true;
+    }
+
     return QWidget::eventFilter(obj, event);
 }

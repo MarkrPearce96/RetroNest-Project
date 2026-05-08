@@ -50,10 +50,14 @@ void HotkeyBindingRow::setBindingDisplay(const QString& displayText) {
 void HotkeyBindingRow::setCapturing(bool capturing) {
     if (capturing) {
         m_button->setStyleSheet(kCapturingStyle);
-        m_button->setText(QStringLiteral("Press a button or key…"));
+        m_button->setText(QStringLiteral("Press a button... [5]"));
     } else {
         m_button->setStyleSheet(kHotkeyRowDefaultStyle);
     }
+}
+
+void HotkeyBindingRow::setCapturingText(const QString& text) {
+    m_button->setText(text);
 }
 
 void HotkeyBindingRow::focusInEvent(QFocusEvent* e) {

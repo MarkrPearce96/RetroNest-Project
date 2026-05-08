@@ -40,7 +40,6 @@ signals:
     // Emitted when a row gains focus. `currentDisplay` is the formatted
     // display string ("Period", "SDL-0 R1 + SDL-0 Circle", or empty).
     void bindingFocused(HotkeyDef def, QString currentDisplay);
-    void bindingFocusCleared();
 
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;

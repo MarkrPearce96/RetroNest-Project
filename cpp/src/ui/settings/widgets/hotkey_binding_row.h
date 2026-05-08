@@ -22,6 +22,10 @@ public:
     // Toggle the "currently capturing" visual style.
     void setCapturing(bool capturing);
 
+    // Replace just the button text while capturing (without recomputing the
+    // tooltip). Used by the page to render "<captured> [N]" countdown updates.
+    void setCapturingText(const QString& text);
+
 signals:
     void focused(HotkeyDef def);
     void rebindRequested(HotkeyDef def);

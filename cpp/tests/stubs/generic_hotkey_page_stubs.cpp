@@ -25,4 +25,23 @@ void AppController::clearHotkey(const QString& /*emuId*/, const QString& /*secti
 
 void AppController::resetHotkeys(const QString& /*emuId*/) {}
 
+QString AppController::formatCapturedBinding(const QString& /*emuId*/, int /*deviceIndex*/,
+                                              const QString& /*element*/, bool /*isAxis*/,
+                                              bool /*positive*/) const {
+    return {};
+}
+
+QString AppController::formatCapturedKeyboard(const QString& /*emuId*/, int /*qtKey*/,
+                                               int /*modifiers*/) const {
+    return {};
+}
+
+QString AppController::formatCapturedMouse(const QString& /*emuId*/, int /*qtButton*/) const {
+    return {};
+}
+
+QString AppController::formatCapturedWheel(const QString& /*emuId*/, int /*direction*/) const {
+    return {};
+}
+
 void InputRouter::setButtonPressed(int /*port*/, RetroPadSlot /*slot*/, bool /*down*/) {}
