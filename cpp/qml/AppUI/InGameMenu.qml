@@ -6,7 +6,7 @@ import QtQuick.Controls
  * Used by both the libretro in-window path and the external-emulator
  * panel path. Emulator is paused while this menu is open.
  */
-Item {
+FocusScope {
     id: root
     anchors.fill: parent
     visible: false
@@ -53,7 +53,8 @@ Item {
         }
     }
 
-    // Visible icon-button list, rebuilt when state changes.
+    // Visible icon-button list, rebuilt when raGameId or
+    // supportsSaveOnExit changes.
     property var hudModel: {
         var items = [
             { icon: "images/hud/resume.svg",       label: "Resume",      action: "resume",     destructive: false }
