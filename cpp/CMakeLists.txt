@@ -94,6 +94,7 @@ set(SOURCES
     src/ui/settings/controller_bindings_view.cpp
     src/ui/settings/emulator_settings_dialog_base.cpp
     src/ui/settings/emulator_category_hub_base.cpp
+    src/ui/settings/generic_hotkey_page.cpp
     src/ui/settings/generic_settings_page.cpp
     src/ui/settings/settings_page_builder.cpp
     src/ui/settings/hotkey_settings_page.cpp
@@ -170,6 +171,7 @@ set(HEADERS
     src/ui/settings/controller_mapping_page.h
     src/ui/settings/emulator_settings_dialog_base.h
     src/ui/settings/emulator_category_hub_base.h
+    src/ui/settings/generic_hotkey_page.h
     src/ui/settings/generic_settings_page.h
     src/ui/settings/settings_page_builder.h
     src/ui/settings/hotkey_settings_page.h
@@ -699,6 +701,24 @@ target_link_libraries(test_hotkey_binding_row PRIVATE
     Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test
 )
 add_test(NAME HotkeyBindingRow COMMAND test_hotkey_binding_row)
+
+add_executable(test_generic_hotkey_page
+    tests/test_generic_hotkey_page.cpp
+    tests/stubs/generic_hotkey_page_stubs.cpp
+    src/ui/settings/generic_hotkey_page.cpp
+    src/ui/settings/widgets/hotkey_binding_row.cpp
+    src/ui/settings/widgets/settings_section_header.cpp
+    src/core/sdl_input_manager.cpp
+)
+set_target_properties(test_generic_hotkey_page PROPERTIES AUTOMOC ON)
+target_include_directories(test_generic_hotkey_page PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${SDL2_INCLUDE_DIRS}
+)
+target_link_libraries(test_generic_hotkey_page PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Test ${SDL2_LIBRARIES}
+)
+add_test(NAME GenericHotkeyPage COMMAND test_generic_hotkey_page)
 
 add_executable(test_quick_settings_file_field
     tests/test_quick_settings_file_field.cpp
