@@ -26,4 +26,5 @@ references/*/
 
 # clangd index cache + compile_commands symlink (LSP artifacts)
 cpp/.cache/
+.cache/
 /compile_commands.json
