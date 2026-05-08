@@ -379,7 +379,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/controllers/analog_controller.svg
         qml/AppUI/images/controllers/PSP.svg
         qml/AppUI/images/controllers/GameCube.svg
-        qml/AppUI/images/controllers/Wii.svg
+        qml/AppUI/images/controllers/Wii_classiccontroller.svg
     RESOURCE_PREFIX /
 )
 

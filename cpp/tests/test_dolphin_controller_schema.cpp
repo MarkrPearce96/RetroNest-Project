@@ -5,10 +5,13 @@
 #include "core/binding_def.h"
 #include "core/controller_type_def.h"
 
-// Pins Dolphin's two-controller schema. Every binding clusters into a
-// known cardSlot; physical buttons have non-zero spotlights; bindings
-// route to GCPadNew.ini vs WiimoteNew.ini by type id; formatBinding
-// translates SDL element names into Dolphin's expression syntax.
+// Pins Dolphin's two-controller schema (GameCube + Wii Classic Controller).
+// Every binding clusters into a known cardSlot; physical buttons have
+// non-zero spotlights; bindings route to GCPadNew.ini vs WiimoteNew.ini by
+// type id; formatBinding translates SDL element names into Dolphin's
+// expression syntax. The Wii type maps to the Classic Controller extension
+// — we ship Classic by default since most users play with a regular gamepad
+// and the bare Wiimote needs hardware most people don't have.
 
 class TestDolphinControllerSchema : public QObject {
     Q_OBJECT
@@ -31,11 +34,9 @@ private slots:
                 QVERIFY(t.svgResource.endsWith("GameCube.svg"));
                 QVERIFY(t.slotTitleOverrides.isEmpty());
             } else {
-                QCOMPARE(t.displayName, QString("Wii Remote"));
-                QVERIFY(t.svgResource.endsWith("Wii.svg"));
-                QCOMPARE(t.slotTitleOverrides.value("LeftAnalog"),    QString("TILT"));
-                QCOMPARE(t.slotTitleOverrides.value("RightAnalog"),   QString("IR POINTING"));
-                QCOMPARE(t.slotTitleOverrides.value("LeftShoulders"), QString("SHAKE"));
+                QCOMPARE(t.displayName, QString("Wii Classic Controller"));
+                QVERIFY(t.svgResource.endsWith("Wii_classiccontroller.svg"));
+                QVERIFY(t.slotTitleOverrides.isEmpty());
             }
         }
     }
@@ -51,7 +52,10 @@ private slots:
     }
 
     void testWiimoteBindingsCount() {
-        QCOMPARE(adapter_.controllerBindingDefsForType("Wiimote1").size(), 23);
+        // Classic Controller: 4 D-Pad + 4 face + 4 Lstick + 4 Rstick
+        // + 6 shoulder/trigger (L, L-Analog, ZL, R, R-Analog, ZR)
+        // + 3 system (- / Home / +) + 1 rumble = 26 bindings
+        QCOMPARE(adapter_.controllerBindingDefsForType("Wiimote1").size(), 26);
     }
 
     void testBindingsHaveCardSlot() {
@@ -87,18 +91,20 @@ private slots:
     }
 
     void testWiimotePhysicalButtonsHaveSpotlight() {
-        // Shake/* and Rumble/Motor are abstract — exempt.
+        // Wii Classic Controller. Rumble/Motor is abstract — exempt.
         const QSet<QString> mustHaveSpotlight{
             "Up", "Down", "Left", "Right",
-            "A", "B", "1", "2",
-            "Tilt Forward", "Tilt Backward", "Tilt Left", "Tilt Right",
-            "IR Up", "IR Down", "IR Left", "IR Right",
+            "A", "B", "X", "Y",
+            "Left Stick Up", "Left Stick Down", "Left Stick Left", "Left Stick Right",
+            "Right Stick Up", "Right Stick Down", "Right Stick Left", "Right Stick Right",
+            "L (digital)", "L-Analog", "ZL",
+            "R (digital)", "R-Analog", "ZR",
             "Minus", "Plus", "Home",
         };
         for (const auto& b : adapter_.controllerBindingDefsForType("Wiimote1")) {
             if (!mustHaveSpotlight.contains(b.label)) continue;
             QVERIFY2(b.spotlightR > 0,
-                qPrintable(QString("Wiimote '%1' must have spotlightR > 0").arg(b.label)));
+                qPrintable(QString("Classic '%1' must have spotlightR > 0").arg(b.label)));
         }
     }
 

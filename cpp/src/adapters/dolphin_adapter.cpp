@@ -1880,37 +1880,42 @@ bool DolphinAdapter::writeWiimoteDefaultsIfMissing() {
     if (QFile::exists(path))
         return true;  // never overwrite
 
-    // Default Wiimote1 profile: emulated Wiimote (no real Wii Remote needed),
-    // sideways orientation, no extension. Maps to SDL gamepad 0.
-    // This is a minimal "playable" profile — full Wii Remote IR/motion
-    // mapping is out of scope for v1; users who need it remap via Dolphin's
-    // native UI.
+    // Default Wiimote1 profile: Classic Controller extension, mapped to a
+    // standard SDL gamepad. The bare Wii Remote (motion + pointer) is only
+    // useful with hardware most users don't have, so we ship a Classic
+    // Controller profile by default — that's the experience most Wii games
+    // (Smash Brawl, Mario Kart Wii via Classic, Brawl) play best with on
+    // a regular gamepad. Users who want a real Wiimote can change
+    // Extension and rebind through Dolphin's native UI.
     const char* profile = R"INI([Wiimote1]
 Source = 1
 Device = SDL/0/Wireless Controller
-Options/Sideways Wiimote = True
-Buttons/A = `Button S`
-Buttons/B = `Button E`
-Buttons/1 = `Button W`
-Buttons/2 = `Button N`
-Buttons/- = `Back`
-Buttons/+ = `Start`
-Buttons/Home = `Guide`
-D-Pad/Up = `Pad N`
-D-Pad/Down = `Pad S`
-D-Pad/Left = `Pad W`
-D-Pad/Right = `Pad E`
-Shake/X = `Shoulder L`
-Shake/Y = `Shoulder L`
-Shake/Z = `Shoulder L`
-IR/Up = `Right Y-`
-IR/Down = `Right Y+`
-IR/Left = `Right X-`
-IR/Right = `Right X+`
-Tilt/Forward = `Left Y-`
-Tilt/Backward = `Left Y+`
-Tilt/Left = `Left X-`
-Tilt/Right = `Left X+`
+Extension = Classic
+Classic/Buttons/A = `Button E`
+Classic/Buttons/B = `Button S`
+Classic/Buttons/X = `Button N`
+Classic/Buttons/Y = `Button W`
+Classic/Buttons/- = `Back`
+Classic/Buttons/+ = `Start`
+Classic/Buttons/Home = `Guide`
+Classic/Buttons/ZL = `Trigger L`
+Classic/Buttons/ZR = `Trigger R`
+Classic/D-Pad/Up = `Pad N`
+Classic/D-Pad/Down = `Pad S`
+Classic/D-Pad/Left = `Pad W`
+Classic/D-Pad/Right = `Pad E`
+Classic/Left Stick/Up = `Left Y-`
+Classic/Left Stick/Down = `Left Y+`
+Classic/Left Stick/Left = `Left X-`
+Classic/Left Stick/Right = `Left X+`
+Classic/Right Stick/Up = `Right Y-`
+Classic/Right Stick/Down = `Right Y+`
+Classic/Right Stick/Left = `Right X-`
+Classic/Right Stick/Right = `Right X+`
+Classic/Triggers/L = `Shoulder L`
+Classic/Triggers/R = `Shoulder R`
+Classic/Triggers/L-Analog = `Trigger L`
+Classic/Triggers/R-Analog = `Trigger R`
 Rumble/Motor = `Motor`
 )INI";
 
@@ -2037,73 +2042,85 @@ QString DolphinAdapter::subcategoryIcon(const QString& category,
 
 namespace {
 
-QVector<BindingDef> wiimoteBindings() {
-    // Wii Remote SVG: viewBox 0 0 387 1505 (portrait, held vertically)
+QVector<BindingDef> classicControllerBindings() {
+    // Wii Classic Controller SVG: viewBox 0 0 2340 1182
     // Calibrated against the rendered PNG via per-color blob centroids:
-    //   Power button:     centre (77, 69)   [decorative — no binding]
-    //   D-Pad cross:      cluster centre (190, 250); arm tips at
-    //                       up=(191,194)  down=(191,310)
-    //                       left=(133,250) right=(248,251)
-    //   A button:         centre (189, 473), bbox 116x116
-    //   −/Home/+ row:     (87, 722) / (189, 722) / (294, 723)
-    //   1 button:         centre (193, 1099), bbox 84x85
-    //   2 button:         centre (192, 1225), bbox 84x85
+    //   D-Pad:   cluster (461, 459); arm centres up=(461,344) down=(461,574)
+    //                                            left=(345,459) right=(577,459)
+    //   Left Stick:  centre (857, 838), bbox 360x361
+    //   Right Stick: centre (1481, 837), bbox 359x361
+    //   X (top):     centre (1883, 289)
+    //   Y (left):    centre (1659, 461)
+    //   A (right):   centre (2108, 460)
+    //   B (bottom):  centre (1883, 633)
+    //   −/Home/+ row at y≈459: (996, 459) / (1169, 459) / (1343, 459)
+    //   L/R/ZL/ZR: not in front view — placed at top edges of body
+    //
+    // Bindings are written under [Wiimote1] with the Classic/ prefix; Dolphin
+    // routes them to the Classic Controller extension when Extension=Classic.
     return {
-        // D-Pad — arm tips
-        {BindingDef::Button, "Up",    "D-Pad", "Wiimote1", "D-Pad/Up",    "`Pad N`",
-            "DPad", 191, 194, 32},
-        {BindingDef::Button, "Down",  "D-Pad", "Wiimote1", "D-Pad/Down",  "`Pad S`",
-            "DPad", 191, 310, 32},
-        {BindingDef::Button, "Left",  "D-Pad", "Wiimote1", "D-Pad/Left",  "`Pad W`",
-            "DPad", 133, 250, 32},
-        {BindingDef::Button, "Right", "D-Pad", "Wiimote1", "D-Pad/Right", "`Pad E`",
-            "DPad", 248, 251, 32},
+        // D-Pad — confirmed arm centres
+        {BindingDef::Button, "Up",    "D-Pad", "Wiimote1", "Classic/D-Pad/Up",    "`Pad N`",
+            "DPad", 461, 344, 50},
+        {BindingDef::Button, "Down",  "D-Pad", "Wiimote1", "Classic/D-Pad/Down",  "`Pad S`",
+            "DPad", 461, 574, 50},
+        {BindingDef::Button, "Left",  "D-Pad", "Wiimote1", "Classic/D-Pad/Left",  "`Pad W`",
+            "DPad", 345, 459, 50},
+        {BindingDef::Button, "Right", "D-Pad", "Wiimote1", "Classic/D-Pad/Right", "`Pad E`",
+            "DPad", 577, 459, 50},
 
-        // Buttons
-        {BindingDef::Button, "A", "Buttons", "Wiimote1", "Buttons/A", "`Button S`",
-            "FaceButtons", 189, 473, 58},   // large round A
-        {BindingDef::Button, "B", "Buttons", "Wiimote1", "Buttons/B", "`Button E`",
-            "FaceButtons", 189, 473, 58},   // back trigger — no front-view artwork; share A's centre
-        {BindingDef::Button, "1", "Buttons", "Wiimote1", "Buttons/1", "`Button W`",
-            "FaceButtons", 193, 1099, 42},
-        {BindingDef::Button, "2", "Buttons", "Wiimote1", "Buttons/2", "`Button N`",
-            "FaceButtons", 192, 1225, 42},
+        // Face Buttons — cluster on the right (a/b/x/y in cross layout)
+        {BindingDef::Button, "A", "Face Buttons", "Wiimote1", "Classic/Buttons/A", "`Button E`",
+            "FaceButtons", 2108, 460, 80},
+        {BindingDef::Button, "B", "Face Buttons", "Wiimote1", "Classic/Buttons/B", "`Button S`",
+            "FaceButtons", 1883, 633, 80},
+        {BindingDef::Button, "X", "Face Buttons", "Wiimote1", "Classic/Buttons/X", "`Button N`",
+            "FaceButtons", 1883, 289, 80},
+        {BindingDef::Button, "Y", "Face Buttons", "Wiimote1", "Classic/Buttons/Y", "`Button W`",
+            "FaceButtons", 1659, 461, 80},
 
-        // Tilt → LeftAnalog — no physical button; spotlight grip area between 1/2 buttons
-        {BindingDef::Axis, "Tilt Forward",  "Tilt", "Wiimote1", "Tilt/Forward",  "`Left Y-`",
-            "LeftAnalog", 192, 1062, 50},
-        {BindingDef::Axis, "Tilt Backward", "Tilt", "Wiimote1", "Tilt/Backward", "`Left Y+`",
-            "LeftAnalog", 192, 1262, 50},
-        {BindingDef::Axis, "Tilt Left",     "Tilt", "Wiimote1", "Tilt/Left",     "`Left X-`",
-            "LeftAnalog", 92,  1162, 50},
-        {BindingDef::Axis, "Tilt Right",    "Tilt", "Wiimote1", "Tilt/Right",    "`Left X+`",
-            "LeftAnalog", 292, 1162, 50},
+        // Left Stick — centre (857, 838); direction offset 100
+        {BindingDef::Axis, "Left Stick Up",    "Left Stick", "Wiimote1", "Classic/Left Stick/Up",    "`Left Y-`",
+            "LeftAnalog", 857, 738, 80},
+        {BindingDef::Axis, "Left Stick Down",  "Left Stick", "Wiimote1", "Classic/Left Stick/Down",  "`Left Y+`",
+            "LeftAnalog", 857, 938, 80},
+        {BindingDef::Axis, "Left Stick Left",  "Left Stick", "Wiimote1", "Classic/Left Stick/Left",  "`Left X-`",
+            "LeftAnalog", 757, 838, 80},
+        {BindingDef::Axis, "Left Stick Right", "Left Stick", "Wiimote1", "Classic/Left Stick/Right", "`Left X+`",
+            "LeftAnalog", 957, 838, 80},
 
-        // IR → RightAnalog — spotlight top of Wiimote where IR sensor sits
-        {BindingDef::Axis, "IR Up",    "IR", "Wiimote1", "IR/Up",    "`Right Y-`",
-            "RightAnalog", 190, 30, 40},
-        {BindingDef::Axis, "IR Down",  "IR", "Wiimote1", "IR/Down",  "`Right Y+`",
-            "RightAnalog", 190, 130, 40},
-        {BindingDef::Axis, "IR Left",  "IR", "Wiimote1", "IR/Left",  "`Right X-`",
-            "RightAnalog", 140, 80, 40},
-        {BindingDef::Axis, "IR Right", "IR", "Wiimote1", "IR/Right", "`Right X+`",
-            "RightAnalog", 240, 80, 40},
+        // Right Stick — centre (1481, 837); direction offset 100
+        {BindingDef::Axis, "Right Stick Up",    "Right Stick", "Wiimote1", "Classic/Right Stick/Up",    "`Right Y-`",
+            "RightAnalog", 1481, 737, 80},
+        {BindingDef::Axis, "Right Stick Down",  "Right Stick", "Wiimote1", "Classic/Right Stick/Down",  "`Right Y+`",
+            "RightAnalog", 1481, 937, 80},
+        {BindingDef::Axis, "Right Stick Left",  "Right Stick", "Wiimote1", "Classic/Right Stick/Left",  "`Right X-`",
+            "RightAnalog", 1381, 837, 80},
+        {BindingDef::Axis, "Right Stick Right", "Right Stick", "Wiimote1", "Classic/Right Stick/Right", "`Right X+`",
+            "RightAnalog", 1581, 837, 80},
 
-        // Shake → LeftShoulders — abstract, no spotlight
-        {BindingDef::Button, "Shake X", "Shake", "Wiimote1", "Shake/X", "`Shoulder L`",
-            "LeftShoulders", 0, 0, 0},
-        {BindingDef::Button, "Shake Y", "Shake", "Wiimote1", "Shake/Y", "`Shoulder L`",
-            "LeftShoulders", 0, 0, 0},
-        {BindingDef::Button, "Shake Z", "Shake", "Wiimote1", "Shake/Z", "`Shoulder L`",
-            "LeftShoulders", 0, 0, 0},
+        // Triggers / shoulder — top-of-body anchors (L/R aren't drawn in front view)
+        // L and L-Analog share the same physical trigger; ZL is offset.
+        {BindingDef::Button, "L (digital)", "Triggers", "Wiimote1", "Classic/Triggers/L",        "`Shoulder L`",
+            "LeftShoulders", 370, 80, 70},
+        {BindingDef::Axis,   "L-Analog",    "Triggers", "Wiimote1", "Classic/Triggers/L-Analog", "`Trigger L`",
+            "LeftShoulders", 370, 80, 70},
+        {BindingDef::Button, "ZL",          "Buttons",  "Wiimote1", "Classic/Buttons/ZL",        "`Trigger L`",
+            "LeftShoulders", 570, 80, 60},
+        {BindingDef::Button, "R (digital)", "Triggers", "Wiimote1", "Classic/Triggers/R",        "`Shoulder R`",
+            "RightShoulders", 1970, 80, 70},
+        {BindingDef::Axis,   "R-Analog",    "Triggers", "Wiimote1", "Classic/Triggers/R-Analog", "`Trigger R`",
+            "RightShoulders", 1970, 80, 70},
+        {BindingDef::Button, "ZR",          "Buttons",  "Wiimote1", "Classic/Buttons/ZR",        "`Trigger R`",
+            "RightShoulders", 1770, 80, 60},
 
-        // System — −/Home/+ row at y≈722
-        {BindingDef::Button, "Minus", "System", "Wiimote1", "Buttons/-",    "`Back`",
-            "System", 87, 722, 30},
-        {BindingDef::Button, "Plus",  "System", "Wiimote1", "Buttons/+",    "`Start`",
-            "System", 294, 723, 30},
-        {BindingDef::Button, "Home",  "System", "Wiimote1", "Buttons/Home", "`Guide`",
-            "System", 189, 722, 30},
+        // System — −/Home/+ row at y≈459
+        {BindingDef::Button, "Minus", "System", "Wiimote1", "Classic/Buttons/-",    "`Back`",
+            "System", 996, 459, 50},
+        {BindingDef::Button, "Home",  "System", "Wiimote1", "Classic/Buttons/Home", "`Guide`",
+            "System", 1169, 459, 50},
+        {BindingDef::Button, "Plus",  "System", "Wiimote1", "Classic/Buttons/+",    "`Start`",
+            "System", 1343, 459, 50},
         {BindingDef::Axis,   "Rumble/Motor", "System", "Wiimote1", "Rumble/Motor", "`Motor`",
             "System", 0, 0, 0},
     };
@@ -2198,13 +2215,9 @@ QVector<ControllerTypeDef> DolphinAdapter::controllerTypes() const {
         /*slotTitleOverrides=*/{}
     };
     ControllerTypeDef wii{
-        "Wiimote1", "Wii Remote",
-        ":/AppUI/qml/AppUI/images/controllers/Wii.svg",
-        /*slotTitleOverrides=*/{
-            {"LeftAnalog",    "TILT"},
-            {"RightAnalog",   "IR POINTING"},
-            {"LeftShoulders", "SHAKE"},
-        }
+        "Wiimote1", "Wii Classic Controller",
+        ":/AppUI/qml/AppUI/images/controllers/Wii_classiccontroller.svg",
+        /*slotTitleOverrides=*/{}
     };
     return {gcpad, wii};
 }
@@ -2219,7 +2232,7 @@ QVector<BindingDef> DolphinAdapter::controllerBindingDefs() const {
 
 QVector<BindingDef> DolphinAdapter::controllerBindingDefsForType(const QString& type) const {
     if (type == "GCPad1")   return gcPadBindings();
-    if (type == "Wiimote1") return wiimoteBindings();
+    if (type == "Wiimote1") return classicControllerBindings();
     return {};
 }
 
