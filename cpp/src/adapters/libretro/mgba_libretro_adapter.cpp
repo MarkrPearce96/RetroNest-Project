@@ -49,9 +49,9 @@ QVector<BindingDef> MgbaLibretroAdapter::controllerBindingDefsForType(const QStr
           "DPad",        255,  900, 65 },
         // Action buttons — A right, B diagonal-down-left of A
         { BindingDef::Button, "A",           "Buttons",   "Pad1", "A",      "",
-          "FaceButtons", 640,  870, 70 },
+          "FaceButtons", 680,  870, 50 },
         { BindingDef::Button, "B",           "Buttons",   "Pad1", "B",      "",
-          "FaceButtons", 540,  940, 70 },
+          "FaceButtons", 520,  915, 50 },
         // Shoulders — not present on DMG silhouette; no spotlight.
         { BindingDef::Button, "L",           "Shoulders", "Pad1", "L",      "",
           "Shoulders",     0,    0,  0 },
