@@ -54,7 +54,7 @@ QVector<SettingDef> MgbaLibretroAdapter::settingsSchema() const {
 
     auto opt = [](const QString& key, const QString& label,
                   const QString& def, const QStringList& vals,
-                  const QString& group, const QString& tooltip) -> SettingDef {
+                  const QString& category, const QString& tooltip) -> SettingDef {
         SettingDef d;
         d.storage = SettingDef::Storage::LibretroOption;
         d.key = key;
@@ -63,25 +63,125 @@ QVector<SettingDef> MgbaLibretroAdapter::settingsSchema() const {
         d.type = SettingDef::Combo;
         for (const auto& v : vals)
             d.options.append({ v, v });
-        d.category = "Core Options";
-        d.group = group;
+        d.category = category;
         d.tooltip = tooltip;
         return d;
     };
 
-    s << opt("mgba_skip_bios", "Skip BIOS intro", "OFF", { "OFF", "ON" },
-             "System", "Skip the GBA BIOS intro animation.")
-      << opt("mgba_use_bios", "Use BIOS file if available", "ON", { "ON", "OFF" },
-             "System", "Load gba_bios.bin from the BIOS folder if present.")
-      << opt("mgba_solar_sensor_level", "Solar Sensor level", "0",
-             { "0","1","2","3","4","5","6","7","8","9","10" },
-             "System", "Solar sensor level for Boktai games.")
-      << opt("mgba_color_correction", "Color correction", "OFF",
+    // System
+    s << opt("mgba_gb_model",
+             "Game Boy Model (Restart)",
+             "Autodetect",
+             { "Autodetect", "Game Boy", "Super Game Boy", "Game Boy Color",
+               "Super Game Boy Color", "Game Boy Advance" },
+             "System",
+             "Runs loaded content with a specific Game Boy model. 'Autodetect' will select the most appropriate model for the current game.");
+    s << opt("mgba_use_bios",
+             "Use BIOS File if Found (Restart)",
+             "ON",
+             { "ON", "OFF" },
+             "System",
+             "Use official BIOS/bootloader for emulated hardware, if present in RetroArch's system directory.");
+    s << opt("mgba_skip_bios",
+             "Skip BIOS Intro (Restart)",
+             "OFF",
+             { "OFF", "ON" },
+             "System",
+             "When using an official BIOS/bootloader, skip the start-up logo animation. This setting is ignored when 'Use BIOS File if Found' is disabled.");
+
+    // Video
+    s << opt("mgba_gb_colors",
+             "Default Game Boy Palette",
+             "Grayscale",
+             { "Grayscale" },
+             "Video",
+             "Selects which palette is used for Game Boy games that are not Game Boy Color or Super Game Boy compatible, or if the model is forced to Game Boy.");
+    s << opt("mgba_gb_colors_preset",
+             "Hardware Preset Game Boy Palettes (Restart)",
+             "0",
+             { "0", "1", "2", "3" },
+             "Video",
+             "Use the palettes for Game Boy games that have presets on the Game Boy Color or Super Game Boy.");
+    s << opt("mgba_sgb_borders",
+             "Use Super Game Boy Borders (Restart)",
+             "ON",
+             { "ON", "OFF" },
+             "Video",
+             "Display Super Game Boy borders when running Super Game Boy enhanced games.");
+    s << opt("mgba_color_correction",
+             "Color Correction",
+             "OFF",
              { "OFF", "GBA", "GBC", "Auto" },
-             "Video", "Apply LCD color correction filters.")
-      << opt("mgba_interframe_blending", "Interframe blending", "OFF",
-             { "OFF", "Mix", "LCD Ghosting (Accurate)", "LCD Ghosting (Fast)" },
-             "Video", "Smooth animation by blending consecutive frames.");
+             "Video",
+             "Adjusts output colors to match the display of real GBA/GBC hardware.");
+    s << opt("mgba_interframe_blending",
+             "Interframe Blending",
+             "OFF",
+             { "OFF", "mix", "mix_smart", "lcd_ghosting", "lcd_ghosting_fast" },
+             "Video",
+             "Simulates LCD ghosting effects. 'Simple' performs a 50:50 mix of the current and previous frames. 'Smart' attempts to detect screen flickering, and only performs a 50:50 mix on affected pixels. 'LCD Ghosting' mimics natural LCD response times by combining multiple buffered frames. 'Simple' or 'Smart' blending is required when playing games that aggressively exploit LCD ghosting for transparency effects (Wave Race, Chikyuu Kaihou Gun ZAS, F-Zero, the Boktai series...).");
+
+    // Audio
+    s << opt("mgba_audio_low_pass_filter",
+             "Audio Filter",
+             "disabled",
+             { "disabled", "enabled" },
+             "Audio",
+             "Enables a low pass audio filter to reduce the 'harshness' of generated audio.");
+    s << opt("mgba_audio_low_pass_range",
+             "Audio Filter Level",
+             "60",
+             { "5", "10", "15", "20", "25", "30", "35", "40", "45", "50",
+               "55", "60", "65", "70", "75", "80", "85", "90", "95" },
+             "Audio",
+             "Specifies the cut-off frequency of the low pass audio filter. A higher value increases the perceived 'strength' of the filter, since a wider range of the high frequency spectrum is attenuated.");
+
+    // Input
+    s << opt("mgba_allow_opposing_directions",
+             "Allow Opposing Directional Input",
+             "no",
+             { "no", "yes" },
+             "Input",
+             "Enabling this will allow pressing / quickly alternating / holding both left and right (or up and down) directions at the same time. This may cause movement-based glitches.");
+    s << opt("mgba_solar_sensor_level",
+             "Solar Sensor Level",
+             "0",
+             { "sensor", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" },
+             "Input",
+             "Sets ambient sunlight intensity. Can be used by games that included a solar sensor in their cartridges, e.g: the Boktai series.");
+    s << opt("mgba_force_gbp",
+             "Game Boy Player Rumble (Restart)",
+             "OFF",
+             { "OFF", "ON" },
+             "Input",
+             "Enabling this will allow compatible games with the Game Boy Player boot logo to make the controller rumble. Due to how Nintendo decided this feature should work, it may cause glitches such as flickering or lag in some of these games.");
+
+    // Emulation (upstream category key: "performance")
+    s << opt("mgba_idle_optimization",
+             "Idle Loop Removal",
+             "Remove Known",
+             { "Remove Known", "Detect and Remove", "Don't Remove" },
+             "Emulation",
+             "Reduce system load by optimizing so-called 'idle-loops' - sections in the code where nothing happens, but the CPU runs at full speed (like a car revving in neutral). Improves performance, and should be enabled on low-end hardware.");
+    s << opt("mgba_frameskip",
+             "Frameskip",
+             "disabled",
+             { "disabled", "auto", "auto_threshold", "fixed_interval" },
+             "Emulation",
+             "Skip frames to avoid audio buffer under-run (crackling). Improves performance at the expense of visual smoothness. 'Auto' skips frames when advised by the frontend. 'Auto (Threshold)' utilises the 'Frameskip Threshold (%)' setting. 'Fixed Interval' utilises the 'Frameskip Interval' setting.");
+    s << opt("mgba_frameskip_threshold",
+             "Frameskip Threshold (%)",
+             "33",
+             { "15", "18", "21", "24", "27", "30", "33", "36", "39", "42",
+               "45", "48", "51", "54", "57", "60" },
+             "Emulation",
+             "When 'Frameskip' is set to 'Auto (Threshold)', specifies the audio buffer occupancy threshold (percentage) below which frames will be skipped. Higher values reduce the risk of crackling by causing frames to be dropped more frequently.");
+    s << opt("mgba_frameskip_interval",
+             "Frameskip Interval",
+             "0",
+             { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" },
+             "Emulation",
+             "When 'Frameskip' is set to 'Fixed Interval', the value set here is the number of frames omitted after a frame is rendered - i.e. '0' = 60fps, '1' = 30fps, '2' = 15fps, etc.");
 
     return s;
 }
