@@ -7,6 +7,8 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QPushButton>
+#include <QShowEvent>
+#include <QTimer>
 #include <QVBoxLayout>
 
 HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
@@ -72,6 +74,8 @@ void HotkeySettingsDialog::keyPressEvent(QKeyEvent* e) {
     }
     // Face-button shortcuts. SdlInputManager translates A/B/X/Y to these
     // Qt keys via the unified-input pipeline (see CLAUDE.md "Input System").
+    // Square (X) closes the dialog — matches controller_mapping_page where
+    // Backspace is the page-level close shortcut.
     switch (e->key()) {
         case Qt::Key_Return:                            // A — Rebind
             m_page->rebindFocused();
@@ -82,8 +86,23 @@ void HotkeySettingsDialog::keyPressEvent(QKeyEvent* e) {
         case Qt::Key_M:                                 // Y — Add (alternate binding)
             m_page->appendRebindFocused();
             return;
+        case Qt::Key_Backspace:                         // X — Close
+            accept();
+            return;
         default:
             break;
     }
     EmulatorSettingsDialogBase::keyPressEvent(e);
+}
+
+void HotkeySettingsDialog::showEvent(QShowEvent* e) {
+    EmulatorSettingsDialogBase::showEvent(e);
+    // Auto-focus the first hotkey row so keyboard / controller navigation
+    // works immediately. The base class searches for SettingsCard children
+    // (which the hotkey page doesn't use) — defer to the page so focus
+    // lands on a HotkeyBindingRow. Deferred via singleShot(0, ...) for the
+    // same reason as the base class's own auto-focus: Qt's showEvent does
+    // its own focus shuffling on the same tick.
+    GenericHotkeyPage* page = m_page;
+    if (page) QTimer::singleShot(0, page, [page]{ page->focusFirstRow(); });
 }

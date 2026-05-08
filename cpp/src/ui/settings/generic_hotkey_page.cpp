@@ -212,6 +212,37 @@ void GenericHotkeyPage::clearFocused() {
     emit bindingFocused(d, QString());
 }
 
+void GenericHotkeyPage::focusFirstRow() {
+    if (m_entries.isEmpty()) return;
+    if (auto it = m_rowByKey.constFind(m_entries.first().key);
+        it != m_rowByKey.constEnd()) {
+        (*it)->setFocus(Qt::OtherFocusReason);
+    }
+}
+
+void GenericHotkeyPage::keyPressEvent(QKeyEvent* e) {
+    // Up/Down navigate between rows in adapter declaration order. Wraps
+    // at both ends so the user can hold the d-pad without dead zones.
+    // Only active when a row already has focus — otherwise fall through
+    // so the dialog's keyPressEvent can handle face-button shortcuts.
+    if (m_focusedRow && (e->key() == Qt::Key_Up || e->key() == Qt::Key_Down)) {
+        const QString currentKey = m_focusedRow->def().key;
+        int idx = -1;
+        for (int i = 0; i < m_entries.size(); ++i) {
+            if (m_entries[i].key == currentKey) { idx = i; break; }
+        }
+        if (idx < 0) { QWidget::keyPressEvent(e); return; }
+        const int delta = (e->key() == Qt::Key_Down) ? 1 : -1;
+        const int next = (idx + delta + m_entries.size()) % m_entries.size();
+        if (auto it = m_rowByKey.constFind(m_entries[next].key);
+            it != m_rowByKey.constEnd()) {
+            (*it)->setFocus(Qt::OtherFocusReason);
+        }
+        return;
+    }
+    QWidget::keyPressEvent(e);
+}
+
 void GenericHotkeyPage::restoreDefaults() {
     if (!m_appController) return;
     m_appController->resetHotkeys(m_emuId);

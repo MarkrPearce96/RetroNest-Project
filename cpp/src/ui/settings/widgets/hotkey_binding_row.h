@@ -34,6 +34,8 @@ signals:
 
 protected:
     void focusInEvent(QFocusEvent* e) override;
+    void focusOutEvent(QFocusEvent* e) override;
+    void paintEvent(QPaintEvent* e) override;
 
 private:
     HotkeyDef m_def;

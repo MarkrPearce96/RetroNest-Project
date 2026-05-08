@@ -4,10 +4,18 @@
 
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPainter>
+#include <QStyle>
 
 HotkeyBindingRow::HotkeyBindingRow(const HotkeyDef& def, QWidget* parent)
     : QWidget(parent), m_def(def) {
     setFocusPolicy(Qt::StrongFocus);
+    setAttribute(Qt::WA_StyledBackground, true);
+    setProperty("focused", false);
+    setStyleSheet(QStringLiteral(
+        "HotkeyBindingRow { border-radius: 4px; background: transparent; }"
+        "HotkeyBindingRow[focused=\"true\"] { background: %1; }")
+        .arg(SettingsDialogTheme::titleBarBg().name()));
 
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(8, 4, 8, 4);
@@ -62,5 +70,29 @@ void HotkeyBindingRow::setCapturingText(const QString& text) {
 
 void HotkeyBindingRow::focusInEvent(QFocusEvent* e) {
     QWidget::focusInEvent(e);
+    setProperty("focused", true);
+    style()->unpolish(this); style()->polish(this);
+    update();
     emit focused(m_def);
+}
+
+void HotkeyBindingRow::focusOutEvent(QFocusEvent* e) {
+    QWidget::focusOutEvent(e);
+    setProperty("focused", false);
+    style()->unpolish(this); style()->polish(this);
+    update();
+}
+
+void HotkeyBindingRow::paintEvent(QPaintEvent* e) {
+    QWidget::paintEvent(e);
+    if (!hasFocus()) return;
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    QColor halo = SettingsDialogTheme::accent();
+    halo.setAlphaF(0.45);
+    QPen pen(halo, 2);
+    p.setPen(pen);
+    p.setBrush(Qt::NoBrush);
+    QRectF r = rect().adjusted(1, 1, -1, -1);
+    p.drawRoundedRect(r, 4, 4);
 }

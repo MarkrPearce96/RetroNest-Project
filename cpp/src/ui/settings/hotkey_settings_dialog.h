@@ -22,6 +22,7 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent* e) override;
+    void showEvent(QShowEvent* e) override;
 
 private slots:
     void onBindingFocused(HotkeyDef def, QString currentDisplay);

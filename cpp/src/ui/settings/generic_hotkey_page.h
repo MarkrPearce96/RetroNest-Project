@@ -36,6 +36,11 @@ public:
     void clearFocused();
     void restoreDefaults();
 
+    // Focus the first hotkey row (called by the hosting dialog on showEvent
+    // so keyboard / controller navigation works without a mouse-click priming).
+    // No-op when the page has no entries (Dolphin / empty-state).
+    void focusFirstRow();
+
 signals:
     // Emitted when a row gains focus. `currentDisplay` is the formatted
     // display string ("Period", "SDL-0 R1 + SDL-0 Circle", or empty).
@@ -43,6 +48,7 @@ signals:
 
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
+    void keyPressEvent(QKeyEvent* e) override;
 
 private:
     void buildLayout();
