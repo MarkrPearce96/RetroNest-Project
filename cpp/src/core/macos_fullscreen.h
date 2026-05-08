@@ -28,4 +28,19 @@ void registerGlobalHotkey(HotkeyCallback callback);
 // Unregister the global hotkey.
 void unregisterGlobalHotkey();
 
+// Locate the NSScreen displaying the main window of `pid`.
+// Returns a pointer to the NSScreen for the emulator's window, or
+// nullptr if the process / window cannot be located. The pointer
+// type is opaque (void*) so this header stays C++-only — callers in
+// .mm files cast it to NSScreen*.
+void* screenForProcess(int64_t pid);
+
+// Apply NSPanel-style configuration to the NSWindow backing a Qt
+// top-level QWindow. The argument is the QWindow's winId() — on
+// macOS this is the NSView* of the underlying content view.
+// Sets style mask, level, collection behavior, and transparency
+// for an OpenEmu-style HUD panel that floats above other apps
+// without activating our app.
+void configurePanelWindow(void* nsViewPtr);
+
 } // namespace MacFullscreen
