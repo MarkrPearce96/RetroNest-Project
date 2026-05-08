@@ -88,6 +88,8 @@ private slots:
         QVERIFY(keys.contains("ToggleMediaCapture"));    // System (newly added)
         QVERIFY(keys.contains("FreecamToggle"));         // Free Camera (newly added)
         QVERIFY(keys.contains("FreecamRollLeft"));       // Free Camera (newly added)
+        QVERIFY(keys.contains("ToggleSoftwareRendering")); // Graphics
+        QVERIFY(keys.contains("ToggleOSD"));               // Graphics (newly added)
         QVERIFY(keys.contains("AudioMute"));             // Audio
         QVERIFY(keys.contains("LoadGameState1"));        // Save States
         QVERIFY(keys.contains("LoadGlobalState1"));      // Save States (newly added)
@@ -101,6 +103,10 @@ private slots:
         const HotkeyDef* loadGlobal = findKey(defs, "LoadGlobalState1");
         QVERIFY(loadGlobal);
         QCOMPARE(loadGlobal->group, QStringLiteral("Save States"));
+
+        const HotkeyDef* toggleOSD = findKey(defs, "ToggleOSD");
+        QVERIFY(toggleOSD);
+        QCOMPARE(toggleOSD->group, QStringLiteral("Graphics"));
 
         // Default value preserved on FastForward.
         const HotkeyDef* fastForward = findKey(defs, "FastForward");
