@@ -72,5 +72,5 @@ private slots:
     // ppsspp_completeness — added in Task 3.
 };
 
-QTEST_MAIN(TestHotkeyDefs)
+QTEST_GUILESS_MAIN(TestHotkeyDefs)
 #include "test_hotkey_defs.moc"
