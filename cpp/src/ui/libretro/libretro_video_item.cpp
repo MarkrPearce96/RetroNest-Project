@@ -93,18 +93,22 @@ void LibretroVideoItem::paint(QPainter* p) {
     // Skipped for "stretch" (integer scaling on a stretched frame is
     // meaningless — you'd just get the bounds anyway).
     if (m_integerScale && m_aspectMode != QStringLiteral("stretch")) {
-        const double multW = std::floor(tw / fw);
-        const double multH = std::floor(th / fh);
-        double mult = std::min(multW, multH);
-        if (mult < 1.0) mult = 1.0;
-        tw = fw * mult;
-        th = fh * mult;
-        // Safety clamp: at very small item sizes the integer multiple can
-        // overshoot; clamp to bounds and fall back to the un-snapped size.
-        if (tw > bw || th > bh) {
-            tw = std::min(tw, bw);
-            th = std::min(th, bh);
-        }
+        // Snap each axis INDEPENDENTLY to its largest integer multiple of the
+        // source. Earlier we used min(multW, multH) which always collapsed
+        // back to native source aspect — making 16:9 + integer-scale visually
+        // identical to 4:3 + integer-scale. Per-axis multipliers honour the
+        // chosen aspect at the cost of slightly anisotropic pixels for the
+        // non-native modes (each pixel is N wide × M tall). For pixel-perfect
+        // 1:1 use "native" or "square" — the multipliers naturally match.
+        double multW = std::floor(tw / fw);
+        double multH = std::floor(th / fh);
+        if (multW < 1.0) multW = 1.0;
+        if (multH < 1.0) multH = 1.0;
+        tw = fw * multW;
+        th = fh * multH;
+        // Safety clamp at very small item sizes.
+        if (tw > bw) tw = bw;
+        if (th > bh) th = bh;
     }
 
     // ─── Center and draw ───────────────────────────────────────────────────
