@@ -10,7 +10,7 @@
 #include "settings/duckstation/duckstation_settings_dialog.h"
 #include "settings/ppsspp/ppsspp_settings_dialog.h"
 #include "settings/dolphin/dolphin_settings_dialog.h"
-#include "settings/hotkey_settings_page.h"
+#include "settings/hotkey_settings_dialog.h"
 
 #include <QFileDialog>
 #include <QFileInfo>
@@ -461,7 +461,7 @@ void AppController::showHotkeySettings(const QString& emuId) {
         qWarning() << "[AppController] No SdlInputManager set";
         return;
     }
-    auto* dialog = new HotkeySettingsPage(m_inputManager, this, emuId);
+    auto* dialog = new HotkeySettingsDialog(m_inputManager, this, emuId);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }
