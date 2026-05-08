@@ -10,8 +10,16 @@
 #include <QCursor>
 #include <QDebug>
 
+namespace {
+constexpr int kPanelWidth = 480;
+constexpr int kPanelHeight = 140;
+constexpr int kPanelBottomMargin = 32;
+} // namespace
+
 InGameMenuPanel::InGameMenuPanel(QQmlEngine* engine, QObject* parent)
-    : QObject(parent), m_engine(engine) {}
+    : QObject(parent), m_engine(engine) {
+    Q_ASSERT(engine);
+}
 
 InGameMenuPanel::~InGameMenuPanel() = default;
 
@@ -69,15 +77,25 @@ void InGameMenuPanel::showOverEmulator(int64_t emulatorPid) {
     ensureCreated();
     if (!m_window) return;
 
-    // Resolve target screen. screenForProcess returns an NSScreen* but
-    // Qt's QScreen doesn't expose NSScreen* directly. Best-effort: prefer
-    // the QScreen that contains the cursor (the user just pressed a hotkey,
-    // the cursor is on the active display). Fall back to primary screen.
-    Q_UNUSED(emulatorPid);
-    QScreen* targetQScreen = QGuiApplication::primaryScreen();
-    {
+    // Resolve target screen.
+    //   1. Prefer the screen displaying the emulator's window (Qt mirrors
+    //      [NSScreen screens] order on macOS, so the index from
+    //      MacFullscreen translates directly).
+    //   2. Fall back to the screen containing the cursor — covers cases
+    //      where the emulator's window can't be located (kiosk,
+    //      headless-style adapters, or the index is somehow stale).
+    //   3. Last resort: primary screen.
+    QScreen* targetQScreen = nullptr;
+
+    const int idx = MacFullscreen::screenIndexForProcess(emulatorPid);
+    const QList<QScreen*> screens = QGuiApplication::screens();
+    if (idx >= 0 && idx < screens.size()) {
+        targetQScreen = screens.at(idx);
+    }
+
+    if (!targetQScreen) {
         const QPoint cursorPos = QCursor::pos();
-        for (QScreen* s : QGuiApplication::screens()) {
+        for (QScreen* s : screens) {
             if (s->geometry().contains(cursorPos)) {
                 targetQScreen = s;
                 break;
@@ -85,21 +103,16 @@ void InGameMenuPanel::showOverEmulator(int64_t emulatorPid) {
         }
     }
 
-    const QRect screenGeom = targetQScreen->geometry();
-    const int panelW = 480;
-    const int panelH = 140;
-    const int bottomMargin = 32;
-    const int x = screenGeom.x() + (screenGeom.width() - panelW) / 2;
-    const int y = screenGeom.y() + screenGeom.height() - panelH - bottomMargin;
-    m_window->setGeometry(x, y, panelW, panelH);
+    if (!targetQScreen) targetQScreen = QGuiApplication::primaryScreen();
 
-    // Show the window first so winId() is valid, then apply NSPanel chrome
-    // (one-time). configurePanelWindow is idempotent because m_chromeApplied
-    // gates re-application.
+    const QRect screenGeom = targetQScreen->geometry();
+    const int x = screenGeom.x() + (screenGeom.width() - kPanelWidth) / 2;
+    const int y = screenGeom.y() + screenGeom.height() - kPanelHeight - kPanelBottomMargin;
+    m_window->setGeometry(x, y, kPanelWidth, kPanelHeight);
+
     m_window->show();
     applyPanelChrome();
 
-    // Tell the QML side to bring up the HUD content + force focus.
     QMetaObject::invokeMethod(m_window, "openMenu");
 }
 

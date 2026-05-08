@@ -86,7 +86,7 @@ void unregisterGlobalHotkey() {
     }
 }
 
-void* screenForProcess(int64_t pid) {
+int screenIndexForProcess(int64_t pid) {
     @autoreleasepool {
         // Skip menu-bar items, tooltips, and other small windows owned by
         // the same PID — only the emulator's main render window is large.
@@ -95,12 +95,12 @@ void* screenForProcess(int64_t pid) {
         CFArrayRef windows = CGWindowListCopyWindowInfo(
             kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,
             kCGNullWindowID);
-        if (!windows) return nullptr;
+        if (!windows) return -1;
 
         NSArray<NSScreen*>* allScreens = [NSScreen screens];
         CGFloat primaryHeight = [[allScreens firstObject] frame].size.height;
 
-        NSScreen* result = nullptr;
+        int result = -1;
         CFIndex count = CFArrayGetCount(windows);
         // CGWindowListCopyWindowInfo returns windows in front-to-back order
         // for kCGWindowListOptionOnScreenOnly, so the first matching window
@@ -127,18 +127,18 @@ void* screenForProcess(int64_t pid) {
                 windowCenterCG.x,
                 primaryHeight - windowCenterCG.y);
 
-            for (NSScreen* screen in allScreens) {
+            for (NSUInteger si = 0; si < [allScreens count]; ++si) {
+                NSScreen* screen = [allScreens objectAtIndex:si];
                 if (NSPointInRect(windowCenter, [screen frame])) {
-                    result = screen;
+                    result = (int)si;
                     break;
                 }
             }
-            if (result) break;
+            if (result >= 0) break;
         }
         CFRelease(windows);
 
-        if (!result) result = [NSScreen mainScreen];
-        return (__bridge void*)result;
+        return result;
     }
 }
 
@@ -191,7 +191,7 @@ void activateOurApp() {}
 void activateProcess(int64_t) {}
 void registerGlobalHotkey(HotkeyCallback) {}
 void unregisterGlobalHotkey() {}
-void* screenForProcess(int64_t) { return nullptr; }
+int screenIndexForProcess(int64_t) { return -1; }
 void configurePanelWindow(void*) {}
 }
 #endif

@@ -28,12 +28,12 @@ void registerGlobalHotkey(HotkeyCallback callback);
 // Unregister the global hotkey.
 void unregisterGlobalHotkey();
 
-// Locate the NSScreen displaying the frontmost large on-screen window
-// owned by `pid`. Returns a pointer to the NSScreen, or nullptr if the
-// process / window cannot be located. The pointer type is opaque
-// (void*) so this header stays C++-only — callers in .mm files cast
-// it to NSScreen*.
-void* screenForProcess(int64_t pid);
+// Return the index into [NSScreen screens] of the screen displaying the
+// frontmost large on-screen window owned by `pid`. Returns -1 if the
+// process / window cannot be located. Index form (vs. NSScreen*) keeps
+// this header C++-only and lets callers index QGuiApplication::screens()
+// directly — Qt mirrors NSScreen ordering on macOS.
+int screenIndexForProcess(int64_t pid);
 
 // Apply NSPanel-style configuration to the NSWindow backing a Qt
 // top-level QWindow. The argument is the QWindow's winId() — on
