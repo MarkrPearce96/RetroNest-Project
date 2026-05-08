@@ -485,6 +485,36 @@ void SdlInputManager::pollEvents() {
                     emit capturingChanged();
                 }
                 emit bindingCaptured(devIdx, element, true, positive);
+            } else if (m_emulationTarget && !m_capturing) {
+                // Route axis polarity to the InputRouter so analog-mapped-to-
+                // RetroPad bindings work (e.g. D-Pad Up = SDL-0/-LeftY).
+                // Resolve both "+{axis}" and "-{axis}" via lookup; only the
+                // bound polarity gets a press, the opposite gets released.
+                const char* axisName = SDL_GameControllerGetStringForAxis(
+                    static_cast<SDL_GameControllerAxis>(event.caxis.axis));
+                const QString axis = canonicalName(axisName);
+                const QString posEl = "+" + axis;
+                const QString negEl = "-" + axis;
+                const int devIdx = m_deviceIndices.value(event.caxis.which, 0);
+                const auto posSlot = m_emulationTarget->lookup(devIdx, posEl);
+                const auto negSlot = m_emulationTarget->lookup(devIdx, negEl);
+
+                if (value > kAxisDeadzone) {
+                    if (posSlot != RetroPadSlot::None)
+                        m_emulationTarget->setButtonPressed(0, posSlot, true);
+                    if (negSlot != RetroPadSlot::None)
+                        m_emulationTarget->setButtonPressed(0, negSlot, false);
+                } else if (value < -kAxisDeadzone) {
+                    if (negSlot != RetroPadSlot::None)
+                        m_emulationTarget->setButtonPressed(0, negSlot, true);
+                    if (posSlot != RetroPadSlot::None)
+                        m_emulationTarget->setButtonPressed(0, posSlot, false);
+                } else if (std::abs(value) <= kAxisDeadzone / 2) {
+                    if (posSlot != RetroPadSlot::None)
+                        m_emulationTarget->setButtonPressed(0, posSlot, false);
+                    if (negSlot != RetroPadSlot::None)
+                        m_emulationTarget->setButtonPressed(0, negSlot, false);
+                }
             } else if (!m_capturing && std::abs(value) > kAxisDeadzone) {
                 auto axis = static_cast<SDL_GameControllerAxis>(event.caxis.axis);
                 SDL_JoystickID jid = event.caxis.which;
