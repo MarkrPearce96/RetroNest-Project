@@ -1,6 +1,7 @@
 #include "settings_description_bar.h"
 #include "ui/settings/settings_dialog_theme.h"
 #include "core/sdl_input_manager.h"
+#include "core/binding_def.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -39,6 +40,14 @@ void SettingsDescriptionBar::setSetting(const SettingDef& def) {
     }
     m_rec->setText(QStringLiteral("Recommended: %1").arg(rec));
     m_rec->setVisible(!rec.isEmpty());
+}
+
+void SettingsDescriptionBar::setHotkey(const HotkeyDef& def, const QString& currentDisplay) {
+    const QString shown = currentDisplay.isEmpty()
+                              ? QStringLiteral("Not bound")
+                              : currentDisplay;
+    m_text->setText(QStringLiteral("%1  —  Currently: %2").arg(def.label, shown));
+    m_rec->setVisible(false);
 }
 
 void SettingsDescriptionBar::clear() {

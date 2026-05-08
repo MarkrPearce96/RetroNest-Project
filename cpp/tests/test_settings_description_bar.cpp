@@ -1,6 +1,8 @@
 #include <QtTest>
+#include <QLabel>
 #include "ui/settings/widgets/settings_description_bar.h"
 #include "core/setting_def.h"
+#include "core/binding_def.h"
 
 class TestSettingsDescriptionBar : public QObject {
     Q_OBJECT
@@ -59,6 +61,36 @@ private slots:
         QCOMPARE(bar.hints().size(), 1);
         bar.clearHints();
         QCOMPARE(bar.hints().size(), 0);
+    }
+
+    void setHotkey_writesLabelAndCurrentBinding() {
+        SettingsDescriptionBar bar;
+
+        HotkeyDef def;
+        def.label = "Toggle Turbo";
+        def.group = "Speed Control";
+        def.section = "Hotkeys";
+        def.key = "ToggleTurbo";
+
+        bar.setHotkey(def, "Period");
+
+        QCOMPARE(bar.descText(),
+                 QStringLiteral("Toggle Turbo  —  Currently: Period"));
+        // Recommended badge is hidden for hotkeys (no recommended value).
+        QVERIFY(bar.recommendedText().isEmpty()
+                || !bar.findChild<QLabel*>("SettingsDescRecommended")->isVisible());
+    }
+
+    void setHotkey_emptyValueShowsNotBound() {
+        SettingsDescriptionBar bar;
+
+        HotkeyDef def;
+        def.label = "Frame Advance";
+
+        bar.setHotkey(def, QString());
+
+        QCOMPARE(bar.descText(),
+                 QStringLiteral("Frame Advance  —  Currently: Not bound"));
     }
 };
 QTEST_MAIN(TestSettingsDescriptionBar)

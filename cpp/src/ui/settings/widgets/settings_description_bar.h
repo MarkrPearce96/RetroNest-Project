@@ -3,6 +3,8 @@
 #include <QVector>
 #include "core/setting_def.h"
 
+struct HotkeyDef;
+
 class QLabel;
 class QHBoxLayout;
 class SdlInputManager;
@@ -20,6 +22,10 @@ public:
     void setSetting(const SettingDef& def);
     void clear();
     void setDescriptionVisible(bool visible);
+
+    // Hotkey variant: writes "<Label> — Currently: <value or 'Not bound'>"
+    // to the primary text and hides the recommended badge.
+    void setHotkey(const HotkeyDef& def, const QString& currentDisplay);
 
     void setHints(const QVector<ButtonHint>& hints);
     void clearHints();
