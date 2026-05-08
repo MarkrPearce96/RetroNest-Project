@@ -23,14 +23,7 @@ HotkeyBindingRow::HotkeyBindingRow(const HotkeyDef& def, QWidget* parent)
     m_button = new BindBtn(this);
     m_button->setFixedHeight(kBtnH);
     m_button->setCursor(Qt::PointingHandCursor);
-    m_button->setStyleSheet(QStringLiteral(
-        "QPushButton { background:%1; color:%2; border:1px solid %3;"
-        "  border-radius:6px; font-size:12px; padding:4px 8px; }"
-        "QPushButton:hover { border-color:%4; }")
-        .arg(SettingsDialogTheme::inputBg().name(),
-             SettingsDialogTheme::textPrimary().name(),
-             SettingsDialogTheme::cardBorder().name(),
-             SettingsDialogTheme::accent().name()));
+    m_button->setStyleSheet(kHotkeyRowDefaultStyle);
     m_button->setText(QStringLiteral("Not bound"));
 
     connect(m_button, &QPushButton::clicked, this,
@@ -59,14 +52,7 @@ void HotkeyBindingRow::setCapturing(bool capturing) {
         m_button->setStyleSheet(kCapturingStyle);
         m_button->setText(QStringLiteral("Press a button or key…"));
     } else {
-        m_button->setStyleSheet(QStringLiteral(
-            "QPushButton { background:%1; color:%2; border:1px solid %3;"
-            "  border-radius:6px; font-size:12px; padding:4px 8px; }"
-            "QPushButton:hover { border-color:%4; }")
-            .arg(SettingsDialogTheme::inputBg().name(),
-                 SettingsDialogTheme::textPrimary().name(),
-                 SettingsDialogTheme::cardBorder().name(),
-                 SettingsDialogTheme::accent().name()));
+        m_button->setStyleSheet(kHotkeyRowDefaultStyle);
     }
 }
 

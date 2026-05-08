@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ui/settings/settings_dialog_theme.h"
+
 #include <QPushButton>
 #include <QLabel>
 #include <QWidget>
@@ -30,6 +32,20 @@ inline const QString kCapturingStyle = QStringLiteral(
     "  border-radius: 6px; font-size: 12px; font-style: italic; font-weight: 600;"
     "  padding: 4px 8px; }"
 ).arg(kAccent, kTextPrimary);
+
+// Default-state stylesheet for HotkeyBindingRow's BindBtn. Uses
+// SettingsDialogTheme (the warm-grey + amber palette) rather than the legacy
+// dark-navy kBtnStyle above, because hotkey rows now live inside the per-
+// emulator settings dialogs. Hoisted here so the row's ctor and
+// setCapturing(false) reference one definition.
+inline const QString kHotkeyRowDefaultStyle = QStringLiteral(
+    "QPushButton { background:%1; color:%2; border:1px solid %3;"
+    "  border-radius:6px; font-size:12px; padding:4px 8px; }"
+    "QPushButton:hover { border-color:%4; }")
+    .arg(SettingsDialogTheme::inputBg().name(),
+         SettingsDialogTheme::textPrimary().name(),
+         SettingsDialogTheme::cardBorder().name(),
+         SettingsDialogTheme::accent().name());
 
 // ── Binding button with right-click ────────────────────────
 class BindBtn : public QPushButton {
