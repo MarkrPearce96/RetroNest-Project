@@ -702,6 +702,22 @@ target_link_libraries(test_hotkey_binding_row PRIVATE
 )
 add_test(NAME HotkeyBindingRow COMMAND test_hotkey_binding_row)
 
+add_executable(test_hotkey_defs
+    tests/test_hotkey_defs.cpp
+    src/adapters/pcsx2_adapter.cpp
+    src/adapters/duckstation_adapter.cpp
+    src/adapters/ppsspp_adapter.cpp
+    src/adapters/emulator_adapter.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_hotkey_defs PROPERTIES AUTOMOC ON)
+target_include_directories(test_hotkey_defs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_hotkey_defs PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_test(NAME HotkeyDefs COMMAND test_hotkey_defs)
+
 add_executable(test_generic_hotkey_page
     tests/test_generic_hotkey_page.cpp
     tests/stubs/generic_hotkey_page_stubs.cpp
