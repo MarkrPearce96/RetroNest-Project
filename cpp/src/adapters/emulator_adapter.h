@@ -192,6 +192,14 @@ public:
     virtual class OptionsStore* libretroOptionsStore() { return nullptr; }
 
     /**
+     * Return the frontend settings store for this adapter, or nullptr if not
+     * a libretro-backed adapter. Overridden by LibretroAdapter.
+     * Used by GenericSettingsPage to read/write SettingDefs whose storage is
+     * SettingDef::Storage::FrontendSetting.
+     */
+    virtual class FrontendSettingsStore* frontendSettingsStore() { return nullptr; }
+
+    /**
      * Return the path to the config file where controller bindings are stored.
      * Most emulators store bindings in the main config file, so this defaults
      * to configFilePath(). Override for emulators that use a separate file

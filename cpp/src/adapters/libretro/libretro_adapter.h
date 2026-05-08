@@ -2,7 +2,10 @@
 
 #include "adapters/emulator_adapter.h"
 #include "core/libretro/core_runtime.h"
+#include "core/libretro/frontend_settings_store.h"
 #include <QObject>
+#include <QPair>
+#include <QVector>
 #include <memory>
 
 class LibretroAdapter : public QObject, public EmulatorAdapter {
@@ -36,6 +39,13 @@ public:
     // enough to mitigate this v1 limitation.
     OptionsStore* libretroOptionsStore() override;
 
+    // Return the frontend settings store for this adapter.
+    // Lazily initialised on first call; loads from frontend.json using the
+    // defaults returned by frontendSettingDefaults(). Never returns nullptr
+    // after the first call (unlike libretroOptionsStore which requires a live
+    // runtime — frontend settings are independent of the core thread).
+    FrontendSettingsStore* frontendSettingsStore() override;
+
     // Used by GameSession when manifest.backend == "libretro".
     CoreRuntime* runtime() { return m_runtime.get(); }
     void prepareRuntime();
@@ -50,13 +60,23 @@ public:
         Q_UNUSED(systemId); return 0;
     }
 
+    /** Default frontend setting (key, defaultValue) pairs for this core.
+     *  Subclasses override to declare their frontend-managed settings.
+     *  Default returns empty (no frontend settings). */
+    virtual QVector<QPair<QString, QString>> frontendSettingDefaults() const {
+        return {};
+    }
+
 protected:
     /** Static path: {root}/emulators/libretro/cores/{core_dylib} */
     static QString coreDylibPath(const EmulatorManifest& manifest);
     /** Static path: {root}/emulators/libretro/{coreId}/options.json */
     QString optionsJsonPath() const;
     QString controlsJsonPath() const;
+    /** Static path: {root}/emulators/libretro/{coreId}/frontend.json */
+    QString frontendJsonPath() const;
 
 private:
     std::unique_ptr<CoreRuntime> m_runtime;
+    std::unique_ptr<FrontendSettingsStore> m_frontendSettings;
 };

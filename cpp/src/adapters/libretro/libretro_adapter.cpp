@@ -20,6 +20,10 @@ QString LibretroAdapter::controlsJsonPath() const {
     return Paths::emulatorsDir("libretro") + "/" + coreId() + "/controls.json";
 }
 
+QString LibretroAdapter::frontendJsonPath() const {
+    return Paths::emulatorsDir("libretro") + "/" + coreId() + "/frontend.json";
+}
+
 bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
                                    const QString& /*biosPath*/,
                                    const QString& savesPath) {
@@ -78,6 +82,14 @@ QString LibretroAdapter::findResumeFile(const QString& /*serial*/) const {
 
 OptionsStore* LibretroAdapter::libretroOptionsStore() {
     return m_runtime ? &m_runtime->options() : nullptr;
+}
+
+FrontendSettingsStore* LibretroAdapter::frontendSettingsStore() {
+    if (!m_frontendSettings) {
+        m_frontendSettings = std::make_unique<FrontendSettingsStore>();
+        m_frontendSettings->load(frontendJsonPath(), frontendSettingDefaults());
+    }
+    return m_frontendSettings.get();
 }
 
 void LibretroAdapter::prepareRuntime() {

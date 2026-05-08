@@ -68,6 +68,7 @@ set(SOURCES
     src/core/ra_client.cpp
     src/core/iso9660_reader.cpp
     src/core/libretro/options_store.cpp
+    src/core/libretro/frontend_settings_store.cpp
     src/core/libretro/retro_log.cpp
     src/core/libretro/rcheevos_runtime.cpp
     src/adapters/libretro/libretro_adapter.cpp
@@ -458,6 +459,7 @@ add_executable(test_rom_scanner
     src/core/libretro/audio_sink.cpp
     src/core/libretro/input_router.cpp
     src/core/libretro/options_store.cpp
+    src/core/libretro/frontend_settings_store.cpp
     src/core/libretro/rcheevos_runtime.cpp
     src/core/libretro/retro_log.cpp
     src/core/sfo_parser.cpp
@@ -672,6 +674,7 @@ add_executable(test_controller_bindings_view
     src/core/libretro/audio_sink.cpp
     src/core/libretro/input_router.cpp
     src/core/libretro/options_store.cpp
+    src/core/libretro/frontend_settings_store.cpp
     src/core/libretro/rcheevos_runtime.cpp
     src/core/libretro/retro_log.cpp
     src/core/ini_file.cpp
@@ -759,6 +762,7 @@ add_executable(test_quick_settings_file_field
     src/core/libretro/audio_sink.cpp
     src/core/libretro/input_router.cpp
     src/core/libretro/options_store.cpp
+    src/core/libretro/frontend_settings_store.cpp
     src/core/libretro/rcheevos_runtime.cpp
     src/core/libretro/retro_log.cpp
     src/core/ini_file.cpp

@@ -38,6 +38,11 @@ Item {
     LibretroVideoItem {
         id: video
         anchors.fill: parent
+        // Bind aspect-ratio and integer-scale from the active libretro
+        // frontend settings store. When no game is running the session
+        // properties return safe defaults ("native" / false).
+        aspectMode:   root.session ? root.session.libretroAspectMode   : "native"
+        integerScale: root.session ? root.session.libretroIntegerScale  : false
     }
 
     // Route frameReady from the GameSession to the video item.

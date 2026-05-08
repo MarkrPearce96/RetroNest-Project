@@ -17,8 +17,13 @@ struct SettingDef {
      *  - LibretroOption: read/write via the per-core libretro options.json
      *    sidecar. Used by libretro-backed adapters; `key` becomes the
      *    libretro option key (e.g. "mgba_skip_bios").
+     *  - FrontendSetting: read/write via a per-core frontend.json sidecar
+     *    (parallel to options.json). Used for settings that are frontend
+     *    concerns, not core-declared (e.g. aspect ratio, integer scale).
+     *    Values are managed entirely by RetroNest — the libretro core never
+     *    sees them.
      */
-    enum class Storage { Ini, LibretroOption };
+    enum class Storage { Ini, LibretroOption, FrontendSetting };
 
     QString category;    // UI tab/group (e.g. "Graphics", "Audio")
     QString subcategory; // Sub-tab within category (e.g. "Display", "Rendering")
@@ -114,7 +119,8 @@ struct SettingDef {
     QString iniFilePath;
 
     // Storage backend: Ini (default) reads/writes via the emulator's INI file;
-    // LibretroOption reads/writes via the per-core libretro options.json sidecar.
+    // LibretroOption reads/writes via the per-core libretro options.json sidecar;
+    // FrontendSetting reads/writes via the per-core frontend.json sidecar.
     // Placed last so existing positional aggregate initialisers are unaffected.
     Storage storage = Storage::Ini;
 };

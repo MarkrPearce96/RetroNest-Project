@@ -2,6 +2,7 @@
 #include "paths.h"
 #include "adapters/emulator_adapter.h"
 #include "adapters/libretro/libretro_adapter.h"
+#include "core/libretro/frontend_settings_store.h"
 #include "core/libretro/rcheevos_runtime.h"
 #include "core/sdl_input_manager.h"
 #include "services/ra_service.h"
@@ -188,6 +189,18 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
                 Qt::QueuedConnection);
     }
 
+    // Wire frontend settings changes → libretroFrontendChanged so QML
+    // bindings on libretroAspectMode / libretroIntegerScale update live.
+    if (auto* fs = lr->frontendSettingsStore()) {
+        connect(fs, &FrontendSettingsStore::frontendSettingChanged,
+                this, [this](const QString& /*key*/, const QString& /*value*/) {
+                    emit libretroFrontendChanged();
+                }, Qt::QueuedConnection);
+    }
+    // Emit once at game-start so QML reactive bindings get the current value
+    // immediately (before any change signal fires).
+    emit libretroFrontendChanged();
+
     if (!rt->start(cfg))
         return false;
 
@@ -260,6 +273,22 @@ bool GameSession::isRunning() const {
 
 qint64 GameSession::pid() const {
     return m_process ? m_process->processId() : -1;
+}
+
+QString GameSession::libretroAspectMode() const {
+    if (!m_libretroAdapter) return QStringLiteral("native");
+    if (auto* store = m_libretroAdapter->frontendSettingsStore()) {
+        const QString v = store->get(QStringLiteral("aspect_mode"));
+        return v.isEmpty() ? QStringLiteral("native") : v;
+    }
+    return QStringLiteral("native");
+}
+
+bool GameSession::libretroIntegerScale() const {
+    if (!m_libretroAdapter) return false;
+    if (auto* store = m_libretroAdapter->frontendSettingsStore())
+        return store->get(QStringLiteral("integer_scale")).compare("ON", Qt::CaseInsensitive) == 0;
+    return false;
 }
 
 void GameSession::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {

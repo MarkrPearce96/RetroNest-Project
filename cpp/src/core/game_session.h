@@ -4,11 +4,13 @@
 #include <QImage>
 #include <QObject>
 #include <QProcess>
+#include <QString>
 
 class EmulatorAdapter;
 class LibretroAdapter;
 class SdlInputManager;
 class RAService;
+class FrontendSettingsStore;
 
 /**
  * GameSession — manages an async emulator process or libretro core.
@@ -17,6 +19,8 @@ class RAService;
 class GameSession : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
+    Q_PROPERTY(QString libretroAspectMode READ libretroAspectMode NOTIFY libretroFrontendChanged)
+    Q_PROPERTY(bool libretroIntegerScale READ libretroIntegerScale NOTIFY libretroFrontendChanged)
 
 public:
     explicit GameSession(QObject* parent = nullptr);
@@ -46,6 +50,12 @@ public:
     /** True when the running game uses the libretro (in-process) backend. */
     bool isLibretro() const { return m_backend == Backend::Libretro; }
 
+    /** Current aspect mode from the libretro frontend settings store.
+     *  Returns "native" when no libretro game is running or no store. */
+    QString libretroAspectMode() const;
+    /** Current integer-scale flag from the libretro frontend settings store. */
+    bool libretroIntegerScale() const;
+
     /** Pause emulation for the in-game menu. Libretro path: stops the core
      *  thread's retro_run loop and routes SDL events back to QML navigation
      *  by clearing emulation mode. No-op for process emulators (they pause
@@ -69,6 +79,8 @@ signals:
     void errorOccurred(const QString& error);
     /** Emitted for each rendered frame (libretro path only). Used by EmulationView. */
     void frameReady(const QImage& frame);
+    /** Emitted when a libretro frontend setting (aspect mode, integer scale) changes. */
+    void libretroFrontendChanged();
 
 private slots:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);

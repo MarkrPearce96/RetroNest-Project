@@ -98,6 +98,17 @@ AspectRatioPreview::fromSchemaValue(const QString& v) {
     if (v == "4:3")            return AspectRatio::R4_3;
     if (v == "16:9")           return AspectRatio::R16_9;
     if (v == "10:7")           return AspectRatio::R10_7;
+
+    // Frontend-setting strings used by mGBA's libretro frontend aspect control.
+    // "native" maps to 4:3 in the preview (GBA natural ratio is close to 3:2 but
+    // 4:3 is the conventional display shape and gives a cleaner preview label).
+    // "square" is the same visual shape as native for the purposes of this widget.
+    if (v == "native")   return AspectRatio::R4_3;
+    if (v == "square")   return AspectRatio::R4_3;
+    if (v == "4_3")      return AspectRatio::R4_3;
+    if (v == "16_9")     return AspectRatio::R16_9;
+    if (v == "stretch")  return AspectRatio::Stretch;
+
     return AspectRatio::R4_3;
 }
 

@@ -1,6 +1,7 @@
 #include "generic_settings_page.h"
 #include "adapters/emulator_adapter.h"
 #include "core/bitmask_helpers.h"
+#include "core/libretro/frontend_settings_store.h"
 #include "core/libretro/options_store.h"
 #include "core/setting_dependency.h"
 #include "emulator_settings_dialog_base.h"
@@ -47,12 +48,18 @@ static QString readSetting(const SettingDef &def, EmulatorAdapter *adapter,
             return store->get(def.key);
         return def.defaultValue;
     }
+    if (def.storage == SettingDef::Storage::FrontendSetting) {
+        if (auto *store = adapter ? adapter->frontendSettingsStore() : nullptr)
+            return store->get(def.key);
+        return def.defaultValue;
+    }
     return iniRead(def.section, def.key);
 }
 
 // Write a SettingDef's new value to whichever backend owns it.
-// Falls back silently for Storage::LibretroOption when no OptionsStore is
-// available — same "inert for non-libretro adapters" contract as readSetting.
+// Falls back silently for Storage::LibretroOption/FrontendSetting when no
+// store is available — same "inert for non-libretro adapters" contract as
+// readSetting.
 static void writeSetting(const SettingDef &def, EmulatorAdapter *adapter,
                          const QString &value,
                          const std::function<void(const QString &,
@@ -60,6 +67,11 @@ static void writeSetting(const SettingDef &def, EmulatorAdapter *adapter,
                                                   const QString &)> &iniWrite) {
     if (def.storage == SettingDef::Storage::LibretroOption) {
         if (auto *store = adapter ? adapter->libretroOptionsStore() : nullptr)
+            store->set(def.key, value);
+        return;
+    }
+    if (def.storage == SettingDef::Storage::FrontendSetting) {
+        if (auto *store = adapter ? adapter->frontendSettingsStore() : nullptr)
             store->set(def.key, value);
         return;
     }

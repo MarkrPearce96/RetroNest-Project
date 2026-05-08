@@ -49,6 +49,13 @@ QVector<HotkeyDef> MgbaLibretroAdapter::hotkeyBindingDefs() const {
     return {};
 }
 
+QVector<QPair<QString, QString>> MgbaLibretroAdapter::frontendSettingDefaults() const {
+    return {
+        { "aspect_mode",    "native" },
+        { "integer_scale",  "OFF"    },
+    };
+}
+
 QVector<SettingDef> MgbaLibretroAdapter::settingsSchema() const {
     QVector<SettingDef> s;
 
@@ -68,8 +75,50 @@ QVector<SettingDef> MgbaLibretroAdapter::settingsSchema() const {
         return d;
     };
 
+    // Helper for FrontendSetting entries: same Combo shape but backed by
+    // frontend.json rather than options.json. Combo values are our internal
+    // strings (e.g. "native", "4_3") — NOT the AspectRatioPreview strings.
+    // AspectRatioPreview::fromSchemaValue is extended to handle both sets.
+    auto frontend = [](const QString& key, const QString& label,
+                       const QString& def, const QStringList& vals,
+                       const QString& category, const QString& tooltip) -> SettingDef {
+        SettingDef d;
+        d.storage = SettingDef::Storage::FrontendSetting;
+        d.key = key;
+        d.label = label;
+        d.defaultValue = def;
+        d.type = SettingDef::Combo;
+        for (const auto& v : vals)
+            d.options.append({ v, v });
+        d.category = category;
+        d.tooltip = tooltip;
+        return d;
+    };
+
     // Recommended — curated short-list, same keys as their native categories
     // below. Edits in either place persist to the same OptionsStore key.
+
+    // Frontend-managed: aspect ratio and integer scale (Recommended + Video).
+    // These live in frontend.json, not the libretro core's options.json, because
+    // the mGBA core exposes no aspect-ratio setting — it is a frontend concern.
+    s << frontend("aspect_mode", "Aspect Ratio",
+                  "native",
+                  { "native", "square", "4_3", "16_9", "stretch" },
+                  "Recommended",
+                  "How the emulated frame is fitted into the window. "
+                  "'Native' preserves the system's natural aspect ratio. "
+                  "'Square Pixel' shows pixel-perfect 1:1. "
+                  "'4:3' / '16:9' force a TV-style aspect. "
+                  "'Stretch' fills the window ignoring aspect.");
+
+    s << frontend("integer_scale", "Integer Scale",
+                  "OFF",
+                  { "OFF", "ON" },
+                  "Recommended",
+                  "Snap the displayed frame to the largest integer multiple "
+                  "of native resolution that fits. Eliminates pixel shimmer "
+                  "at the cost of some unused screen area.");
+
     s << opt("mgba_skip_bios",
              "Skip BIOS Intro (Restart)",
              "OFF",
@@ -123,6 +172,27 @@ QVector<SettingDef> MgbaLibretroAdapter::settingsSchema() const {
              "When using an official BIOS/bootloader, skip the start-up logo animation. This setting is ignored when 'Use BIOS File if Found' is disabled.");
 
     // Video
+    // Frontend-managed aspect controls duplicated here so they appear under
+    // the Video category too. Both entries share the same frontend.json keys,
+    // so editing from either category persists to the same value.
+    s << frontend("aspect_mode", "Aspect Ratio",
+                  "native",
+                  { "native", "square", "4_3", "16_9", "stretch" },
+                  "Video",
+                  "How the emulated frame is fitted into the window. "
+                  "'Native' preserves the system's natural aspect ratio. "
+                  "'Square Pixel' shows pixel-perfect 1:1. "
+                  "'4:3' / '16:9' force a TV-style aspect. "
+                  "'Stretch' fills the window ignoring aspect.");
+
+    s << frontend("integer_scale", "Integer Scale",
+                  "OFF",
+                  { "OFF", "ON" },
+                  "Video",
+                  "Snap the displayed frame to the largest integer multiple "
+                  "of native resolution that fits. Eliminates pixel shimmer "
+                  "at the cost of some unused screen area.");
+
     s << opt("mgba_gb_colors",
              "Default Game Boy Palette",
              "Grayscale",
@@ -221,12 +291,13 @@ QVector<SettingDef> MgbaLibretroAdapter::settingsSchema() const {
 
 PreviewSpec MgbaLibretroAdapter::previewSpec(const QString& category,
                                               const QString& subcategory) const {
-    // Recommended page hosts a decorative AspectRatioPreview, mirroring the
-    // PPSSPP pattern. mGBA's libretro core doesn't expose a discrete aspect
-    // ratio combo, so the preview is decorative-only (no key bindings) — it
-    // just gives the page the canonical Recommended layout shape.
+    // Recommended and Video pages both host a live AspectRatioPreview bound
+    // to aspect_mode. The combo values ("native", "square", "4_3", "16_9",
+    // "stretch") are translated by AspectRatioPreview::fromSchemaValue to the
+    // widget's AspectRatio enum. integerScaling is also wired so the preview
+    // reflects integer-scale snapping.
     if (category == "Recommended" && subcategory.isEmpty())
-        return { "aspect", {} };
+        return { "aspect", { { "aspect_mode", "aspectMode" } } };
     return {};
 }
 
