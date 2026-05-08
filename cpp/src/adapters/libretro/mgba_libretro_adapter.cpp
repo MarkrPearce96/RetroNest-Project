@@ -68,6 +68,39 @@ QVector<SettingDef> MgbaLibretroAdapter::settingsSchema() const {
         return d;
     };
 
+    // Recommended — curated short-list, same keys as their native categories
+    // below. Edits in either place persist to the same OptionsStore key.
+    s << opt("mgba_skip_bios",
+             "Skip BIOS Intro (Restart)",
+             "OFF",
+             { "OFF", "ON" },
+             "Recommended",
+             "When using an official BIOS/bootloader, skip the start-up logo animation. This setting is ignored when 'Use BIOS File if Found' is disabled.");
+    s << opt("mgba_color_correction",
+             "Color Correction",
+             "OFF",
+             { "OFF", "GBA", "GBC", "Auto" },
+             "Recommended",
+             "Adjusts output colors to match the display of real GBA/GBC hardware.");
+    s << opt("mgba_interframe_blending",
+             "Interframe Blending",
+             "OFF",
+             { "OFF", "mix", "mix_smart", "lcd_ghosting", "lcd_ghosting_fast" },
+             "Recommended",
+             "Simulates LCD ghosting effects. 'mix' performs a 50:50 mix of the current and previous frames. 'mix_smart' detects screen flickering and only blends affected pixels. 'lcd_ghosting' mimics natural LCD response times.");
+    s << opt("mgba_idle_optimization",
+             "Idle Loop Removal",
+             "Remove Known",
+             { "Remove Known", "Detect and Remove", "Don't Remove" },
+             "Recommended",
+             "Reduce system load by optimizing 'idle-loops' — sections of code where nothing happens but the CPU runs at full speed. Improves performance, especially on low-end hardware.");
+    s << opt("mgba_frameskip",
+             "Frameskip",
+             "disabled",
+             { "disabled", "auto", "auto_threshold", "fixed_interval" },
+             "Recommended",
+             "Skip frames to avoid audio buffer under-run (crackling). Improves performance at the expense of visual smoothness.");
+
     // System
     s << opt("mgba_gb_model",
              "Game Boy Model (Restart)",
@@ -186,8 +219,15 @@ QVector<SettingDef> MgbaLibretroAdapter::settingsSchema() const {
     return s;
 }
 
-PreviewSpec MgbaLibretroAdapter::previewSpec(const QString&, const QString&) const {
-    return {}; // deferred — wired in a follow-up if we want aspect-ratio preview
+PreviewSpec MgbaLibretroAdapter::previewSpec(const QString& category,
+                                              const QString& subcategory) const {
+    // Recommended page hosts a decorative AspectRatioPreview, mirroring the
+    // PPSSPP pattern. mGBA's libretro core doesn't expose a discrete aspect
+    // ratio combo, so the preview is decorative-only (no key bindings) — it
+    // just gives the page the canonical Recommended layout shape.
+    if (category == "Recommended" && subcategory.isEmpty())
+        return { "aspect", {} };
+    return {};
 }
 
 QString MgbaLibretroAdapter::configFilePath() const {
