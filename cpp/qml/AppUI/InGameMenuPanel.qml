@@ -5,11 +5,14 @@ import QtQuick.Window
  * InGameMenuPanel — Window host for the in-game HUD when an external
  * emulator is running. Sized and positioned by C++ (InGameMenuPanel)
  * via setGeometry(). Configured as a non-activating NSPanel by
- * MacFullscreen::configurePanelWindow().
+ * MacFullscreen::configurePanelWindow() — that's what prevents the
+ * panel from activating our app while still allowing it to become
+ * the system key window (which is required for the emulator's
+ * PauseOnFocusLoss to fire).
  */
 Window {
     id: panelWindow
-    flags: Qt.FramelessWindowHint | Qt.Tool | Qt.WindowDoesNotAcceptFocus | Qt.WindowStaysOnTopHint
+    flags: Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint
     color: "transparent"
     visible: false
 

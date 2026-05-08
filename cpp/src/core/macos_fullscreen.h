@@ -43,4 +43,12 @@ int screenIndexForProcess(int64_t pid);
 // without activating our app.
 void configurePanelWindow(void* nsViewPtr);
 
+// Make the NSWindow backing a Qt top-level QWindow the system key
+// window. Required after every show() of a non-activating panel —
+// macOS does not promote it to key just because it was ordered front.
+// Used so the emulator's window loses key (firing PauseOnFocusLoss)
+// and so SDL/Qt input routes into the panel's QML scene. The
+// argument is the QWindow's winId() (NSView* on macOS).
+void makePanelKey(void* nsViewPtr);
+
 } // namespace MacFullscreen

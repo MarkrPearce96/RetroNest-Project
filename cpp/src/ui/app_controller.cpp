@@ -722,7 +722,16 @@ void AppController::openInGameMenuPanel() {
 }
 
 void AppController::closeInGameMenuPanel() {
-    if (m_inGameMenuPanel) m_inGameMenuPanel->hide();
+    if (!m_inGameMenuPanel) return;
+    m_inGameMenuPanel->hide();
+    // Explicitly re-activate the emulator. macOS does not always
+    // return key status to the previously-key window after a panel
+    // orderOut, which would leave the emulator stuck paused (its
+    // PauseOnFocusLoss never sees the windowDidBecomeKey event).
+    if (auto* sess = gameSession()) {
+        const int64_t pid = sess->pid();
+        if (pid > 0) MacFullscreen::activateProcess(pid);
+    }
 }
 
 bool AppController::inGameMenuPanelVisible() const {

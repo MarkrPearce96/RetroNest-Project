@@ -112,6 +112,13 @@ void InGameMenuPanel::showOverEmulator(int64_t emulatorPid) {
 
     m_window->show();
     applyPanelChrome();
+    // makeKeyWindow must be called on every show — the
+    // nonactivatingPanel style mask permits it; orderFront alone does
+    // not promote the panel to key. Without this the emulator's
+    // PauseOnFocusLoss won't fire and Qt focusWindow won't be the
+    // panel (so SDL controller events go to the wrong scene).
+    void* nsView = reinterpret_cast<void*>(m_window->winId());
+    MacFullscreen::makePanelKey(nsView);
 
     QMetaObject::invokeMethod(m_window, "openMenu");
 }

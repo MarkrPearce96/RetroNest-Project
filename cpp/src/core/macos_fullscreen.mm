@@ -180,6 +180,16 @@ void configurePanelWindow(void* nsViewPtr) {
     }
 }
 
+void makePanelKey(void* nsViewPtr) {
+    @autoreleasepool {
+        if (!nsViewPtr) return;
+        NSView* view = (__bridge NSView*)nsViewPtr;
+        NSWindow* window = [view window];
+        if (!window) return;
+        [window makeKeyWindow];
+    }
+}
+
 } // namespace MacFullscreen
 
 #else
@@ -193,5 +203,6 @@ void registerGlobalHotkey(HotkeyCallback) {}
 void unregisterGlobalHotkey() {}
 int screenIndexForProcess(int64_t) { return -1; }
 void configurePanelWindow(void*) {}
+void makePanelKey(void*) {}
 }
 #endif
