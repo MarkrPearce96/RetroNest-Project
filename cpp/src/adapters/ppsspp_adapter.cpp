@@ -1044,22 +1044,34 @@ QVector<SettingDef> PPSSPPAdapter::controllerSettingDefsForType(const QString& t
 
 QVector<HotkeyDef> PPSSPPAdapter::hotkeyBindingDefs() const {
     return {
-        // Speed (10-4036 = right trigger axis positive)
-        {"Fast-forward",       "Speed",       "ControlMapping", "Fast-forward",  "10-4036"},
-        {"Speed Toggle",       "Speed",       "ControlMapping", "SpeedToggle",   ""},
-        {"Alt Speed 1",        "Speed",       "ControlMapping", "Alt speed 1",   ""},
-        {"Alt Speed 2",        "Speed",       "ControlMapping", "Alt speed 2",   ""},
-        {"Frame Advance",      "Speed",       "ControlMapping", "Frame Advance", ""},
-        // System
-        {"Rewind",             "System",      "ControlMapping", "Rewind",        ""},
-        {"Screenshot",         "System",      "ControlMapping", "Screenshot",    ""},
-        {"Mute Toggle",        "System",      "ControlMapping", "Mute toggle",   ""},
-        {"Reset",              "System",      "ControlMapping", "Reset",         ""},
-        // Save States
-        {"Save State",         "Save States", "ControlMapping", "Save State",    ""},
-        {"Load State",         "Save States", "ControlMapping", "Load State",    ""},
-        {"Previous Slot",      "Save States", "ControlMapping", "Previous Slot", ""},
-        {"Next Slot",          "Save States", "ControlMapping", "Next Slot",     ""},
+        // ── Control modifiers ──
+        {"Rotate Analog (CW)",       "Control modifiers", "ControlMapping", "Rotate Analog (CW)",  ""},
+        {"Rotate Analog (CCW)",      "Control modifiers", "ControlMapping", "Rotate Analog (CCW)", ""},
+        {"Analog limiter",           "Control modifiers", "ControlMapping", "Analog limiter",      ""},
+        {"RapidFire",                "Control modifiers", "ControlMapping", "RapidFire",           ""},
+        {"Axis swap (hold)",         "Control modifiers", "ControlMapping", "Axis swap (hold)",    ""},
+        {"Axis swap (toggle)",       "Control modifiers", "ControlMapping", "Axis swap (toggle)",  ""},
+
+        // ── Emulator controls ──
+        {"Fast-forward",             "Emulator controls", "ControlMapping", "Fast-forward",                "10-4036"},
+        {"SpeedToggle",              "Emulator controls", "ControlMapping", "SpeedToggle",                 ""},
+        {"Alt speed 1",              "Emulator controls", "ControlMapping", "Alt speed 1",                 ""},
+        {"Alt speed 2",              "Emulator controls", "ControlMapping", "Alt speed 2",                 ""},
+        {"Analog speed",             "Emulator controls", "ControlMapping", "Analog speed",                ""},
+        {"Reset",                    "Emulator controls", "ControlMapping", "Reset",                       ""},
+        {"Frame Advance",            "Emulator controls", "ControlMapping", "Frame Advance",               ""},
+        {"Rewind",                   "Emulator controls", "ControlMapping", "Rewind",                      ""},
+        {"Save State",               "Emulator controls", "ControlMapping", "Save State",                  ""},
+        {"Load State",               "Emulator controls", "ControlMapping", "Load State",                  ""},
+        {"Previous Slot",            "Emulator controls", "ControlMapping", "Previous Slot",               ""},
+        {"Next Slot",                "Emulator controls", "ControlMapping", "Next Slot",                   ""},
+        {"Toggle tilt control",      "Emulator controls", "ControlMapping", "Toggle tilt control",         ""},
+        {"Display Portrait",         "Emulator controls", "ControlMapping", "Display Portrait",            ""},
+        {"Display Portrait Reversed","Emulator controls", "ControlMapping", "Display Portrait Reversed",   ""},
+        {"Display Landscape",        "Emulator controls", "ControlMapping", "Display Landscape",           ""},
+        {"Display Landscape Reversed","Emulator controls","ControlMapping", "Display Landscape Reversed",  ""},
+        {"Screenshot",               "Emulator controls", "ControlMapping", "Screenshot",                  ""},
+        {"Mute toggle",              "Emulator controls", "ControlMapping", "Mute toggle",                 ""},
     };
 }
 

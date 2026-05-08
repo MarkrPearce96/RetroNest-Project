@@ -114,7 +114,56 @@ private slots:
         QCOMPARE(fastForward->defaultValue, QStringLiteral("Keyboard/Tab"));
     }
 
-    // ppsspp_completeness — added in Task 3.
+    void ppsspp_completeness() {
+        PPSSPPAdapter adapter;
+        const auto defs = adapter.hotkeyBindingDefs();
+
+        QCOMPARE(defs.size(), 25);
+
+        const QStringList keys = keysOf(defs);
+        // Overlay-conflict trim list — these MUST NOT appear.
+        QVERIFY(!keys.contains("Pause"));
+        QVERIFY(!keys.contains("Pause (no menu)"));
+        QVERIFY(!keys.contains("Toggle Fullscreen"));
+        QVERIFY(!keys.contains("Exit App"));
+        // Platform-irrelevance trim list — these MUST NOT appear.
+        QVERIFY(!keys.contains("VR camera adjust"));
+        QVERIFY(!keys.contains("VR camera reset"));
+        QVERIFY(!keys.contains("Toggle WLAN"));
+        QVERIFY(!keys.contains("Toggle touch controls"));
+        QVERIFY(!keys.contains("OpenChat"));
+        QVERIFY(!keys.contains("Toggle mouse input"));
+        QVERIFY(!keys.contains("DevMenu"));
+        QVERIFY(!keys.contains("Toggle Debugger"));
+        QVERIFY(!keys.contains("Texture Dumping"));
+        QVERIFY(!keys.contains("Texture Replacement"));
+        QVERIFY(!keys.contains("Audio/Video Recording"));
+
+        // Sample present rows.
+        QVERIFY(keys.contains("RapidFire"));
+        QVERIFY(keys.contains("Analog limiter"));
+        QVERIFY(keys.contains("Fast-forward"));
+        QVERIFY(keys.contains("Save State"));
+        QVERIFY(keys.contains("Display Portrait"));
+        QVERIFY(keys.contains("Toggle tilt control"));
+
+        // Group renames / placements.
+        const HotkeyDef* saveState = findKey(defs, "Save State");
+        QVERIFY(saveState);
+        QCOMPARE(saveState->group, QStringLiteral("Emulator controls"));
+
+        const HotkeyDef* rapidFire = findKey(defs, "RapidFire");
+        QVERIFY(rapidFire);
+        QCOMPARE(rapidFire->group, QStringLiteral("Control modifiers"));
+
+        // Default value preserved on Fast-forward (right-trigger axis-positive).
+        const HotkeyDef* fastForward = findKey(defs, "Fast-forward");
+        QVERIFY(fastForward);
+        QCOMPARE(fastForward->defaultValue, QStringLiteral("10-4036"));
+
+        // controls.ini section is correct (PPSSPP uses ControlMapping, not Hotkeys).
+        QCOMPARE(saveState->section, QStringLiteral("ControlMapping"));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestHotkeyDefs)
