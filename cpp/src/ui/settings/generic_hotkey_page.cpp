@@ -235,9 +235,18 @@ void GenericHotkeyPage::navigateFromRow(int direction) {
     }
     if (idx < 0) return;
     const int next = (idx + direction + m_entries.size()) % m_entries.size();
-    if (auto it = m_rowByKey.constFind(m_entries[next].key);
-        it != m_rowByKey.constEnd()) {
-        (*it)->setFocus(Qt::OtherFocusReason);
+    auto it = m_rowByKey.constFind(m_entries[next].key);
+    if (it == m_rowByKey.constEnd()) return;
+    HotkeyBindingRow* nextRow = *it;
+    nextRow->setFocus(Qt::OtherFocusReason);
+    // Scroll the now-focused row into view (mirrors generic_settings_page's
+    // arrow-nav handler). Walk up the parent chain rather than caching the
+    // QScrollArea — the page makes no assumption about its container.
+    for (QWidget* p = nextRow->parentWidget(); p; p = p->parentWidget()) {
+        if (auto* sa = qobject_cast<QScrollArea*>(p)) {
+            sa->ensureWidgetVisible(nextRow, 20, 40);
+            break;
+        }
     }
 }
 
