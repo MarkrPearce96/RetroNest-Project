@@ -27,21 +27,41 @@ AspectRatioOptions MgbaLibretroAdapter::aspectRatioOptions() const {
 }
 
 QVector<ControllerTypeDef> MgbaLibretroAdapter::controllerTypes() const {
-    return { { "GBA", "GBA Controller", "" } };
+    return {
+        { "GBA", "GBA Controller",
+          ":/AppUI/qml/AppUI/images/controllers/Gameboy.svg" },
+    };
 }
 
 QVector<BindingDef> MgbaLibretroAdapter::controllerBindingDefsForType(const QString&) const {
+    // Spotlight coordinates target the Gameboy.svg viewBox (822 × 1354).
+    // L/R don't exist on the DMG-01 silhouette so they get no spotlight
+    // (zero coords suppress the overlay).
     return {
-        { BindingDef::Button, "D-Pad Up",    "D-Pad", "", "Up",     "" },
-        { BindingDef::Button, "D-Pad Down",  "D-Pad", "", "Down",   "" },
-        { BindingDef::Button, "D-Pad Left",  "D-Pad", "", "Left",   "" },
-        { BindingDef::Button, "D-Pad Right", "D-Pad", "", "Right",  "" },
-        { BindingDef::Button, "A",           "Buttons", "", "A",    "" },
-        { BindingDef::Button, "B",           "Buttons", "", "B",    "" },
-        { BindingDef::Button, "L",           "Shoulders", "", "L",  "" },
-        { BindingDef::Button, "R",           "Shoulders", "", "R",  "" },
-        { BindingDef::Button, "Start",       "System", "", "Start", "" },
-        { BindingDef::Button, "Select",      "System", "", "Select","" },
+        // D-Pad — cross at lower-left
+        { BindingDef::Button, "D-Pad Up",    "D-Pad",     "Pad1", "Up",     "",
+          "DPad",        180,  825, 65 },
+        { BindingDef::Button, "D-Pad Down",  "D-Pad",     "Pad1", "Down",   "",
+          "DPad",        180,  975, 65 },
+        { BindingDef::Button, "D-Pad Left",  "D-Pad",     "Pad1", "Left",   "",
+          "DPad",        105,  900, 65 },
+        { BindingDef::Button, "D-Pad Right", "D-Pad",     "Pad1", "Right",  "",
+          "DPad",        255,  900, 65 },
+        // Action buttons — A right, B diagonal-down-left of A
+        { BindingDef::Button, "A",           "Buttons",   "Pad1", "A",      "",
+          "FaceButtons", 640,  870, 70 },
+        { BindingDef::Button, "B",           "Buttons",   "Pad1", "B",      "",
+          "FaceButtons", 540,  940, 70 },
+        // Shoulders — not present on DMG silhouette; no spotlight.
+        { BindingDef::Button, "L",           "Shoulders", "Pad1", "L",      "",
+          "Shoulders",     0,    0,  0 },
+        { BindingDef::Button, "R",           "Shoulders", "Pad1", "R",      "",
+          "Shoulders",     0,    0,  0 },
+        // Select / Start — small angled buttons in lower-center
+        { BindingDef::Button, "Start",       "System",    "Pad1", "Start",  "",
+          "System",      460, 1140, 50 },
+        { BindingDef::Button, "Select",      "System",    "Pad1", "Select", "",
+          "System",      325, 1140, 50 },
     };
 }
 
