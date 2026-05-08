@@ -484,6 +484,7 @@ void AppController::setCursorVisible(bool visible) {
 }
 
 QVariantList AppController::hotkeyBindings(const QString& emuId) const { return m_configService.hotkeyBindings(emuId); }
+bool AppController::hasHotkeys(const QString& emuId) const { return !m_configService.hotkeyBindings(emuId).isEmpty(); }
 void AppController::saveHotkey(const QString& emuId, const QString& section, const QString& key, const QString& value) { m_configService.saveHotkey(emuId, section, key, value); }
 void AppController::clearHotkey(const QString& emuId, const QString& section, const QString& key) { m_configService.clearHotkey(emuId, section, key); }
 void AppController::resetHotkeys(const QString& emuId) { m_configService.resetHotkeys(emuId); }

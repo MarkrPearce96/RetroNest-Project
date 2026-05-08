@@ -143,6 +143,7 @@ public:
 
     // Hotkeys (per-emulator)
     Q_INVOKABLE QVariantList hotkeyBindings(const QString& emuId) const;
+    Q_INVOKABLE bool hasHotkeys(const QString& emuId) const;
     Q_INVOKABLE void saveHotkey(const QString& emuId, const QString& section, const QString& key, const QString& value);
     Q_INVOKABLE void clearHotkey(const QString& emuId, const QString& section, const QString& key);
     Q_INVOKABLE void resetHotkeys(const QString& emuId);
