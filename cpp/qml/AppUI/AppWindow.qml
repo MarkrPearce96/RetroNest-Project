@@ -22,18 +22,33 @@ ApplicationWindow {
     // Toggle the in-game menu, activating the app window so controller/keyboard
     // focus comes back from the emulator. Used by both the global Cmd+Escape
     // hotkey and the SDL Select+Circle combo.
+    // True when a libretro game is the current top of mainStack.
+    function isLibretroGame() {
+        return mainStack.currentItem && mainStack.currentItem.isEmulationView === true;
+    }
+
     function toggleInGameMenu() {
-        if (inGameMenu.visible) {
-            app.activateEmulator();
-            inGameMenu.close();
-            // Resume the libretro core (no-op for process emulators).
-            if (app.gameSession) app.gameSession.resumeEmulation();
+        if (isLibretroGame()) {
+            // Libretro path: in-window HUD. Pause/resume the core
+            // explicitly because we don't get PauseOnFocusLoss.
+            if (inGameMenu.visible) {
+                inGameMenu.close();
+                if (app.gameSession) app.gameSession.resumeEmulation();
+            } else {
+                if (app.gameSession) app.gameSession.pauseEmulation();
+                app.activateApp();
+                inGameMenu.open();
+            }
+            return;
+        }
+
+        // External-emulator path: floating panel. Pause is triggered
+        // by the panel becoming the system key window (each emulator's
+        // PauseOnFocusLoss config handles it).
+        if (app.inGameMenuPanelVisible) {
+            app.closeInGameMenuPanel();
         } else {
-            // Pause the libretro core BEFORE opening the menu so input events
-            // routed through the menu don't also reach the running game.
-            if (app.gameSession) app.gameSession.pauseEmulation();
-            app.activateApp();
-            inGameMenu.open();
+            app.openInGameMenuPanel();
         }
     }
 
@@ -197,6 +212,9 @@ ApplicationWindow {
             raLoginPrompt.visible = true
             app.setCursorVisible(true)
             raLoginPrompt.forceActiveFocus()
+        }
+        function onInGameMenuPanelAchievementsRequested(raGameId, gameTitle) {
+            settingsOverlay.navigateToAchievements(raGameId, gameTitle);
         }
     }
 
@@ -537,6 +555,7 @@ ApplicationWindow {
     Connections {
         target: inputManager
         enabled: !inputManager.virtualKeyboardOpen && !gameActionPopup.visible
+                 && !app.inGameMenuPanelVisible
         function onNavigateStart() {
             if (settingsOverlay.visible) {
                 if (settingsOverlay.isBusy()) {
@@ -600,6 +619,7 @@ ApplicationWindow {
     Shortcut {
         sequence: "Escape"
         enabled: !gameActionPopup.visible && !resumeStateDialog.visible
+                 && !app.inGameMenuPanelVisible
         onActivated: {
             if (app.gameRunning) {
                 // Shortcut only fires when the app already has focus, so we
