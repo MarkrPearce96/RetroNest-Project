@@ -89,6 +89,7 @@ set(SOURCES
     src/ui/install_controller.cpp
     src/ui/game_list_model.cpp
     src/ui/app_controller.cpp
+    src/ui/in_game_menu_panel.cpp
     src/ui/theme_manager.cpp
     src/ui/theme_context.cpp
     src/ui/settings/controller_mapping_page.cpp
