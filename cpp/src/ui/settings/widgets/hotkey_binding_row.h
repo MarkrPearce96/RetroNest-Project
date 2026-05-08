@@ -31,11 +31,17 @@ signals:
     void rebindRequested(HotkeyDef def);
     void appendRebindRequested(HotkeyDef def);
     void clearRequested(HotkeyDef def);
+    // Emitted on Up/Down while the row has focus. `direction` is +1 for
+    // Down, -1 for Up. Page consumes this to move focus to the prev/next
+    // row in adapter declaration order — fires before the parent QScrollArea
+    // can intercept the arrow key for scrolling.
+    void navigateRequested(int direction);
 
 protected:
     void focusInEvent(QFocusEvent* e) override;
     void focusOutEvent(QFocusEvent* e) override;
     void paintEvent(QPaintEvent* e) override;
+    void keyPressEvent(QKeyEvent* e) override;
 
 private:
     HotkeyDef m_def;

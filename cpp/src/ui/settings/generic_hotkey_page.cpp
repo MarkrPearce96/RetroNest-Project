@@ -169,6 +169,8 @@ void GenericHotkeyPage::buildLayout() {
                     if (auto it = m_rowByKey.constFind(d.key); it != m_rowByKey.constEnd())
                         (*it)->setBindingDisplay(QString());
                 });
+        connect(row, &HotkeyBindingRow::navigateRequested,
+                this, &GenericHotkeyPage::navigateFromRow);
         currentCardLayout->addWidget(row);
         m_rowByKey.insert(def.key, row);
     }
@@ -220,24 +222,32 @@ void GenericHotkeyPage::focusFirstRow() {
     }
 }
 
+void GenericHotkeyPage::navigateFromRow(int direction) {
+    // Walk m_entries (adapter declaration order) from the currently focused
+    // row, wrapping at both ends so the user can hold the d-pad without
+    // dead zones. Driven by HotkeyBindingRow::navigateRequested so it
+    // intercepts arrow keys before the parent QScrollArea can scroll.
+    if (!m_focusedRow || m_entries.isEmpty()) return;
+    const QString currentKey = m_focusedRow->def().key;
+    int idx = -1;
+    for (int i = 0; i < m_entries.size(); ++i) {
+        if (m_entries[i].key == currentKey) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    const int next = (idx + direction + m_entries.size()) % m_entries.size();
+    if (auto it = m_rowByKey.constFind(m_entries[next].key);
+        it != m_rowByKey.constEnd()) {
+        (*it)->setFocus(Qt::OtherFocusReason);
+    }
+}
+
 void GenericHotkeyPage::keyPressEvent(QKeyEvent* e) {
-    // Up/Down navigate between rows in adapter declaration order. Wraps
-    // at both ends so the user can hold the d-pad without dead zones.
-    // Only active when a row already has focus — otherwise fall through
-    // so the dialog's keyPressEvent can handle face-button shortcuts.
+    // Fallback path: when focus has somehow landed on the page itself
+    // (rather than a row), forward Up/Down through navigateFromRow so
+    // the user is never stuck. The primary path is the row's own
+    // keyPressEvent → navigateRequested signal.
     if (m_focusedRow && (e->key() == Qt::Key_Up || e->key() == Qt::Key_Down)) {
-        const QString currentKey = m_focusedRow->def().key;
-        int idx = -1;
-        for (int i = 0; i < m_entries.size(); ++i) {
-            if (m_entries[i].key == currentKey) { idx = i; break; }
-        }
-        if (idx < 0) { QWidget::keyPressEvent(e); return; }
-        const int delta = (e->key() == Qt::Key_Down) ? 1 : -1;
-        const int next = (idx + delta + m_entries.size()) % m_entries.size();
-        if (auto it = m_rowByKey.constFind(m_entries[next].key);
-            it != m_rowByKey.constEnd()) {
-            (*it)->setFocus(Qt::OtherFocusReason);
-        }
+        navigateFromRow(e->key() == Qt::Key_Down ? +1 : -1);
         return;
     }
     QWidget::keyPressEvent(e);

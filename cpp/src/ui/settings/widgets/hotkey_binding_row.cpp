@@ -3,6 +3,7 @@
 #include "ui/settings/settings_dialog_theme.h"
 
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QPainter>
 #include <QStyle>
@@ -81,6 +82,24 @@ void HotkeyBindingRow::focusOutEvent(QFocusEvent* e) {
     setProperty("focused", false);
     style()->unpolish(this); style()->polish(this);
     update();
+}
+
+void HotkeyBindingRow::keyPressEvent(QKeyEvent* e) {
+    // Catch Up/Down before they bubble up to the parent QScrollArea, which
+    // would otherwise consume them as scroll commands. Emitting a signal
+    // (rather than walking the parent chain to the page) keeps this widget
+    // independent of where it lives in the dialog hierarchy.
+    if (e->key() == Qt::Key_Up) {
+        emit navigateRequested(-1);
+        e->accept();
+        return;
+    }
+    if (e->key() == Qt::Key_Down) {
+        emit navigateRequested(+1);
+        e->accept();
+        return;
+    }
+    QWidget::keyPressEvent(e);
 }
 
 void HotkeyBindingRow::paintEvent(QPaintEvent* e) {

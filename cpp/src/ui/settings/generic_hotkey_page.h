@@ -55,6 +55,7 @@ private:
     void loadBindings();
 
     void onRowFocused(const HotkeyDef& def);
+    void navigateFromRow(int direction);
     void startCapture(const HotkeyDef& def, bool append);
     void stopCapture(bool save);
     void onBindingCaptured(int deviceIndex, const QString& element,
