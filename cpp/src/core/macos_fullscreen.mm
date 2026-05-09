@@ -3,6 +3,9 @@
 #ifdef __APPLE__
 #import <AppKit/AppKit.h>
 #import <Carbon/Carbon.h>
+#import <objc/runtime.h>
+#include <signal.h>
+#include <sys/types.h>
 
 static EventHotKeyRef s_hotkeyRef = nullptr;
 static MacFullscreen::HotkeyCallback s_hotkeyCallback = nullptr;
@@ -11,6 +14,7 @@ static MacFullscreen::HotkeyCallback s_hotkeyCallback = nullptr;
 static OSStatus hotkeyHandler(EventHandlerCallRef /*nextHandler*/,
                                EventRef /*event*/,
                                void* /*userData*/) {
+    fprintf(stderr, "[MacFullscreen] global hotkey fired\n");
     if (s_hotkeyCallback) {
         // Dispatch to main thread
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -64,13 +68,16 @@ void registerGlobalHotkey(HotkeyCallback callback) {
     EventTypeSpec eventType = { kEventClassKeyboard, kEventHotKeyPressed };
     InstallApplicationEventHandler(&hotkeyHandler, 1, &eventType, nullptr, nullptr);
 
-    // Register Cmd+Escape (kVK_Escape = 53, cmdKey modifier)
+    // Register Cmd+Shift+Escape. Cmd+Escape alone is claimed by
+    // macOS Sonoma+'s Game Mode HUD when an app is fullscreen-gaming,
+    // and Cmd+Opt+Escape is the system Force Quit dialog. Shift is
+    // the lowest-friction modifier that avoids both.
     EventHotKeyID hotkeyID = { 'EMUF', 1 };
-    OSStatus err = RegisterEventHotKey(kVK_Escape, cmdKey, hotkeyID,
+    OSStatus err = RegisterEventHotKey(kVK_Escape, cmdKey | shiftKey, hotkeyID,
                                         GetApplicationEventTarget(),
                                         0, &s_hotkeyRef);
     if (err == noErr) {
-        fprintf(stderr, "[MacFullscreen] Registered Cmd+Escape global hotkey\n");
+        fprintf(stderr, "[MacFullscreen] Registered Cmd+Shift+Escape global hotkey\n");
     } else {
         fprintf(stderr, "[MacFullscreen] Failed to register global hotkey: %d\n", (int)err);
         s_hotkeyRef = nullptr;
@@ -142,6 +149,32 @@ int screenIndexForProcess(int64_t pid) {
     }
 }
 
+// Promote a Qt-created NSWindow to a runtime subclass that returns YES
+// from canBecomeKeyWindow. Frameless NSWindows return NO by default —
+// without this, [window makeKeyWindow] is a no-op and keyboard input
+// flows to the (still-foreground) emulator instead of our HUD panel.
+// Isa-swizzling rather than allocating a new NSWindow keeps Qt's view
+// hierarchy and event delivery intact. The dynamic subclass is created
+// once per original class (cached) so multiple panels share it.
+static void promoteToKeyEnabled(NSWindow* window) {
+    Class originalClass = [window class];
+    NSString* subclassName = [NSString stringWithFormat:@"%@_RNKeyEnabled",
+                              NSStringFromClass(originalClass)];
+    Class subclass = NSClassFromString(subclassName);
+    if (!subclass) {
+        subclass = objc_allocateClassPair(originalClass,
+                                           [subclassName UTF8String], 0);
+        if (!subclass) return;
+        IMP yesImp = imp_implementationWithBlock(^BOOL(id /*self*/){ return YES; });
+        Method protoMethod = class_getInstanceMethod([NSWindow class],
+                                                       @selector(canBecomeKeyWindow));
+        const char* typeEnc = method_getTypeEncoding(protoMethod);
+        class_addMethod(subclass, @selector(canBecomeKeyWindow), yesImp, typeEnc);
+        objc_registerClassPair(subclass);
+    }
+    object_setClass(window, subclass);
+}
+
 void configurePanelWindow(void* nsViewPtr) {
     @autoreleasepool {
         if (!nsViewPtr) return;
@@ -149,20 +182,26 @@ void configurePanelWindow(void* nsViewPtr) {
         NSWindow* window = [view window];
         if (!window) return;
 
+        // Override canBecomeKeyWindow so [window makeKeyWindow] actually
+        // promotes this window to key. Required for keyboard input
+        // (and SDL controller events routed via Qt focusWindow) to land
+        // in the panel's QML scene instead of the emulator.
+        promoteToKeyEnabled(window);
+
         [window setStyleMask:(NSWindowStyleMaskBorderless |
                               NSWindowStyleMaskNonactivatingPanel)];
 
         // NSWindowStyleMaskNonactivatingPanel is documented as valid only
         // on NSPanel. Qt backs QWindow with QNSWindow (an NSWindow subclass),
         // not NSPanel — so the bit may be silently dropped. Detect this at
-        // runtime so Task 5's smoke test surfaces it immediately if the HUD
-        // ends up activating our app on show.
+        // runtime so smoke tests surface it immediately if the HUD ends
+        // up activating our app on show.
         NSWindowStyleMask appliedMask = [window styleMask];
         if (!(appliedMask & NSWindowStyleMaskNonactivatingPanel)) {
             fprintf(stderr,
                 "[MacFullscreen] WARNING: NSWindowStyleMaskNonactivatingPanel was "
-                "not applied (window is %s, expected NSPanel). The HUD panel will "
-                "activate the app on show. Fix: reparent contentView into an NSPanel.\n",
+                "not applied (window is %s). The HUD panel will activate the "
+                "app on show. Fix: reparent contentView into an NSPanel.\n",
                 [[[window class] description] UTF8String]);
         }
 
@@ -190,6 +229,36 @@ void makePanelKey(void* nsViewPtr) {
     }
 }
 
+void sendKeyToProcess(int64_t pid, int virtualKeyCode) {
+    if (pid <= 0) return;
+    @autoreleasepool {
+        fprintf(stderr, "[MacFullscreen] sendKeyToProcess pid=%lld vk=0x%02x\n",
+                (long long)pid, virtualKeyCode);
+        CGEventRef keyDown = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)virtualKeyCode, true);
+        if (keyDown) {
+            CGEventPostToPid((pid_t)pid, keyDown);
+            CFRelease(keyDown);
+        }
+        CGEventRef keyUp = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)virtualKeyCode, false);
+        if (keyUp) {
+            CGEventPostToPid((pid_t)pid, keyUp);
+            CFRelease(keyUp);
+        }
+    }
+}
+
+void pauseProcess(int64_t pid) {
+    if (pid <= 0) return;
+    fprintf(stderr, "[MacFullscreen] SIGSTOP pid=%lld\n", (long long)pid);
+    kill((pid_t)pid, SIGSTOP);
+}
+
+void resumeProcess(int64_t pid) {
+    if (pid <= 0) return;
+    fprintf(stderr, "[MacFullscreen] SIGCONT pid=%lld\n", (long long)pid);
+    kill((pid_t)pid, SIGCONT);
+}
+
 } // namespace MacFullscreen
 
 #else
@@ -199,6 +268,9 @@ void hideMenuBarAndDock() {}
 void restoreMenuBarAndDock() {}
 void activateOurApp() {}
 void activateProcess(int64_t) {}
+void sendKeyToProcess(int64_t, int) {}
+void pauseProcess(int64_t) {}
+void resumeProcess(int64_t) {}
 void registerGlobalHotkey(HotkeyCallback) {}
 void unregisterGlobalHotkey() {}
 int screenIndexForProcess(int64_t) { return -1; }

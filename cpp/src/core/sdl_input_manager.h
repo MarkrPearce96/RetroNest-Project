@@ -61,6 +61,15 @@ public:
     static QString canonicalName(const char* sdlName);
 
     /**
+     * True if any A/B/X/Y face button is currently held down on any
+     * connected controller. Used by AppController to defer SIGCONT
+     * until the close-trigger button is released — the emulator polls
+     * SDL on its first frame after resume, so any held button would
+     * leak as in-game input.
+     */
+    bool isAnyActionButtonPressed() const;
+
+    /**
      * Switch to emulation mode: SDL gamepad button events write into the
      * InputRouter instead of being injected as Qt key events. The in-game
      * menu hotkey (Select+Circle) still fires inGameMenuRequested().
@@ -82,7 +91,7 @@ signals:
     // Non-navigation signals (app-level actions, not injected as keys)
     void navigateStart();       // Start button — toggle settings
     void navigateShift();       // R2 trigger — shift/caps toggle
-    void inGameMenuRequested(); // Select+B/Circle combo — in-game menu
+    void inGameMenuRequested(); // Select+B/Circle combo or Touchpad — in-game menu
 
 
 private:

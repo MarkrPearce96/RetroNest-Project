@@ -27,10 +27,11 @@ void InGameMenuPanel::ensureCreated() {
     if (m_window) return;
 
     if (!m_component) {
-        // Module is registered with RESOURCE_PREFIX "/"; QML files in the
-        // AppUI module live at qrc:/AppUI/<file>.qml.
+        // Module URI is "AppUI" and RESOURCE_PREFIX is "/". Each file's
+        // path under the module dir (e.g. qml/AppUI/InGameMenuPanel.qml)
+        // is preserved, so the full qrc URL is /AppUI/<file_path>.
         m_component = new QQmlComponent(m_engine,
-            QUrl(QStringLiteral("qrc:/AppUI/InGameMenuPanel.qml")), this);
+            QUrl(QStringLiteral("qrc:/AppUI/qml/AppUI/InGameMenuPanel.qml")), this);
     }
     if (m_component->isError()) {
         qWarning() << "[InGameMenuPanel] component errors:" << m_component->errors();

@@ -4,8 +4,10 @@
 #include "core/paths.h"
 #include "core/scraper.h"
 #include "in_game_menu_panel.h"
+#include "core/sdl_input_manager.h"
 
 #include <QQmlEngine>
+#include <QTimer>
 
 #include <QCursor>
 #include "settings/controller_mapping_page.h"
@@ -677,11 +679,18 @@ void AppController::raSetNotifications(bool enabled) { m_raService.setNotificati
 bool AppController::raSoundEffects() const { return m_raService.soundEffects(); }
 void AppController::raSetSoundEffects(bool enabled) { m_raService.setSoundEffects(enabled); }
 
+void AppController::setSdlInputManager(SdlInputManager* mgr) {
+    m_inputManager = mgr;
+    m_gameService.session()->setSdlInputManager(mgr);
+    m_configService.setSdlInputManager(mgr);
+}
+
 void AppController::setQmlEngine(QQmlEngine* engine) {
     m_qmlEngine = engine;
 }
 
 void AppController::openInGameMenuPanel() {
+    qInfo() << "[InGameMenuPanel] open requested";
     if (!m_qmlEngine) {
         qWarning() << "[AppController] openInGameMenuPanel before QML engine set";
         return;
@@ -702,12 +711,29 @@ void AppController::openInGameMenuPanel() {
                 });
         connect(m_inGameMenuPanel, &InGameMenuPanel::exitWithSaveRequested,
                 this, [this]() {
-                    closeInGameMenuPanel();
+                    // Unpause the emulator first so its save thread
+                    // can run on the SIGTERM that saveAndStopGame
+                    // will send.
+                    m_inGameMenuPanel->hide();
+                    if (auto* sess = gameSession()) {
+                        const int64_t pid = sess->pid();
+                        if (pid > 0 && m_emulatorSuspended) {
+                            MacFullscreen::sendKeyToProcess(pid, 0x31 /* kVK_Space → DuckStation TogglePause */);
+                            m_emulatorSuspended = false;
+                        }
+                    }
                     saveAndStopGame(1);
                 });
         connect(m_inGameMenuPanel, &InGameMenuPanel::exitWithoutSaveRequested,
                 this, [this]() {
-                    closeInGameMenuPanel();
+                    m_inGameMenuPanel->hide();
+                    if (auto* sess = gameSession()) {
+                        const int64_t pid = sess->pid();
+                        if (pid > 0 && m_emulatorSuspended) {
+                            MacFullscreen::sendKeyToProcess(pid, 0x31 /* kVK_Space → DuckStation TogglePause */);
+                            m_emulatorSuspended = false;
+                        }
+                    }
                     stopGame();
                 });
         connect(m_inGameMenuPanel, &InGameMenuPanel::visibilityChanged,
@@ -718,20 +744,52 @@ void AppController::openInGameMenuPanel() {
     if (auto* sess = gameSession()) {
         pid = sess->pid();
     }
+    if (pid > 0 && !m_emulatorSuspended) {
+        // Synthesize Space → DuckStation's TogglePause hotkey →
+        // emulator pauses itself with clean audio (no SIGSTOP click).
+        MacFullscreen::sendKeyToProcess(pid, 0x31 /* kVK_Space */);
+        m_emulatorSuspended = true;
+    }
     m_inGameMenuPanel->showOverEmulator(pid);
 }
 
 void AppController::closeInGameMenuPanel() {
     if (!m_inGameMenuPanel) return;
     m_inGameMenuPanel->hide();
-    // Explicitly re-activate the emulator. macOS does not always
-    // return key status to the previously-key window after a panel
-    // orderOut, which would leave the emulator stuck paused (its
-    // PauseOnFocusLoss never sees the windowDidBecomeKey event).
-    if (auto* sess = gameSession()) {
-        const int64_t pid = sess->pid();
-        if (pid > 0) MacFullscreen::activateProcess(pid);
+    int64_t pid = 0;
+    if (auto* sess = gameSession()) pid = sess->pid();
+    if (pid <= 0 || !m_emulatorSuspended) {
+        m_emulatorSuspended = false;
+        return;
     }
+    MacFullscreen::activateProcess(pid);
+
+    // Poll SDL state at 16 ms; send the unpause Space only once all
+    // action buttons (A/B/X/Y) are released. Variable delay
+    // (~50–150 ms typical) so the close-trigger button can never
+    // leak as in-game input. Safety timeout at 500 ms (~30 ticks).
+    if (!m_resumeWhenButtonsReleasedTimer) {
+        m_resumeWhenButtonsReleasedTimer = new QTimer(this);
+        m_resumeWhenButtonsReleasedTimer->setInterval(16);
+    }
+    int* tickCount = new int(0);
+    QMetaObject::Connection* conn = new QMetaObject::Connection;
+    *conn = connect(m_resumeWhenButtonsReleasedTimer, &QTimer::timeout, this,
+        [this, pid, tickCount, conn]() {
+            const bool buttonsHeld =
+                m_inputManager && m_inputManager->isAnyActionButtonPressed();
+            if (!buttonsHeld || ++(*tickCount) > 30) {
+                if (m_emulatorSuspended) {
+                    MacFullscreen::sendKeyToProcess(pid, 0x31 /* kVK_Space */);
+                    m_emulatorSuspended = false;
+                }
+                m_resumeWhenButtonsReleasedTimer->stop();
+                disconnect(*conn);
+                delete conn;
+                delete tickCount;
+            }
+        });
+    m_resumeWhenButtonsReleasedTimer->start();
 }
 
 bool AppController::inGameMenuPanelVisible() const {

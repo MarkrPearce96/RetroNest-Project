@@ -298,6 +298,18 @@ void SdlInputManager::cancelCapture() {
     emit capturingChanged();
 }
 
+bool SdlInputManager::isAnyActionButtonPressed() const {
+    for (auto it = m_controllers.cbegin(); it != m_controllers.cend(); ++it) {
+        SDL_GameController* ctrl = it.value();
+        if (!ctrl) continue;
+        if (SDL_GameControllerGetButton(ctrl, SDL_CONTROLLER_BUTTON_A)) return true;
+        if (SDL_GameControllerGetButton(ctrl, SDL_CONTROLLER_BUTTON_B)) return true;
+        if (SDL_GameControllerGetButton(ctrl, SDL_CONTROLLER_BUTTON_X)) return true;
+        if (SDL_GameControllerGetButton(ctrl, SDL_CONTROLLER_BUTTON_Y)) return true;
+    }
+    return false;
+}
+
 QString SdlInputManager::canonicalName(const char* sdlName) {
     if (!sdlName) return {};
     return canonicalMap().value(QString(sdlName).toLower(), QString(sdlName));
@@ -394,12 +406,22 @@ void SdlInputManager::pollEvents() {
                 }
                 emit bindingCaptured(devIdx, element, false, true);
             } else if (m_emulationTarget) {
-                // Emulation mode: route to InputRouter, except for the in-game menu combo
+                // Emulation mode (libretro): route to InputRouter,
+                // except for the in-game menu trigger. Select+B and
+                // Touchpad both open the menu. The "pre-emptive pause"
+                // signals are NOT emitted here — libretro's pause is
+                // in-process (no SIGSTOP), and Select itself is a
+                // valid in-game button for the libretro core.
                 auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);
                 if (btn == SDL_CONTROLLER_BUTTON_BACK)
                     m_selectHeld = true;
-                if (m_selectHeld && btn == SDL_CONTROLLER_BUTTON_B) {
-                    qInfo() << "[SdlInput] Select+B combo detected — emitting inGameMenuRequested";
+                if (m_selectHeld && btn == SDL_CONTROLLER_BUTTON_START) {
+                    qInfo() << "[SdlInput] Select+Start combo — emitting inGameMenuRequested (libretro)";
+                    emit inGameMenuRequested();
+                    break;
+                }
+                if (btn == SDL_CONTROLLER_BUTTON_TOUCHPAD) {
+                    qInfo() << "[SdlInput] Touchpad press — emitting inGameMenuRequested (libretro)";
                     emit inGameMenuRequested();
                     break;
                 }
@@ -424,14 +446,25 @@ void SdlInputManager::pollEvents() {
                 if (typeChanged)
                     emit controllerTypeChanged();
                 auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);
-                // Select + B/Circle combo detection for in-game menu
                 if (btn == SDL_CONTROLLER_BUTTON_BACK) {
                     m_selectHeld = true;
                 }
-                if (m_selectHeld && btn == SDL_CONTROLLER_BUTTON_B) {
-                    qInfo() << "[SdlInput] Select+B combo detected — emitting inGameMenuRequested";
+                // Select + Start combo — universal across all
+                // controllers. Start is rarely action-mapped in retro
+                // games (typically "Pause" or unbound), so the brief
+                // press before our SIGSTOP arrives is unlikely to
+                // trigger an in-game action.
+                if (m_selectHeld && btn == SDL_CONTROLLER_BUTTON_START) {
+                    qInfo() << "[SdlInput] Select+Start combo — emitting inGameMenuRequested";
                     emit inGameMenuRequested();
-                    break; // Don't inject B as Key_Back when used in combo
+                    break;
+                }
+                // Touchpad single press: same outcome, no combo.
+                // DualShock 4 / DualSense have it; Xbox/Switch don't.
+                if (btn == SDL_CONTROLLER_BUTTON_TOUCHPAD) {
+                    qInfo() << "[SdlInput] Touchpad press — emitting inGameMenuRequested";
+                    emit inGameMenuRequested();
+                    break;
                 }
                 // Start emits signal (app-level action, not navigation)
                 if (btn == SDL_CONTROLLER_BUTTON_START) {
@@ -461,7 +494,6 @@ void SdlInputManager::pollEvents() {
                 }
             } else if (!m_capturing) {
                 auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);
-                // Track Select/Back release for combo detection
                 if (btn == SDL_CONTROLLER_BUTTON_BACK) {
                     m_selectHeld = false;
                 }

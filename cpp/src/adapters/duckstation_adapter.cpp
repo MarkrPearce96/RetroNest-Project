@@ -1272,7 +1272,10 @@ bool DuckStationAdapter::createDefaultConfig(const QString& path,
         "",
         "[Hotkeys]",
         "OpenPauseMenu =",
-        "TogglePause =",
+        // Bound to Space (DuckStation's default) so RetroNest can
+        // synthesize Space to toggle pause when the in-game menu
+        // opens/closes. Native pause = clean audio (no SIGSTOP).
+        "TogglePause = Keyboard/Space",
         "ToggleFullscreen =",
         "",
         "[Pad1]",
@@ -1315,7 +1318,9 @@ bool DuckStationAdapter::patchExistingConfig(const QString& path,
         {"Main", "SaveStateOnExit",  "true"},
 
         {"Hotkeys", "OpenPauseMenu",    ""},
-        {"Hotkeys", "TogglePause",     ""},
+        // RetroNest synthesizes Space to toggle pause when the
+        // in-game menu opens/closes (DuckStation's default binding).
+        {"Hotkeys", "TogglePause",      "Keyboard/Space"},
         {"Hotkeys", "ToggleFullscreen", ""},
 
         // Without [Pad1].Type DuckStation registers zero bindings — see

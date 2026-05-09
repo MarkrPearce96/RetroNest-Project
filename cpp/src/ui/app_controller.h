@@ -29,11 +29,7 @@ class AppController : public QObject {
 
 public:
     AppController(ManifestLoader* loader, Database* db, QObject* parent = nullptr);
-    void setSdlInputManager(SdlInputManager* mgr) {
-        m_inputManager = mgr;
-        m_gameService.session()->setSdlInputManager(mgr);
-        m_configService.setSdlInputManager(mgr);
-    }
+    void setSdlInputManager(SdlInputManager* mgr);
     SdlInputManager* sdlInputManager() const { return m_inputManager; }
 
     // Game session (for QML binding to frameReady signal)
@@ -263,4 +259,16 @@ private:
 
     QQmlEngine* m_qmlEngine = nullptr;
     InGameMenuPanel* m_inGameMenuPanel = nullptr;
+
+    // True between paired Space-keystroke sends to the emulator
+    // (the TogglePause hotkey is a toggle, so we must track which
+    // half of the toggle we're in to avoid double-pause/double-resume).
+    bool m_emulatorSuspended = false;
+
+    // Polls SDL state at 16ms intervals after closeInGameMenuPanel()
+    // until all action buttons (A/B/X/Y) are released, then sends
+    // the Space keystroke to unpause. Variable delay so the close-
+    // trigger button can never leak as in-game input.
+    QTimer* m_resumeWhenButtonsReleasedTimer = nullptr;
+
 };
