@@ -1935,11 +1935,13 @@ bool DolphinAdapter::patchHotkeysIni() {
         content = "[Hotkeys]\n";
     }
 
-    // Clear native hotkeys that compete with our Cmd+Esc overlay or
-    // automatic save-on-exit logic. Dolphin's expression parser tolerates
-    // empty values (returns 0/false, no crash).
+    // Clear native hotkeys that compete with our overlay / save-on-exit.
+    // Dolphin's expression parser tolerates empty values (returns 0/false,
+    // no crash). Toggle Pause is bound to @(Space) so RetroNest can
+    // synthesize Space to toggle pause when the in-game menu opens/
+    // closes (clean native pause, no SIGSTOP audio click).
     const QVector<IniKeyPatch> patches = {
-        {"Hotkeys", "General/Toggle Pause",       ""},
+        {"Hotkeys", "General/Toggle Pause",       "@(Space)"},
         {"Hotkeys", "General/Open",                ""},
         {"Hotkeys", "General/Exit",                ""},
         {"Hotkeys", "Save State/Save State Slot 1", ""},

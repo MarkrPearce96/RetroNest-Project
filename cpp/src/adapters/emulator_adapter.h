@@ -325,6 +325,22 @@ public:
     virtual QVector<HotkeyDef> hotkeyBindingDefs() const { return {}; }
 
     /**
+     * Carbon kVK_* virtual keycode that, when synthesized to the
+     * running emulator's process, toggles its pause state. Used by
+     * AppController to pause/resume the emulator natively when the
+     * in-game menu opens/closes — clean audio (no SIGSTOP buffer-cut
+     * click). Adapters that don't expose a "pause-only" hotkey return
+     * 0; AppController falls back to SIGSTOP for those (audio
+     * stutter, but still pauses correctly).
+     *
+     * The corresponding emulator config (its TogglePause / equivalent
+     * hotkey) must be bound to this key in createDefaultConfig /
+     * patchExistingConfig — otherwise the synthesized keystroke
+     * reaches the emulator but does nothing.
+     */
+    virtual int pauseHotkeyVirtualKeyCode() const { return 0; }
+
+    /**
      * Return the CLI arguments to resume from a save state.
      * Default: {"-statefile", stateFilePath} (PCSX2 convention).
      * Override for emulators that use a different flag (e.g. DuckStation uses "-resume").

@@ -1368,7 +1368,11 @@ bool PCSX2Adapter::createDefaultConfig(const QString& path,
         "",
         "[Hotkeys]",
         "OpenPauseMenu =",
-        "TogglePause =",
+        // Bound to Space so RetroNest can synthesize Space (kVK_Space)
+        // to toggle pause when the in-game menu opens/closes. Same
+        // approach as DuckStation — emulator pauses itself, clean
+        // audio (no SIGSTOP buffer-cut click).
+        "TogglePause = Keyboard/Space",
         "",
     };
 
@@ -1429,9 +1433,11 @@ bool PCSX2Adapter::patchExistingConfig(const QString& path,
 
         {"EmuCore", "SaveStateOnShutdown", "true"},
 
-        // Suppress native pause menu and TogglePause — we use PauseOnFocusLoss instead
+        // Suppress native pause menu (it would conflict with our HUD).
+        // Bind TogglePause to Keyboard/Space so RetroNest can
+        // synthesize Space when the in-game menu opens/closes.
         {"Hotkeys", "OpenPauseMenu", ""},
-        {"Hotkeys", "TogglePause",   ""},
+        {"Hotkeys", "TogglePause",   "Keyboard/Space"},
     };
     if (patchIniKeys(content, patches))
         changed = true;

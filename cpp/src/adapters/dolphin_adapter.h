@@ -71,6 +71,9 @@ public:
                                   int deviceIndex, QObject* input) const override;
 
     QVector<HotkeyDef> hotkeyBindingDefs() const override { return {}; }
+    // Synthesize Space → Dolphin's General/Toggle Pause (bound to
+    // @(Space) in patchHotkeysIni).
+    int pauseHotkeyVirtualKeyCode() const override { return 0x31 /* kVK_Space */; }
 
     bool supportsRetroAchievements() const override { return true; }
     bool supportsSaveOnExit() const override { return false; }

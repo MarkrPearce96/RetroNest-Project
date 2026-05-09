@@ -32,6 +32,9 @@ public:
     ResolutionOptions resolutionOptions() const override;
     AspectRatioOptions aspectRatioOptions() const override;
     QVector<HotkeyDef> hotkeyBindingDefs() const override;
+    // Synthesize Space → DuckStation's TogglePause (bound to
+    // Keyboard/Space in createDefaultConfig + patchExistingConfig).
+    int pauseHotkeyVirtualKeyCode() const override { return 0x31 /* kVK_Space */; }
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
     QVector<SettingDef> controllerSettingDefsForType(const QString& type) const override;

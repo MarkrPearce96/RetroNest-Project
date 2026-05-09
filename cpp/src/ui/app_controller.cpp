@@ -689,6 +689,27 @@ void AppController::setQmlEngine(QQmlEngine* engine) {
     m_qmlEngine = engine;
 }
 
+namespace {
+// Ask the running adapter for its pause-key. If non-zero, synthesize
+// it to the emulator's process (clean native pause). Otherwise fall
+// back to SIGSTOP/SIGCONT (universal but causes audio click).
+void emulatorPause(GameSession* sess, int64_t pid) {
+    if (!sess) { MacFullscreen::pauseProcess(pid); return; }
+    auto* adapter = sess->adapter();
+    const int vk = adapter ? adapter->pauseHotkeyVirtualKeyCode() : 0;
+    if (vk != 0) MacFullscreen::sendKeyToProcess(pid, vk);
+    else         MacFullscreen::pauseProcess(pid);
+}
+
+void emulatorResume(GameSession* sess, int64_t pid) {
+    if (!sess) { MacFullscreen::resumeProcess(pid); return; }
+    auto* adapter = sess->adapter();
+    const int vk = adapter ? adapter->pauseHotkeyVirtualKeyCode() : 0;
+    if (vk != 0) MacFullscreen::sendKeyToProcess(pid, vk);
+    else         MacFullscreen::resumeProcess(pid);
+}
+} // namespace
+
 void AppController::openInGameMenuPanel() {
     qInfo() << "[InGameMenuPanel] open requested";
     if (!m_qmlEngine) {
@@ -718,7 +739,7 @@ void AppController::openInGameMenuPanel() {
                     if (auto* sess = gameSession()) {
                         const int64_t pid = sess->pid();
                         if (pid > 0 && m_emulatorSuspended) {
-                            MacFullscreen::sendKeyToProcess(pid, 0x31 /* kVK_Space → DuckStation TogglePause */);
+                            emulatorResume(sess, pid);
                             m_emulatorSuspended = false;
                         }
                     }
@@ -730,7 +751,7 @@ void AppController::openInGameMenuPanel() {
                     if (auto* sess = gameSession()) {
                         const int64_t pid = sess->pid();
                         if (pid > 0 && m_emulatorSuspended) {
-                            MacFullscreen::sendKeyToProcess(pid, 0x31 /* kVK_Space → DuckStation TogglePause */);
+                            emulatorResume(sess, pid);
                             m_emulatorSuspended = false;
                         }
                     }
@@ -741,13 +762,10 @@ void AppController::openInGameMenuPanel() {
     }
 
     int64_t pid = 0;
-    if (auto* sess = gameSession()) {
-        pid = sess->pid();
-    }
+    GameSession* sess = gameSession();
+    if (sess) pid = sess->pid();
     if (pid > 0 && !m_emulatorSuspended) {
-        // Synthesize Space → DuckStation's TogglePause hotkey →
-        // emulator pauses itself with clean audio (no SIGSTOP click).
-        MacFullscreen::sendKeyToProcess(pid, 0x31 /* kVK_Space */);
+        emulatorPause(sess, pid);
         m_emulatorSuspended = true;
     }
     m_inGameMenuPanel->showOverEmulator(pid);
@@ -756,18 +774,18 @@ void AppController::openInGameMenuPanel() {
 void AppController::closeInGameMenuPanel() {
     if (!m_inGameMenuPanel) return;
     m_inGameMenuPanel->hide();
-    int64_t pid = 0;
-    if (auto* sess = gameSession()) pid = sess->pid();
+    GameSession* sess = gameSession();
+    int64_t pid = sess ? sess->pid() : 0;
     if (pid <= 0 || !m_emulatorSuspended) {
         m_emulatorSuspended = false;
         return;
     }
     MacFullscreen::activateProcess(pid);
 
-    // Poll SDL state at 16 ms; send the unpause Space only once all
-    // action buttons (A/B/X/Y) are released. Variable delay
-    // (~50–150 ms typical) so the close-trigger button can never
-    // leak as in-game input. Safety timeout at 500 ms (~30 ticks).
+    // Poll SDL state at 16 ms; resume only once all action buttons
+    // (A/B/X/Y) are released. Variable delay (~50–150 ms typical) so
+    // the close-trigger button can never leak as in-game input.
+    // Safety timeout at 500 ms (~30 ticks).
     if (!m_resumeWhenButtonsReleasedTimer) {
         m_resumeWhenButtonsReleasedTimer = new QTimer(this);
         m_resumeWhenButtonsReleasedTimer->setInterval(16);
@@ -775,12 +793,12 @@ void AppController::closeInGameMenuPanel() {
     int* tickCount = new int(0);
     QMetaObject::Connection* conn = new QMetaObject::Connection;
     *conn = connect(m_resumeWhenButtonsReleasedTimer, &QTimer::timeout, this,
-        [this, pid, tickCount, conn]() {
+        [this, sess, pid, tickCount, conn]() {
             const bool buttonsHeld =
                 m_inputManager && m_inputManager->isAnyActionButtonPressed();
             if (!buttonsHeld || ++(*tickCount) > 30) {
                 if (m_emulatorSuspended) {
-                    MacFullscreen::sendKeyToProcess(pid, 0x31 /* kVK_Space */);
+                    emulatorResume(sess, pid);
                     m_emulatorSuspended = false;
                 }
                 m_resumeWhenButtonsReleasedTimer->stop();
