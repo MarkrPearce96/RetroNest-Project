@@ -148,22 +148,32 @@ ApplicationWindow {
     InGameMenu {
         id: inGameMenu
 
+        // This in-window InGameMenu instance is the libretro path only
+        // (external emulators get their own InGameMenuPanel). All paths
+        // here resume the libretro core before doing anything else —
+        // the core thread was paused on menu open and stays paused
+        // until we explicitly call resumeEmulation, otherwise the game
+        // (and any save-state work) is frozen.
         onResumeRequested: {
-            app.activateEmulator();
+            if (app.gameSession) app.gameSession.resumeEmulation();
             inGameMenu.close();
         }
 
         onAchievementsRequested: function(raGameId, gameTitle) {
+            // Legacy path — the HUD now opens its inline popup
+            // instead of emitting this signal. Kept for completeness.
             inGameMenu.close();
             settingsOverlay.navigateToAchievements(raGameId, gameTitle);
         }
 
         onExitWithSaveRequested: {
+            if (app.gameSession) app.gameSession.resumeEmulation();
             inGameMenu.close();
             themeContext.saveAndStopGame(1);
         }
 
         onExitWithoutSaveRequested: {
+            if (app.gameSession) app.gameSession.resumeEmulation();
             inGameMenu.close();
             themeContext.stopGame();
         }
@@ -622,12 +632,16 @@ ApplicationWindow {
                  && !app.inGameMenuPanelVisible
         onActivated: {
             if (app.gameRunning) {
-                // Shortcut only fires when the app already has focus, so we
-                // don't call activateApp() — inGameMenu.open() is enough.
+                // Shortcut fires when this app has focus — i.e. the
+                // libretro path. Resume the core when closing the menu;
+                // pause it when opening. (External-emulator path is
+                // handled via the panel + Cmd+Shift+Esc Carbon hotkey,
+                // not this Shortcut.)
                 if (inGameMenu.visible) {
-                    app.activateEmulator();
+                    if (app.gameSession) app.gameSession.resumeEmulation();
                     inGameMenu.close();
                 } else {
+                    if (app.gameSession) app.gameSession.pauseEmulation();
                     inGameMenu.open();
                 }
                 return
