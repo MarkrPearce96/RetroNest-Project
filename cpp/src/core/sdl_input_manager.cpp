@@ -473,9 +473,18 @@ void SdlInputManager::pollEvents() {
                 // injection still goes through (focused window is the
                 // panel, so HUD navigation works).
                 if (m_suppressMainInputs && btn == SDL_CONTROLLER_BUTTON_START) break;
-                // Start emits signal (app-level action, not navigation)
+                // Start emits signal (app-level action, not navigation).
+                // Deferred ~50 ms so the combo-detection has a chance
+                // when the user fires Select+Start but the controller
+                // happens to report Start first (HID-order race). If
+                // Select press lands within the window, m_selectHeld
+                // flips true and we cancel the navigateStart.
                 if (btn == SDL_CONTROLLER_BUTTON_START) {
-                    emit navigateStart();
+                    QTimer::singleShot(50, this, [this]() {
+                        if (m_selectHeld) return;            // combo will fire
+                        if (m_suppressMainInputs) return;     // panel owns input
+                        emit navigateStart();
+                    });
                 } else {
                     int qtKey = mapButtonToKey(btn);
                     if (qtKey)
