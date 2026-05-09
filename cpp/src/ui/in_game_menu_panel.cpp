@@ -12,7 +12,10 @@
 
 namespace {
 constexpr int kPanelWidth = 480;
-constexpr int kPanelHeight = 140;
+// Tall enough to fit the slide-up Achievements popup (max ~360 px)
+// above the HUD pill (~92 px) with breathing room. The window is
+// transparent so the unused vertical space costs nothing visually.
+constexpr int kPanelHeight = 540;
 constexpr int kPanelBottomMargin = 32;
 } // namespace
 

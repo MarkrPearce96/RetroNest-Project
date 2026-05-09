@@ -43,8 +43,14 @@ FocusScope {
     }
 
     function close() {
+        achievementsPopupOpen = false;
         visible = false;
     }
+
+    // True while the slide-up Achievements popup is showing on top
+    // of the HUD. B / Back closes the popup first; only when closed
+    // does B / Back actually resume.
+    property bool achievementsPopupOpen: false
 
     Connections {
         target: app
@@ -143,9 +149,45 @@ FocusScope {
         }
     }
 
+    // ── Achievements slide-up popup ──
+    InGameAchievementsPopup {
+        id: achievementsPopup
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: pill.top
+        anchors.bottomMargin: 12
+        height: 360
+        raGameId: root.raGameId
+        open: root.achievementsPopupOpen
+    }
+
     // ── Input ──
     Keys.onPressed: function(event) {
         if (!visible) return;
+
+        // While the achievements popup is open, route navigation
+        // into the list instead of cycling HUD icons.
+        if (achievementsPopupOpen) {
+            if (event.key === Qt.Key_Up) {
+                achievementsPopup.scrollUp();
+                event.accepted = true;
+                return;
+            } else if (event.key === Qt.Key_Down) {
+                achievementsPopup.scrollDown();
+                event.accepted = true;
+                return;
+            } else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
+                achievementsPopupOpen = false;
+                event.accepted = true;
+                return;
+            }
+            // Other keys (Left/Right, Return, etc.) fall through and
+            // are absorbed below — we don't want HUD nav while the
+            // popup is up.
+            event.accepted = true;
+            return;
+        }
+
         if (event.key === Qt.Key_Left) {
             focusIndex = Math.max(0, focusIndex - 1);
             event.accepted = true;
@@ -167,7 +209,12 @@ FocusScope {
             resumeRequested();
             break;
         case "achievements":
-            achievementsRequested(raGameId, raGameTitle);
+            // Stay in the game/menu context — slide the achievements
+            // list up over the HUD instead of routing back to the
+            // main app's settings overlay (the legacy
+            // achievementsRequested signal path is left in place for
+            // any callers that still want navigation behavior).
+            achievementsPopupOpen = !achievementsPopupOpen;
             break;
         case "exitSave":
             exitWithSaveRequested();
