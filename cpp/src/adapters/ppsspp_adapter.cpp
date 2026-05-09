@@ -855,7 +855,12 @@ bool PPSSPPAdapter::createDefaultConfig(const QString& path,
     if (!writeConfigFile(path, lines.join("\n"), "PPSSPP"))
         return false;
 
-    // Create default controls.ini with default bindings
+    // Create default controls.ini with default bindings.
+    // "Pause (no menu)" maps to PPSSPP's VIRTKEY_PAUSE_NO_MENU which
+    // pauses the game without showing PPSSPP's own UI overlay
+    // (perfect for our HUD to live above without conflict). 1-62 =
+    // DEVICE_ID_KEYBOARD-NKCODE_SPACE; AppController synthesizes
+    // kVK_Space via CGEventPostToPid.
     QStringList ctrlLines = {
         "[ControlMapping]",
         "Up = 10-19",
@@ -875,6 +880,7 @@ bool PPSSPPAdapter::createDefaultConfig(const QString& path,
         "An.Left = 10-4001",
         "An.Right = 10-4000",
         "Fast-forward = 10-4036",
+        "Pause (no menu) = 1-62",
         "",
     };
 
@@ -934,6 +940,16 @@ void PPSSPPAdapter::scrubControlsIniHotkeys() {
             ini.setValue(def.section, def.key, "");
             changed = true;
         }
+    }
+
+    // Force-inject "Pause (no menu)" → keyboard Space binding so
+    // RetroNest's in-game menu can synthesize Space and PPSSPP
+    // pauses itself without showing its own overlay UI. We always
+    // overwrite to defend against the user accidentally clearing it.
+    static constexpr auto kPauseBinding = "1-62"; // KEYBOARD-NKCODE_SPACE
+    if (ini.value("ControlMapping", "Pause (no menu)") != QString::fromLatin1(kPauseBinding)) {
+        ini.setValue("ControlMapping", "Pause (no menu)", kPauseBinding);
+        changed = true;
     }
 
     if (changed && !ini.save(path))
