@@ -85,6 +85,10 @@ void CoreRuntime::stop() {
 
 void CoreRuntime::pause() {
     m_paused = true;
+    // Silence the SDL audio device too — without this the pre-pause
+    // tail of samples queued for playback bleeds through while the
+    // worker is blocked on the pause cond.
+    m_audio.setPaused(true);
 }
 
 void CoreRuntime::resume() {
@@ -92,6 +96,7 @@ void CoreRuntime::resume() {
         std::lock_guard<std::mutex> l(m_pauseMx);
         m_paused = false;
     }
+    m_audio.setPaused(false);
     m_pauseCv.notify_all();
 }
 
@@ -127,6 +132,27 @@ void CoreRuntime::flushPendingSaveState(const CoreSymbols& s) {
         }
     }
     m_pendingSavePath.clear();
+}
+
+void CoreRuntime::requestLoadState(const QString& path) {
+    std::lock_guard<std::mutex> l(m_loadMx);
+    m_pendingLoadPath = path;
+}
+
+void CoreRuntime::flushPendingLoadState(const CoreSymbols& s) {
+    std::lock_guard<std::mutex> l(m_loadMx);
+    if (m_pendingLoadPath.isEmpty()) return;
+    QFile f(m_pendingLoadPath);
+    if (f.exists() && f.open(QIODevice::ReadOnly)) {
+        QByteArray state = f.readAll();
+        s.retro_unserialize(state.constData(), static_cast<size_t>(state.size()));
+    }
+    m_pendingLoadPath.clear();
+}
+
+void CoreRuntime::setSpeedMultiplier(double multiplier) {
+    if (multiplier <= 0.0) multiplier = 1.0;
+    m_speedMultiplier.store(multiplier);
 }
 
 void CoreRuntime::runLoop() {
@@ -201,10 +227,15 @@ void CoreRuntime::runLoop() {
             m_pauseCv.wait(lk, [this] { return !m_paused.load() || m_stopRequested.load(); });
         }
         if (m_stopRequested.load()) break;
+        // Apply a load-state request BEFORE retro_run so the next frame
+        // emits the loaded state's video/audio (post-run flush would
+        // discard the just-rendered frame).
+        flushPendingLoadState(s);
         s.retro_run();
         m_rcheevos.frame();
         flushPendingSaveState(s);
-        next += std::chrono::nanoseconds(static_cast<long long>(m_frameDurationSec * 1e9));
+        const double mult = m_speedMultiplier.load();
+        next += std::chrono::nanoseconds(static_cast<long long>(m_frameDurationSec * 1e9 / mult));
         std::this_thread::sleep_until(next);
     }
 

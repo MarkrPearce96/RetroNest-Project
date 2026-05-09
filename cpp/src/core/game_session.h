@@ -66,6 +66,21 @@ public:
      *  resumes the core thread. */
     Q_INVOKABLE void resumeEmulation();
 
+    /** Schedule an async save-state write to slot `slot` (1-based) for the
+     *  running libretro game. No-op for process emulators (they handle save
+     *  state via synthesized hotkeys). The state file path is derived from
+     *  the adapter's serial-extraction so it matches resume-state conventions:
+     *  `{savestates}/{serial}_slot{N}.state`. */
+    Q_INVOKABLE void saveStateLibretro(int slot = 1);
+
+    /** Schedule an async load-state read from slot `slot`. Silent no-op if
+     *  no save exists for that slot. Libretro path only. */
+    Q_INVOKABLE void loadStateLibretro(int slot = 1);
+
+    /** Toggle 4× fast-forward on the libretro worker. Returns the new state
+     *  (true = FF on). No-op for process emulators. */
+    Q_INVOKABLE bool toggleFastForwardLibretro();
+
     /** The adapter for the currently running emulator. Null if not running. */
     EmulatorAdapter* adapter() const { return m_adapter; }
 
@@ -99,12 +114,15 @@ private:
                        EmulatorAdapter* adapter,
                        const QString& romPath);
 
+    QString libretroSlotPath(int slot) const;
+
     QProcess* m_process = nullptr;
     EmulatorAdapter* m_adapter = nullptr;
     const EmulatorManifest* m_manifest = nullptr;
     QString m_emuId;
     QString m_currentRomPath;
     LibretroAdapter* m_libretroAdapter = nullptr;
+    bool m_libretroFastForward = false;
 
     SdlInputManager* m_sdlInputManager = nullptr;
     RAService* m_raService = nullptr;

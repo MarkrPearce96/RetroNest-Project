@@ -43,6 +43,14 @@ void AudioSink::close() {
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
+void AudioSink::setPaused(bool paused) {
+    if (!m_dev) return;
+    // Drop any queued samples on pause so resume doesn't burst the
+    // pre-pause tail when SDL re-enables the device.
+    if (paused) SDL_ClearQueuedAudio(m_dev);
+    SDL_PauseAudioDevice(m_dev, paused ? 1 : 0);
+}
+
 void AudioSink::writeSamples(const int16_t* data, int frames) {
     if (!m_dev || !m_stream || !data || frames <= 0) return;
     SDL_AudioStreamPut(m_stream, data, frames * 2 * sizeof(int16_t));

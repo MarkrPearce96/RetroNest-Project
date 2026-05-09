@@ -172,11 +172,15 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         // Fix 1: restore navigation mode when the libretro game ends
         if (m_sdlInputManager)
             m_sdlInputManager->clearEmulationMode();
+        // Tear down state BEFORE emitting runningChanged / finished so
+        // QML observers reading `app.gameRunning` from the slot see
+        // false (isRunning() is computed live from m_libretroAdapter).
+        if (m_libretroAdapter) m_libretroAdapter->releaseRuntime();
+        m_libretroAdapter = nullptr;
+        m_libretroFastForward = false;
         m_adapter = nullptr; m_manifest = nullptr;
         emit runningChanged();
         emit finished(crashed ? -1 : 0, crashed);
-        if (m_libretroAdapter) m_libretroAdapter->releaseRuntime();
-        m_libretroAdapter = nullptr;
     });
     connect(rt, &CoreRuntime::errorOccurred, this, [this](const QString& m) {
         emit errorOccurred(m);
@@ -296,6 +300,44 @@ void GameSession::resumeEmulation() {
             m_sdlInputManager->setEmulationMode(&m_libretroAdapter->runtime()->input());
         m_libretroAdapter->runtime()->resume();
     }
+}
+
+QString GameSession::libretroSlotPath(int slot) const {
+    if (!m_libretroAdapter || !m_manifest || m_currentRomPath.isEmpty())
+        return {};
+    const QString systemId = Paths::systemIdFor(m_manifest->id, m_manifest->systems);
+    const QString serial = m_libretroAdapter->extractSerial(m_currentRomPath);
+    const QString baseName = serial.isEmpty()
+        ? QFileInfo(m_currentRomPath).completeBaseName()
+        : serial;
+    const QString path = Paths::emulatorDataDir(m_manifest->id, systemId)
+        + "/savestates/" + baseName + "_slot" + QString::number(slot) + ".state";
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    return path;
+}
+
+void GameSession::saveStateLibretro(int slot) {
+    if (m_backend != Backend::Libretro) return;
+    if (!m_libretroAdapter || !m_libretroAdapter->runtime()) return;
+    const QString path = libretroSlotPath(slot);
+    if (path.isEmpty()) return;
+    m_libretroAdapter->runtime()->requestSaveState(path);
+}
+
+void GameSession::loadStateLibretro(int slot) {
+    if (m_backend != Backend::Libretro) return;
+    if (!m_libretroAdapter || !m_libretroAdapter->runtime()) return;
+    const QString path = libretroSlotPath(slot);
+    if (path.isEmpty()) return;
+    m_libretroAdapter->runtime()->requestLoadState(path);
+}
+
+bool GameSession::toggleFastForwardLibretro() {
+    if (m_backend != Backend::Libretro) return false;
+    if (!m_libretroAdapter || !m_libretroAdapter->runtime()) return false;
+    m_libretroFastForward = !m_libretroFastForward;
+    m_libretroAdapter->runtime()->setSpeedMultiplier(m_libretroFastForward ? 4.0 : 1.0);
+    return m_libretroFastForward;
 }
 
 bool GameSession::isRunning() const {

@@ -1,5 +1,6 @@
 #include "app_controller.h"
 #include "adapters/adapter_registry.h"
+#include "adapters/libretro/libretro_adapter.h"
 #include "core/macos_fullscreen.h"
 #include "core/paths.h"
 #include "core/scraper.h"
@@ -629,17 +630,21 @@ QVariantMap AppController::currentGameInfo() const {
             info["emuId"] = game.emulator_id;
             auto* adapter = AdapterRegistry::instance().adapterFor(game.emulator_id);
             info["supportsSaveOnExit"] = adapter ? adapter->supportsSaveOnExit() : false;
-            // In-game menu uses these to hide actions whose synth-key
-            // the adapter doesn't expose (e.g. PPSSPP/Dolphin can't
-            // toggle fast-forward cleanly from a single keystroke;
-            // Dolphin can't reliably receive any synthesized hotkey
-            // so its Save/Load State return 0 too).
-            info["supportsSaveState"] = adapter
+            // External-emulator path uses synthesized hotkeys; libretro
+            // path uses direct CoreRuntime calls. Libretro cores always
+            // support save/load state via retro_serialize/unserialize and
+            // fast-forward via setSpeedMultiplier — no per-core opt-in
+            // needed.
+            const bool isLibretro = dynamic_cast<LibretroAdapter*>(adapter) != nullptr;
+            const bool synthSave = adapter
                 && adapter->hotkeyVirtualKeyCode(EmulatorAdapter::HotkeyAction::SaveState) != 0;
-            info["supportsLoadState"] = adapter
+            const bool synthLoad = adapter
                 && adapter->hotkeyVirtualKeyCode(EmulatorAdapter::HotkeyAction::LoadState) != 0;
-            info["supportsFastForward"] = adapter
+            const bool synthFf = adapter
                 && adapter->hotkeyVirtualKeyCode(EmulatorAdapter::HotkeyAction::ToggleFastForward) != 0;
+            info["supportsSaveState"] = isLibretro || synthSave;
+            info["supportsLoadState"] = isLibretro || synthLoad;
+            info["supportsFastForward"] = isLibretro || synthFf;
             return info;
         }
     }

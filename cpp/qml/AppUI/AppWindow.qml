@@ -170,6 +170,86 @@ ApplicationWindow {
             inGameMenu.close();
             themeContext.stopGame();
         }
+
+        // Libretro save / load drive CoreRuntime directly (external
+        // emulators use synthesized hotkeys; libretro is in-process).
+        // Resume the core first so the worker can flush the
+        // requested action between frames.
+        onSaveStateRequested: {
+            if (app.gameSession) {
+                app.gameSession.saveStateLibretro(1);
+                app.gameSession.resumeEmulation();
+            }
+            inGameMenu.close();
+            saveToast.show();
+        }
+
+        onLoadStateRequested: {
+            if (app.gameSession) {
+                app.gameSession.loadStateLibretro(1);
+                app.gameSession.resumeEmulation();
+            }
+            inGameMenu.close();
+            loadToast.show();
+        }
+
+        // Fast Forward is a STATE TOGGLE, not a one-shot action — keep
+        // the menu open so the user explicitly clicks Resume when
+        // they're ready to return. The new multiplier takes effect on
+        // the worker's next iteration after resume; toggling while
+        // paused stages the speed without unpausing.
+        onToggleFastForwardRequested: {
+            if (!app.gameSession) return;
+            var ffOn = app.gameSession.toggleFastForwardLibretro();
+            if (ffOn) ffToast.show(); else ffToast.hide();
+        }
+    }
+
+    // When the game ends, drop any persistent in-game indicators —
+    // otherwise the FF toast (or future sticky toasts) would stick
+    // around on the main app UI after the user quits.
+    Connections {
+        target: app
+        function onGameRunningChanged() {
+            if (!app.gameRunning) {
+                ffToast.hide();
+                saveToast.hide();
+                loadToast.hide();
+            }
+        }
+    }
+
+    // Top-right HUD notifications for libretro save/load/FF actions.
+    // External emulators show their own OSD natively, so these are
+    // libretro-only — they happen to also no-op when the libretro
+    // path isn't active because nothing emits show().
+    //
+    // FF sits at the top (it's sticky); save/load drop below it and
+    // collapse up against the screen edge when FF is off.
+    Column {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 32
+        anchors.rightMargin: 32
+        spacing: 8
+        z: 220
+
+        ActionToast {
+            id: ffToast
+            iconSource: "images/hud/fast_forward.svg"
+            label: "4×"
+            sticky: true
+        }
+        ActionToast {
+            id: saveToast
+            iconSource: "images/hud/save_state.svg"
+            label: "Saved"
+        }
+        ActionToast {
+            id: loadToast
+            iconSource: "images/hud/load_state.svg"
+            label: "Loaded"
+        }
     }
 
     ResumeStateDialog {

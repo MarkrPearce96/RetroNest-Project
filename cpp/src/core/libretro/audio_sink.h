@@ -13,6 +13,11 @@ public:
     bool open(int sourceSampleRate);
     void close();
     bool isOpen() const { return m_dev != 0; }
+    /** Pause/resume the underlying SDL audio device. While paused, the
+     *  device produces silence regardless of what writeSamples queues —
+     *  prevents the in-game menu from leaking residual / looping audio
+     *  while the libretro worker thread is blocked on the pause cond. */
+    void setPaused(bool paused);
 
     /** writeSamples: stereo int16 frames; `frames` is per-channel pair count. */
     void writeSamples(const int16_t* data, int frames);

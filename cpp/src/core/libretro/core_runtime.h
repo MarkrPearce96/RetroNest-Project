@@ -68,6 +68,21 @@ public:
      */
     void requestSaveState(const QString& path);
 
+    /**
+     * Asynchronously schedule a load-state read from `path`. Mirrors
+     * requestSaveState — the worker reads the file and calls retro_unserialize
+     * between frames. Silently no-ops if the file doesn't exist (e.g. user
+     * clicked Load State before ever saving). Safe to call from any thread.
+     */
+    void requestLoadState(const QString& path);
+
+    /**
+     * Set a frame-pacing multiplier. 1.0 = native speed; 4.0 = 4× fast forward.
+     * Atomic — safe to call from any thread. The worker reads it each frame
+     * to compute its sleep_until interval. Values ≤ 0 are clamped to 1.0.
+     */
+    void setSpeedMultiplier(double multiplier);
+
     InputRouter& input() { return m_input; }
     OptionsStore& options() { return m_options; }
     RcheevosRuntime& rcheevos() { return m_rcheevos; }
@@ -90,6 +105,7 @@ private:
 
     void runLoop();
     void flushPendingSaveState(const CoreSymbols& s);
+    void flushPendingLoadState(const CoreSymbols& s);
 
     StartConfig m_cfg;
     CoreLoader m_loader;
@@ -108,6 +124,10 @@ private:
 
     std::mutex m_saveMx;
     QString m_pendingSavePath;
+    std::mutex m_loadMx;
+    QString m_pendingLoadPath;
+
+    std::atomic<double> m_speedMultiplier{1.0};
 
     double m_frameDurationSec = 1.0 / 60.0;
     int m_sampleRate = 48000;
