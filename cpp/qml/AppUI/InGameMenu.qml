@@ -24,7 +24,6 @@ FocusScope {
     property string raGameTitle: ""
 
     signal resumeRequested()
-    signal achievementsRequested(int raGameId, string gameTitle)
     signal exitWithSaveRequested()
     signal exitWithoutSaveRequested()
 
@@ -211,9 +210,7 @@ FocusScope {
         case "achievements":
             // Stay in the game/menu context — slide the achievements
             // list up over the HUD instead of routing back to the
-            // main app's settings overlay (the legacy
-            // achievementsRequested signal path is left in place for
-            // any callers that still want navigation behavior).
+            // main app's settings overlay.
             achievementsPopupOpen = !achievementsPopupOpen;
             break;
         case "exitSave":

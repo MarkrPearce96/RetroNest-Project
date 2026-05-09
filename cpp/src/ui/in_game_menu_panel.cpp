@@ -59,8 +59,6 @@ void InGameMenuPanel::wireSignals() {
     if (!m_window) return;
     connect(m_window, SIGNAL(resumeRequested()),
             this, SIGNAL(resumeRequested()));
-    connect(m_window, SIGNAL(achievementsRequested(int, QString)),
-            this, SIGNAL(achievementsRequested(int, QString)));
     connect(m_window, SIGNAL(exitWithSaveRequested()),
             this, SIGNAL(exitWithSaveRequested()));
     connect(m_window, SIGNAL(exitWithoutSaveRequested()),

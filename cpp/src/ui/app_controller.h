@@ -199,7 +199,6 @@ signals:
     void gamesChanged();
     void gameRunningChanged();
     void inGameMenuPanelVisibleChanged();
-    void inGameMenuPanelAchievementsRequested(int raGameId, const QString& gameTitle);
     void gameStarted();
     /** Emitted instead of gameStarted() when the backend is libretro (in-process). */
     void gameStartedLibretro();

@@ -17,9 +17,10 @@ Window {
     visible: false
 
     // Re-emitted from the embedded HUD so AppController can wire them
-    // to the same handlers used by the in-window path.
+    // to the same handlers used by the in-window path. Achievements
+    // is handled inline by the HUD's slide-up popup, so it doesn't
+    // need to leave the panel context.
     signal resumeRequested()
-    signal achievementsRequested(int raGameId, string gameTitle)
     signal exitWithSaveRequested()
     signal exitWithoutSaveRequested()
 
@@ -38,9 +39,6 @@ Window {
         id: hud
         anchors.fill: parent
         onResumeRequested: panelWindow.resumeRequested()
-        onAchievementsRequested: function(rid, title) {
-            panelWindow.achievementsRequested(rid, title);
-        }
         onExitWithSaveRequested: panelWindow.exitWithSaveRequested()
         onExitWithoutSaveRequested: panelWindow.exitWithoutSaveRequested()
     }

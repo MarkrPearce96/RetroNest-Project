@@ -159,13 +159,6 @@ ApplicationWindow {
             inGameMenu.close();
         }
 
-        onAchievementsRequested: function(raGameId, gameTitle) {
-            // Legacy path — the HUD now opens its inline popup
-            // instead of emitting this signal. Kept for completeness.
-            inGameMenu.close();
-            settingsOverlay.navigateToAchievements(raGameId, gameTitle);
-        }
-
         onExitWithSaveRequested: {
             if (app.gameSession) app.gameSession.resumeEmulation();
             inGameMenu.close();
@@ -222,9 +215,6 @@ ApplicationWindow {
             raLoginPrompt.visible = true
             app.setCursorVisible(true)
             raLoginPrompt.forceActiveFocus()
-        }
-        function onInGameMenuPanelAchievementsRequested(raGameId, gameTitle) {
-            settingsOverlay.navigateToAchievements(raGameId, gameTitle);
         }
     }
 

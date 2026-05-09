@@ -722,14 +722,6 @@ void AppController::openInGameMenuPanel() {
                 this, [this]() {
                     closeInGameMenuPanel();
                 });
-        connect(m_inGameMenuPanel, &InGameMenuPanel::achievementsRequested,
-                this, [this](int raGameId, const QString& title) {
-                    closeInGameMenuPanel();
-                    // Bring our app forward so the settings overlay
-                    // (in the main window) is visible.
-                    MacFullscreen::activateOurApp();
-                    emit inGameMenuPanelAchievementsRequested(raGameId, title);
-                });
         connect(m_inGameMenuPanel, &InGameMenuPanel::exitWithSaveRequested,
                 this, [this]() {
                     // Unpause the emulator first so its save thread

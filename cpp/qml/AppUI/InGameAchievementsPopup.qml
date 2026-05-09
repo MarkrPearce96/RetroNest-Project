@@ -24,6 +24,11 @@ Item {
     property var achievements: []
     property int totalEarned: 0
 
+    /** "loading" until raGameDetailReady fires, then "loaded" (with
+     *  achievements possibly empty) or "timeout" after ~5 s of no
+     *  response. */
+    property string loadState: "loading"
+
     /** Hide entirely when fully closed so it doesn't intercept input. */
     visible: opacity > 0.01
 
@@ -37,7 +42,20 @@ Item {
     function refresh() {
         achievements = [];
         totalEarned = 0;
-        if (raGameId > 0) app.raRequestGameDetail(raGameId);
+        loadState = "loading";
+        if (raGameId > 0) {
+            app.raRequestGameDetail(raGameId);
+            loadTimeout.restart();
+        }
+    }
+
+    Timer {
+        id: loadTimeout
+        interval: 5000
+        repeat: false
+        onTriggered: {
+            if (root.loadState === "loading") root.loadState = "timeout";
+        }
     }
 
     /** D-pad / arrow-key navigation hooks called by InGameMenu while
@@ -60,6 +78,8 @@ Item {
         target: app
         function onRaGameDetailReady(rid, detail) {
             if (rid !== root.raGameId) return;
+            loadTimeout.stop();
+            root.loadState = "loaded";
             if (!detail || !detail.achievements) return;
             root.achievements = detail.achievements;
             var n = 0;
@@ -185,11 +205,13 @@ Item {
             }
         }
 
-        // Loading / empty state
+        // Loading / empty / timeout state
         Text {
             anchors.centerIn: list
             visible: root.achievements.length === 0
-            text: "Loading achievements…"
+            text: root.loadState === "loading" ? "Loading achievements…"
+                  : root.loadState === "timeout" ? "Couldn't load achievements"
+                  : "No achievements found for this game"
             color: Qt.rgba(1, 1, 1, 0.4)
             font.pixelSize: 13
         }

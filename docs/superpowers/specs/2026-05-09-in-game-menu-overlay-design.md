@@ -148,31 +148,25 @@ Style: monochrome white, rounded line-style, ~24 px viewBox, matching the visual
 - `AppWindow.qml`'s `inputManager` `Connections` block gates relevant handlers on `!app.inGameMenuPanelVisible`.
 - `InGameMenuPanel.qml`'s `Connections` block consumes them when the panel is open.
 
-## Pause behavior — the load-bearing assumption
+## Pause behavior
 
-> **As-shipped note (post-implementation):** the spec originally proposed `PauseOnFocusLoss` as the primary pause mechanism, with keystroke synthesis as a fallback only for PPSSPP. Implementation flipped this: keystroke synthesis is the **primary** path for the three emulators that expose a stable TogglePause hotkey, and SIGSTOP/SIGCONT is the universal fallback for emulators that don't (currently PPSSPP). The reasons documented during iteration: (a) `PauseOnFocusLoss` is implemented at the *application*-state level in PCSX2/DuckStation/Dolphin, not window-key level, so a non-activating panel doesn't reliably trigger it; (b) keystroke synthesis is more deterministic and produces clean audio (the emulator gracefully suspends its own audio thread).
+> **History:** the original spec proposed `PauseOnFocusLoss` as the primary pause mechanism — the panel becomes the macOS key window, the emulator's window loses key status, and the emulator's own focus-loss handler pauses it. Implementation revealed two problems: (a) PCSX2/DuckStation/Dolphin's `PauseOnFocusLoss` checks Qt's *application*-active state, not window-key, so a non-activating panel doesn't trigger it; (b) the alternative — SIGSTOP'ing the emulator process — cuts CoreAudio mid-buffer and produces an audible click on every menu open/close. So the design pivoted to **synthesizing the emulator's own TogglePause hotkey** via `CGEventPostToPid`. The emulator pauses itself (clean audio fade), and we control the hotkey binding so we know what key to send.
+>
+> SIGSTOP/SIGCONT remains as a fallback path for any future emulator that doesn't expose a pause-only hotkey.
 
-The approach depends on each external emulator pausing when its window loses key status, regardless of whether our app activates. Each adapter already configures its emulator's pause-on-focus-loss option. Implementations differ slightly per emulator:
+### Per-adapter pause table (as shipped)
 
-| Emulator | Setting | Risk |
-|----------|---------|------|
-| PCSX2 | `EmuCore/PauseOnFocusLoss = true` | Low — uses Qt window-focus events |
-| DuckStation | `Main/PauseOnFocusLoss = true` | Low — uses Qt window-focus events |
-| PPSSPP | `iPauseOnLostFocus = 1` | **Medium** — historically finicky on macOS |
-| Dolphin | `[General] PauseOnFocusLost = True` | Low — Qt window focus |
+| Emulator | Bound TogglePause hotkey | Synthesis key | Mechanism |
+|----------|---------------------------|---------------|-----------|
+| DuckStation | `[Hotkeys] TogglePause = Keyboard/Space` | `kVK_Space` | Native pause |
+| PCSX2 | `[Hotkeys] TogglePause = Keyboard/Space` | `kVK_Space` | Native pause |
+| Dolphin | `[Hotkeys] General/Toggle Pause = @(Space)` | `kVK_Space` | Native pause |
+| PPSSPP | `[ControlMapping] Pause (no menu) = 1-62` | `kVK_Space` | Native pause (VIRTKEY_PAUSE_NO_MENU) |
+| _future emulators_ | (none) | — | SIGSTOP/SIGCONT fallback |
 
-PPSSPP is the only meaningful unknown. Verification happens during implementation; if PPSSPP fails to pause with a non-activating panel, fallback options include synthesizing the emulator's own pause hotkey (`CGEventPostToPid`) on panel open, or scoping PPSSPP back to the Option-A approach (transparent main window) while the others use the panel. The fallback decision is captured here so future-us doesn't re-litigate it.
+Each adapter overrides `EmulatorAdapter::pauseHotkeyVirtualKeyCode()` to return its `kVK_*`; the default `0` triggers AppController's SIGSTOP path. The TogglePause hotkey is intentionally **not** exposed in any adapter's `hotkeyBindingDefs()`, so the user can't rebind the key our synthesis depends on.
 
-### As-shipped pause table
-
-| Emulator | TogglePause binding | Synthesis key | Notes |
-|----------|---------------------|---------------|-------|
-| DuckStation | `[Hotkeys] TogglePause = Keyboard/Space` | `kVK_Space` | Native pause, clean audio |
-| PCSX2 | `[Hotkeys] TogglePause = Keyboard/Space` | `kVK_Space` | Native pause, clean audio |
-| Dolphin | `[Hotkeys] General/Toggle Pause = @(Space)` | `kVK_Space` | Native pause, clean audio |
-| PPSSPP | (none — no stable pause-only hotkey in v1.16) | — | SIGSTOP/SIGCONT fallback (audio click on transitions) |
-
-Per-adapter routing lives behind `EmulatorAdapter::pauseHotkeyVirtualKeyCode()`: returns the `kVK_*` for native synthesis, or 0 to fall back to SIGSTOP. Requires Accessibility permission for `CGEventPostToPid` (one-time macOS prompt).
+`CGEventPostToPid` requires macOS Accessibility permission for the RetroNest app — granted once via the system prompt the first time the menu is opened.
 
 ## Edge cases
 

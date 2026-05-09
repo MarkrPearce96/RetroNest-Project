@@ -1,5 +1,14 @@
 # In-Game Menu Overlay Implementation Plan
 
+> **⚠️ Historical document — significantly diverged from what shipped.**
+> This plan was the starting point for the feature, but iterative discoveries during implementation changed the architecture in non-trivial ways:
+> - Pause mechanism: the plan assumed `PauseOnFocusLoss` would do the work via the panel becoming key. In practice, that mechanism is app-active level not window-key level for most emulators, so each adapter now binds its own TogglePause hotkey to Space and AppController synthesizes Space via `CGEventPostToPid`. SIGSTOP/SIGCONT remained as a fallback.
+> - Pause hotkey trigger: changed from `Cmd+Escape` to `Cmd+Shift+Escape` to avoid macOS Sonoma+'s Game Mode HUD claiming the key. Controller trigger is `Select+Start`, plus DualSense Touchpad as a single-button alternative.
+> - Achievements: originally routed back to the main app's settings overlay; ships as an inline slide-up popup that keeps the user in the in-game menu context.
+> - Close-side input bleed: solved via SDL state polling for A/B/X/Y release before SIGCONT, not via fixed delay.
+>
+> See the spec (`2026-05-09-in-game-menu-overlay-design.md`, "Pause behavior" section) for the as-shipped pause table and the merged commit list (15+ commits on `main` after `db070ff`) for the actual implementation. Use this plan as background reading only — task numbering, file paths, and code snippets reflect the original design, not what's in the tree.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the in-game menu visually appear *over* the running game for external (process-backed) emulators by hosting it in a non-activating `NSPanel`, and redesign the menu itself as an OpenEmu-style horizontal HUD.

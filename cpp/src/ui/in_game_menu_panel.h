@@ -35,7 +35,6 @@ public:
 
 signals:
     void resumeRequested();
-    void achievementsRequested(int raGameId, const QString& gameTitle);
     void exitWithSaveRequested();
     void exitWithoutSaveRequested();
     void visibilityChanged();
