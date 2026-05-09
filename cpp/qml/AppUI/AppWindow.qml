@@ -19,9 +19,9 @@ ApplicationWindow {
     // Track whether the empty state page is currently shown
     property bool showingEmptyState: false
 
-    // Toggle the in-game menu, activating the app window so controller/keyboard
-    // focus comes back from the emulator. Used by both the global Cmd+Escape
-    // hotkey and the SDL Select+Circle combo.
+    // Toggle the in-game menu. Used by the global Cmd+Shift+Escape
+    // Carbon hotkey, the SDL Select+Start combo, and the DualSense/
+    // DualShock 4 Touchpad press.
     // True when a libretro game is the current top of mainStack.
     function isLibretroGame() {
         return mainStack.currentItem && mainStack.currentItem.isEmulationView === true;
@@ -307,7 +307,7 @@ ApplicationWindow {
         }
     }
 
-    // Global Cmd+Escape hotkey — works even when PCSX2 has focus
+    // Global Cmd+Shift+Escape hotkey — works even when an external emulator has focus
     Connections {
         target: app
         function onGlobalHotkeyPressed() {

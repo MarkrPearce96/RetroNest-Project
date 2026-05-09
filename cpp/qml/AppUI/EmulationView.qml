@@ -8,7 +8,7 @@ import AppUI
  * Pushed onto mainStack when a libretro game starts. It:
  *   • Hosts LibretroVideoItem and pipes frameReady frames to it.
  *   • Forwards Escape / Key_Back to the in-game menu (same hotkey as
- *     the global Cmd+Escape path in AppWindow).
+ *     the global Cmd+Shift+Escape path in AppWindow).
  *
  * The existing process-emulator path (PCSX2, DuckStation, Dolphin, PPSSPP)
  * never pushes this view — it remains unaffected.

@@ -19,9 +19,12 @@ void activateOurApp();
 // Activate the process with the given PID (switches to its Space).
 void activateProcess(int64_t pid);
 
-// Register Cmd+Escape as a system-wide hotkey (no permissions needed).
+// Register Cmd+Shift+Escape as a system-wide hotkey (no permissions needed).
 // Uses Carbon RegisterEventHotKey — works even when another app has focus.
 // Calls the callback on the main thread when the hotkey is pressed.
+// Cmd+Escape alone is claimed by macOS Sonoma+'s Game Mode HUD when a
+// fullscreen game is active; Shift is the lowest-friction modifier
+// that avoids that and Cmd+Opt+Esc (Force Quit dialog).
 using HotkeyCallback = void(*)();
 void registerGlobalHotkey(HotkeyCallback callback);
 

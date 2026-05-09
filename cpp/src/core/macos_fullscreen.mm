@@ -14,7 +14,6 @@ static MacFullscreen::HotkeyCallback s_hotkeyCallback = nullptr;
 static OSStatus hotkeyHandler(EventHandlerCallRef /*nextHandler*/,
                                EventRef /*event*/,
                                void* /*userData*/) {
-    fprintf(stderr, "[MacFullscreen] global hotkey fired\n");
     if (s_hotkeyCallback) {
         // Dispatch to main thread
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -232,8 +231,6 @@ void makePanelKey(void* nsViewPtr) {
 void sendKeyToProcess(int64_t pid, int virtualKeyCode) {
     if (pid <= 0) return;
     @autoreleasepool {
-        fprintf(stderr, "[MacFullscreen] sendKeyToProcess pid=%lld vk=0x%02x\n",
-                (long long)pid, virtualKeyCode);
         CGEventRef keyDown = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)virtualKeyCode, true);
         if (keyDown) {
             CGEventPostToPid((pid_t)pid, keyDown);
@@ -249,13 +246,11 @@ void sendKeyToProcess(int64_t pid, int virtualKeyCode) {
 
 void pauseProcess(int64_t pid) {
     if (pid <= 0) return;
-    fprintf(stderr, "[MacFullscreen] SIGSTOP pid=%lld\n", (long long)pid);
     kill((pid_t)pid, SIGSTOP);
 }
 
 void resumeProcess(int64_t pid) {
     if (pid <= 0) return;
-    fprintf(stderr, "[MacFullscreen] SIGCONT pid=%lld\n", (long long)pid);
     kill((pid_t)pid, SIGCONT);
 }
 

@@ -72,18 +72,26 @@ public:
     /**
      * Switch to emulation mode: SDL gamepad button events write into the
      * InputRouter instead of being injected as Qt key events. The in-game
-     * menu hotkey (Select+Circle) still fires inGameMenuRequested().
+     * menu hotkey (Select+Start, or Touchpad on PS controllers)
+     * still fires inGameMenuRequested().
      * Call clearEmulationMode() when the libretro game ends.
      */
     void setEmulationMode(InputRouter* target);
     void clearEmulationMode();
 
     /**
-     * While true, suppress emit of navigateStart / inGameMenuRequested
-     * and Qt-key injection. Used by AppController to drop controller
-     * input flowing into the main app while the in-game panel is the
-     * key window — avoids QML-binding-timing races where a Start
-     * press leaks past the QML enabled-gate.
+     * While true, suppress the navigateStart emit on Start press —
+     * otherwise it leaks past the QML enabled-gate (binding-update
+     * timing race) and pops the main app's settings overlay open
+     * behind the in-game menu panel. Used by AppController on panel
+     * open/close.
+     *
+     * Asymmetric on purpose: inGameMenuRequested still emits
+     * (Touchpad / Select+Start while the panel is open is how the
+     * user toggles the menu closed), and key injection (face buttons
+     * / D-pad) still flows through to the focused window — that's
+     * the panel, so HUD navigation continues to work. Only the
+     * main-window-bound navigateStart signal is gated.
      */
     void setSuppressMainInputs(bool suppress) { m_suppressMainInputs = suppress; }
 
@@ -100,7 +108,7 @@ signals:
     // Non-navigation signals (app-level actions, not injected as keys)
     void navigateStart();       // Start button — toggle settings
     void navigateShift();       // R2 trigger — shift/caps toggle
-    void inGameMenuRequested(); // Select+B/Circle combo or Touchpad — in-game menu
+    void inGameMenuRequested(); // Select+Start combo or Touchpad — in-game menu
 
 
 private:

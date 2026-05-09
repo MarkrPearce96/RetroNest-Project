@@ -416,12 +416,12 @@ void SdlInputManager::pollEvents() {
                 if (btn == SDL_CONTROLLER_BUTTON_BACK)
                     m_selectHeld = true;
                 if (m_selectHeld && btn == SDL_CONTROLLER_BUTTON_START) {
-                    qInfo() << "[SdlInput] Select+Start combo — emitting inGameMenuRequested (libretro)";
+                    qDebug() << "[SdlInput] Select+Start combo — emitting inGameMenuRequested (libretro)";
                     emit inGameMenuRequested();
                     break;
                 }
                 if (btn == SDL_CONTROLLER_BUTTON_TOUCHPAD) {
-                    qInfo() << "[SdlInput] Touchpad press — emitting inGameMenuRequested (libretro)";
+                    qDebug() << "[SdlInput] Touchpad press — emitting inGameMenuRequested (libretro)";
                     emit inGameMenuRequested();
                     break;
                 }
@@ -455,14 +455,14 @@ void SdlInputManager::pollEvents() {
                 // press before our SIGSTOP arrives is unlikely to
                 // trigger an in-game action.
                 if (m_selectHeld && btn == SDL_CONTROLLER_BUTTON_START) {
-                    qInfo() << "[SdlInput] Select+Start combo — emitting inGameMenuRequested";
+                    qDebug() << "[SdlInput] Select+Start combo — emitting inGameMenuRequested";
                     emit inGameMenuRequested();
                     break;
                 }
                 // Touchpad single press: same outcome, no combo.
                 // DualShock 4 / DualSense have it; Xbox/Switch don't.
                 if (btn == SDL_CONTROLLER_BUTTON_TOUCHPAD) {
-                    qInfo() << "[SdlInput] Touchpad press — emitting inGameMenuRequested";
+                    qDebug() << "[SdlInput] Touchpad press — emitting inGameMenuRequested";
                     emit inGameMenuRequested();
                     break;
                 }

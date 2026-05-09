@@ -99,8 +99,12 @@ All directories derive from a single user-chosen root:
 - Binding capture mode: `startCapture()` emits raw `bindingCaptured()` signals instead of key injection
 
 ## In-Game Menu & Emulator Control
-- Trigger: Cmd+Escape (Carbon global hotkey) or Select+Circle (SDL combo)
-- Pausing via **PauseOnFocusLoss** config — our app takes focus, emulator auto-pauses (no IPC)
+- **Trigger:** Cmd+Shift+Escape (Carbon global hotkey, system-wide), Select+Start (SDL combo, all controllers), or Touchpad press (DualShock 4 / DualSense single-button)
+- **Overlay mechanism:** the menu is a separate `QQuickWindow` (`InGameMenuPanel`) backed by an isa-swizzled `NSPanel` (frameless, status-window-level, fullscreen-auxiliary, non-activating-panel) so it floats over a fullscreened external emulator without our app activating
+- **Pause is per-adapter.** Each adapter overrides `pauseHotkeyVirtualKeyCode()` to return the Carbon `kVK_*` for its TogglePause hotkey; the corresponding INI key is bound to that hotkey in `createDefaultConfig` + `patchExistingConfig`. AppController synthesizes the keystroke via `CGEventPostToPid` for clean native pause (no SIGSTOP audio click). Adapters that don't expose a pause-only hotkey return 0 → AppController falls back to SIGSTOP/SIGCONT (audio click but works universally; PPSSPP currently uses this fallback).
+- **`CGEventPostToPid` requires Accessibility permission** on macOS Sonoma+ (System Settings → Privacy & Security → Accessibility → enable RetroNest.app). Without it, synthesized keystrokes are silently dropped and the emulator never pauses. macOS prompts the first time the menu opens.
+- **Pause hotkey is hidden from user-facing settings** — none of the adapters list TogglePause / `General/Toggle Pause` in their `hotkeyBindingDefs()`, so the user can't accidentally rebind the key our synthesis depends on.
+- **Close-side input bleed avoided** by polling SDL state until A/B/X/Y are released before sending the unpause keystroke (e.g. Cross-to-Resume → no jump in the resumed game).
 - Save-on-exit via emulator's **SaveStateOnShutdown** config — SIGTERM triggers save, SIGKILL skips
 - Resume detection: serial extracted from ROM at import → scan savestates dir for resume file by serial
 - Serial format conversion per emulator (e.g. `SCUS_949.00` → `SCUS-94900`)

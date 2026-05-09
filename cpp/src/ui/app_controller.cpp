@@ -711,7 +711,7 @@ void emulatorResume(GameSession* sess, int64_t pid) {
 } // namespace
 
 void AppController::openInGameMenuPanel() {
-    qInfo() << "[InGameMenuPanel] open requested";
+    qDebug() << "[InGameMenuPanel] open requested";
     if (!m_qmlEngine) {
         qWarning() << "[AppController] openInGameMenuPanel before QML engine set";
         return;
@@ -782,6 +782,16 @@ void AppController::closeInGameMenuPanel() {
     if (!m_inGameMenuPanel) return;
     m_inGameMenuPanel->hide();
     if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
+
+    // If a previous close is still polling, tear it down. Captures
+    // are held by std::shared_ptr below, so disconnecting + dropping
+    // the lambda releases them deterministically (no leak even if the
+    // user fast-toggles the menu).
+    if (m_resumeWhenButtonsReleasedTimer) {
+        m_resumeWhenButtonsReleasedTimer->stop();
+        m_resumeWhenButtonsReleasedTimer->disconnect();
+    }
+
     GameSession* sess = gameSession();
     int64_t pid = sess ? sess->pid() : 0;
     if (pid <= 0 || !m_emulatorSuspended) {
@@ -798,10 +808,9 @@ void AppController::closeInGameMenuPanel() {
         m_resumeWhenButtonsReleasedTimer = new QTimer(this);
         m_resumeWhenButtonsReleasedTimer->setInterval(16);
     }
-    int* tickCount = new int(0);
-    QMetaObject::Connection* conn = new QMetaObject::Connection;
-    *conn = connect(m_resumeWhenButtonsReleasedTimer, &QTimer::timeout, this,
-        [this, sess, pid, tickCount, conn]() {
+    auto tickCount = std::make_shared<int>(0);
+    connect(m_resumeWhenButtonsReleasedTimer, &QTimer::timeout, this,
+        [this, sess, pid, tickCount]() {
             const bool buttonsHeld =
                 m_inputManager && m_inputManager->isAnyActionButtonPressed();
             if (!buttonsHeld || ++(*tickCount) > 30) {
@@ -810,9 +819,7 @@ void AppController::closeInGameMenuPanel() {
                     m_emulatorSuspended = false;
                 }
                 m_resumeWhenButtonsReleasedTimer->stop();
-                disconnect(*conn);
-                delete conn;
-                delete tickCount;
+                m_resumeWhenButtonsReleasedTimer->disconnect();
             }
         });
     m_resumeWhenButtonsReleasedTimer->start();
