@@ -32,9 +32,19 @@ public:
     QVector<PathDef> pathsDefs() const override;
     ResolutionOptions resolutionOptions() const override;
     QVector<HotkeyDef> hotkeyBindingDefs() const override;
-    // Synthesize Space → PPSSPP's "Pause (no menu)" virtual hotkey
-    // (bound to keyboard Space / "1-62" in scrubControlsIniHotkeys).
-    int pauseHotkeyVirtualKeyCode() const override { return 0x31 /* kVK_Space */; }
+    // Save/Load State are bound to keyboard F5/F7 (1-135 / 1-137) in
+    // controls.ini and removed from hotkeyBindingDefs(). Fast-forward
+    // is hold-style on PPSSPP with no clean toggle hotkey, so we
+    // return 0 — the in-game menu hides the FF action.
+    int hotkeyVirtualKeyCode(HotkeyAction action) const override {
+        switch (action) {
+        case HotkeyAction::TogglePause:       return 0x31; // kVK_Space
+        case HotkeyAction::SaveState:         return 0x60; // kVK_F5
+        case HotkeyAction::LoadState:         return 0x62; // kVK_F7
+        case HotkeyAction::ToggleFastForward: return 0;    // hold-style only; hidden in HUD
+        }
+        return 0;
+    }
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
     QVector<SettingDef> controllerSettingDefsForType(const QString& type) const override;

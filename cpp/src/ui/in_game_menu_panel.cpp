@@ -11,7 +11,12 @@
 #include <QDebug>
 
 namespace {
-constexpr int kPanelWidth = 480;
+// Wide enough to fit the maximum HUD pill: 7 icons × 92 px + 6 ×
+// 12 px spacing + 32 px pill x-padding = 748 px, plus margin for the
+// achievements popup chrome. Items: Resume / Save State / Load State /
+// Fast Forward / Achievements / Save & Quit / Quit. Bump if more
+// actions land or icon width changes.
+constexpr int kPanelWidth = 820;
 // Tall enough to fit the slide-up Achievements popup (max ~360 px)
 // above the HUD pill (~92 px) with breathing room. The window is
 // transparent so the unused vertical space costs nothing visually.
@@ -63,6 +68,12 @@ void InGameMenuPanel::wireSignals() {
             this, SIGNAL(exitWithSaveRequested()));
     connect(m_window, SIGNAL(exitWithoutSaveRequested()),
             this, SIGNAL(exitWithoutSaveRequested()));
+    connect(m_window, SIGNAL(saveStateRequested()),
+            this, SIGNAL(saveStateRequested()));
+    connect(m_window, SIGNAL(loadStateRequested()),
+            this, SIGNAL(loadStateRequested()));
+    connect(m_window, SIGNAL(toggleFastForwardRequested()),
+            this, SIGNAL(toggleFastForwardRequested()));
     connect(m_window, &QWindow::visibleChanged,
             this, &InGameMenuPanel::visibilityChanged);
 }

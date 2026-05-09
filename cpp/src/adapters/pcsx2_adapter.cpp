@@ -1373,6 +1373,13 @@ bool PCSX2Adapter::createDefaultConfig(const QString& path,
         // approach as DuckStation — emulator pauses itself, clean
         // audio (no SIGSTOP buffer-cut click).
         "TogglePause = Keyboard/Space",
+        // In-game menu actions: F5 / F7 / F8 are synthesized by
+        // AppController (see PCSX2Adapter::hotkeyVirtualKeyCode).
+        // Hidden from hotkeyBindingDefs() so the user can't rebind
+        // them through the hotkey settings UI.
+        "SaveStateToSlot = Keyboard/F5",
+        "LoadStateFromSlot = Keyboard/F7",
+        "ToggleTurbo = Keyboard/F8",
         "",
     };
 
@@ -1438,6 +1445,12 @@ bool PCSX2Adapter::patchExistingConfig(const QString& path,
         // synthesize Space when the in-game menu opens/closes.
         {"Hotkeys", "OpenPauseMenu", ""},
         {"Hotkeys", "TogglePause",   "Keyboard/Space"},
+        // In-game menu actions — see createDefaultConfig comment.
+        // Force-bound on every patch so a user-rebound key (from a
+        // pre-redesign INI) is corrected back to the synth target.
+        {"Hotkeys", "SaveStateToSlot",   "Keyboard/F5"},
+        {"Hotkeys", "LoadStateFromSlot", "Keyboard/F7"},
+        {"Hotkeys", "ToggleTurbo",       "Keyboard/F8"},
     };
     if (patchIniKeys(content, patches))
         changed = true;
@@ -1525,9 +1538,12 @@ QVector<HotkeyDef> PCSX2Adapter::hotkeyBindingDefs() const {
         {"Open Leaderboards List",      "Navigation",  "Hotkeys", "OpenLeaderboardsList",       ""},
 
         // ── Speed ──
+        // ToggleTurbo is force-bound to Keyboard/F8 in createDefaultConfig +
+        // patchExistingConfig and synthesized by AppController for the
+        // in-game menu's Fast Forward action — exposing it here would let
+        // the user rebind the key our synthesis depends on.
         {"Frame Advance",               "Speed",       "Hotkeys", "FrameAdvance",               ""},
         {"Toggle Frame Limit",          "Speed",       "Hotkeys", "ToggleFrameLimit",           ""},
-        {"Toggle Turbo / Fast Forward", "Speed",       "Hotkeys", "ToggleTurbo",                "Keyboard/Period"},
         {"Turbo / Fast Forward (Hold)", "Speed",       "Hotkeys", "HoldTurbo",                  ""},
         {"Toggle Slow Motion",          "Speed",       "Hotkeys", "ToggleSlowMotion",           "Keyboard/Shift & Keyboard/Backspace"},
         {"Increase Target Speed",       "Speed",       "Hotkeys", "IncreaseSpeed",              ""},
@@ -1541,10 +1557,12 @@ QVector<HotkeyDef> PCSX2Adapter::hotkeyBindingDefs() const {
         {"Toggle Mouse Lock",           "System",      "Hotkeys", "ToggleMouseLock",            ""},
 
         // ── Save States ──
+        // SaveStateToSlot / LoadStateFromSlot are force-bound to F5/F7
+        // and synthesized by AppController for the in-game menu's
+        // Save State / Load State actions; they're omitted here so
+        // users can't rebind the synth keys.
         {"Select Previous Save Slot",   "Save States", "Hotkeys", "PreviousSaveStateSlot",      "Keyboard/Shift & Keyboard/F2"},
         {"Select Next Save Slot",       "Save States", "Hotkeys", "NextSaveStateSlot",          "Keyboard/F2"},
-        {"Save State To Selected Slot", "Save States", "Hotkeys", "SaveStateToSlot",            "Keyboard/F1"},
-        {"Load State From Selected Slot","Save States","Hotkeys", "LoadStateFromSlot",          "Keyboard/F3"},
         {"Load Backup State From Selected Slot","Save States","Hotkeys","LoadBackupStateFromSlot",""},
         {"Save State and Select Next Slot","Save States","Hotkeys","SaveStateAndSelectNextSlot",""},
         {"Select Next Slot and Save State","Save States","Hotkeys","SelectNextSlotAndSaveState",""},

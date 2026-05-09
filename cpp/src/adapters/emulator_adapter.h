@@ -325,20 +325,39 @@ public:
     virtual QVector<HotkeyDef> hotkeyBindingDefs() const { return {}; }
 
     /**
-     * Carbon kVK_* virtual keycode that, when synthesized to the
-     * running emulator's process, toggles its pause state. Used by
-     * AppController to pause/resume the emulator natively when the
-     * in-game menu opens/closes — clean audio (no SIGSTOP buffer-cut
-     * click). Adapters that don't expose a "pause-only" hotkey return
-     * 0; AppController falls back to SIGSTOP for those (audio
-     * stutter, but still pauses correctly).
-     *
-     * The corresponding emulator config (its TogglePause / equivalent
-     * hotkey) must be bound to this key in createDefaultConfig /
-     * patchExistingConfig — otherwise the synthesized keystroke
+     * In-game menu actions that AppController synthesizes by posting a
+     * Carbon virtual keycode to the emulator process. Each adapter
+     * returns the kVK_* it has bound to the corresponding hotkey in
+     * its config (createDefaultConfig / patchExistingConfig). Adapters
+     * return 0 when they don't support the action — the menu hides
+     * actions whose key is 0 (and TogglePause specifically falls back
+     * to SIGSTOP/SIGCONT, which works universally but causes a brief
+     * audio click).
+     */
+    enum class HotkeyAction {
+        TogglePause,
+        SaveState,
+        LoadState,
+        ToggleFastForward,
+    };
+
+
+    /**
+     * Carbon kVK_* virtual keycode for the given action, or 0 if the
+     * adapter doesn't expose a synth target for it. The corresponding
+     * emulator hotkey must be bound to this key in createDefaultConfig
+     * / patchExistingConfig — otherwise the synthesized keystroke
      * reaches the emulator but does nothing.
      */
-    virtual int pauseHotkeyVirtualKeyCode() const { return 0; }
+    virtual int hotkeyVirtualKeyCode(HotkeyAction action) const {
+        Q_UNUSED(action);
+        return 0;
+    }
+
+    /** Back-compat alias used by AppController's pause path. */
+    int pauseHotkeyVirtualKeyCode() const {
+        return hotkeyVirtualKeyCode(HotkeyAction::TogglePause);
+    }
 
     /**
      * Return the CLI arguments to resume from a save state.
@@ -831,7 +850,14 @@ protected:
         bool changed = false;
         for (const auto& p : patches) {
             const QString sectionHeader = "[" + p.section + "]";
-            QRegularExpression keyRe("^" + QRegularExpression::escape(p.key) + "\\s*=\\s*.*$",
+            // [ \t] (not \s) so the regex cannot cross a newline. With \s the
+            // post-= class greedily consumed the trailing newline and `.*`
+            // picked up the FOLLOWING line — so for any empty-value patch,
+            // the line after it got swallowed by the replace. This silently
+            // dropped real settings on patch passes #2+ (when our own zeroed
+            // keys were already in the file). Found by tracing Dolphin's
+            // Hotkeys.ini going from 5 keys to 3 after a single patch run.
+            QRegularExpression keyRe("^" + QRegularExpression::escape(p.key) + "[ \\t]*=[ \\t]*.*$",
                                      QRegularExpression::MultilineOption);
             const QString newLine = p.key + " = " + p.value;
 

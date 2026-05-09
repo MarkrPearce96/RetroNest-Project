@@ -629,6 +629,17 @@ QVariantMap AppController::currentGameInfo() const {
             info["emuId"] = game.emulator_id;
             auto* adapter = AdapterRegistry::instance().adapterFor(game.emulator_id);
             info["supportsSaveOnExit"] = adapter ? adapter->supportsSaveOnExit() : false;
+            // In-game menu uses these to hide actions whose synth-key
+            // the adapter doesn't expose (e.g. PPSSPP/Dolphin can't
+            // toggle fast-forward cleanly from a single keystroke;
+            // Dolphin can't reliably receive any synthesized hotkey
+            // so its Save/Load State return 0 too).
+            info["supportsSaveState"] = adapter
+                && adapter->hotkeyVirtualKeyCode(EmulatorAdapter::HotkeyAction::SaveState) != 0;
+            info["supportsLoadState"] = adapter
+                && adapter->hotkeyVirtualKeyCode(EmulatorAdapter::HotkeyAction::LoadState) != 0;
+            info["supportsFastForward"] = adapter
+                && adapter->hotkeyVirtualKeyCode(EmulatorAdapter::HotkeyAction::ToggleFastForward) != 0;
             return info;
         }
     }
@@ -690,23 +701,35 @@ void AppController::setQmlEngine(QQmlEngine* engine) {
 }
 
 namespace {
-// Ask the running adapter for its pause-key. If non-zero, synthesize
-// it to the emulator's process (clean native pause). Otherwise fall
-// back to SIGSTOP/SIGCONT (universal but causes audio click).
-void emulatorPause(GameSession* sess, int64_t pid) {
-    if (!sess) { MacFullscreen::pauseProcess(pid); return; }
+using HotkeyAction = EmulatorAdapter::HotkeyAction;
+
+// Ask the running adapter for the kVK_* it has bound to the given
+// action and synthesize it to the emulator process. Returns true if
+// a key was sent. The caller decides what to do when no key is
+// available — pause/resume falls back to SIGSTOP/SIGCONT, the
+// in-game menu actions just no-op.
+//
+// Ask the running adapter for the kVK_* it has bound to the given
+// action and synthesize it to the emulator process. Returns true if
+// a key was sent. Pause/resume falls back to SIGSTOP/SIGCONT when no
+// key is available; in-game menu actions just no-op.
+bool synthesizeHotkey(GameSession* sess, int64_t pid, HotkeyAction action) {
+    if (!sess) return false;
     auto* adapter = sess->adapter();
-    const int vk = adapter ? adapter->pauseHotkeyVirtualKeyCode() : 0;
-    if (vk != 0) MacFullscreen::sendKeyToProcess(pid, vk);
-    else         MacFullscreen::pauseProcess(pid);
+    const int vk = adapter ? adapter->hotkeyVirtualKeyCode(action) : 0;
+    if (vk == 0) return false;
+    MacFullscreen::sendKeyToProcess(pid, vk);
+    return true;
+}
+
+void emulatorPause(GameSession* sess, int64_t pid) {
+    if (!synthesizeHotkey(sess, pid, HotkeyAction::TogglePause))
+        MacFullscreen::pauseProcess(pid);
 }
 
 void emulatorResume(GameSession* sess, int64_t pid) {
-    if (!sess) { MacFullscreen::resumeProcess(pid); return; }
-    auto* adapter = sess->adapter();
-    const int vk = adapter ? adapter->pauseHotkeyVirtualKeyCode() : 0;
-    if (vk != 0) MacFullscreen::sendKeyToProcess(pid, vk);
-    else         MacFullscreen::resumeProcess(pid);
+    if (!synthesizeHotkey(sess, pid, HotkeyAction::TogglePause))
+        MacFullscreen::resumeProcess(pid);
 }
 } // namespace
 
@@ -750,6 +773,32 @@ void AppController::openInGameMenuPanel() {
                         }
                     }
                     stopGame();
+                });
+        // Save / Load / Fast-forward: synth the action key, then close
+        // the menu (which handles activate + button-release poll +
+        // unpause). The synth path is per-adapter — see
+        // synthesizeHotkey: PidEvents goes via CGEventPostToPid (lands
+        // in the emulator's NSEvent queue immediately), HidTap goes
+        // via AppleScript / System Events (activates the process and
+        // dispatches the keystroke through Apple Events).
+        auto synthThenClose = [this](EmulatorAdapter::HotkeyAction action) {
+            if (auto* sess = gameSession()) {
+                const int64_t pid = sess->pid();
+                if (pid > 0) synthesizeHotkey(sess, pid, action);
+            }
+            closeInGameMenuPanel();
+        };
+        connect(m_inGameMenuPanel, &InGameMenuPanel::saveStateRequested,
+                this, [synthThenClose]() {
+                    synthThenClose(EmulatorAdapter::HotkeyAction::SaveState);
+                });
+        connect(m_inGameMenuPanel, &InGameMenuPanel::loadStateRequested,
+                this, [synthThenClose]() {
+                    synthThenClose(EmulatorAdapter::HotkeyAction::LoadState);
+                });
+        connect(m_inGameMenuPanel, &InGameMenuPanel::toggleFastForwardRequested,
+                this, [synthThenClose]() {
+                    synthThenClose(EmulatorAdapter::HotkeyAction::ToggleFastForward);
                 });
         connect(m_inGameMenuPanel, &InGameMenuPanel::visibilityChanged,
                 this, &AppController::inGameMenuPanelVisibleChanged);

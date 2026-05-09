@@ -881,6 +881,12 @@ bool PPSSPPAdapter::createDefaultConfig(const QString& path,
         "An.Right = 10-4000",
         "Fast-forward = 10-4036",
         "Pause (no menu) = 1-62",
+        // In-game menu Save/Load State: 1-135 / 1-137 = keyboard F5/F7
+        // (DEVICE_ID_KEYBOARD-NKCODE_F5/F7). AppController synthesizes
+        // kVK_F5 / kVK_F7. Hidden from hotkeyBindingDefs() so the
+        // user can't rebind the synth keys.
+        "Save State = 1-135",
+        "Load State = 1-137",
         "",
     };
 
@@ -942,14 +948,23 @@ void PPSSPPAdapter::scrubControlsIniHotkeys() {
         }
     }
 
-    // Force-inject "Pause (no menu)" → keyboard Space binding so
-    // RetroNest's in-game menu can synthesize Space and PPSSPP
-    // pauses itself without showing its own overlay UI. We always
-    // overwrite to defend against the user accidentally clearing it.
-    static constexpr auto kPauseBinding = "1-62"; // KEYBOARD-NKCODE_SPACE
-    if (ini.value("ControlMapping", "Pause (no menu)") != QString::fromLatin1(kPauseBinding)) {
-        ini.setValue("ControlMapping", "Pause (no menu)", kPauseBinding);
-        changed = true;
+    // Force-inject "Pause (no menu)" / "Save State" / "Load State" so
+    // RetroNest's in-game menu can synthesize the bound keys. We
+    // always overwrite to defend against the user accidentally
+    // clearing them. (The hotkey UI doesn't expose these — see
+    // hotkeyBindingDefs.)
+    struct ForcedBinding { const char* key; const char* value; };
+    static constexpr ForcedBinding kForced[] = {
+        {"Pause (no menu)", "1-62"},  // KEYBOARD-NKCODE_SPACE
+        {"Save State",      "1-135"}, // KEYBOARD-NKCODE_F5
+        {"Load State",      "1-137"}, // KEYBOARD-NKCODE_F7
+    };
+    for (const auto& fb : kForced) {
+        const QString val = QString::fromLatin1(fb.value);
+        if (ini.value("ControlMapping", QString::fromLatin1(fb.key)) != val) {
+            ini.setValue("ControlMapping", QString::fromLatin1(fb.key), val);
+            changed = true;
+        }
     }
 
     if (changed && !ini.save(path))
@@ -1077,8 +1092,10 @@ QVector<HotkeyDef> PPSSPPAdapter::hotkeyBindingDefs() const {
         {"Reset",                    "Emulator controls", "ControlMapping", "Reset",                       ""},
         {"Frame Advance",            "Emulator controls", "ControlMapping", "Frame Advance",               ""},
         {"Rewind",                   "Emulator controls", "ControlMapping", "Rewind",                      ""},
-        {"Save State",               "Emulator controls", "ControlMapping", "Save State",                  ""},
-        {"Load State",               "Emulator controls", "ControlMapping", "Load State",                  ""},
+        // "Save State" and "Load State" are force-bound to keyboard
+        // F5/F7 in scrubControlsIniHotkeys and synthesized by
+        // AppController for the in-game menu's Save State / Load State
+        // actions; omitted here so users can't rebind the synth keys.
         {"Previous Slot",            "Emulator controls", "ControlMapping", "Previous Slot",               ""},
         {"Next Slot",                "Emulator controls", "ControlMapping", "Next Slot",                   ""},
         {"Toggle tilt control",      "Emulator controls", "ControlMapping", "Toggle tilt control",         ""},

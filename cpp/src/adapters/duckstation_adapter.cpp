@@ -1277,6 +1277,12 @@ bool DuckStationAdapter::createDefaultConfig(const QString& path,
         // opens/closes. Native pause = clean audio (no SIGSTOP).
         "TogglePause = Keyboard/Space",
         "ToggleFullscreen =",
+        // In-game menu actions: F5 / F7 / F8 are synthesized by
+        // AppController (see DuckStationAdapter::hotkeyVirtualKeyCode).
+        // Hidden from hotkeyBindingDefs() so the user can't rebind them.
+        "SaveSelectedSaveState = Keyboard/F5",
+        "LoadSelectedSaveState = Keyboard/F7",
+        "ToggleFastForward = Keyboard/F8",
         "",
         "[Pad1]",
         "Type = AnalogController",
@@ -1322,6 +1328,12 @@ bool DuckStationAdapter::patchExistingConfig(const QString& path,
         // in-game menu opens/closes (DuckStation's default binding).
         {"Hotkeys", "TogglePause",      "Keyboard/Space"},
         {"Hotkeys", "ToggleFullscreen", ""},
+        // In-game menu actions — see createDefaultConfig comment.
+        // Force-bound on every patch so a user-rebound key is corrected
+        // back to the synth target.
+        {"Hotkeys", "SaveSelectedSaveState", "Keyboard/F5"},
+        {"Hotkeys", "LoadSelectedSaveState", "Keyboard/F7"},
+        {"Hotkeys", "ToggleFastForward",     "Keyboard/F8"},
 
         // Without [Pad1].Type DuckStation registers zero bindings — see
         // Controller::GetSettingsSection / Settings::Load in upstream.
@@ -1519,8 +1531,11 @@ QVector<HotkeyDef> DuckStationAdapter::hotkeyBindingDefs() const {
         {"Save Screenshot",            "Interface",   "Hotkeys", "Screenshot",                "Keyboard/F10"},
 
         // ── System ──
+        // ToggleFastForward is force-bound to Keyboard/F8 in
+        // createDefaultConfig + patchExistingConfig and synthesized by
+        // AppController for the in-game menu's Fast Forward action; it's
+        // omitted here so users can't rebind the synth key.
         {"Fast Forward (Hold)",        "System",      "Hotkeys", "FastForward",               "Keyboard/Tab"},
-        {"Fast Forward (Toggle)",      "System",      "Hotkeys", "ToggleFastForward",         ""},
         {"Turbo (Hold)",               "System",      "Hotkeys", "Turbo",                     ""},
         {"Turbo (Toggle)",             "System",      "Hotkeys", "ToggleTurbo",               ""},
         {"Restart Game",               "System",      "Hotkeys", "Reset",                     ""},
@@ -1576,8 +1591,10 @@ QVector<HotkeyDef> DuckStationAdapter::hotkeyBindingDefs() const {
         {"Volume Down",                "Audio",       "Hotkeys", "AudioVolumeDown",           ""},
 
         // ── Save States (selected/undo) ──
-        {"Load From Selected Slot",    "Save States", "Hotkeys", "LoadSelectedSaveState",     "Keyboard/F1"},
-        {"Save To Selected Slot",      "Save States", "Hotkeys", "SaveSelectedSaveState",     "Keyboard/F2"},
+        // SaveSelectedSaveState / LoadSelectedSaveState are force-bound
+        // to F5/F7 and synthesized by AppController for the in-game
+        // menu's Save State / Load State actions; omitted here so
+        // users can't rebind the synth keys.
         {"Select Previous Save Slot",  "Save States", "Hotkeys", "SelectPreviousSaveStateSlot","Keyboard/F3"},
         {"Select Next Save Slot",      "Save States", "Hotkeys", "SelectNextSaveStateSlot",   "Keyboard/F4"},
         {"Save State and Select Next Slot","Save States","Hotkeys","SaveStateAndSelectNextSlot",""},

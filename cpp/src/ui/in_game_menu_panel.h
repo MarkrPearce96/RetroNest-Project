@@ -37,6 +37,9 @@ signals:
     void resumeRequested();
     void exitWithSaveRequested();
     void exitWithoutSaveRequested();
+    void saveStateRequested();
+    void loadStateRequested();
+    void toggleFastForwardRequested();
     void visibilityChanged();
 
 private:

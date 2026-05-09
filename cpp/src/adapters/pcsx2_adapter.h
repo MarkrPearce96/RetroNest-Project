@@ -29,9 +29,21 @@ public:
     ResolutionOptions resolutionOptions() const override;
     AspectRatioOptions aspectRatioOptions() const override;
     QVector<HotkeyDef> hotkeyBindingDefs() const override;
-    // Synthesize Space → PCSX2's TogglePause (bound to Keyboard/Space
-    // in createDefaultConfig + patchExistingConfig).
-    int pauseHotkeyVirtualKeyCode() const override { return 0x31 /* kVK_Space */; }
+    // Carbon kVK_* keys for in-game menu actions. The corresponding
+    // PCSX2 hotkeys are force-bound to these keys in createDefaultConfig
+    // + patchExistingConfig; "Save State To Selected Slot",
+    // "Load State From Selected Slot" and "Toggle Turbo / Fast Forward"
+    // are deliberately omitted from hotkeyBindingDefs() so the user
+    // can't rebind the keys our synthesis depends on.
+    int hotkeyVirtualKeyCode(HotkeyAction action) const override {
+        switch (action) {
+        case HotkeyAction::TogglePause:       return 0x31; // kVK_Space
+        case HotkeyAction::SaveState:         return 0x60; // kVK_F5
+        case HotkeyAction::LoadState:         return 0x62; // kVK_F7
+        case HotkeyAction::ToggleFastForward: return 0x64; // kVK_F8
+        }
+        return 0;
+    }
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
     QVector<SettingDef> controllerSettingDefsForType(const QString& type) const override;

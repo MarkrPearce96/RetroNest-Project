@@ -14,10 +14,20 @@ FocusScope {
 
     property int focusIndex: 0
 
-    // Whether the currently running emulator supports save-on-exit.
-    // Refreshed each open(). PPSSPP does not support this; PCSX2 +
-    // DuckStation + Dolphin do.
+    // Per-emulator capability flags. Refreshed each open() from the
+    // running adapter. Drives which icons appear in hudModel.
+    //   supportsSaveOnExit  — PCSX2/DuckStation/Dolphin yes, PPSSPP no.
+    //   supportsSaveState / supportsLoadState — every shipped adapter
+    //     binds keyboard F5/F7 to its native save/load slot 1 hotkey.
+    //   supportsFastForward — true only when the adapter exposes a
+    //     real toggle keystroke (PCSX2/DuckStation). PPSSPP and
+    //     Dolphin's "fast-forward" hotkeys are hold-style and would
+    //     misbehave from a single synthesized press, so they return 0
+    //     and the icon is hidden.
     property bool supportsSaveOnExit: true
+    property bool supportsSaveState: false
+    property bool supportsLoadState: false
+    property bool supportsFastForward: false
 
     // RA state (filled in async after open()).
     property int raGameId: 0
@@ -26,6 +36,9 @@ FocusScope {
     signal resumeRequested()
     signal exitWithSaveRequested()
     signal exitWithoutSaveRequested()
+    signal saveStateRequested()
+    signal loadStateRequested()
+    signal toggleFastForwardRequested()
 
     function open() {
         focusIndex = 0;
@@ -33,6 +46,9 @@ FocusScope {
         raGameTitle = "";
         var gameInfo = app.currentGameInfo();
         supportsSaveOnExit = gameInfo.supportsSaveOnExit === true;
+        supportsSaveState = gameInfo.supportsSaveState === true;
+        supportsLoadState = gameInfo.supportsLoadState === true;
+        supportsFastForward = gameInfo.supportsFastForward === true;
         if (app.hasRACredentials() && gameInfo.title) {
             raGameTitle = gameInfo.title;
             app.raRequestGameIdLookup(gameInfo.title, gameInfo.system || "");
@@ -58,12 +74,22 @@ FocusScope {
         }
     }
 
-    // Visible icon-button list, rebuilt when raGameId or
-    // supportsSaveOnExit changes.
+    // Visible icon-button list, rebuilt when raGameId or any of the
+    // capability flags change. Order: Resume → Save State → Load
+    // State → Fast Forward → Achievements → Save & Quit → Quit.
     property var hudModel: {
         var items = [
-            { icon: "images/hud/resume.svg",       label: "Resume",      action: "resume",     destructive: false }
+            { icon: "images/hud/resume.svg", label: "Resume", action: "resume", destructive: false }
         ];
+        if (supportsSaveState) {
+            items.push({ icon: "images/hud/save_state.svg", label: "Save State", action: "saveState", destructive: false });
+        }
+        if (supportsLoadState) {
+            items.push({ icon: "images/hud/load_state.svg", label: "Load State", action: "loadState", destructive: false });
+        }
+        if (supportsFastForward) {
+            items.push({ icon: "images/hud/fast_forward.svg", label: "Fast Forward", action: "fastForward", destructive: false });
+        }
         if (raGameId > 0) {
             items.push({ icon: "images/hud/achievements.svg", label: "Achievements", action: "achievements", destructive: false });
         }
@@ -212,6 +238,15 @@ FocusScope {
             // list up over the HUD instead of routing back to the
             // main app's settings overlay.
             achievementsPopupOpen = !achievementsPopupOpen;
+            break;
+        case "saveState":
+            saveStateRequested();
+            break;
+        case "loadState":
+            loadStateRequested();
+            break;
+        case "fastForward":
+            toggleFastForwardRequested();
             break;
         case "exitSave":
             exitWithSaveRequested();

@@ -23,6 +23,9 @@ Window {
     signal resumeRequested()
     signal exitWithSaveRequested()
     signal exitWithoutSaveRequested()
+    signal saveStateRequested()
+    signal loadStateRequested()
+    signal toggleFastForwardRequested()
 
     function openMenu() {
         visible = true;
@@ -41,5 +44,8 @@ Window {
         onResumeRequested: panelWindow.resumeRequested()
         onExitWithSaveRequested: panelWindow.exitWithSaveRequested()
         onExitWithoutSaveRequested: panelWindow.exitWithoutSaveRequested()
+        onSaveStateRequested: panelWindow.saveStateRequested()
+        onLoadStateRequested: panelWindow.loadStateRequested()
+        onToggleFastForwardRequested: panelWindow.toggleFastForwardRequested()
     }
 }
