@@ -78,6 +78,15 @@ public:
     void setEmulationMode(InputRouter* target);
     void clearEmulationMode();
 
+    /**
+     * While true, suppress emit of navigateStart / inGameMenuRequested
+     * and Qt-key injection. Used by AppController to drop controller
+     * input flowing into the main app while the in-game panel is the
+     * key window — avoids QML-binding-timing races where a Start
+     * press leaks past the QML enabled-gate.
+     */
+    void setSuppressMainInputs(bool suppress) { m_suppressMainInputs = suppress; }
+
 signals:
     void capturingChanged();
     void controllersChanged();
@@ -109,6 +118,7 @@ private:
     bool m_virtualKeyboardOpen = false;
     bool m_injectingKey = false;  // true while injecting a controller key event
     bool m_selectHeld = false;    // true while Select/Back button is held (combo detection)
+    bool m_suppressMainInputs = false; // true while the in-game menu panel owns input
 
     // Axis threshold-crossing state (shared between above/below threshold checks)
     QMap<QPair<SDL_JoystickID, int>, bool> m_axisActive;

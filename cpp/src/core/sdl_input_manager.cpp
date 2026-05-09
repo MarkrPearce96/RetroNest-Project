@@ -466,6 +466,13 @@ void SdlInputManager::pollEvents() {
                     emit inGameMenuRequested();
                     break;
                 }
+                // While the in-game menu panel owns input, suppress
+                // signal emits (navigateStart) that fire QML handlers
+                // in the *main* window — those would leak past the
+                // QML enabled-gate due to binding-update timing. Key
+                // injection still goes through (focused window is the
+                // panel, so HUD navigation works).
+                if (m_suppressMainInputs && btn == SDL_CONTROLLER_BUTTON_START) break;
                 // Start emits signal (app-level action, not navigation)
                 if (btn == SDL_CONTROLLER_BUTTON_START) {
                     emit navigateStart();

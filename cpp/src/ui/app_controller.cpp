@@ -736,6 +736,7 @@ void AppController::openInGameMenuPanel() {
                     // can run on the SIGTERM that saveAndStopGame
                     // will send.
                     m_inGameMenuPanel->hide();
+                    if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
                     if (auto* sess = gameSession()) {
                         const int64_t pid = sess->pid();
                         if (pid > 0 && m_emulatorSuspended) {
@@ -748,6 +749,7 @@ void AppController::openInGameMenuPanel() {
         connect(m_inGameMenuPanel, &InGameMenuPanel::exitWithoutSaveRequested,
                 this, [this]() {
                     m_inGameMenuPanel->hide();
+                    if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
                     if (auto* sess = gameSession()) {
                         const int64_t pid = sess->pid();
                         if (pid > 0 && m_emulatorSuspended) {
@@ -768,12 +770,18 @@ void AppController::openInGameMenuPanel() {
         emulatorPause(sess, pid);
         m_emulatorSuspended = true;
     }
+    // Tell SDL to suppress main-window signal emits (e.g. Start
+    // pressing in the menu shouldn't open the main app's settings
+    // overlay). Key injection still flows to the focused window
+    // (the panel), so HUD navigation continues to work.
+    if (m_inputManager) m_inputManager->setSuppressMainInputs(true);
     m_inGameMenuPanel->showOverEmulator(pid);
 }
 
 void AppController::closeInGameMenuPanel() {
     if (!m_inGameMenuPanel) return;
     m_inGameMenuPanel->hide();
+    if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
     GameSession* sess = gameSession();
     int64_t pid = sess ? sess->pid() : 0;
     if (pid <= 0 || !m_emulatorSuspended) {
