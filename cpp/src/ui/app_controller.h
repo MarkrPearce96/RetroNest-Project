@@ -193,6 +193,17 @@ public:
      *  immediately — no relaunch needed. The setting also persists in
      *  retroachievements.json so the next session picks it up. */
     Q_INVOKABLE void raSetEncoreMode(bool enabled);
+    /** True iff a libretro game is currently running AND its rcheevos
+     *  session has finished loading. QML uses this to pick between the
+     *  in-memory rc_client achievement list and the RA web API.
+     *  Non-const because GameService::session() is non-const. */
+    Q_INVOKABLE bool libretroAchievementsReady();
+    /** Snapshot of the current libretro game's CORE achievement list
+     *  drawn straight from rc_client (no network). Each entry is a
+     *  QVariantMap with: id, title, description, points, earned,
+     *  badgeUrl, measured. Returns empty if no libretro session is
+     *  active or rcheevos is still loading. */
+    Q_INVOKABLE QVariantList libretroAchievementList();
 
 signals:
     void statusMessageChanged();

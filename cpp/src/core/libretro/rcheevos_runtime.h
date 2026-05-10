@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QNetworkAccessManager>
 #include <QString>
+#include <QVariantList>
 #include <QVariantMap>
 #include <rc_client.h>
 #include <rc_libretro.h>
@@ -45,6 +46,21 @@ public:
     /** Toggle encore mode on the live rc_client. Mid-session changes
      *  are honored — rcheevos re-evaluates the achievement set. */
     void setEncore(bool on);
+
+    /** Snapshot of the current core-category achievement list as a
+     *  QVariantList suitable for QML binding. Each entry is a
+     *  QVariantMap with: id, title, description, points, earned,
+     *  badgeUrl. Built from rc_client's in-memory state — no network
+     *  call. Returns empty when no game is loaded.
+     *
+     *  Used by InGameAchievementsPopup for libretro games to avoid
+     *  the redundant RA web API call (and the count-mismatch bug
+     *  it produces vs the game-start banner). External-emulator
+     *  games still go through the web API path. */
+    QVariantList achievementListVariants();
+    /** True once the rcheevos session is fully active (login + load
+     *  callbacks both succeeded). False during the load window. */
+    bool isInSession() const { return m_inSession; }
     void endSession();
     /** Per-frame tick. Cheap when no session is active or RA is disabled. */
     void frame();

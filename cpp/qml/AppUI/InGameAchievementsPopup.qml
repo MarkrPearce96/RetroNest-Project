@@ -43,6 +43,30 @@ Item {
         achievements = [];
         totalEarned = 0;
         loadState = "loading";
+
+        // Libretro path: rc_client already has the achievement list in
+        // memory after the game-session load completed. Render directly,
+        // skipping the redundant RA web API call. Source-of-truth match
+        // means the popup count agrees with the game-start banner —
+        // both come from rc_client via rc_client_create_achievement_list
+        // on the CORE category.
+        if (app.libretroAchievementsReady()) {
+            var local = app.libretroAchievementList();
+            if (local && local.length > 0) {
+                achievements = local;
+                var n = 0;
+                for (var i = 0; i < achievements.length; ++i)
+                    if (achievements[i].earned) ++n;
+                totalEarned = n;
+                loadState = "loaded";
+                return;
+            }
+        }
+
+        // External-emulator path (PCSX2 / DuckStation / Dolphin / PPSSPP):
+        // we don't run rcheevos in-process, so fall back to the RA web
+        // API to populate the popup. Same applies if the libretro
+        // session is briefly between load callbacks.
         if (raGameId > 0) {
             app.raRequestGameDetail(raGameId);
             loadTimeout.restart();

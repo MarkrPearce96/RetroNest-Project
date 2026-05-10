@@ -432,6 +432,49 @@ void RcheevosRuntime::setEncore(bool on) {
         rc_client_set_encore_mode_enabled(m_client, on ? 1 : 0);
 }
 
+QVariantList RcheevosRuntime::achievementListVariants() {
+    QVariantList result;
+    if (!m_client) return result;
+    // CORE category only, matching what the RA web API's
+    // GetGameInfoAndUserProgress returns. This is what the popup
+    // counter "X / Y earned" should reflect.
+    rc_client_achievement_list_t* list = rc_client_create_achievement_list(
+        m_client,
+        RC_CLIENT_ACHIEVEMENT_CATEGORY_CORE,
+        RC_CLIENT_ACHIEVEMENT_LIST_GROUPING_LOCK_STATE);
+    if (!list) return result;
+
+    for (uint32_t b = 0; b < list->num_buckets; ++b) {
+        const rc_client_achievement_bucket_t& bucket = list->buckets[b];
+        for (uint32_t i = 0; i < bucket.num_achievements; ++i) {
+            const rc_client_achievement_t* a = bucket.achievements[i];
+            if (!a) continue;
+            QVariantMap m;
+            m["id"] = QString::number(a->id);
+            m["title"] = QString::fromUtf8(a->title ? a->title : "");
+            m["description"] = QString::fromUtf8(a->description ? a->description : "");
+            m["points"] = static_cast<int>(a->points);
+            const bool earned =
+                (a->state == RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED);
+            m["earned"] = earned;
+            // Coloured badge for earned, locked variant for unlocked.
+            char buf[256] = {0};
+            rc_client_achievement_get_image_url(
+                a,
+                earned ? RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED
+                       : RC_CLIENT_ACHIEVEMENT_STATE_ACTIVE,
+                buf, sizeof(buf));
+            m["badgeUrl"] = QString::fromUtf8(buf);
+            // Optional progress text — empty for non-trackable
+            // achievements; the popup just doesn't render it.
+            m["measured"] = QString::fromUtf8(a->measured_progress);
+            result.append(m);
+        }
+    }
+    rc_client_destroy_achievement_list(list);
+    return result;
+}
+
 void RcheevosRuntime::setEnabled(bool on) {
     m_enabled = on;
 }

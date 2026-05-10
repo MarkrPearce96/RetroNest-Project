@@ -747,6 +747,21 @@ void AppController::raSetEncoreMode(bool enabled) {
     }
 }
 
+bool AppController::libretroAchievementsReady() {
+    auto* sess = m_gameService.session();
+    if (!sess || !sess->isRunning() || !sess->isLibretro()) return false;
+    auto* lr = dynamic_cast<LibretroAdapter*>(sess->adapter());
+    if (!lr || !lr->runtime()) return false;
+    return lr->runtime()->rcheevos().isInSession();
+}
+
+QVariantList AppController::libretroAchievementList() {
+    if (!libretroAchievementsReady()) return {};
+    auto* sess = m_gameService.session();
+    auto* lr = dynamic_cast<LibretroAdapter*>(sess->adapter());
+    return lr->runtime()->rcheevos().achievementListVariants();
+}
+
 void AppController::setSdlInputManager(SdlInputManager* mgr) {
     m_inputManager = mgr;
     m_gameService.session()->setSdlInputManager(mgr);
