@@ -29,6 +29,7 @@ public:
         QString raUsername;
         QString raToken;
         bool raHardcore = false;
+        bool raEncore = false;   // see LibretroRaConfig::encore
     };
 
     explicit CoreRuntime(QObject* parent = nullptr);

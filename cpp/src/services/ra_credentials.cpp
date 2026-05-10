@@ -27,6 +27,7 @@ bool RACredentials::load() {
     hardcoreMode  = obj["hardcoreMode"].toBool(false);
     notifications = obj["notifications"].toBool(true);
     soundEffects  = obj["soundEffects"].toBool(true);
+    encoreMode    = obj["encoreMode"].toBool(false);
 
     promptedEmulators.clear();
     QJsonArray prompted = obj["promptedEmulators"].toArray();
@@ -45,6 +46,7 @@ bool RACredentials::save() const {
     obj["hardcoreMode"]  = hardcoreMode;
     obj["notifications"] = notifications;
     obj["soundEffects"]  = soundEffects;
+    obj["encoreMode"]    = encoreMode;
 
     QJsonArray prompted;
     for (const auto& emu : promptedEmulators)
@@ -70,6 +72,7 @@ void RACredentials::clearUser() {
     hardcoreMode = false;
     notifications = true;
     soundEffects = true;
+    encoreMode = false;
     promptedEmulators.clear();
     QFile::remove(filePath());
 }

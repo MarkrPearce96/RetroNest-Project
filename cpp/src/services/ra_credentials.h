@@ -18,6 +18,12 @@ public:
     bool hardcoreMode = false;
     bool notifications = true;
     bool soundEffects = true;
+    /** Re-fire toast/sound for already-unlocked achievements when their
+     *  condition is re-met. The server-side unlock isn't recorded again
+     *  (you can't double-earn), but the local celebration plays — useful
+     *  for streaming, testing the toast UI, or replaying favorite
+     *  achievement moments. Off by default. */
+    bool encoreMode = false;
     QStringList promptedEmulators;
 
     /** Load from disk. Returns true if file was read (even if empty). */

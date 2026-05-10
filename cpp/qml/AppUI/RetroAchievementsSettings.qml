@@ -18,6 +18,7 @@ Item {
 
     // Settings
     property bool hardcoreMode: app.raHardcoreMode()
+    property bool encoreMode:   app.raEncoreMode()
     property bool notificationsEnabled: app.raNotifications()
     property bool soundsEnabled: app.raSoundEffects()
 
@@ -891,6 +892,61 @@ Item {
                                 onClicked: {
                                     hardcoreMode = !hardcoreMode
                                     app.raSetHardcoreMode(hardcoreMode)
+                                }
+                            }
+                        }
+                    }
+
+                    // Separator
+                    Rectangle { width: parent.width; height: 1; color: SettingsTheme.border }
+
+                    // Encore mode
+                    RowLayout {
+                        width: parent.width
+                        spacing: 12
+
+                        Column {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Text {
+                                text: "Encore Mode"
+                                color: SettingsTheme.text
+                                font.pixelSize: 14
+                            }
+
+                            Text {
+                                text: "Replay unlock notifications for achievements you've already earned (your account record is unchanged)"
+                                color: SettingsTheme.textMuted
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                                width: parent.width
+                            }
+                        }
+
+                        Rectangle {
+                            width: 44
+                            height: 24
+                            radius: 12
+                            color: encoreMode ? SettingsTheme.accent : SettingsTheme.border
+
+                            Rectangle {
+                                x: encoreMode ? parent.width - width - 3 : 3
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 18
+                                height: 18
+                                radius: 9
+                                color: SettingsTheme.text
+
+                                Behavior on x { NumberAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    encoreMode = !encoreMode
+                                    app.raSetEncoreMode(encoreMode)
                                 }
                             }
                         }

@@ -348,6 +348,7 @@ bool RcheevosRuntime::beginSession(const CoreSymbols& syms,
                                    const QString& username,
                                    const QString& token,
                                    bool hardcore,
+                                   bool encore,
                                    const retro_memory_map* memoryMap) {
     if (m_inSession) endSession();
     g_active = this;
@@ -379,6 +380,7 @@ bool RcheevosRuntime::beginSession(const CoreSymbols& syms,
         return false;
     }
     rc_client_set_hardcore_enabled(m_client, hardcore ? 1 : 0);
+    rc_client_set_encore_mode_enabled(m_client, encore ? 1 : 0);
     rc_client_set_event_handler(m_client, eventHandler);
 
     if (token.isEmpty() || username.isEmpty()) {
@@ -423,6 +425,11 @@ void RcheevosRuntime::frame() {
 void RcheevosRuntime::setHardcore(bool on) {
     if (m_client)
         rc_client_set_hardcore_enabled(m_client, on ? 1 : 0);
+}
+
+void RcheevosRuntime::setEncore(bool on) {
+    if (m_client)
+        rc_client_set_encore_mode_enabled(m_client, on ? 1 : 0);
 }
 
 void RcheevosRuntime::setEnabled(bool on) {

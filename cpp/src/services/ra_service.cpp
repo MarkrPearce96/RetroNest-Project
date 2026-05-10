@@ -408,6 +408,12 @@ void RAService::setSoundEffects(bool enabled) {
     m_creds.save();
 }
 
+bool RAService::encoreMode() const { return m_creds.encoreMode; }
+void RAService::setEncoreMode(bool enabled) {
+    m_creds.encoreMode = enabled;
+    m_creds.save();
+}
+
 bool RAService::needsEmulatorLoginPrompt(const QString& emuId) {
     if (!m_creds.hasCredentials()) return false;
     if (m_creds.promptedEmulators.contains(emuId)) return false;

@@ -151,6 +151,7 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         }
         cfg.raToken    = m_raConfig.loginToken;
         cfg.raHardcore = m_raConfig.hardcore;
+        cfg.raEncore   = m_raConfig.encore;
     }
 
     // Fix 4: Populate resume state path

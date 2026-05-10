@@ -39,7 +39,12 @@ public:
                       const QString& username,
                       const QString& token,
                       bool hardcore,
+                      bool encore,
                       const retro_memory_map* memoryMap);
+
+    /** Toggle encore mode on the live rc_client. Mid-session changes
+     *  are honored — rcheevos re-evaluates the achievement set. */
+    void setEncore(bool on);
     void endSession();
     /** Per-frame tick. Cheap when no session is active or RA is disabled. */
     void frame();

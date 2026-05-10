@@ -249,6 +249,7 @@ void AppController::launchGame(int /*gameId*/, const QString& romPath, const QSt
         raCfg.loginToken = m_raService.credentials().loginToken;
         raCfg.apiKey     = m_raService.credentials().apiKey;
         raCfg.hardcore   = m_raService.hardcoreMode();
+        raCfg.encore     = m_raService.encoreMode();
         raCfg.valid      = true;
     }
     m_gameService.session()->setLibretroRaConfig(raCfg);
@@ -730,6 +731,21 @@ bool AppController::raNotifications() const { return m_raService.notifications()
 void AppController::raSetNotifications(bool enabled) { m_raService.setNotifications(enabled); }
 bool AppController::raSoundEffects() const { return m_raService.soundEffects(); }
 void AppController::raSetSoundEffects(bool enabled) { m_raService.setSoundEffects(enabled); }
+
+bool AppController::raEncoreMode() const { return m_raService.encoreMode(); }
+void AppController::raSetEncoreMode(bool enabled) {
+    m_raService.setEncoreMode(enabled);
+    // Mid-session honor: if a libretro game is running, push the new
+    // value into the live rc_client so encore takes effect without
+    // requiring a relaunch. The persistent setting also gets picked
+    // up at next session start via LibretroRaConfig.
+    auto* sess = m_gameService.session();
+    if (sess && sess->isRunning() && sess->isLibretro()) {
+        if (auto* lr = dynamic_cast<LibretroAdapter*>(sess->adapter()))
+            if (auto* rt = lr->runtime())
+                rt->rcheevos().setEncore(enabled);
+    }
+}
 
 void AppController::setSdlInputManager(SdlInputManager* mgr) {
     m_inputManager = mgr;

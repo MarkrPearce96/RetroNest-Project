@@ -22,6 +22,7 @@ struct LibretroRaConfig {
     QString loginToken;   // libretro/rcheevos session token
     QString apiKey;       // web API key (used only for the "no token" warning)
     bool hardcore = false;
+    bool encore = false;  // re-fire unlock events for already-earned achievements
     int  consoleId = 0;   // populated per-launch from the adapter
     bool valid = false;   // false → no RA wiring; treated as "not signed in"
 };

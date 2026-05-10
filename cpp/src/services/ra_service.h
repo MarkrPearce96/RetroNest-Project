@@ -52,6 +52,12 @@ public:
     void setNotifications(bool enabled);
     bool soundEffects() const;
     void setSoundEffects(bool enabled);
+    /** Encore mode: rcheevos re-fires unlock events (toast/sound/UI)
+     *  for already-earned achievements when their condition is re-met.
+     *  Server-side records are unchanged. Useful for streaming and
+     *  for testing the unlock UI without burning fresh achievements. */
+    bool encoreMode() const;
+    void setEncoreMode(bool enabled);
 
     /** Returns true if this is the first RA-enabled launch for this emulator. Marks it as prompted. */
     bool needsEmulatorLoginPrompt(const QString& emuId);

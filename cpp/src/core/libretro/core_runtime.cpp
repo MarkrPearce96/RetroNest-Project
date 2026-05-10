@@ -221,7 +221,7 @@ void CoreRuntime::runLoop() {
         m_envCtx.memoryMapSet ? &m_envCtx.memoryMap : nullptr;
     m_rcheevos.beginSession(s, m_cfg.romPath, m_cfg.raConsoleId,
                             m_cfg.raUsername, m_cfg.raToken, m_cfg.raHardcore,
-                            mmap);
+                            m_cfg.raEncore, mmap);
 
     emit started();
 

@@ -188,6 +188,11 @@ public:
     Q_INVOKABLE void raSetNotifications(bool enabled);
     Q_INVOKABLE bool raSoundEffects() const;
     Q_INVOKABLE void raSetSoundEffects(bool enabled);
+    Q_INVOKABLE bool raEncoreMode() const;
+    /** Toggling encore mid-session takes effect on the running rc_client
+     *  immediately — no relaunch needed. The setting also persists in
+     *  retroachievements.json so the next session picks it up. */
+    Q_INVOKABLE void raSetEncoreMode(bool enabled);
 
 signals:
     void statusMessageChanged();
