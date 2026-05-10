@@ -195,6 +195,7 @@ void RAService::requestGameDetail(int raGameId) {
                 achMap["badgeName"] = ach.badgeName;
                 achMap["badgeUrl"] = "https://media.retroachievements.org/Badge/" + ach.badgeName + ".png";
                 achMap["type"] = ach.type;
+                achMap["missable"] = ach.missable;
                 achMap["earned"] = ach.earned;
                 achMap["earnedHardcore"] = ach.earnedHardcore;
                 achMap["earnedDate"] = ach.earnedDate;

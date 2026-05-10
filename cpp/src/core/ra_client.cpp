@@ -243,6 +243,10 @@ RAClient::GameDetail RAClient::fetchGameDetail(int gameId, QAtomicInt* cancelFla
         ach.badgeName = a["BadgeName"].toString();
         int achType = a["type"].toInt();
         ach.type = (achType == 0) ? "core" : "unofficial";
+        // RA's "type" int doubles as a STANDARD/MISSABLE/PROGRESSION/WIN
+        // tag (matches rcheevos's RC_CLIENT_ACHIEVEMENT_TYPE_*). Pull
+        // the missable bit out for the popup's filter tab.
+        ach.missable = (achType == 1);
 
         if (!a["DateEarnedHardcore"].toString().isEmpty()) {
             ach.earnedHardcore = true;

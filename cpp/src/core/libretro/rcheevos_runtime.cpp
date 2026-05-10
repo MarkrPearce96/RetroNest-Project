@@ -512,6 +512,11 @@ QVariantList RcheevosRuntime::achievementListVariants() {
             const bool earned =
                 (a->state == RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED);
             m["earned"] = earned;
+            // RC_CLIENT_ACHIEVEMENT_TYPE_MISSABLE = 1; matches the
+            // RA web API's "type" int 1 so the popup's filter logic
+            // is identical for both data paths.
+            m["missable"] =
+                (a->type == RC_CLIENT_ACHIEVEMENT_TYPE_MISSABLE);
             // Coloured badge for earned, locked variant for unlocked.
             char buf[256] = {0};
             rc_client_achievement_get_image_url(

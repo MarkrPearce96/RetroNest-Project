@@ -8,7 +8,9 @@ import QtQuick.Controls
  * to the main app's settings overlay).
  *
  * Hosted inside InGameMenu.qml; opens when the user activates the
- * HUD's Achievements icon.
+ * HUD's Achievements icon. Tab bar at the top filters between All /
+ * Earned / Unearned / Missable so users can jump straight to the
+ * subset they care about (RA's website has the same shape).
  */
 Item {
     id: root
@@ -24,7 +26,44 @@ Item {
     property var achievements: []
     property int totalEarned: 0
 
-    /** "loading" until raGameDetailReady fires, then "loaded" (with
+    /** Tab selection index. 0=All, 1=Earned, 2=Unearned, 3=Missable.
+     *  Used by the filter that drives the visible list. Reset to 0
+     *  whenever a fresh load completes. */
+    property int currentTab: 0
+    readonly property var tabLabels: ["All", "Earned", "Unearned", "Missable"]
+
+    /** Per-tab counts shown next to each tab label. Computed by
+     *  applying the same filter the visible list uses. */
+    readonly property int countAll: achievements.length
+    readonly property int countEarned: {
+        var n = 0;
+        for (var i = 0; i < achievements.length; ++i)
+            if (achievements[i].earned) ++n;
+        return n;
+    }
+    readonly property int countUnearned: countAll - countEarned
+    readonly property int countMissable: {
+        var n = 0;
+        for (var i = 0; i < achievements.length; ++i)
+            if (achievements[i].missable) ++n;
+        return n;
+    }
+
+    /** Achievements filtered by the current tab — the model the
+     *  ListView actually renders. */
+    readonly property var visibleAchievements: {
+        if (currentTab === 0) return achievements;
+        var out = [];
+        for (var i = 0; i < achievements.length; ++i) {
+            var a = achievements[i];
+            if (currentTab === 1 && a.earned) out.push(a);
+            else if (currentTab === 2 && !a.earned) out.push(a);
+            else if (currentTab === 3 && a.missable) out.push(a);
+        }
+        return out;
+    }
+
+    /** "loading" until the data path resolves, then "loaded" (with
      *  achievements possibly empty) or "timeout" after ~5 s of no
      *  response. */
     property string loadState: "loading"
@@ -43,13 +82,12 @@ Item {
         achievements = [];
         totalEarned = 0;
         loadState = "loading";
+        currentTab = 0;
+        list.currentIndex = 0;
 
         // Libretro path: rc_client already has the achievement list in
         // memory after the game-session load completed. Render directly,
-        // skipping the redundant RA web API call. Source-of-truth match
-        // means the popup count agrees with the game-start banner —
-        // both come from rc_client via rc_client_create_achievement_list
-        // on the CORE category.
+        // skipping the redundant RA web API call.
         if (app.libretroAchievementsReady()) {
             var local = app.libretroAchievementList();
             if (local && local.length > 0) {
@@ -63,10 +101,7 @@ Item {
             }
         }
 
-        // External-emulator path (PCSX2 / DuckStation / Dolphin / PPSSPP):
-        // we don't run rcheevos in-process, so fall back to the RA web
-        // API to populate the popup. Same applies if the libretro
-        // session is briefly between load callbacks.
+        // External-emulator path: fall back to the RA web API.
         if (raGameId > 0) {
             app.raRequestGameDetail(raGameId);
             loadTimeout.restart();
@@ -83,7 +118,8 @@ Item {
     }
 
     /** D-pad / arrow-key navigation hooks called by InGameMenu while
-     *  the popup is open. Keeps the focused row visible. */
+     *  the popup is open. Up/Down move the list cursor; Left/Right
+     *  switch the active tab. */
     function scrollUp() {
         if (list.count <= 0) return;
         list.currentIndex = Math.max(0, list.currentIndex - 1);
@@ -93,6 +129,14 @@ Item {
         if (list.count <= 0) return;
         list.currentIndex = Math.min(list.count - 1, list.currentIndex + 1);
         list.positionViewAtIndex(list.currentIndex, ListView.Contain);
+    }
+    function nextTab() {
+        currentTab = (currentTab + 1) % tabLabels.length;
+        list.currentIndex = 0;
+    }
+    function prevTab() {
+        currentTab = (currentTab - 1 + tabLabels.length) % tabLabels.length;
+        list.currentIndex = 0;
     }
 
     onRaGameIdChanged: refresh()
@@ -116,8 +160,11 @@ Item {
     // ── Card ──
     Rectangle {
         id: card
-        width: 480
-        height: Math.min(360, headerCol.height + list.contentHeight + 24)
+        // Wider + taller than the original to fit the tab bar plus
+        // ~6 visible rows of content without forcing scroll on every
+        // open.
+        width: 560
+        height: 460
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
 
@@ -132,7 +179,7 @@ Item {
                 left: parent.left; right: parent.right; top: parent.top
                 margins: 14
             }
-            spacing: 2
+            spacing: 6
 
             Text {
                 text: "Achievements"
@@ -146,6 +193,55 @@ Item {
                 color: Qt.rgba(1, 1, 1, 0.5)
                 font.pixelSize: 11
             }
+
+            // Tab bar — clickable buttons + arrow-key driven via
+            // nextTab() / prevTab() which InGameMenu wires to L/R.
+            Row {
+                spacing: 4
+                Repeater {
+                    model: root.tabLabels
+                    delegate: Rectangle {
+                        required property int index
+                        required property string modelData
+                        readonly property bool active: root.currentTab === index
+                        readonly property int tabCount: {
+                            switch (index) {
+                            case 0: return root.countAll;
+                            case 1: return root.countEarned;
+                            case 2: return root.countUnearned;
+                            case 3: return root.countMissable;
+                            }
+                            return 0;
+                        }
+                        width: tabText.implicitWidth + 22
+                        height: 28
+                        radius: 6
+                        color: active
+                               ? Qt.rgba(1, 0.84, 0.30, 0.18)
+                               : Qt.rgba(1, 1, 1, 0.04)
+                        border.color: active
+                                      ? Qt.rgba(1, 0.84, 0.30, 0.55)
+                                      : Qt.rgba(1, 1, 1, 0.08)
+                        border.width: 1
+                        Text {
+                            id: tabText
+                            anchors.centerIn: parent
+                            text: modelData + " (" + tabCount + ")"
+                            color: active ? "#ffffff" : Qt.rgba(1, 1, 1, 0.6)
+                            font.pixelSize: 11
+                            font.weight: active ? Font.DemiBold : Font.Normal
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.currentTab = index;
+                                list.currentIndex = 0;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         ListView {
@@ -158,7 +254,7 @@ Item {
             clip: true
             spacing: 4
             boundsBehavior: Flickable.StopAtBounds
-            model: root.achievements
+            model: root.visibleAchievements
             currentIndex: 0
             highlightMoveDuration: 120
             highlightFollowsCurrentItem: true
@@ -199,7 +295,7 @@ Item {
 
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - 36 - 60 - 20
+                        width: parent.width - 36 - 60 - 20 - missableTag.implicitWidth - 8
                         spacing: 1
                         Text {
                             text: modelData.title || ""
@@ -218,6 +314,30 @@ Item {
                         }
                     }
 
+                    // "Missable" tag — visible only on missable
+                    // achievements. Helps spot them in the All /
+                    // Earned / Unearned views without switching tab.
+                    Rectangle {
+                        id: missableTag
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: modelData.missable === true
+                        width: visible ? (missableLabel.implicitWidth + 12) : 0
+                        height: 20
+                        radius: 4
+                        color: Qt.rgba(0.95, 0.55, 0.10, 0.18)
+                        border.color: Qt.rgba(0.95, 0.55, 0.10, 0.5)
+                        border.width: 1
+                        Text {
+                            id: missableLabel
+                            anchors.centerIn: parent
+                            text: "MISSABLE"
+                            color: Qt.rgba(0.95, 0.65, 0.20, 1)
+                            font.pixelSize: 9
+                            font.weight: Font.Bold
+                            font.letterSpacing: 0.5
+                        }
+                    }
+
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: (modelData.points || 0) + " pts"
@@ -232,10 +352,12 @@ Item {
         // Loading / empty / timeout state
         Text {
             anchors.centerIn: list
-            visible: root.achievements.length === 0
+            visible: list.count === 0
             text: root.loadState === "loading" ? "Loading achievements…"
                   : root.loadState === "timeout" ? "Couldn't load achievements"
-                  : "No achievements found for this game"
+                  : root.achievements.length === 0
+                      ? "No achievements found for this game"
+                      : "No achievements in this category"
             color: Qt.rgba(1, 1, 1, 0.4)
             font.pixelSize: 13
         }

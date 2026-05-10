@@ -72,6 +72,10 @@ public:
         int trueRatio = 0;
         QString badgeName;
         QString type;
+        // True when RA marks this as a missable achievement (one-time
+        // window in a playthrough — RA's type=1). Exposed to QML so
+        // the in-game popup can offer a "Missable" filter tab.
+        bool missable = false;
         bool earned = false;
         bool earnedHardcore = false;
         QString earnedDate;

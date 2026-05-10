@@ -235,7 +235,10 @@ FocusScope {
         anchors.right: parent.right
         anchors.bottom: pill.top
         anchors.bottomMargin: 12
-        height: 360
+        // Matches the card's fixed height (560×460 inside) plus a
+        // little breathing room so the slide-in transform doesn't
+        // clip on the way up.
+        height: 470
         raGameId: root.raGameId
         open: root.achievementsPopupOpen
     }
@@ -245,7 +248,8 @@ FocusScope {
         if (!visible) return;
 
         // While the achievements popup is open, route navigation
-        // into the list instead of cycling HUD icons.
+        // into the popup instead of cycling HUD icons. Up/Down
+        // scroll the list; Left/Right cycle the filter tabs.
         if (achievementsPopupOpen) {
             if (event.key === Qt.Key_Up) {
                 achievementsPopup.scrollUp();
@@ -255,14 +259,21 @@ FocusScope {
                 achievementsPopup.scrollDown();
                 event.accepted = true;
                 return;
+            } else if (event.key === Qt.Key_Left) {
+                achievementsPopup.prevTab();
+                event.accepted = true;
+                return;
+            } else if (event.key === Qt.Key_Right) {
+                achievementsPopup.nextTab();
+                event.accepted = true;
+                return;
             } else if (event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
                 achievementsPopupOpen = false;
                 event.accepted = true;
                 return;
             }
-            // Other keys (Left/Right, Return, etc.) fall through and
-            // are absorbed below — we don't want HUD nav while the
-            // popup is up.
+            // Other keys (Return, etc.) fall through and are absorbed
+            // below — we don't want HUD nav while the popup is up.
             event.accepted = true;
             return;
         }
