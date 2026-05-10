@@ -726,7 +726,21 @@ void AppController::raLoginWithPassword(const QString& username, const QString& 
 bool AppController::raHasLibretroToken() const { return m_raService.hasLibretroToken(); }
 
 bool AppController::raHardcoreMode() const { return m_raService.hardcoreMode(); }
-void AppController::raSetHardcoreMode(bool enabled) { m_raService.setHardcoreMode(enabled); }
+void AppController::raSetHardcoreMode(bool enabled) {
+    m_raService.setHardcoreMode(enabled);
+    // Mid-session honor: same pattern as raSetEncoreMode. If a libretro
+    // game is running, push the new value into the live rc_client so
+    // hardcore takes effect (or releases) without a relaunch. rcheevos
+    // raises a RC_CLIENT_EVENT_RESET when hardcore flips on with a game
+    // already loaded — our event handler invokes retro_reset to wipe
+    // any save-state contamination, satisfying RA's hardcore rule.
+    auto* sess = m_gameService.session();
+    if (sess && sess->isRunning() && sess->isLibretro()) {
+        if (auto* lr = dynamic_cast<LibretroAdapter*>(sess->adapter()))
+            if (auto* rt = lr->runtime())
+                rt->rcheevos().setHardcore(enabled);
+    }
+}
 bool AppController::raNotifications() const { return m_raService.notifications(); }
 void AppController::raSetNotifications(bool enabled) { m_raService.setNotifications(enabled); }
 bool AppController::raSoundEffects() const { return m_raService.soundEffects(); }

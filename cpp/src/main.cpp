@@ -38,6 +38,11 @@ static int runCli(QCoreApplication& app, QCommandLineParser& parser, ManifestLoa
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("RetroNest");
+    // Surfaced via QCoreApplication::applicationVersion(); RcheevosRuntime
+    // composes the RA User-Agent from this so version bumps in the binary
+    // are automatically reflected in HTTP requests to RA's servers. Keep
+    // in sync with MACOSX_BUNDLE_VERSION in CMakeLists.txt.
+    app.setApplicationVersion("0.1.0");
 
     QCommandLineParser parser;
     parser.addHelpOption();

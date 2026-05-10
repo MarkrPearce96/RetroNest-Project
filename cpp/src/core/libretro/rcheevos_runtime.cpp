@@ -1,5 +1,6 @@
 #include "rcheevos_runtime.h"
 #include <rc_client.h>
+#include <QCoreApplication>
 #include <QDebug>
 #include <QMetaObject>
 #include <QNetworkRequest>
@@ -403,9 +404,21 @@ bool RcheevosRuntime::beginSession(const CoreSymbols& syms,
     // approval) is what flips hardcore unlocks from "rejected" to
     // "validated". The rcheevos clause version-stamps the rcheevos
     // library so RA's server knows which protocol version we speak.
+    //
+    // Pull the app version from QCoreApplication so version bumps in
+    // the binary roll forward into RA's request log without us having
+    // to remember to edit a hardcoded string. Falls back to "unknown"
+    // if main.cpp didn't call setApplicationVersion (defensive — it
+    // should always be set in real runs).
     char uaClause[64] = {0};
     rc_client_get_user_agent_clause(m_client, uaClause, sizeof(uaClause));
-    m_userAgent = QByteArray("RetroNest/0.1.0 ") + QByteArray(uaClause);
+    const QByteArray appName = QCoreApplication::applicationName().isEmpty()
+        ? QByteArrayLiteral("RetroNest")
+        : QCoreApplication::applicationName().toUtf8();
+    const QByteArray appVer = QCoreApplication::applicationVersion().isEmpty()
+        ? QByteArrayLiteral("unknown")
+        : QCoreApplication::applicationVersion().toUtf8();
+    m_userAgent = appName + "/" + appVer + " " + QByteArray(uaClause);
 
     if (token.isEmpty() || username.isEmpty()) {
         emit loginRequired();
