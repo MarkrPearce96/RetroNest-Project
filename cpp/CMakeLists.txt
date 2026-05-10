@@ -405,6 +405,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/hud/resume.svg
         qml/AppUI/images/hud/achievements.svg
         qml/AppUI/images/hud/save_state.svg
+        qml/AppUI/sounds/Libretro_Achievement_Unlock.wav
         qml/AppUI/images/hud/load_state.svg
         qml/AppUI/images/hud/fast_forward.svg
         qml/AppUI/images/hud/save_quit.svg

@@ -265,14 +265,14 @@ ApplicationWindow {
         z: 220
     }
 
-    // Achievement-unlock chime. Drop a short WAV at
-    // `cpp/qml/AppUI/sounds/unlock.wav` (and add it to CMakeLists.txt
-    // RESOURCES under the appui_backing module) and switch `source` to
-    // "sounds/unlock.wav" to enable. Until then the source stays empty
-    // and the play() call is gated below — no console spam.
+    // Achievement-unlock chime. Sourced from RetroAchievements'
+    // canonical libretro unlock SFX. Listed under appui_backing
+    // RESOURCES in CMakeLists.txt so it's bundled into the QRC.
+    // The play() call below is gated on app.raSoundEffects so users
+    // who prefer silent unlocks can opt out from the settings UI.
     SoundEffect {
         id: unlockSound
-        source: ""
+        source: "sounds/Libretro_Achievement_Unlock.wav"
         volume: 0.7
     }
 
@@ -341,9 +341,10 @@ ApplicationWindow {
         target: app
         function onRaAchievementUnlocked(id, title, description, imageUrl) {
             achievementToast.show(title, description, imageUrl)
-            // Chime — gated on the user's RA preference AND on a non-empty
-            // source so an unconfigured installation stays silent rather
-            // than logging a missing-file warning every unlock.
+            // Chime — gated on the user's "Sound Effects" preference
+            // (Settings → RetroAchievements). Source-length check is
+            // a defensive belt: if the WAV asset ever goes missing
+            // from the bundle, fail silent rather than log spam.
             if (app.raSoundEffects && unlockSound.source.toString().length > 0)
                 unlockSound.play()
         }
