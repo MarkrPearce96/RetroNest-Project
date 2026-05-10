@@ -52,6 +52,11 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     connect(m_gameService.session(), &GameSession::achievementUnlocked,
             &m_raService, &RAService::notifyAchievementUnlocked,
             Qt::QueuedConnection);
+    // Same shape for the generic info toast (game-start, mastered,
+    // hardcore reset, server error).
+    connect(m_gameService.session(), &GameSession::raInfoToast,
+            &m_raService, &RAService::notifyInfoToast,
+            Qt::QueuedConnection);
 
     connect(&m_gameService, &GameService::statusMessage, this, &AppController::setStatus);
     connect(&m_gameService, &GameService::gameRunningChanged, this, &AppController::gameRunningChanged);
@@ -123,6 +128,8 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     //   → here → QML.
     connect(&m_raService, &RAService::achievementUnlocked,
             this, &AppController::raAchievementUnlocked);
+    connect(&m_raService, &RAService::infoToast,
+            this, &AppController::raInfoToast);
 }
 
 // ── Game Session ───────────────────────────────────────────

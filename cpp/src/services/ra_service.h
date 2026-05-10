@@ -63,6 +63,12 @@ public slots:
     void notifyAchievementUnlocked(const QString& id, const QString& title,
                                    const QString& description,
                                    const QString& imageUrl);
+    /** Generic toast notifier used for game-start banner, game-mastered
+     *  celebration, hardcore reset notice, and server-error notice.
+     *  Forwarded from RcheevosRuntime via GameSession. */
+    void notifyInfoToast(const QString& header, const QString& title,
+                         const QString& description,
+                         const QString& imageUrl, int durationMs);
 
 signals:
     void loginCompleted(bool success, const QString& message);
@@ -78,6 +84,10 @@ signals:
     void achievementUnlocked(const QString& id, const QString& title,
                              const QString& description,
                              const QString& imageUrl);
+    /** Generic toast emit — re-emitted from notifyInfoToast for QML. */
+    void infoToast(const QString& header, const QString& title,
+                   const QString& description, const QString& imageUrl,
+                   int durationMs);
 
 private:
     Database* m_db;

@@ -126,10 +126,12 @@ static void rcheevos_get_core_memory_info(uint32_t id,
 // ---------------------------------------------------------------------------
 // Event handler — called from core thread via rc_client_do_frame
 // ---------------------------------------------------------------------------
-void RcheevosRuntime::eventHandler(const rc_client_event_t* ev, rc_client_t* /*client*/) {
+void RcheevosRuntime::eventHandler(const rc_client_event_t* ev, rc_client_t* client) {
     if (!g_active || !ev) return;
 
-    if (ev->type == RC_CLIENT_EVENT_ACHIEVEMENT_TRIGGERED && ev->achievement) {
+    switch (ev->type) {
+    case RC_CLIENT_EVENT_ACHIEVEMENT_TRIGGERED: {
+        if (!ev->achievement) return;
         // RA serves badge images at media.retroachievements.org/Badge/<name>.png
         // (with `_lock` for the locked variant). The unlocked variant is the
         // colored, fully-saturated badge — what we want for the toast.
@@ -144,6 +146,64 @@ void RcheevosRuntime::eventHandler(const rc_client_event_t* ev, rc_client_t* /*c
             QString::fromUtf8(ev->achievement->description
                               ? ev->achievement->description : ""),
             QString::fromUtf8(urlBuf));
+        break;
+    }
+
+    case RC_CLIENT_EVENT_GAME_COMPLETED: {
+        // All achievements for the game (or its core set) earned.
+        const rc_client_game_t* game = rc_client_get_game_info(client);
+        char imgBuf[256] = {0};
+        if (game) rc_client_game_get_image_url(game, imgBuf, sizeof(imgBuf));
+        rc_client_user_game_summary_t summary{};
+        rc_client_get_user_game_summary(client, &summary);
+        const QString title = (game && game->title)
+            ? QString::fromUtf8(game->title) : QStringLiteral("Game");
+        const QString desc = QStringLiteral("All %1 achievements earned!")
+                             .arg(summary.num_core_achievements);
+        emit g_active->raInfoToast(QStringLiteral("GAME MASTERED"),
+                                    title, desc,
+                                    QString::fromUtf8(imgBuf), 8000);
+        qInfo().noquote() << "[rcheevos] Game mastered:" << title;
+        break;
+    }
+
+    case RC_CLIENT_EVENT_RESET: {
+        // Fired when hardcore mode is toggled on with a game already
+        // loaded — rcheevos demands the emulator reset so any prior
+        // save-state contamination is wiped before the hardcore run
+        // is allowed to count. We MUST actually reset the core, or
+        // server-side validation will void any post-toggle unlocks.
+        // eventHandler runs on the core thread (called from inside
+        // rc_client_do_frame), so retro_reset is safe to invoke here.
+        if (g_syms && g_syms->retro_reset) g_syms->retro_reset();
+        emit g_active->raInfoToast(
+            QStringLiteral("HARDCORE MODE"),
+            QStringLiteral("System reset"),
+            QStringLiteral("Hardcore mode enabled — game restarted to validate the run."),
+            QString(), 6000);
+        qInfo() << "[rcheevos] Hardcore reset (event 14): retro_reset invoked";
+        break;
+    }
+
+    case RC_CLIENT_EVENT_SERVER_ERROR: {
+        // Non-retryable server error (auth, rate limit, malformed
+        // payload, etc). Surface to the user — silent failures used
+        // to leave the user wondering why an unlock didn't land.
+        const QString api = (ev->server_error && ev->server_error->api)
+            ? QString::fromUtf8(ev->server_error->api) : QString();
+        const QString msg = (ev->server_error && ev->server_error->error_message)
+            ? QString::fromUtf8(ev->server_error->error_message)
+            : QStringLiteral("(no message)");
+        emit g_active->raInfoToast(
+            QStringLiteral("RA SERVER ERROR"),
+            api.isEmpty() ? QStringLiteral("Submission failed") : api,
+            msg, QString(), 8000);
+        qWarning().noquote() << "[rcheevos] Server error" << api << ":" << msg;
+        break;
+    }
+
+    default:
+        break;
     }
 }
 
@@ -171,6 +231,23 @@ void RcheevosRuntime::loadGameCallback(int result, const char* errorMessage,
             << " unlocked=" << summary.num_unlocked_achievements
             << " regions=" << self->m_regions.count
             << " region_total_bytes=" << self->m_regions.total_size;
+
+        // Game-start banner: tells the user they're playing a tracked
+        // game and how much of the achievement set they've already
+        // earned. Skipped if the game has no achievements (no toast
+        // adds value when there's nothing to track).
+        if (summary.num_core_achievements > 0) {
+            char gameImg[256] = {0};
+            if (game) rc_client_game_get_image_url(game, gameImg, sizeof(gameImg));
+            const QString title = (game && game->title)
+                ? QString::fromUtf8(game->title) : QStringLiteral("Game");
+            const QString desc = QStringLiteral("%1 / %2 achievements earned")
+                .arg(summary.num_unlocked_achievements)
+                .arg(summary.num_core_achievements);
+            emit self->raInfoToast(QStringLiteral("ACHIEVEMENTS ACTIVE"),
+                                   title, desc,
+                                   QString::fromUtf8(gameImg), 5000);
+        }
     } else {
         qWarning() << "[rcheevos] rc_client_begin_identify_and_load_game failed:"
                    << (errorMessage ? errorMessage : "(no message)");

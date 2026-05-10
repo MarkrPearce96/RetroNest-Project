@@ -231,6 +231,13 @@ signals:
     void raAchievementUnlocked(const QString& id, const QString& title,
                                const QString& description,
                                const QString& imageUrl);
+    /** Generic info toast forwarded from RAService — used for the
+     *  game-start banner, game-mastered celebration, hardcore reset
+     *  notice, and server-error notice. QML routes this through the
+     *  same AchievementToast component as the unlock toast. */
+    void raInfoToast(const QString& header, const QString& title,
+                     const QString& description, const QString& imageUrl,
+                     int durationMs);
 
 private:
     void setStatus(const QString& msg);

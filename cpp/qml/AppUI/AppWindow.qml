@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtMultimedia
 import "EmulatorLogos.js" as EmulatorLogos
 
 ApplicationWindow {
@@ -264,6 +265,17 @@ ApplicationWindow {
         z: 220
     }
 
+    // Achievement-unlock chime. Drop a short WAV at
+    // `cpp/qml/AppUI/sounds/unlock.wav` (and add it to CMakeLists.txt
+    // RESOURCES under the appui_backing module) and switch `source` to
+    // "sounds/unlock.wav" to enable. Until then the source stays empty
+    // and the play() call is gated below — no console spam.
+    SoundEffect {
+        id: unlockSound
+        source: ""
+        volume: 0.7
+    }
+
     ResumeStateDialog {
         id: resumeStateDialog
 
@@ -317,6 +329,18 @@ ApplicationWindow {
         target: app
         function onRaAchievementUnlocked(id, title, description, imageUrl) {
             achievementToast.show(title, description, imageUrl)
+            // Chime — gated on the user's RA preference AND on a non-empty
+            // source so an unconfigured installation stays silent rather
+            // than logging a missing-file warning every unlock.
+            if (app.raSoundEffects && unlockSound.source.toString().length > 0)
+                unlockSound.play()
+        }
+        // Generic info-toast — drives the same component for game-start
+        // banner, game-mastered celebration, hardcore reset notice, and
+        // server-error notice. The C++ side picks the header text.
+        function onRaInfoToast(header, title, description, imageUrl, durationMs) {
+            achievementToast.showWithHeader(header, title, description,
+                                             imageUrl, durationMs)
         }
     }
 

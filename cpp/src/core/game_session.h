@@ -120,6 +120,13 @@ signals:
     void achievementUnlocked(const QString& id, const QString& title,
                              const QString& description,
                              const QString& imageUrl);
+    /** Forwarded from the in-process rcheevos runtime — generic toast
+     *  request used for game-start banner, game-mastered celebration,
+     *  hardcore reset notice, and server-error notice. AppController
+     *  re-emits onto QML via RAService. */
+    void raInfoToast(const QString& header, const QString& title,
+                     const QString& description, const QString& imageUrl,
+                     int durationMs);
 
 private slots:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);

@@ -51,6 +51,14 @@ signals:
     void achievementUnlocked(const QString& id, const QString& title,
                              const QString& description,
                              const QString& imageUrl);
+    /** Generic "show me as a toast" signal, used for the rcheevos events
+     *  that don't deserve their own dedicated path: game-start session
+     *  banner, game-mastered celebration, server-error notice, hardcore
+     *  reset notice. Forwarded through GameSession → RAService →
+     *  AppController → QML so QML can render via AchievementToast. */
+    void raInfoToast(const QString& header, const QString& title,
+                     const QString& description, const QString& imageUrl,
+                     int durationMs);
     void loginRequired();
 
 private:

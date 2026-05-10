@@ -20,9 +20,12 @@ Item {
     height: card.height
     visible: visibleState || card.opacity > 0.0
 
-    // Public API — call show(title, description, imageUrl) from a
-    // Connections block. imageUrl is optional; falls back to the trophy
-    // glyph when empty or when the network image fails to load.
+    // Public API — call show(title, description, imageUrl) for the
+    // achievement-unlock case (default header, default duration), or
+    // showWithHeader(...) to drive the toast for game-start banners,
+    // game-mastered celebrations, hardcore reset notices, and server
+    // error notices.
+    property string header: "ACHIEVEMENT UNLOCKED"
     property string title: ""
     property string description: ""
     property string imageUrl: ""
@@ -30,9 +33,15 @@ Item {
     property bool visibleState: false
 
     function show(t, d, url) {
+        showWithHeader("ACHIEVEMENT UNLOCKED", t, d, url, 6000);
+    }
+
+    function showWithHeader(h, t, d, url, durationMs) {
+        header = h || "ACHIEVEMENT UNLOCKED";
         title = t || "";
         description = d || "";
         imageUrl = url || "";
+        duration = (durationMs && durationMs > 0) ? durationMs : 6000;
         hideTimer.stop();
         visibleState = true;
         hideTimer.restart();
@@ -106,7 +115,7 @@ Item {
                 spacing: 2
 
                 Text {
-                    text: "ACHIEVEMENT UNLOCKED"
+                    text: root.header
                     color: Qt.rgba(1, 0.84, 0.30, 1)   // gold
                     font.pixelSize: 11
                     font.weight: Font.Bold

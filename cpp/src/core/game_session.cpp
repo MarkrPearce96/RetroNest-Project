@@ -191,6 +191,11 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     connect(&rt->rcheevos(), &RcheevosRuntime::achievementUnlocked,
             this, &GameSession::achievementUnlocked,
             Qt::QueuedConnection);
+    // Same forwarding for the generic info-toast signal (game-start
+    // banner, game-mastered, hardcore reset, server-error notice).
+    connect(&rt->rcheevos(), &RcheevosRuntime::raInfoToast,
+            this, &GameSession::raInfoToast,
+            Qt::QueuedConnection);
 
     // Wire frontend settings changes → libretroFrontendChanged so QML
     // bindings on libretroAspectMode / libretroIntegerScale update live.

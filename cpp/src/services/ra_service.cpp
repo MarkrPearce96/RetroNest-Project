@@ -378,6 +378,12 @@ void RAService::notifyAchievementUnlocked(const QString& id, const QString& titl
     emit achievementUnlocked(id, title, description, imageUrl);
 }
 
+void RAService::notifyInfoToast(const QString& header, const QString& title,
+                                const QString& description,
+                                const QString& imageUrl, int durationMs) {
+    emit infoToast(header, title, description, imageUrl, durationMs);
+}
+
 // ── Settings ──
 
 bool RAService::hardcoreMode() const { return m_creds.hardcoreMode; }
