@@ -138,6 +138,12 @@ void RcheevosRuntime::eventHandler(const rc_client_event_t* ev, rc_client_t* cli
     switch (ev->type) {
     case RC_CLIENT_EVENT_ACHIEVEMENT_TRIGGERED: {
         if (!ev->achievement) return;
+        // Skip synthetic entries — same canonical signal we use in
+        // achievementListVariants (points == 0). Without this filter,
+        // rcheevos's "Warning: Unknown Emulator" entry triggers an
+        // achievement-unlocked toast at hardcore-on time as if the
+        // user had earned a real achievement.
+        if (ev->achievement->points == 0) return;
         // RA serves badge images at media.retroachievements.org/Badge/<name>.png
         // (with `_lock` for the locked variant). The unlocked variant is the
         // colored, fully-saturated badge — what we want for the toast.
