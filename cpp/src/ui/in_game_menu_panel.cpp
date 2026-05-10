@@ -17,10 +17,15 @@ namespace {
 // Fast Forward / Achievements / Save & Quit / Quit. Bump if more
 // actions land or icon width changes.
 constexpr int kPanelWidth = 820;
-// Tall enough to fit the slide-up Achievements popup (max ~360 px)
-// above the HUD pill (~92 px) with breathing room. The window is
-// transparent so the unused vertical space costs nothing visually.
-constexpr int kPanelHeight = 540;
+// Tall enough to fit the slide-up Achievements popup card (460 px,
+// since it grew when we added the tab bar + larger size for parity
+// with the libretro path) plus a 12 px margin above the HUD pill
+// (~92 px) plus the pill's own 32 px bottom margin plus an optional
+// hardcore-mode badge (34 px including margin) — total ~640 px.
+// Previously 540, which clipped the popup top (tabs disappeared
+// behind the panel boundary). The window is transparent so the
+// unused vertical space costs nothing visually.
+constexpr int kPanelHeight = 640;
 constexpr int kPanelBottomMargin = 32;
 } // namespace
 
