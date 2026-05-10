@@ -189,13 +189,21 @@ Item {
         // earlier "Achievements" title + "X / N earned" subtitle were
         // pure redundancy. Dropping them tightens the layout and gives
         // the list more breathing room without making the popup taller.
+        //
+        // Height is hard-coded to match the tab-chip height (28) instead
+        // of bound to tabRow.implicitHeight: the implicit-height binding
+        // didn't resolve reliably in the InGameMenuPanel render context
+        // used by external-emulator games, leaving headerCol 0-tall and
+        // letting the ListView (later-declared sibling) render on top of
+        // the tab row. Explicit height + listed-first sibling order keeps
+        // the layout deterministic in both panel contexts.
         Item {
             id: headerCol
             anchors {
                 left: parent.left; right: parent.right; top: parent.top
                 margins: 14
             }
-            height: tabRow.implicitHeight
+            height: 28
 
             Row {
                 id: tabRow
