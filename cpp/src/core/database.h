@@ -77,4 +77,9 @@ private:
     bool runMigrations();
     int schemaVersion();
     bool setSchemaVersion(int version);
+    /** Copy the current DB file to "<dbPath>.bak-v<N>" before any migration
+     *  runs, so a partial-failure leaves the user with a recoverable copy. */
+    bool backupBeforeMigration(int fromVersion);
+
+    QString m_dbPath;  // remembered between open() and runMigrations() for backup
 };

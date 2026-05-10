@@ -1,6 +1,9 @@
 # Build output
 cpp/build/
 
+# CTest scratch output (created when ctest runs from the project root)
+/Testing/
+
 # ScreenScraper developer credentials (build-time secret)
 cpp/dev_credentials.cmake
 

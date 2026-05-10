@@ -21,11 +21,28 @@ bool Database::open(const QString& dbPath) {
         return false;
     }
 
+    m_dbPath = dbPath;
+
     if (!createTables()) {
         qCritical() << "[Database] Failed to create tables";
         return false;
     }
     qInfo() << "[Database] Opened:" << dbPath;
+    return true;
+}
+
+bool Database::backupBeforeMigration(int fromVersion) {
+    if (m_dbPath.isEmpty()) return false;
+    if (!QFileInfo::exists(m_dbPath)) return false;  // fresh DB; nothing to back up
+    const QString backupPath = QString("%1.bak-v%2").arg(m_dbPath).arg(fromVersion);
+    if (QFileInfo::exists(backupPath))
+        QFile::remove(backupPath);   // overwrite previous backup at same version
+    if (!QFile::copy(m_dbPath, backupPath)) {
+        qWarning() << "[Database] Failed to back up DB to" << backupPath
+                   << "before migration; aborting migration to avoid data loss";
+        return false;
+    }
+    qInfo() << "[Database] Pre-migration backup written to" << backupPath;
     return true;
 }
 
@@ -128,6 +145,15 @@ bool Database::setSchemaVersion(int version) {
 bool Database::runMigrations() {
     int current = schemaVersion();
 
+    // Pre-migration safety: copy the DB file before touching the schema, so
+    // a partial-failure leaves the user with a recoverable copy at the
+    // pre-migration version. Skipped on fresh DBs (open() just created them
+    // and there is nothing to lose).
+    if (current > 0 && current < CURRENT_SCHEMA_VERSION) {
+        if (!backupBeforeMigration(current))
+            return false;  // refuse to run migrations without a backup
+    }
+
     if (current < 2) {
         auto db = QSqlDatabase::database(DB_CONNECTION);
         if (!db.transaction()) {
@@ -196,12 +222,21 @@ bool Database::runMigrations() {
         qInfo() << "[Database] Migrated schema v2 → v3 (added media path columns)";
     }
 
-    // Single-statement migration — no transaction needed (SQLite ALTER TABLE is atomic)
     if (current < 4) {
         auto db = QSqlDatabase::database(DB_CONNECTION);
+        if (!db.transaction()) {
+            qCritical() << "[Database] Failed to begin transaction for v3→v4 migration";
+            return false;
+        }
         QSqlQuery q(db);
         if (!q.exec("ALTER TABLE games ADD COLUMN disc_count INTEGER NOT NULL DEFAULT 0")) {
             qCritical() << "[Database] Migration v3→v4 failed:" << q.lastError().text();
+            db.rollback();
+            return false;
+        }
+        if (!db.commit()) {
+            qCritical() << "[Database] Failed to commit v3→v4 migration";
+            db.rollback();
             return false;
         }
         qInfo() << "[Database] Migrated schema v3 → v4 (added disc_count column)";
@@ -212,9 +247,19 @@ bool Database::runMigrations() {
 
     if (current < 6) {
         auto db = QSqlDatabase::database(DB_CONNECTION);
+        if (!db.transaction()) {
+            qCritical() << "[Database] Failed to begin transaction for v5→v6 migration";
+            return false;
+        }
         QSqlQuery q(db);
         if (!q.exec("ALTER TABLE games ADD COLUMN serial TEXT NOT NULL DEFAULT ''")) {
             qCritical() << "[Database] Migration v5→v6 failed:" << q.lastError().text();
+            db.rollback();
+            return false;
+        }
+        if (!db.commit()) {
+            qCritical() << "[Database] Failed to commit v5→v6 migration";
+            db.rollback();
             return false;
         }
         qInfo() << "[Database] Migrated schema v5 → v6 (added serial column)";

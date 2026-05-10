@@ -2,8 +2,11 @@
 
 #include "emulator_list_model.h"
 #include "core/manifest_loader.h"
+#include "services/emulator_service.h"
 #include <QObject>
 #include <QString>
+#include <QStringList>
+#include <memory>
 
 class InstallController : public QObject {
     Q_OBJECT
@@ -35,10 +38,22 @@ signals:
     void progressChanged();
 
 private:
+    /** Kick off the next async install, or run the post-install steps when
+     *  all selected emulators are done. */
+    void installNextOrFinish();
+    /** Apply per-emulator resolution + aspect-ratio choices, ensure ROM
+     *  directories, run a ROM scan, then mark install done. */
+    void runPostInstall();
+
     EmulatorListModel* m_model;
     bool m_installing = false;
     int m_installCurrent = 0;
     int m_installTotal = 0;
     QString m_installStatus;
     bool m_installDone = false;
+
+    // Async install state-machine
+    std::unique_ptr<EmulatorService> m_emuService;
+    QStringList m_pendingEmulators;
+    int m_pendingIndex = 0;
 };

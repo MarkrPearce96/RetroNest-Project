@@ -1,6 +1,7 @@
 #include "ini_file.h"
 
 #include <QFile>
+#include <QSaveFile>
 #include <QTextStream>
 
 bool IniFile::load(const QString& path) {
@@ -46,26 +47,40 @@ bool IniFile::load(const QString& path) {
     return true;
 }
 
-bool IniFile::save(const QString& path) {
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-        return false;
-
-    QTextStream out(&file);
+QString IniFile::serialize() const {
+    QString out;
+    QTextStream ts(&out);
     for (const auto& line : m_lines) {
         switch (line.type) {
         case Line::Section:
-            out << "[" << line.section << "]\n";
+            ts << "[" << line.section << "]\n";
             break;
         case Line::KeyValue:
-            out << line.key << " = " << line.value << "\n";
+            ts << line.key << " = " << line.value << "\n";
             break;
         default:
-            out << line.raw << "\n";
+            ts << line.raw << "\n";
             break;
         }
     }
-    return true;
+    ts.flush();
+    return out;
+}
+
+bool IniFile::save(const QString& path) {
+    // QSaveFile: writes into <path>.<random> then renames atomically on
+    // commit(). A torn write (process killed mid-flush, disk full) leaves
+    // the original file untouched. Replaces the previous direct-write
+    // path that could leave half-written INI on disk.
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+    const QByteArray bytes = serialize().toUtf8();
+    if (file.write(bytes) != bytes.size()) {
+        file.cancelWriting();
+        return false;
+    }
+    return file.commit();
 }
 
 QString IniFile::value(const QString& section, const QString& key, const QString& defaultValue) const {

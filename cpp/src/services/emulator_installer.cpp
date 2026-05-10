@@ -1,6 +1,7 @@
 #include "emulator_installer.h"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -19,6 +20,34 @@
 #include <QFutureWatcher>
 
 #include "adapters/adapter_registry.h"
+
+// ============================================================================
+// SHA256 verification (skip if expected hash is empty)
+// ============================================================================
+
+QString EmulatorInstaller::computeSha256(const QString& path) {
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) return {};
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    if (!hash.addData(&f)) return {};
+    return QString::fromLatin1(hash.result().toHex());
+}
+
+bool EmulatorInstaller::verifySha256(const QString& path, const QString& expected) {
+    if (expected.isEmpty()) return true;  // verification opt-in only
+    const QString actual = computeSha256(path);
+    if (actual.isEmpty()) {
+        qWarning() << "[Installer] SHA256: failed to read" << path;
+        return false;
+    }
+    if (actual.compare(expected, Qt::CaseInsensitive) != 0) {
+        qWarning() << "[Installer] SHA256 MISMATCH for" << path
+                   << "expected" << expected << "got" << actual;
+        return false;
+    }
+    qInfo() << "[Installer] SHA256 verified for" << path;
+    return true;
+}
 
 // ============================================================================
 // HTTP helpers (synchronous via local event loop)
@@ -149,10 +178,37 @@ bool EmulatorInstaller::extract(const QString& archivePath, const QString& destP
                 qWarning() << "[Installer] ditto failed:" << dittoProc.readAllStandardError();
         }
 
+        // Detach the volume before cleaning up the mountpoint directory.
+        // If we don't wait for detach to actually finish — or if it fails
+        // with "resource busy" — removeRecursively() races against an
+        // in-progress unmount and can corrupt or hang. Belt-and-braces:
+        //   1. waitForFinished() may return false on timeout — track that.
+        //   2. Non-zero exit means detach refused (busy / already gone) —
+        //      escalate to `hdiutil detach -force`.
+        //   3. Only remove the mountpoint *directory* once we're sure no
+        //      volume is mounted there. setAutoRemove(false) earlier means
+        //      QTemporaryDir won't reap it for us.
         QProcess detach;
         detach.start("hdiutil", {"detach", mountPoint.path(), "-quiet"});
-        detach.waitForFinished(30000);  // wait for detach to complete before cleanup
-        QDir(mountPoint.path()).removeRecursively();
+        const bool detachExited = detach.waitForFinished(30000);
+        bool detached = detachExited && detach.exitCode() == 0;
+        if (!detached) {
+            qWarning() << "[Installer] hdiutil detach failed (exited:"
+                       << detachExited << "code:" << detach.exitCode()
+                       << "); retrying with -force";
+            QProcess force;
+            force.start("hdiutil", {"detach", mountPoint.path(), "-force", "-quiet"});
+            const bool forceExited = force.waitForFinished(15000);
+            detached = forceExited && force.exitCode() == 0;
+            if (!detached)
+                qWarning() << "[Installer] hdiutil detach -force also failed:"
+                           << force.readAllStandardError();
+        }
+        if (detached)
+            QDir(mountPoint.path()).removeRecursively();
+        else
+            qWarning() << "[Installer] Leaving mountpoint dir to avoid race"
+                       << "with stuck mount:" << mountPoint.path();
         return ok;
     } else if (name.endsWith(".appimage")) {
         // AppImage: just copy and make executable
@@ -229,6 +285,7 @@ EmulatorInstaller::ReleaseInfo EmulatorInstaller::fetchReleaseInfo(const Emulato
             info.publishedAt = direct.publishedAt;
             info.assetName = direct.assetName;
             info.downloadUrl = direct.downloadUrl;
+            info.sha256 = direct.sha256;
             info.ok = true;
             qInfo() << "[Installer] Using adapter-resolved direct download for" << manifest.id
                     << ":" << direct.assetName << "(" << direct.version << ")";
@@ -258,12 +315,19 @@ EmulatorInstaller::ReleaseInfo EmulatorInstaller::fetchReleaseInfo(const Emulato
 
     QStringList assetNames;
     QHash<QString, QString> assetUrls;
+    QHash<QString, QString> assetDigests;  // GitHub Releases assets carry an
+                                            // optional "digest" field formatted as
+                                            // "sha256:<hex>". Empty if upstream
+                                            // didn't compute it.
     for (const auto& a : assets) {
         QJsonObject asset = a.toObject();
         QString name = asset["name"].toString();
         QString url = asset["browser_download_url"].toString();
+        QString digest = asset["digest"].toString();
         assetNames.append(name);
         assetUrls.insert(name, url);
+        if (digest.startsWith("sha256:", Qt::CaseInsensitive))
+            assetDigests.insert(name, digest.mid(7).toLower());
     }
 
     info.assetName = matchAsset(manifest.id, assetNames);
@@ -273,8 +337,10 @@ EmulatorInstaller::ReleaseInfo EmulatorInstaller::fetchReleaseInfo(const Emulato
     }
 
     info.downloadUrl = assetUrls[info.assetName];
+    info.sha256 = assetDigests.value(info.assetName);  // empty if not provided
     info.ok = true;
-    qInfo() << "[Installer] Selected asset:" << info.assetName;
+    qInfo() << "[Installer] Selected asset:" << info.assetName
+            << (info.sha256.isEmpty() ? "(no digest)" : "(digest provided)");
     return info;
 }
 
@@ -384,6 +450,13 @@ EmulatorInstaller::InstallResult EmulatorInstaller::installSync(
         return result;
     }
 
+    // 2.5. Verify integrity (no-op if upstream didn't provide a digest).
+    if (!verifySha256(tempFile, release.sha256)) {
+        QFile::remove(tempFile);
+        result.message = "Integrity check failed (SHA256 mismatch).";
+        return result;
+    }
+
     // 3. Extract, cleanup, quarantine
     result = postDownload(tempFile, installPath, release.tagName, release.publishedAt);
 
@@ -414,7 +487,8 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
             qInfo() << "[Installer] Using adapter-resolved direct download for" << manifest.id
                     << ":" << direct.assetName << "(" << direct.version << ")";
             startDirectDownload(direct.assetName, direct.downloadUrl,
-                                direct.version, direct.publishedAt, installPath);
+                                direct.version, direct.publishedAt,
+                                direct.sha256, installPath);
             return;
         }
     }
@@ -457,12 +531,16 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
 
                 QStringList assetNames;
                 QHash<QString, QString> assetUrls;
+                QHash<QString, QString> assetDigests;
                 for (const auto& a : assets) {
                     QJsonObject asset = a.toObject();
                     QString name = asset["name"].toString();
                     QString url = asset["browser_download_url"].toString();
+                    QString digest = asset["digest"].toString();
                     assetNames.append(name);
                     assetUrls.insert(name, url);
+                    if (digest.startsWith("sha256:", Qt::CaseInsensitive))
+                        assetDigests.insert(name, digest.mid(7).toLower());
                 }
 
                 QString assetName = matchAsset(emuId, assetNames);
@@ -475,11 +553,14 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
                 }
 
                 QString downloadUrl = assetUrls[assetName];
-                qInfo() << "[Installer] Selected asset:" << assetName;
+                QString sha256 = assetDigests.value(assetName);  // empty = skip verify
+                qInfo() << "[Installer] Selected asset:" << assetName
+                        << (sha256.isEmpty() ? "(no digest)" : "(digest provided)");
 
                 // Done with the API NAM \u2014 the download phase creates its own.
                 nam->deleteLater();
-                startDirectDownload(assetName, downloadUrl, tagName, publishedAt, installPath);
+                startDirectDownload(assetName, downloadUrl, tagName, publishedAt,
+                                    sha256, installPath);
             });
 }
 
@@ -491,6 +572,7 @@ void EmulatorInstaller::startDirectDownload(const QString& assetName,
                                               const QString& downloadUrl,
                                               const QString& tagName,
                                               const QString& publishedAt,
+                                              const QString& sha256,
                                               const QString& installPath) {
     QDir().mkpath(installPath);
     const QString tempFile = installPath + "/" + assetName;
@@ -534,7 +616,7 @@ void EmulatorInstaller::startDirectDownload(const QString& assetName,
             });
 
     connect(dlReply, &QNetworkReply::finished, this,
-            [this, dlReply, nam, file, tempFile, installPath, tagName, publishedAt]() {
+            [this, dlReply, nam, file, tempFile, installPath, tagName, publishedAt, sha256]() {
                 dlReply->deleteLater();
                 nam->deleteLater();
                 file->close();
@@ -550,8 +632,10 @@ void EmulatorInstaller::startDirectDownload(const QString& assetName,
                 qInfo() << "[Installer] Downloaded to" << tempFile
                         << "(" << QFileInfo(tempFile).size() / (1024 * 1024) << "MB)";
 
-                // Phase 3: Extract on background thread
-                emit progress(-1.0, "Extracting", "Extracting files...");
+                // Phase 2.5: Integrity check (no-op if no digest was provided
+                // upstream). Hashing a 100MB file is ~200ms on M-series and
+                // belongs on the worker thread together with extract.
+                emit progress(-1.0, "Verifying", "Verifying download...");
 
                 auto* watcher = new QFutureWatcher<InstallResult>(this);
                 connect(watcher, &QFutureWatcher<InstallResult>::finished, this,
@@ -567,7 +651,14 @@ void EmulatorInstaller::startDirectDownload(const QString& assetName,
                         });
 
                 QFuture<InstallResult> future = QtConcurrent::run(
-                    [tempFile, installPath, tagName, publishedAt]() -> InstallResult {
+                    [tempFile, installPath, tagName, publishedAt, sha256]() -> InstallResult {
+                        if (!verifySha256(tempFile, sha256)) {
+                            QFile::remove(tempFile);
+                            return InstallResult{
+                                false,
+                                "Integrity check failed (SHA256 mismatch).",
+                                tagName, publishedAt};
+                        }
                         return postDownload(tempFile, installPath, tagName, publishedAt);
                     });
 

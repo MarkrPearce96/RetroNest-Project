@@ -1,6 +1,5 @@
 #include "game_list_model.h"
 #include "core/cover_resolver.h"
-#include "core/paths.h"
 #include <QDir>
 #include <QFileInfo>
 

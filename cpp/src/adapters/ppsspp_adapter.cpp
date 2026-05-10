@@ -786,9 +786,24 @@ bool PPSSPPAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
                                  const QString& savesPath) {
     // Set portable memstick directory so PPSSPP reads config from our managed location.
     // On macOS, PPSSPP checks NSUserDefaults "UserPreferredMemoryStickDirectoryPath" first.
+    //
+    // Surface a failure of the `defaults` invocation: if PPSSPP ever
+    // rebrands its bundle id, sandboxes, or the binary is missing on a
+    // hardened OS install, this write goes nowhere and PPSSPP launches
+    // against the user's last memstick path. Without an exit-code check
+    // that mode of failure is silent — the user just sees their saves
+    // disappear.
 #if defined(Q_OS_MACOS)
-    QProcess::execute("defaults", {"write", "org.ppsspp.ppsspp",
-                                   "UserPreferredMemoryStickDirectoryPath", configDir()});
+    const int rc = QProcess::execute(
+        "defaults",
+        {"write", "org.ppsspp.ppsspp",
+         "UserPreferredMemoryStickDirectoryPath", configDir()});
+    if (rc != 0) {
+        qWarning() << "[PPSSPP] `defaults write` failed (exit code" << rc
+                   << "); PPSSPP may not pick up the managed memstick path."
+                   << "If saves don't appear under" << configDir()
+                   << "verify that org.ppsspp.ppsspp is still PPSSPP's bundle id.";
+    }
 #endif
 
     // Ensure PSP/SYSTEM directory exists (where PPSSPP reads ppsspp.ini + controls.ini)

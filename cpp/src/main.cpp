@@ -12,7 +12,6 @@
 
 #include "core/manifest_loader.h"
 #include "core/paths.h"
-#include "services/emulator_installer.h"
 #include "services/emulator_service.h"
 #include "core/database.h"
 #include "adapters/adapter_registry.h"

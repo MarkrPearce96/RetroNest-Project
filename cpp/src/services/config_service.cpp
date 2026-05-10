@@ -12,6 +12,9 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QMap>
+#include <QSaveFile>
+#include <memory>
+#include <vector>
 
 
 // Returns iniFilePath if non-empty, else adapter->configFilePath().
@@ -115,10 +118,22 @@ void ConfigService::saveSettings(const QString& emuId, const QVariantMap& values
         writesByFile[path].insert(section + "/" + key, it.value().toString());
     }
 
-    // Apply each group to its file. Cache only the default file (the cache
-    // existed for a single-file world; multi-file invalidates it for non-
-    // default files — load fresh and save).
-    bool ok = true;
+    // Two-phase commit across files:
+    //   Phase 1: load each file, apply its patches, write to a QSaveFile temp.
+    //   Phase 2: only if every Phase-1 write succeeds, commit() each in turn.
+    // A failed Phase-1 cancels every QSaveFile (their temps are deleted) and
+    // leaves all originals untouched. Phase-2 failure is logged per file —
+    // it can still leave a partial commit on disk if the OS fails midway, but
+    // multi-file rename-after-write is the closest practical approach to
+    // multi-file transactional writes on commodity filesystems.
+    struct PendingWrite {
+        QString path;
+        std::unique_ptr<QSaveFile> saver;
+    };
+    std::vector<PendingWrite> pending;
+    pending.reserve(writesByFile.size());
+    bool phase1Ok = true;
+
     for (auto it = writesByFile.constBegin(); it != writesByFile.constEnd(); ++it) {
         const QString& path = it.key();
         const auto& entries = it.value();
@@ -134,10 +149,40 @@ void ConfigService::saveSettings(const QString& emuId, const QVariantMap& values
             const QString key     = e.key().mid(lastSlash + 1);
             ini.setValue(section, key, e.value());
         }
-        if (!ini.save(path)) ok = false;
+
+        auto saver = std::make_unique<QSaveFile>(path);
+        if (!saver->open(QIODevice::WriteOnly | QIODevice::Text)) {
+            qWarning() << "[Settings] Phase-1 open failed for" << path;
+            phase1Ok = false;
+            break;
+        }
+        const QByteArray bytes = ini.serialize().toUtf8();
+        if (saver->write(bytes) != bytes.size()) {
+            qWarning() << "[Settings] Phase-1 write failed for" << path;
+            saver->cancelWriting();
+            phase1Ok = false;
+            break;
+        }
+        pending.push_back({path, std::move(saver)});
     }
 
-    emit statusMessage(ok ? "Settings saved." : "Failed to save settings.");
+    if (!phase1Ok) {
+        for (auto& p : pending)
+            p.saver->cancelWriting();
+        emit statusMessage("Failed to save settings (no changes written).");
+        return;
+    }
+
+    bool commitOk = true;
+    for (auto& p : pending) {
+        if (!p.saver->commit()) {
+            qWarning() << "[Settings] Phase-2 commit failed for" << p.path;
+            commitOk = false;
+        }
+    }
+
+    emit statusMessage(commitOk ? "Settings saved."
+                                : "Failed to save some settings (partial commit).");
 }
 
 void ConfigService::beginSettingsSession(const QString& emuId) {

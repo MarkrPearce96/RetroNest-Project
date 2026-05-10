@@ -11,7 +11,14 @@
 class IniFile {
 public:
     bool load(const QString& path);
+    /** Atomic save: writes to a temporary file and renames over `path` only
+     *  on a clean flush. A torn write (process killed mid-flush) leaves the
+     *  original file untouched instead of half-overwritten. */
     bool save(const QString& path);
+    /** Render the in-memory state to a QString in the same byte-for-byte form
+     *  save() would write. Used by callers that need to do their own
+     *  multi-file two-phase commit. */
+    QString serialize() const;
 
     QString value(const QString& section, const QString& key, const QString& defaultValue = {}) const;
     void setValue(const QString& section, const QString& key, const QString& value);
