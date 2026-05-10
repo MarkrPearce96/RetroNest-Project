@@ -111,6 +111,14 @@ private:
     bool m_inSession = false;
     bool m_enabled = true;
 
+    // User-Agent string built once per session at beginSession time so
+    // every HTTP request sends the same identifier. Format follows RA's
+    // recommended convention: "<ClientName>/<Version> <rcheevos-clause>"
+    // where the rcheevos clause is whatever rc_client_get_user_agent_clause
+    // returns (e.g. "rcheevos/12.3.0"). RA's server uses this to decide
+    // whether to validate hardcore unlocks for this frontend.
+    QByteArray m_userAgent;
+
     // Pending values stored so login/load-game chained callbacks can access them.
     QString m_pendingRomPath;
     int m_pendingConsoleId = 0;

@@ -867,6 +867,19 @@ Item {
                                 wrapMode: Text.WordWrap
                                 width: parent.width
                             }
+
+                            // Frontend-approval status. Shown until RetroNest
+                            // is registered on RA's approved-frontends list,
+                            // so users understand local hardcore unlocks
+                            // won't validate server-side yet.
+                            Text {
+                                text: "⚠ Unverified frontend — local hardcore unlocks will fire but won't count on your RA profile until RetroNest is approved by RetroAchievements."
+                                color: Qt.rgba(0.95, 0.55, 0.10, 1)   // amber
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                                width: parent.width
+                                topPadding: 4
+                            }
                         }
 
                         Rectangle {

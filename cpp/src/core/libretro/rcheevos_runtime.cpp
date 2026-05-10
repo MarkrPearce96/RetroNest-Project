@@ -54,12 +54,17 @@ void RcheevosRuntime::httpHandler(const rc_api_request_t* request,
     RcheevosRuntime* self = g_active;
     if (!self) return;  // Session already ended; silently drop.
 
+    // Capture the user-agent on the calling thread before hopping —
+    // implicit-shared QByteArray copy is cheap and avoids reading
+    // the member from a different thread.
+    const QByteArray userAgent = self->m_userAgent;
+
     // Hop to the main thread where m_nam lives.
     QMetaObject::invokeMethod(self, [self, url, postData, contentType,
-                                      callback, callback_data]() {
+                                      userAgent, callback, callback_data]() {
         QUrl qurl(url);
         QNetworkRequest req(qurl);
-        req.setHeader(QNetworkRequest::UserAgentHeader, "RetroNest/0.1");
+        req.setHeader(QNetworkRequest::UserAgentHeader, userAgent);
         if (!postData.isEmpty()) {
             req.setHeader(QNetworkRequest::ContentTypeHeader, contentType);
         }
@@ -391,6 +396,16 @@ bool RcheevosRuntime::beginSession(const CoreSymbols& syms,
     rc_client_set_hardcore_enabled(m_client, hardcore ? 1 : 0);
     rc_client_set_encore_mode_enabled(m_client, encore ? 1 : 0);
     rc_client_set_event_handler(m_client, eventHandler);
+
+    // Build the User-Agent string once per session. RA's server uses
+    // this to recognize the frontend; an unrecognized UA triggers the
+    // synthetic "Unknown Emulator" warning achievement and (post-
+    // approval) is what flips hardcore unlocks from "rejected" to
+    // "validated". The rcheevos clause version-stamps the rcheevos
+    // library so RA's server knows which protocol version we speak.
+    char uaClause[64] = {0};
+    rc_client_get_user_agent_clause(m_client, uaClause, sizeof(uaClause));
+    m_userAgent = QByteArray("RetroNest/0.1.0 ") + QByteArray(uaClause);
 
     if (token.isEmpty() || username.isEmpty()) {
         emit loginRequired();

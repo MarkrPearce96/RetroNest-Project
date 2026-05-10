@@ -29,6 +29,16 @@ FocusScope {
     property bool supportsLoadState: false
     property bool supportsFastForward: false
 
+    // Hardcore-mode lockdown. True when the user has hardcore enabled
+    // AND a libretro game with active rcheevos session is running. In
+    // this state, save state / load state / fast-forward are hidden
+    // because RA's hardcore rules forbid them — using any of these
+    // would invalidate the session's hardcore unlocks server-side.
+    // External-emulator games (PCSX2/DuckStation/etc) have their own
+    // RA integration handling these rules independently, so we don't
+    // gate them here.
+    property bool hardcoreLockdown: false
+
     // RA state (filled in async after open()).
     property int raGameId: 0
     property string raGameTitle: ""
@@ -49,6 +59,10 @@ FocusScope {
         supportsSaveState = gameInfo.supportsSaveState === true;
         supportsLoadState = gameInfo.supportsLoadState === true;
         supportsFastForward = gameInfo.supportsFastForward === true;
+        // One-shot evaluation: hardcore can't be toggled mid-session
+        // (settings live outside the game). Recompute every menu-open
+        // anyway so a settings round-trip between sessions picks it up.
+        hardcoreLockdown = app.raHardcoreMode() && app.libretroAchievementsReady();
         if (app.hasRACredentials() && gameInfo.title) {
             raGameTitle = gameInfo.title;
             app.raRequestGameIdLookup(gameInfo.title, gameInfo.system || "");
@@ -74,20 +88,23 @@ FocusScope {
         }
     }
 
-    // Visible icon-button list, rebuilt when raGameId or any of the
-    // capability flags change. Order: Resume → Save State → Load
-    // State → Fast Forward → Achievements → Save & Quit → Quit.
+    // Visible icon-button list, rebuilt when raGameId, the capability
+    // flags, or hardcoreLockdown change. Order: Resume → Save State →
+    // Load State → Fast Forward → Achievements → Save & Quit → Quit.
+    // Save / Load / Fast Forward are hidden in hardcore lockdown — RA
+    // forbids them during a hardcore session and using any would void
+    // unlocks for that session.
     property var hudModel: {
         var items = [
             { icon: "images/hud/resume.svg", label: "Resume", action: "resume", destructive: false }
         ];
-        if (supportsSaveState) {
+        if (supportsSaveState && !hardcoreLockdown) {
             items.push({ icon: "images/hud/save_state.svg", label: "Save State", action: "saveState", destructive: false });
         }
-        if (supportsLoadState) {
+        if (supportsLoadState && !hardcoreLockdown) {
             items.push({ icon: "images/hud/load_state.svg", label: "Load State", action: "loadState", destructive: false });
         }
-        if (supportsFastForward) {
+        if (supportsFastForward && !hardcoreLockdown) {
             items.push({ icon: "images/hud/fast_forward.svg", label: "Fast Forward", action: "fastForward", destructive: false });
         }
         if (raGameId > 0) {
@@ -104,6 +121,43 @@ FocusScope {
     onHudModelChanged: {
         if (focusIndex >= hudModel.length) focusIndex = hudModel.length - 1;
         if (focusIndex < 0) focusIndex = 0;
+    }
+
+    // ── Hardcore-mode indicator ──
+    // Sits just above the HUD pill while hardcore lockdown is active so
+    // the user understands why save state / load state / fast forward
+    // are missing from the menu.
+    Rectangle {
+        id: hardcoreBadge
+        visible: hardcoreLockdown
+        anchors.bottom: pill.top
+        anchors.bottomMargin: 8
+        anchors.horizontalCenter: parent.horizontalCenter
+        height: 26
+        width: hardcoreRow.implicitWidth + 16
+        radius: 13
+        color: Qt.rgba(0.45, 0.05, 0.05, 0.92)
+        border.color: Qt.rgba(1, 0.4, 0.3, 0.55)
+        border.width: 1
+
+        Row {
+            id: hardcoreRow
+            anchors.centerIn: parent
+            spacing: 6
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "🔒"
+                font.pixelSize: 12
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "HARDCORE MODE — save / load / fast-forward disabled"
+                color: "#ffffff"
+                font.pixelSize: 11
+                font.weight: Font.DemiBold
+                font.letterSpacing: 0.4
+            }
+        }
     }
 
     // ── HUD pill ──
