@@ -275,20 +275,29 @@ void RcheevosRuntime::loadGameCallback(int result, const char* errorMessage,
     auto* self = static_cast<RcheevosRuntime*>(userdata);
     if (result == RC_OK) {
         self->m_inSession = true;
+        // Derive counts from the SAME filtered walk the popup uses, so
+        // banner ("X / Y earned") and popup header always agree. The
+        // raw rc_client_get_user_game_summary numbers can include
+        // rcheevos's synthetic "Unknown Emulator" entry (id==0,
+        // 0 pts) — see achievementListVariants for why we strip it.
+        const rc_client_game_t* game = rc_client_get_game_info(client);
+        const QVariantList list = self->achievementListVariants();
+        int totalCount = list.size();
+        int unlockedCount = 0;
+        for (const QVariant& v : list)
+            if (v.toMap().value("earned").toBool()) ++unlockedCount;
+
         // Once-per-session info line. Worth keeping in production: the
         // achievement count + region total are the fastest way to spot
         // when a game hash matched the wrong RA entry, or when memory
         // regions failed to map (count=0 → unlocks can never fire even
         // though the session is technically "active").
-        const rc_client_game_t* game = rc_client_get_game_info(client);
-        rc_client_user_game_summary_t summary{};
-        rc_client_get_user_game_summary(client, &summary);
         qInfo().nospace()
             << "[rcheevos] Game loaded; achievement session active. "
             << "Title=\"" << (game && game->title ? game->title : "(unknown)")
             << "\" id=" << (game ? game->id : 0)
-            << " achievements=" << summary.num_core_achievements
-            << " unlocked=" << summary.num_unlocked_achievements
+            << " achievements=" << totalCount
+            << " unlocked=" << unlockedCount
             << " regions=" << self->m_regions.count
             << " region_total_bytes=" << self->m_regions.total_size;
 
@@ -296,14 +305,14 @@ void RcheevosRuntime::loadGameCallback(int result, const char* errorMessage,
         // game and how much of the achievement set they've already
         // earned. Skipped if the game has no achievements (no toast
         // adds value when there's nothing to track).
-        if (summary.num_core_achievements > 0) {
+        if (totalCount > 0) {
             char gameImg[256] = {0};
             if (game) rc_client_game_get_image_url(game, gameImg, sizeof(gameImg));
             const QString title = (game && game->title)
                 ? QString::fromUtf8(game->title) : QStringLiteral("Game");
             const QString desc = QStringLiteral("%1 / %2 achievements earned")
-                .arg(summary.num_unlocked_achievements)
-                .arg(summary.num_core_achievements);
+                .arg(unlockedCount)
+                .arg(totalCount);
             emit self->raInfoToast(QStringLiteral("ACHIEVEMENTS ACTIVE"),
                                    title, desc,
                                    QString::fromUtf8(gameImg), 5000);
@@ -449,6 +458,18 @@ QVariantList RcheevosRuntime::achievementListVariants() {
         for (uint32_t i = 0; i < bucket.num_achievements; ++i) {
             const rc_client_achievement_t* a = bucket.achievements[i];
             if (!a) continue;
+            // Skip rcheevos-synthetic entries. rc_client injects a
+            // pseudo-achievement (e.g. id=101000001 "Warning: Unknown
+            // Emulator", state=UNLOCKED, points=0) when the host
+            // frontend isn't on RA's approved-emulator list — its
+            // intent is to flag that hardcore unlocks won't validate
+            // server-side. The web API's GetGameInfoAndUserProgress
+            // endpoint doesn't return this entry, so it artificially
+            // inflated our local counts by 1 in both numerator and
+            // denominator. Real RA achievements always carry positive
+            // point values; synthetic ones use 0. That's the canonical
+            // distinguishing field.
+            if (a->points == 0) continue;
             QVariantMap m;
             m["id"] = QString::number(a->id);
             m["title"] = QString::fromUtf8(a->title ? a->title : "");
