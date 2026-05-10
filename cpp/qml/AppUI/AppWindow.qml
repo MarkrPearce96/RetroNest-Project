@@ -273,7 +273,7 @@ ApplicationWindow {
     SoundEffect {
         id: unlockSound
         source: "sounds/Libretro_Achievement_Unlock.wav"
-        volume: 0.7
+        volume: 1.0
     }
 
     // Persistent RA indicator stack — challenge / progress chips and
