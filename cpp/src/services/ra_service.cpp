@@ -193,7 +193,15 @@ void RAService::requestGameDetail(int raGameId) {
                 achMap["points"] = ach.points;
                 achMap["trueRatio"] = ach.trueRatio;
                 achMap["badgeName"] = ach.badgeName;
-                achMap["badgeUrl"] = "https://media.retroachievements.org/Badge/" + ach.badgeName + ".png";
+                // Match the libretro path's behavior: serve the locked
+                // (greyed-out) badge variant for unearned achievements,
+                // colored variant for earned ones. RA's CDN exposes
+                // both at <BadgeName>.png and <BadgeName>_lock.png so
+                // the URL is just a suffix flip.
+                achMap["badgeUrl"] = "https://media.retroachievements.org/Badge/"
+                                   + ach.badgeName
+                                   + (ach.earned ? QString() : QStringLiteral("_lock"))
+                                   + ".png";
                 achMap["type"] = ach.type;
                 achMap["missable"] = ach.missable;
                 achMap["earned"] = ach.earned;

@@ -140,7 +140,18 @@ Item {
     }
 
     onRaGameIdChanged: refresh()
-    onOpenChanged: { if (open) refresh(); }
+    // Re-opening the popup mid-session re-uses the previously loaded
+    // data when it's still current — avoids the "Loading achievements…"
+    // flash + redundant network call that the standalone-emulator
+    // (web API) path would otherwise hit on every menu open. Forces
+    // a refresh only when the popup has no data yet, was in a
+    // failed state (timeout), or the active game changed since
+    // the last load.
+    onOpenChanged: {
+        if (!open) return;
+        if (loadState !== "loaded" || achievements.length === 0)
+            refresh();
+    }
 
     Connections {
         target: app
