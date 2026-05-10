@@ -243,10 +243,18 @@ RAClient::GameDetail RAClient::fetchGameDetail(int gameId, QAtomicInt* cancelFla
         ach.badgeName = a["BadgeName"].toString();
         int achType = a["type"].toInt();
         ach.type = (achType == 0) ? "core" : "unofficial";
-        // RA's "type" int doubles as a STANDARD/MISSABLE/PROGRESSION/WIN
-        // tag (matches rcheevos's RC_CLIENT_ACHIEVEMENT_TYPE_*). Pull
-        // the missable bit out for the popup's filter tab.
-        ach.missable = (achType == 1);
+        // Missable detection — RA's API has shipped this field in two
+        // shapes across endpoint versions:
+        //   • `Type` (PascalCase) as a string: "missable", "progression",
+        //     "win_condition", or null. This is the current shape on
+        //     GetGameInfoAndUserProgress.
+        //   • `type` (lowercase) as an int matching rcheevos's
+        //     RC_CLIENT_ACHIEVEMENT_TYPE_* enum (1 = MISSABLE).
+        // Accept both so missable detection works regardless of which
+        // field RA returns for a given game/endpoint version.
+        const QString typeStr = a["Type"].toString();
+        ach.missable = (typeStr.compare("missable", Qt::CaseInsensitive) == 0)
+                       || (achType == 1);
 
         if (!a["DateEarnedHardcore"].toString().isEmpty()) {
             ach.earnedHardcore = true;

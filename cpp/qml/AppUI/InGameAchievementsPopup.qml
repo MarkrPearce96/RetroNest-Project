@@ -184,30 +184,21 @@ Item {
         border.color: Qt.rgba(1, 1, 1, 0.10)
         border.width: 1
 
-        Column {
+        // Tab bar at the top doubles as the popup header — each chip
+        // shows its own count ("All (59)", "Earned (3)" …) so the
+        // earlier "Achievements" title + "X / N earned" subtitle were
+        // pure redundancy. Dropping them tightens the layout and gives
+        // the list more breathing room without making the popup taller.
+        Item {
             id: headerCol
             anchors {
                 left: parent.left; right: parent.right; top: parent.top
                 margins: 14
             }
-            spacing: 6
+            height: tabRow.implicitHeight
 
-            Text {
-                text: "Achievements"
-                color: "#ffffff"
-                font.pixelSize: 14
-                font.weight: Font.DemiBold
-            }
-            Text {
-                visible: root.achievements.length > 0
-                text: root.totalEarned + " / " + root.achievements.length + " earned"
-                color: Qt.rgba(1, 1, 1, 0.5)
-                font.pixelSize: 11
-            }
-
-            // Tab bar — clickable buttons + arrow-key driven via
-            // nextTab() / prevTab() which InGameMenu wires to L/R.
             Row {
+                id: tabRow
                 spacing: 4
                 Repeater {
                     model: root.tabLabels
