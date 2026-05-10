@@ -69,6 +69,10 @@ public slots:
     void notifyInfoToast(const QString& header, const QString& title,
                          const QString& description,
                          const QString& imageUrl, int durationMs);
+    /** Indicator-bar notifier — challenge/progress chips and
+     *  connection status. Forwarded from RcheevosRuntime via
+     *  GameSession; QML drives RAIndicatorBar.qml from this. */
+    void notifyIndicator(int kind, const QVariantMap& data);
 
 signals:
     void loginCompleted(bool success, const QString& message);
@@ -88,6 +92,8 @@ signals:
     void infoToast(const QString& header, const QString& title,
                    const QString& description, const QString& imageUrl,
                    int durationMs);
+    /** Indicator-bar emit — re-emitted from notifyIndicator for QML. */
+    void indicator(int kind, const QVariantMap& data);
 
 private:
     Database* m_db;

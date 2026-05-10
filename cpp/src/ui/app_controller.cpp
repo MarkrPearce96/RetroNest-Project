@@ -57,6 +57,11 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     connect(m_gameService.session(), &GameSession::raInfoToast,
             &m_raService, &RAService::notifyInfoToast,
             Qt::QueuedConnection);
+    // And for the indicator-bar updates (challenge/progress chips,
+    // connection status).
+    connect(m_gameService.session(), &GameSession::raIndicator,
+            &m_raService, &RAService::notifyIndicator,
+            Qt::QueuedConnection);
 
     connect(&m_gameService, &GameService::statusMessage, this, &AppController::setStatus);
     connect(&m_gameService, &GameService::gameRunningChanged, this, &AppController::gameRunningChanged);
@@ -130,6 +135,8 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
             this, &AppController::raAchievementUnlocked);
     connect(&m_raService, &RAService::infoToast,
             this, &AppController::raInfoToast);
+    connect(&m_raService, &RAService::indicator,
+            this, &AppController::raIndicator);
 }
 
 // ── Game Session ───────────────────────────────────────────

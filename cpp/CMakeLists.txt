@@ -369,6 +369,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/InGameAchievementsPopup.qml
         qml/AppUI/ActionToast.qml
         qml/AppUI/AchievementToast.qml
+        qml/AppUI/RAIndicatorBar.qml
         qml/AppUI/ResumeStateDialog.qml
         qml/AppUI/RetroAchievementsSettings.qml
         qml/AppUI/AchievementsPage.qml

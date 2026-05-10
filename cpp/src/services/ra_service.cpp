@@ -384,6 +384,10 @@ void RAService::notifyInfoToast(const QString& header, const QString& title,
     emit infoToast(header, title, description, imageUrl, durationMs);
 }
 
+void RAService::notifyIndicator(int kind, const QVariantMap& data) {
+    emit indicator(kind, data);
+}
+
 // ── Settings ──
 
 bool RAService::hardcoreMode() const { return m_creds.hardcoreMode; }

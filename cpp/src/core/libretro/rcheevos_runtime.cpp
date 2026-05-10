@@ -202,6 +202,66 @@ void RcheevosRuntime::eventHandler(const rc_client_event_t* ev, rc_client_t* cli
         break;
     }
 
+    // ── Persistent indicator-bar events ────────────────────────────────
+    // All of these flow through the single raIndicator(kind, data) signal
+    // so QML can drive a single RAIndicatorBar component without
+    // 7-deep signal-forward plumbing.
+    case RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_SHOW: {
+        if (!ev->achievement) break;
+        QVariantMap data;
+        data["id"] = QString::number(ev->achievement->id);
+        data["title"] = QString::fromUtf8(ev->achievement->title
+                                          ? ev->achievement->title : "");
+        // Locked variant: the user is mid-challenge, hasn't earned it.
+        char buf[256] = {0};
+        rc_client_achievement_get_image_url(ev->achievement,
+                                            RC_CLIENT_ACHIEVEMENT_STATE_ACTIVE,
+                                            buf, sizeof(buf));
+        data["badgeUrl"] = QString::fromUtf8(buf);
+        emit g_active->raIndicator(static_cast<int>(ev->type), data);
+        break;
+    }
+    case RC_CLIENT_EVENT_ACHIEVEMENT_CHALLENGE_INDICATOR_HIDE: {
+        if (!ev->achievement) break;
+        QVariantMap data;
+        data["id"] = QString::number(ev->achievement->id);
+        emit g_active->raIndicator(static_cast<int>(ev->type), data);
+        break;
+    }
+    case RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_SHOW:
+    case RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_UPDATE: {
+        if (!ev->achievement) break;
+        QVariantMap data;
+        data["id"] = QString::number(ev->achievement->id);
+        data["title"] = QString::fromUtf8(ev->achievement->title
+                                          ? ev->achievement->title : "");
+        data["measured"] = QString::fromUtf8(ev->achievement->measured_progress);
+        char buf[256] = {0};
+        rc_client_achievement_get_image_url(ev->achievement,
+                                            RC_CLIENT_ACHIEVEMENT_STATE_ACTIVE,
+                                            buf, sizeof(buf));
+        data["badgeUrl"] = QString::fromUtf8(buf);
+        emit g_active->raIndicator(static_cast<int>(ev->type), data);
+        break;
+    }
+    case RC_CLIENT_EVENT_ACHIEVEMENT_PROGRESS_INDICATOR_HIDE: {
+        if (!ev->achievement) break;
+        QVariantMap data;
+        data["id"] = QString::number(ev->achievement->id);
+        emit g_active->raIndicator(static_cast<int>(ev->type), data);
+        break;
+    }
+    case RC_CLIENT_EVENT_DISCONNECTED:
+    case RC_CLIENT_EVENT_RECONNECTED: {
+        // No payload — QML just toggles the connection-status chip.
+        emit g_active->raIndicator(static_cast<int>(ev->type), QVariantMap{});
+        qInfo().noquote() << "[rcheevos]"
+            << (ev->type == RC_CLIENT_EVENT_DISCONNECTED
+                ? "Disconnected — pending unlocks queued"
+                : "Reconnected — pending unlocks flushed");
+        break;
+    }
+
     default:
         break;
     }

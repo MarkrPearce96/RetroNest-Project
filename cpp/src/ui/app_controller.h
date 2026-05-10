@@ -238,6 +238,11 @@ signals:
     void raInfoToast(const QString& header, const QString& title,
                      const QString& description, const QString& imageUrl,
                      int durationMs);
+    /** Indicator-bar update forwarded from RAService — challenge /
+     *  progress chips and connection-status banner. `kind` matches
+     *  rc_client event-type integers; `data` carries the per-event
+     *  payload. QML drives RAIndicatorBar from this. */
+    void raIndicator(int kind, const QVariantMap& data);
 
 private:
     void setStatus(const QString& msg);

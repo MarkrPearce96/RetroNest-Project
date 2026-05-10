@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QNetworkAccessManager>
 #include <QString>
+#include <QVariantMap>
 #include <rc_client.h>
 #include <rc_libretro.h>
 #include "core_loader.h"
@@ -59,6 +60,16 @@ signals:
     void raInfoToast(const QString& header, const QString& title,
                      const QString& description, const QString& imageUrl,
                      int durationMs);
+    /** Persistent indicator-bar updates: challenge-active chips,
+     *  progress-tracking chips, and connection-status banner. `kind`
+     *  matches the rc_client event-type integer (5=ChallengeShow,
+     *  6=ChallengeHide, 7=ProgressShow, 8=ProgressHide,
+     *  9=ProgressUpdate, 17=Disconnected, 18=Reconnected). `data`
+     *  carries per-event fields: id, title, badgeUrl, measured. QML
+     *  dispatches in RAIndicatorBar.qml. Single-signal payload
+     *  approach avoids 7-fold boilerplate plumbing through
+     *  GameSession → RAService → AppController. */
+    void raIndicator(int kind, const QVariantMap& data);
     void loginRequired();
 
 private:

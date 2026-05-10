@@ -276,6 +276,18 @@ ApplicationWindow {
         volume: 0.7
     }
 
+    // Persistent RA indicator stack — challenge / progress chips and
+    // disconnection banner. Anchored bottom-left so it doesn't fight
+    // the achievement toast (top-right) or the small action toasts.
+    RAIndicatorBar {
+        id: raIndicators
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: 24
+        anchors.bottomMargin: 24
+        z: 220
+    }
+
     ResumeStateDialog {
         id: resumeStateDialog
 
@@ -341,6 +353,11 @@ ApplicationWindow {
         function onRaInfoToast(header, title, description, imageUrl, durationMs) {
             achievementToast.showWithHeader(header, title, description,
                                              imageUrl, durationMs)
+        }
+        // Persistent indicator updates — RAIndicatorBar dispatches
+        // internally based on `kind` (rc_client event-type integers).
+        function onRaIndicator(kind, data) {
+            raIndicators.dispatch(kind, data)
         }
     }
 
@@ -738,6 +755,9 @@ ApplicationWindow {
             // Restore focus to the theme page so controller/keyboard nav works
             if (mainStack.currentItem)
                 mainStack.currentItem.forceActiveFocus();
+            // Drop any active challenge / progress chips so they don't
+            // bleed into the next session.
+            raIndicators.clear()
         }
     }
 

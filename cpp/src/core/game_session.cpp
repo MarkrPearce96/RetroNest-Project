@@ -196,6 +196,11 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     connect(&rt->rcheevos(), &RcheevosRuntime::raInfoToast,
             this, &GameSession::raInfoToast,
             Qt::QueuedConnection);
+    // And for the indicator-bar updates (challenge/progress chips,
+    // connection status).
+    connect(&rt->rcheevos(), &RcheevosRuntime::raIndicator,
+            this, &GameSession::raIndicator,
+            Qt::QueuedConnection);
 
     // Wire frontend settings changes → libretroFrontendChanged so QML
     // bindings on libretroAspectMode / libretroIntegerScale update live.

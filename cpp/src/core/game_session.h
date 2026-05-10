@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QProcess>
 #include <QString>
+#include <QVariantMap>
 
 class EmulatorAdapter;
 class LibretroAdapter;
@@ -127,6 +128,11 @@ signals:
     void raInfoToast(const QString& header, const QString& title,
                      const QString& description, const QString& imageUrl,
                      int durationMs);
+    /** Forwarded from the in-process rcheevos runtime — persistent
+     *  indicator-bar updates (challenge/progress chips + connection
+     *  status). See RcheevosRuntime::raIndicator for the kind/data
+     *  contract. */
+    void raIndicator(int kind, const QVariantMap& data);
 
 private slots:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
