@@ -228,11 +228,22 @@ void CoreRuntime::runLoop() {
     using clock = std::chrono::steady_clock;
     auto next = clock::now();
     while (!m_stopRequested.load()) {
+        bool wasPaused = false;
         {
             std::unique_lock<std::mutex> lk(m_pauseMx);
-            m_pauseCv.wait(lk, [this] { return !m_paused.load() || m_stopRequested.load(); });
+            if (m_paused.load()) {
+                wasPaused = true;
+                m_pauseCv.wait(lk, [this] { return !m_paused.load() || m_stopRequested.load(); });
+            }
         }
         if (m_stopRequested.load()) break;
+        // Re-anchor the frame deadline after a pause. Otherwise `next`
+        // is still set to a moment from before the pause, sleep_until
+        // returns immediately for hundreds of iterations, and the burst
+        // of retro_run() calls floods AudioSink → SDL_QueueAudio with
+        // seconds of samples that then play out at 1× — the resume
+        // audio-lag the user hears.
+        if (wasPaused) next = clock::now();
         // Apply a load-state request BEFORE retro_run so the next frame
         // emits the loaded state's video/audio (post-run flush would
         // discard the just-rendered frame).
