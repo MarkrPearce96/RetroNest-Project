@@ -32,19 +32,24 @@ public:
                                 bool enabled, bool hardcore,
                                 bool notifications, bool sounds) override;
 
-    // Override from Task 5.2's virtual on EmulatorAdapter.
-    // NOTE: returns nullptr when no game is running (m_runtime == nullptr).
-    // The settings UI will show defaults until a game has run at least once.
-    // Task 8.2's GameSession::startLibretro will call prepareRuntime() early
-    // enough to mitigate this v1 limitation.
-    OptionsStore* libretroOptionsStore() override;
+    /** Typed downcast — overrides EmulatorAdapter's nullptr default. */
+    LibretroAdapter* asLibretro() override { return this; }
+
+    // Returns the live runtime's OptionsStore when a game is running; otherwise
+    // a persistent fallback store owned by this adapter, lazily loaded from
+    // optionsJsonPath() and seeded with declared options synthesized from
+    // settingsSchema(). The fallback lets the settings dialog read & write
+    // libretro options without requiring a game to have run first — both
+    // stores ultimately persist to the same options.json on disk, so the
+    // runtime sees the user's edits on next launch.
+    virtual OptionsStore* libretroOptionsStore();
 
     // Return the frontend settings store for this adapter.
     // Lazily initialised on first call; loads from frontend.json using the
     // defaults returned by frontendSettingDefaults(). Never returns nullptr
     // after the first call (unlike libretroOptionsStore which requires a live
     // runtime — frontend settings are independent of the core thread).
-    FrontendSettingsStore* frontendSettingsStore() override;
+    virtual FrontendSettingsStore* frontendSettingsStore();
 
     // Used by GameSession when manifest.backend == "libretro".
     CoreRuntime* runtime() { return m_runtime.get(); }
@@ -88,4 +93,9 @@ protected:
 private:
     std::unique_ptr<CoreRuntime> m_runtime;
     std::unique_ptr<FrontendSettingsStore> m_frontendSettings;
+    /** Fallback OptionsStore used when m_runtime is null. Loaded from
+     *  optionsJsonPath() with declared options synthesized from
+     *  settingsSchema(). Reset whenever m_runtime is created or destroyed
+     *  so the next no-runtime access reloads fresh values from disk. */
+    std::unique_ptr<OptionsStore> m_persistentOptions;
 };

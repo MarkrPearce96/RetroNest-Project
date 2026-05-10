@@ -1,6 +1,7 @@
 #include "libretro_adapter.h"
 #include "core/paths.h"
 #include "core/ini_file.h"
+#include "core/setting_def.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QNetworkAccessManager>
@@ -135,7 +136,31 @@ QString LibretroAdapter::findResumeFile(const QString& /*serial*/) const {
 }
 
 OptionsStore* LibretroAdapter::libretroOptionsStore() {
-    return m_runtime ? &m_runtime->options() : nullptr;
+    // Live runtime owns its own store and is the source of truth while a
+    // game is running.
+    if (m_runtime) return &m_runtime->options();
+
+    // Fallback: lazy-init a persistent store loaded from options.json.
+    // Declared options are synthesized from the SettingDef schema so the
+    // settings dialog can read & write libretro options without a running
+    // core. Both stores share the same JSON file on disk, so the runtime
+    // will see these edits on its next launch.
+    if (!m_persistentOptions) {
+        m_persistentOptions = std::make_unique<OptionsStore>();
+        QVector<CoreOption> declared;
+        for (const auto& def : settingsSchema()) {
+            if (def.storage != SettingDef::Storage::LibretroOption) continue;
+            CoreOption opt;
+            opt.key = def.key;
+            opt.label = def.label;
+            opt.defaultValue = def.defaultValue;
+            for (const auto& pair : def.options)
+                opt.values.append(pair.second);
+            declared.append(opt);
+        }
+        m_persistentOptions->load(optionsJsonPath(), declared);
+    }
+    return m_persistentOptions.get();
 }
 
 FrontendSettingsStore* LibretroAdapter::frontendSettingsStore() {
@@ -148,10 +173,17 @@ FrontendSettingsStore* LibretroAdapter::frontendSettingsStore() {
 
 void LibretroAdapter::prepareRuntime() {
     if (!m_runtime) m_runtime = std::make_unique<CoreRuntime>();
+    // Drop the no-runtime fallback store: the runtime now owns the
+    // authoritative store. Next no-runtime access (after releaseRuntime)
+    // will lazily reload from disk and pick up any edits the runtime made.
+    m_persistentOptions.reset();
 }
 
 void LibretroAdapter::releaseRuntime() {
     m_runtime.reset();
+    // Force reload-on-next-access so we don't return stale in-memory state
+    // (the runtime may have written new values to options.json before exit).
+    m_persistentOptions.reset();
 }
 
 void LibretroAdapter::patchRetroAchievements(const QString& /*username*/,

@@ -7,7 +7,6 @@
 #include "core/libretro/input_router.h"
 #include "core/libretro/rcheevos_runtime.h"
 #include "core/sdl_input_manager.h"
-#include "services/ra_service.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -142,18 +141,16 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     cfg.saveDir = Paths::emulatorDataDir(manifest.id, systemId);
     cfg.optionsJsonPath = Paths::emulatorsDir("libretro") + "/" + lr->coreId() + "/options.json";
 
-    // Fix 3: Populate RA fields
     cfg.raConsoleId = lr->raConsoleId(systemId);
-    if (m_raService) {
-        cfg.raUsername = m_raService->credentials().username;
-        if (m_raService->credentials().loginToken.isEmpty()
-                && !m_raService->credentials().apiKey.isEmpty()) {
+    if (m_raConfig.valid) {
+        cfg.raUsername = m_raConfig.username;
+        if (m_raConfig.loginToken.isEmpty() && !m_raConfig.apiKey.isEmpty()) {
             qInfo() << "[GameSession] No libretro RA login token; achievement unlocks will not "
                        "be sent. Sign in via Settings -> RetroAchievements -> Sign in for "
                        "libretro achievements.";
         }
-        cfg.raToken    = m_raService->credentials().loginToken;
-        cfg.raHardcore = m_raService->hardcoreMode();
+        cfg.raToken    = m_raConfig.loginToken;
+        cfg.raHardcore = m_raConfig.hardcore;
     }
 
     // Fix 4: Populate resume state path
@@ -188,12 +185,12 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     connect(rt, &CoreRuntime::frameReady, this, &GameSession::frameReady,
             Qt::UniqueConnection);
 
-    // Fix 5: Forward achievement unlocks to RAService
-    if (m_raService) {
-        connect(&rt->rcheevos(), &RcheevosRuntime::achievementUnlocked,
-                m_raService, &RAService::notifyAchievementUnlocked,
-                Qt::QueuedConnection);
-    }
+    // Forward achievement unlocks via our own signal — services-layer wiring
+    // reconnects this to RAService::notifyAchievementUnlocked. Keeps core/
+    // free of services/ includes.
+    connect(&rt->rcheevos(), &RcheevosRuntime::achievementUnlocked,
+            this, &GameSession::achievementUnlocked,
+            Qt::QueuedConnection);
 
     // Wire frontend settings changes → libretroFrontendChanged so QML
     // bindings on libretroAspectMode / libretroIntegerScale update live.

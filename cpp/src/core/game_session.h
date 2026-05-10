@@ -9,8 +9,21 @@
 class EmulatorAdapter;
 class LibretroAdapter;
 class SdlInputManager;
-class RAService;
 class FrontendSettingsStore;
+
+/**
+ * LibretroRaConfig — RetroAchievements values needed by the libretro start
+ * path. Populated by services before each start() call. Lives in core so
+ * GameSession does not need to depend on services/ra_service.h.
+ */
+struct LibretroRaConfig {
+    QString username;
+    QString loginToken;   // libretro/rcheevos session token
+    QString apiKey;       // web API key (used only for the "no token" warning)
+    bool hardcore = false;
+    int  consoleId = 0;   // populated per-launch from the adapter
+    bool valid = false;   // false → no RA wiring; treated as "not signed in"
+};
 
 /**
  * GameSession — manages an async emulator process or libretro core.
@@ -29,8 +42,10 @@ public:
     /** Wire up the SDL input manager (called once at app startup). */
     void setSdlInputManager(SdlInputManager* mgr) { m_sdlInputManager = mgr; }
 
-    /** Wire up the RA service (called once at app startup). */
-    void setRaService(RAService* svc) { m_raService = svc; }
+    /** Provide the RA values for the next libretro start. Caller fills the
+     *  struct from its RA service; GameSession itself does not depend on
+     *  services/. Set `.valid = true` to wire achievements. */
+    void setLibretroRaConfig(const LibretroRaConfig& cfg) { m_raConfig = cfg; }
 
     /** Launch the emulator. Returns false if already running or start fails. */
     bool start(const EmulatorManifest& manifest,
@@ -96,6 +111,15 @@ signals:
     void frameReady(const QImage& frame);
     /** Emitted when a libretro frontend setting (aspect mode, integer scale) changes. */
     void libretroFrontendChanged();
+    /** Forwarded from the in-process rcheevos runtime (libretro path only).
+     *  GameService re-emits this onto RAService::notifyAchievementUnlocked
+     *  via a queued connection set up in service-layer wiring — keeps
+     *  core/ free of services/ includes.
+     *  `imageUrl` is the unlocked-state badge URL provided by rc_client;
+     *  may be empty if the runtime couldn't resolve it. */
+    void achievementUnlocked(const QString& id, const QString& title,
+                             const QString& description,
+                             const QString& imageUrl);
 
 private slots:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
@@ -125,5 +149,5 @@ private:
     bool m_libretroFastForward = false;
 
     SdlInputManager* m_sdlInputManager = nullptr;
-    RAService* m_raService = nullptr;
+    LibretroRaConfig m_raConfig;
 };

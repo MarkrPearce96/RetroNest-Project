@@ -1,7 +1,7 @@
 #include "generic_settings_page.h"
 #include "adapters/emulator_adapter.h"
+#include "adapters/libretro/libretro_adapter.h"
 #include "core/bitmask_helpers.h"
-#include "core/libretro/frontend_settings_store.h"
 #include "core/libretro/options_store.h"
 #include "core/setting_dependency.h"
 #include "emulator_settings_dialog_base.h"
@@ -44,12 +44,14 @@ static QString readSetting(const SettingDef &def, EmulatorAdapter *adapter,
                            const std::function<QString(const QString &,
                                                        const QString &)> &iniRead) {
     if (def.storage == SettingDef::Storage::LibretroOption) {
-        if (auto *store = adapter ? adapter->libretroOptionsStore() : nullptr)
+        auto *lr = adapter ? adapter->asLibretro() : nullptr;
+        if (auto *store = lr ? lr->libretroOptionsStore() : nullptr)
             return store->get(def.key);
         return def.defaultValue;
     }
     if (def.storage == SettingDef::Storage::FrontendSetting) {
-        if (auto *store = adapter ? adapter->frontendSettingsStore() : nullptr)
+        auto *lr = adapter ? adapter->asLibretro() : nullptr;
+        if (auto *store = lr ? lr->frontendSettingsStore() : nullptr)
             return store->get(def.key);
         return def.defaultValue;
     }
@@ -66,12 +68,14 @@ static void writeSetting(const SettingDef &def, EmulatorAdapter *adapter,
                                                   const QString &,
                                                   const QString &)> &iniWrite) {
     if (def.storage == SettingDef::Storage::LibretroOption) {
-        if (auto *store = adapter ? adapter->libretroOptionsStore() : nullptr)
+        auto *lr = adapter ? adapter->asLibretro() : nullptr;
+        if (auto *store = lr ? lr->libretroOptionsStore() : nullptr)
             store->set(def.key, value);
         return;
     }
     if (def.storage == SettingDef::Storage::FrontendSetting) {
-        if (auto *store = adapter ? adapter->frontendSettingsStore() : nullptr)
+        auto *lr = adapter ? adapter->asLibretro() : nullptr;
+        if (auto *store = lr ? lr->frontendSettingsStore() : nullptr)
             store->set(def.key, value);
         return;
     }

@@ -16,6 +16,7 @@
 
 class IniFile;
 class QObject;
+class LibretroAdapter;  // typed downcast target; see asLibretro() below
 
 /**
  * ResolutionOption — a friendly label + INI value pair for resolution selection.
@@ -184,20 +185,20 @@ public:
     virtual QString configFilePath() const { return {}; }
 
     /**
-     * Return the in-process libretro options store for this adapter, or nullptr
-     * if this adapter is not libretro-backed. Overridden by LibretroAdapter.
-     * Used by GenericSettingsPage to read/write SettingDefs whose storage is
-     * SettingDef::Storage::LibretroOption.
+     * Typed downcast to LibretroAdapter — the only concrete subtype that
+     * needs special handling at the EmulatorAdapter* call site (e.g.
+     * GenericSettingsPage routing LibretroOption / FrontendSetting writes).
+     *
+     * Returns nullptr for native-process adapters; LibretroAdapter overrides
+     * to return `this`. Prefer this over `dynamic_cast` — it avoids RTTI
+     * and makes the libretro subtype an explicit part of the interface.
+     *
+     * libretroOptionsStore() / frontendSettingsStore() used to live on this
+     * base as nullptr-returning virtuals; native adapters never overrode
+     * them, so they were just noise. They now live on LibretroAdapter only;
+     * call sites that hold an EmulatorAdapter* go through asLibretro().
      */
-    virtual class OptionsStore* libretroOptionsStore() { return nullptr; }
-
-    /**
-     * Return the frontend settings store for this adapter, or nullptr if not
-     * a libretro-backed adapter. Overridden by LibretroAdapter.
-     * Used by GenericSettingsPage to read/write SettingDefs whose storage is
-     * SettingDef::Storage::FrontendSetting.
-     */
-    virtual class FrontendSettingsStore* frontendSettingsStore() { return nullptr; }
+    virtual LibretroAdapter* asLibretro() { return nullptr; }
 
     /**
      * Return the path to the config file where controller bindings are stored.
@@ -405,6 +406,7 @@ public:
         QString publishedAt;   // ISO 8601 — for update detection (may be empty if version alone is unique)
         QString assetName;     // filename for the downloaded file (e.g. "dolphin-2603a-universal.dmg")
         QString downloadUrl;   // direct URL to download
+        QString sha256;        // optional — empty = skip verification; lower-case hex
     };
 
     /**
