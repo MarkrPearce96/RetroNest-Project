@@ -155,10 +155,11 @@ void RcheevosRuntime::loadGameCallback(int result, const char* errorMessage,
     auto* self = static_cast<RcheevosRuntime*>(userdata);
     if (result == RC_OK) {
         self->m_inSession = true;
-        // Diagnostics: log the identified game's title and how many
-        // achievements + memory regions are live. Zero-count on either
-        // side means unlocks can never fire even though the session is
-        // technically "active".
+        // Once-per-session info line. Worth keeping in production: the
+        // achievement count + region total are the fastest way to spot
+        // when a game hash matched the wrong RA entry, or when memory
+        // regions failed to map (count=0 → unlocks can never fire even
+        // though the session is technically "active").
         const rc_client_game_t* game = rc_client_get_game_info(client);
         rc_client_user_game_summary_t summary{};
         rc_client_get_user_game_summary(client, &summary);
