@@ -67,7 +67,6 @@ public:
 
     // macOS Space switching (show our app over fullscreen emulator)
     Q_INVOKABLE void activateApp();
-    Q_INVOKABLE void activateEmulator();
 
     // In-game menu panel (external emulators)
     Q_INVOKABLE void openInGameMenuPanel();
@@ -225,6 +224,13 @@ signals:
     void raUserGamesReady(const QVariantList& games);
     void raGameDetailReady(int raGameId, const QVariantMap& detail);
     void raGameIdLookupReady(const QString& title, int raGameId);
+    /** Forwarded from RAService when an in-process libretro achievement
+     *  triggers. QML uses this to render the unlock toast. `imageUrl`
+     *  is the unlocked-state badge URL provided by rc_client (empty if
+     *  the runtime couldn't resolve it). */
+    void raAchievementUnlocked(const QString& id, const QString& title,
+                               const QString& description,
+                               const QString& imageUrl);
 
 private:
     void setStatus(const QString& msg);

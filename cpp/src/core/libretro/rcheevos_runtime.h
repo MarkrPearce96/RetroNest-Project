@@ -3,7 +3,10 @@
 #include <QNetworkAccessManager>
 #include <QString>
 #include <rc_client.h>
+#include <rc_libretro.h>
 #include "core_loader.h"
+
+struct retro_memory_map;
 
 /**
  * In-process RetroAchievements client. Lives on the core thread; emits
@@ -23,13 +26,19 @@ public:
     /** Begin a session for the loaded game. Initiates async login + game-load
      *  chain via rc_client. Returns false (and emits loginRequired) if no
      *  credentials are available. m_inSession is set true only after both
-     *  login and game-load succeed. */
+     *  login and game-load succeed.
+     *
+     *  `memoryMap` may be nullptr (or a zero-descriptor map): rc_libretro
+     *  falls back to the core's retro_get_memory_data callbacks based on
+     *  console_id. Cores that send SET_MEMORY_MAPS (e.g. mGBA) need it for
+     *  achievements that read outside SYSTEM_RAM (e.g. GBA IWRAM). */
     bool beginSession(const CoreSymbols& syms,
                       const QString& romPath,
                       int raConsoleId,
                       const QString& username,
                       const QString& token,
-                      bool hardcore);
+                      bool hardcore,
+                      const retro_memory_map* memoryMap);
     void endSession();
     /** Per-frame tick. Cheap when no session is active or RA is disabled. */
     void frame();
@@ -40,7 +49,8 @@ public:
 
 signals:
     void achievementUnlocked(const QString& id, const QString& title,
-                             const QString& description);
+                             const QString& description,
+                             const QString& imageUrl);
     void loginRequired();
 
 private:
@@ -64,6 +74,12 @@ private:
     // Pending values stored so login/load-game chained callbacks can access them.
     QString m_pendingRomPath;
     int m_pendingConsoleId = 0;
+
+    // Memory regions populated by rc_libretro_memory_init from the core's
+    // SET_MEMORY_MAPS descriptors (or by retro_get_memory_data fallback).
+    // m_regionsInited tracks whether a destroy() is needed on session end.
+    rc_libretro_memory_regions_t m_regions{};
+    bool m_regionsInited = false;
 
     // QNetworkAccessManager is not thread-safe; it must be used on its
     // construction thread (main thread). Constructed here on the main thread.

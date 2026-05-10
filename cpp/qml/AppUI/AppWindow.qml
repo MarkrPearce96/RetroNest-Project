@@ -252,6 +252,18 @@ ApplicationWindow {
         }
     }
 
+    // Achievement-unlock toast lives outside the small-action Column so
+    // it can be wider/taller without disturbing the FF / save / load
+    // pills. Anchored to the same top-right corner.
+    AchievementToast {
+        id: achievementToast
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 32
+        anchors.rightMargin: 32
+        z: 220
+    }
+
     ResumeStateDialog {
         id: resumeStateDialog
 
@@ -295,6 +307,16 @@ ApplicationWindow {
             raLoginPrompt.visible = true
             app.setCursorVisible(true)
             raLoginPrompt.forceActiveFocus()
+        }
+    }
+
+    // RA achievement unlock toast — fires when an in-process libretro
+    // core triggers an achievement. Shows a richer top-right card with
+    // the achievement title + description for ~6 s.
+    Connections {
+        target: app
+        function onRaAchievementUnlocked(id, title, description, imageUrl) {
+            achievementToast.show(title, description, imageUrl)
         }
     }
 

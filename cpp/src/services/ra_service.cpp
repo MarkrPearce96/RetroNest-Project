@@ -372,9 +372,10 @@ int RAService::matchRaGameIdSync(const QString& title, const QString& system) {
 // ── In-Process Achievement Unlock ──
 
 void RAService::notifyAchievementUnlocked(const QString& id, const QString& title,
-                                          const QString& description) {
+                                          const QString& description,
+                                          const QString& imageUrl) {
     qInfo() << "[RAService] Achievement unlocked:" << id << title;
-    emit achievementUnlocked(id, title, description);
+    emit achievementUnlocked(id, title, description, imageUrl);
 }
 
 // ── Settings ──

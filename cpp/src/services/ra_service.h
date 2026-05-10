@@ -61,7 +61,8 @@ public slots:
      *  achievement unlocks. Forwards to the achievementUnlocked signal
      *  that the toast UI listens to. */
     void notifyAchievementUnlocked(const QString& id, const QString& title,
-                                   const QString& description);
+                                   const QString& description,
+                                   const QString& imageUrl);
 
 signals:
     void loginCompleted(bool success, const QString& message);
@@ -75,7 +76,8 @@ signals:
     void gameDetailReady(int raGameId, const QVariantMap& detail);
     void gameIdLookupReady(const QString& title, int raGameId);
     void achievementUnlocked(const QString& id, const QString& title,
-                             const QString& description);
+                             const QString& description,
+                             const QString& imageUrl);
 
 private:
     Database* m_db;

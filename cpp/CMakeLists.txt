@@ -36,6 +36,11 @@ file(GLOB RCHEEVOS_SOURCES
 add_library(rcheevos_static STATIC ${RCHEEVOS_SOURCES})
 # PUBLIC so consumers (only ${PROJECT_NAME}) get rcheevos headers automatically (e.g. rcheevos_runtime.cpp).
 target_include_directories(rcheevos_static PUBLIC ${rcheevos_SOURCE_DIR}/include)
+# rc_libretro.h lives in src/ (not include/) but consumers need it for the
+# memory-map helpers (rc_libretro_memory_init / rc_libretro_memory_read) used
+# by RetroNest's RcheevosRuntime to translate RA memory addresses through
+# libretro's memory descriptors.
+target_include_directories(rcheevos_static PUBLIC ${rcheevos_SOURCE_DIR}/src)
 target_include_directories(rcheevos_static PRIVATE ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
 # Enable hash-based game identification (rc_client_begin_identify_and_load_game).
 target_compile_definitions(rcheevos_static PUBLIC RC_CLIENT_SUPPORTS_HASH)
@@ -363,6 +368,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/InGameMenuPanel.qml
         qml/AppUI/InGameAchievementsPopup.qml
         qml/AppUI/ActionToast.qml
+        qml/AppUI/AchievementToast.qml
         qml/AppUI/ResumeStateDialog.qml
         qml/AppUI/RetroAchievementsSettings.qml
         qml/AppUI/AchievementsPage.qml

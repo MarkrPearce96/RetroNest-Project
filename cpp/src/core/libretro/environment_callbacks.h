@@ -16,6 +16,16 @@ struct EnvironmentContext {
 
     // Scratch storage so returned const char* buffers stay alive across calls.
     QByteArray scratchVariableValue;
+
+    // Captured from RETRO_ENVIRONMENT_SET_MEMORY_MAPS. The libretro spec
+    // requires the frontend to retain its own copy of the descriptors and
+    // their addrspace strings — the core may free them after the call.
+    // Used by RcheevosRuntime to translate RA memory addresses through
+    // rc_libretro_memory_init.
+    QVector<retro_memory_descriptor> memoryDescriptors;
+    QVector<QByteArray> memoryAddrspaces;   // backing storage for descriptor.addrspace
+    retro_memory_map memoryMap{};            // points into memoryDescriptors
+    bool memoryMapSet = false;
 };
 
 /** Returns true if the enum was handled (libretro semantics). */

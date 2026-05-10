@@ -214,8 +214,14 @@ void CoreRuntime::runLoop() {
     }
 
     // rcheevos session — best-effort; failure is non-fatal.
+    // Pass the captured memory map so rc_libretro can translate RA
+    // addresses through the core's descriptors (essential for cores
+    // like mGBA where IWRAM and EWRAM are non-contiguous).
+    const retro_memory_map* mmap =
+        m_envCtx.memoryMapSet ? &m_envCtx.memoryMap : nullptr;
     m_rcheevos.beginSession(s, m_cfg.romPath, m_cfg.raConsoleId,
-                            m_cfg.raUsername, m_cfg.raToken, m_cfg.raHardcore);
+                            m_cfg.raUsername, m_cfg.raToken, m_cfg.raHardcore,
+                            mmap);
 
     emit started();
 

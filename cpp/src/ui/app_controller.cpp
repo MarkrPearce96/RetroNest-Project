@@ -9,6 +9,7 @@
 
 #include <QQmlEngine>
 #include <QTimer>
+#include <QPointer>
 
 #include <QCursor>
 #include "settings/controller_mapping_page.h"
@@ -44,9 +45,13 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     m_scraperService.loadCredentials();
     m_raService.loadCredentials();
 
-    // Wire RA service into GameSession so startLibretro can populate RA fields
-    // and connect the achievement-unlock signal.
-    m_gameService.session()->setRaService(&m_raService);
+    // Forward libretro achievement unlocks from GameSession (which lives in
+    // core/) onto RAService (services/). GameSession itself has no
+    // dependency on services — it just emits the signal it receives from
+    // its rcheevos runtime.
+    connect(m_gameService.session(), &GameSession::achievementUnlocked,
+            &m_raService, &RAService::notifyAchievementUnlocked,
+            Qt::QueuedConnection);
 
     connect(&m_gameService, &GameService::statusMessage, this, &AppController::setStatus);
     connect(&m_gameService, &GameService::gameRunningChanged, this, &AppController::gameRunningChanged);
@@ -57,12 +62,15 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
             emit gameStarted();
     });
     connect(&m_gameService, &GameService::gameFinished, this, &AppController::gameFinished);
-    // Register global Cmd+Escape hotkey and wire to signal
-    static AppController* s_instance = nullptr;
+    // Register global Cmd+Escape hotkey and wire to signal.
+    // QPointer guards against use-after-free if AppController is ever
+    // destroyed before MacFullscreen::unregisterGlobalHotkey runs (the
+    // raw-pointer version was a hidden footgun).
+    static QPointer<AppController> s_instance;
     s_instance = this;
     MacFullscreen::registerGlobalHotkey([]() {
-        if (s_instance)
-            emit s_instance->globalHotkeyPressed();
+        if (auto* inst = s_instance.data())
+            emit inst->globalHotkeyPressed();
     });
     connect(&m_scraperService, &ScraperService::statusMessage, this, &AppController::setStatus);
     connect(&m_emuService, &EmulatorService::statusMessage, this, &AppController::setStatus);
@@ -108,6 +116,13 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     connect(&m_raService, &RAService::userGamesReady, this, &AppController::raUserGamesReady);
     connect(&m_raService, &RAService::gameDetailReady, this, &AppController::raGameDetailReady);
     connect(&m_raService, &RAService::gameIdLookupReady, this, &AppController::raGameIdLookupReady);
+    // Forward libretro achievement unlocks to QML for the toast UI.
+    // The signal chain that produces this:
+    //   RcheevosRuntime → GameSession (signal forward, queued) →
+    //   RAService::notifyAchievementUnlocked → RAService::achievementUnlocked
+    //   → here → QML.
+    connect(&m_raService, &RAService::achievementUnlocked,
+            this, &AppController::raAchievementUnlocked);
 }
 
 // ── Game Session ───────────────────────────────────────────
@@ -211,6 +226,19 @@ void AppController::launchGame(int /*gameId*/, const QString& romPath, const QSt
         }
     }
 
+    // Push current RA values into the GameSession before launch so the
+    // libretro path can wire achievements without GameSession holding a
+    // services/ dependency. No-op for external-process adapters.
+    LibretroRaConfig raCfg;
+    if (m_raService.hasCredentials()) {
+        raCfg.username   = m_raService.credentials().username;
+        raCfg.loginToken = m_raService.credentials().loginToken;
+        raCfg.apiKey     = m_raService.credentials().apiKey;
+        raCfg.hardcore   = m_raService.hardcoreMode();
+        raCfg.valid      = true;
+    }
+    m_gameService.session()->setLibretroRaConfig(raCfg);
+
     if (!m_gameService.startGame(romPath, emuId, extraArgs)) {
         setStatus("Launch failed");
     }
@@ -242,12 +270,6 @@ void AppController::clearResumeState(const QString& romPath, const QString& emuI
 
 void AppController::activateApp() {
     MacFullscreen::activateOurApp();
-}
-
-void AppController::activateEmulator() {
-    auto* session = m_gameService.session();
-    if (session && session->isRunning())
-        MacFullscreen::activateProcess(session->pid());
 }
 
 void AppController::removeGame(int gameId) {

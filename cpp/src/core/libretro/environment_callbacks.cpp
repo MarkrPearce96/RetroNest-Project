@@ -72,6 +72,38 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
         case RETRO_ENVIRONMENT_GET_CAN_DUPE:
             *static_cast<bool*>(data) = true;
             return true;
+        case RETRO_ENVIRONMENT_SET_MEMORY_MAPS: {
+            // The core declares its memory layout; rcheevos uses this to
+            // translate from RA's normalized address space to actual host
+            // memory pointers. Without this, achievement conditions can't
+            // resolve any address outside SYSTEM_RAM and never trigger.
+            //
+            // The libretro spec requires the FRONTEND to retain its own
+            // copy of the descriptor array and the addrspace strings — the
+            // core may free both after the call returns. Reserve before
+            // appending so QByteArray::constData() pointers stay stable
+            // when we reference them from the descriptor copies.
+            const auto* mm = static_cast<const retro_memory_map*>(data);
+            if (!mm || !mm->descriptors) return false;
+            ctx->memoryDescriptors.clear();
+            ctx->memoryAddrspaces.clear();
+            ctx->memoryDescriptors.reserve(static_cast<int>(mm->num_descriptors));
+            ctx->memoryAddrspaces.reserve(static_cast<int>(mm->num_descriptors));
+            for (unsigned i = 0; i < mm->num_descriptors; ++i) {
+                retro_memory_descriptor d = mm->descriptors[i];
+                ctx->memoryAddrspaces.append(
+                    d.addrspace ? QByteArray(d.addrspace) : QByteArray());
+                d.addrspace = ctx->memoryAddrspaces.last().constData();
+                ctx->memoryDescriptors.append(d);
+            }
+            ctx->memoryMap.descriptors = ctx->memoryDescriptors.data();
+            ctx->memoryMap.num_descriptors =
+                static_cast<unsigned>(ctx->memoryDescriptors.size());
+            ctx->memoryMapSet = true;
+            qInfo() << "[libretro/env] SET_MEMORY_MAPS captured"
+                    << ctx->memoryDescriptors.size() << "descriptors";
+            return true;
+        }
         default: {
             static QSet<unsigned> warned;
             if (!warned.contains(cmd)) {

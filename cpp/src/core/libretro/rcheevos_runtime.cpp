@@ -8,7 +8,21 @@
 #include <cstring>
 
 namespace {
-thread_local RcheevosRuntime* g_active = nullptr;
+// g_active must be visible across threads — rc_client callbacks (login →
+// load-game → unlock) fire on whichever thread the corresponding HTTP reply
+// finishes on (main thread, where m_nam lives), but beginSession runs on the
+// core/worker thread. A thread_local pointer set on the core thread reads as
+// nullptr from the main-thread callback, which silently drops the load HTTP
+// request and stalls the achievement session forever. Plain static (not
+// thread_local) is safe here: only one rcheevos session runs at a time
+// (libretro is single-game), and the assignment in beginSession/endSession
+// happens-before any cross-thread read in practice (the main-thread read
+// only occurs after the core thread has finished issuing the synchronous
+// rc_client call that captured the pointer).
+//
+// g_syms stays thread_local because it's only read from the core thread
+// (readMemoryHandler is called from rc_client_do_frame which runs there).
+RcheevosRuntime* g_active = nullptr;
 thread_local const CoreSymbols* g_syms = nullptr;
 } // namespace
 
@@ -34,7 +48,9 @@ void RcheevosRuntime::httpHandler(const rc_api_request_t* request,
         ? QByteArray(request->content_type)
         : QByteArray("application/x-www-form-urlencoded");
 
-    // g_active is thread_local on the CORE thread — grab the pointer now.
+    // g_active is a plain static (not thread_local) — see the namespace
+    // declaration above for why. Reads from any thread see the value set by
+    // beginSession on the core thread.
     RcheevosRuntime* self = g_active;
     if (!self) return;  // Session already ended; silently drop.
 
@@ -72,19 +88,39 @@ void RcheevosRuntime::httpHandler(const rc_api_request_t* request,
 
 // ---------------------------------------------------------------------------
 // Memory reader
+//
+// Routes through rc_libretro_memory_read, which knows the per-console RA
+// memory layout and walks the descriptors captured from SET_MEMORY_MAPS to
+// translate RA-internal addresses into host pointers. For GBA this is
+// essential — IWRAM (0x03000000) is not contiguous with EWRAM (0x02000000),
+// so the previous direct retro_get_memory_data(SYSTEM_RAM) read returned
+// zeros for any IWRAM-resident achievement condition.
 // ---------------------------------------------------------------------------
 uint32_t RcheevosRuntime::readMemoryHandler(uint32_t address, uint8_t* buffer,
                                              uint32_t num_bytes,
                                              rc_client_t* /*client*/) {
-    if (!g_syms || !buffer) return 0;
-    void* ram = g_syms->retro_get_memory_data(RETRO_MEMORY_SYSTEM_RAM);
-    size_t ramSize = g_syms->retro_get_memory_size(RETRO_MEMORY_SYSTEM_RAM);
-    if (!ram || address + num_bytes > ramSize) {
+    if (!g_active || !buffer) return 0;
+    if (!g_active->m_regionsInited) {
         std::memset(buffer, 0, num_bytes);
         return 0;
     }
-    std::memcpy(buffer, static_cast<uint8_t*>(ram) + address, num_bytes);
-    return num_bytes;
+    return rc_libretro_memory_read(
+        &g_active->m_regions, address, buffer, num_bytes);
+}
+
+// ---------------------------------------------------------------------------
+// Fallback core-memory accessor for rc_libretro_memory_init. Used for
+// consoles whose cores don't send SET_MEMORY_MAPS — rc_libretro queries
+// retro_get_memory_data(id) for SYSTEM_RAM / SAVE_RAM / VIDEO_RAM / RTC.
+// ---------------------------------------------------------------------------
+static void rcheevos_get_core_memory_info(uint32_t id,
+                                          rc_libretro_core_memory_info_t* info) {
+    if (!info) return;
+    info->data = nullptr;
+    info->size = 0;
+    if (!g_syms) return;
+    info->data = static_cast<uint8_t*>(g_syms->retro_get_memory_data(id));
+    info->size = g_syms->retro_get_memory_size(id);
 }
 
 // ---------------------------------------------------------------------------
@@ -92,13 +128,22 @@ uint32_t RcheevosRuntime::readMemoryHandler(uint32_t address, uint8_t* buffer,
 // ---------------------------------------------------------------------------
 void RcheevosRuntime::eventHandler(const rc_client_event_t* ev, rc_client_t* /*client*/) {
     if (!g_active || !ev) return;
+
     if (ev->type == RC_CLIENT_EVENT_ACHIEVEMENT_TRIGGERED && ev->achievement) {
+        // RA serves badge images at media.retroachievements.org/Badge/<name>.png
+        // (with `_lock` for the locked variant). The unlocked variant is the
+        // colored, fully-saturated badge — what we want for the toast.
+        char urlBuf[256] = {0};
+        rc_client_achievement_get_image_url(ev->achievement,
+                                            RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED,
+                                            urlBuf, sizeof(urlBuf));
         emit g_active->achievementUnlocked(
             QString::number(ev->achievement->id),
             QString::fromUtf8(ev->achievement->title
                               ? ev->achievement->title : ""),
             QString::fromUtf8(ev->achievement->description
-                              ? ev->achievement->description : ""));
+                              ? ev->achievement->description : ""),
+            QString::fromUtf8(urlBuf));
     }
 }
 
@@ -106,11 +151,25 @@ void RcheevosRuntime::eventHandler(const rc_client_event_t* ev, rc_client_t* /*c
 // Load-game callback (step 2 of the async chain)
 // ---------------------------------------------------------------------------
 void RcheevosRuntime::loadGameCallback(int result, const char* errorMessage,
-                                        rc_client_t* /*client*/, void* userdata) {
+                                        rc_client_t* client, void* userdata) {
     auto* self = static_cast<RcheevosRuntime*>(userdata);
     if (result == RC_OK) {
         self->m_inSession = true;
-        qInfo() << "[rcheevos] Game loaded; achievement session active.";
+        // Diagnostics: log the identified game's title and how many
+        // achievements + memory regions are live. Zero-count on either
+        // side means unlocks can never fire even though the session is
+        // technically "active".
+        const rc_client_game_t* game = rc_client_get_game_info(client);
+        rc_client_user_game_summary_t summary{};
+        rc_client_get_user_game_summary(client, &summary);
+        qInfo().nospace()
+            << "[rcheevos] Game loaded; achievement session active. "
+            << "Title=\"" << (game && game->title ? game->title : "(unknown)")
+            << "\" id=" << (game ? game->id : 0)
+            << " achievements=" << summary.num_core_achievements
+            << " unlocked=" << summary.num_unlocked_achievements
+            << " regions=" << self->m_regions.count
+            << " region_total_bytes=" << self->m_regions.total_size;
     } else {
         qWarning() << "[rcheevos] rc_client_begin_identify_and_load_game failed:"
                    << (errorMessage ? errorMessage : "(no message)");
@@ -150,13 +209,33 @@ bool RcheevosRuntime::beginSession(const CoreSymbols& syms,
                                    int raConsoleId,
                                    const QString& username,
                                    const QString& token,
-                                   bool hardcore) {
+                                   bool hardcore,
+                                   const retro_memory_map* memoryMap) {
     if (m_inSession) endSession();
     g_active = this;
     g_syms = &syms;
 
+    // Build the memory-region map BEFORE creating rc_client. The reader is
+    // invoked from rc_client internals during do_frame; if regions aren't
+    // ready it returns zeros and conditions never match. Even with a null
+    // memoryMap, rc_libretro falls back to per-console retro_get_memory_data
+    // queries via rcheevos_get_core_memory_info — works for simple cores.
+    if (rc_libretro_memory_init(&m_regions, memoryMap,
+                                 rcheevos_get_core_memory_info,
+                                 static_cast<uint32_t>(raConsoleId))) {
+        m_regionsInited = true;
+    } else {
+        qWarning() << "[rcheevos] rc_libretro_memory_init failed for console"
+                   << raConsoleId << "— achievements will not unlock.";
+        m_regionsInited = false;
+    }
+
     m_client = rc_client_create(readMemoryHandler, httpHandler);
     if (!m_client) {
+        if (m_regionsInited) {
+            rc_libretro_memory_destroy(&m_regions);
+            m_regionsInited = false;
+        }
         g_active = nullptr;
         g_syms = nullptr;
         return false;
@@ -188,6 +267,10 @@ void RcheevosRuntime::endSession() {
     if (m_client) {
         rc_client_destroy(m_client);
         m_client = nullptr;
+    }
+    if (m_regionsInited) {
+        rc_libretro_memory_destroy(&m_regions);
+        m_regionsInited = false;
     }
     g_active = nullptr;
     g_syms = nullptr;
