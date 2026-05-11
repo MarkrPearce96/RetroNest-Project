@@ -54,6 +54,21 @@ void configurePanelWindow(void* nsViewPtr);
 // argument is the QWindow's winId() (NSView* on macOS).
 void makePanelKey(void* nsViewPtr);
 
+// Add `childNSView`'s NSWindow as a child of `parentNSView`'s NSWindow
+// with NSWindowAbove ordering. The child window then tracks the parent's
+// screen, geometry-on-move, and Spaces membership for free. Used by
+// LibretroOverlayPanel so its transparent fullscreen Window follows
+// RetroNest's main window automatically. Both pointers are NSView*
+// (i.e. QWindow::winId() return values).
+void attachChildWindow(void* parentNSView, void* childNSView);
+
+// Toggle whether the NSWindow backing `nsView` ignores mouse events —
+// when YES, the window stays visible but isn't in the responder chain,
+// so clicks pass through to whatever is below. Used by
+// LibretroOverlayPanel: YES while only toasts / badges are showing,
+// NO while the in-game menu is open.
+void setIgnoresMouseEvents(void* nsViewPtr, bool ignore);
+
 // Synthesize a keyboard press+release delivered to `pid`'s event
 // stream via CGEventPostToPid. Used to toggle the emulator's own
 // TogglePause hotkey when the in-game menu opens/closes — the

@@ -84,6 +84,7 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     static QPointer<AppController> s_instance;
     s_instance = this;
     MacFullscreen::registerGlobalHotkey([]() {
+        qInfo() << "[AppController] Cmd+Shift+Esc fired → globalHotkeyPressed";
         if (auto* inst = s_instance.data())
             emit inst->globalHotkeyPressed();
     });
@@ -750,6 +751,13 @@ bool AppController::raNotifications() const { return m_raService.notifications()
 void AppController::raSetNotifications(bool enabled) { m_raService.setNotifications(enabled); }
 bool AppController::raSoundEffects() const { return m_raService.soundEffects(); }
 void AppController::raSetSoundEffects(bool enabled) { m_raService.setSoundEffects(enabled); }
+
+bool AppController::gameUsesHardwareRender() {
+    auto* session = m_gameService.session();
+    if (!session || !session->isLibretro()) return false;
+    auto* libretro = dynamic_cast<LibretroAdapter*>(session->adapter());
+    return libretro && libretro->prefersHardwareRender();
+}
 
 bool AppController::raEncoreMode() const { return m_raService.encoreMode(); }
 void AppController::raSetEncoreMode(bool enabled) {

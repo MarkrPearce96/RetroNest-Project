@@ -228,6 +228,28 @@ void makePanelKey(void* nsViewPtr) {
     }
 }
 
+void attachChildWindow(void* parentNSView, void* childNSView) {
+    @autoreleasepool {
+        if (!parentNSView || !childNSView) return;
+        NSView* parentView = (__bridge NSView*)parentNSView;
+        NSView* childView  = (__bridge NSView*)childNSView;
+        NSWindow* parentWindow = [parentView window];
+        NSWindow* childWindow  = [childView window];
+        if (!parentWindow || !childWindow) return;
+        [parentWindow addChildWindow:childWindow ordered:NSWindowAbove];
+    }
+}
+
+void setIgnoresMouseEvents(void* nsViewPtr, bool ignore) {
+    @autoreleasepool {
+        if (!nsViewPtr) return;
+        NSView* view = (__bridge NSView*)nsViewPtr;
+        NSWindow* window = [view window];
+        if (!window) return;
+        [window setIgnoresMouseEvents:(ignore ? YES : NO)];
+    }
+}
+
 void sendKeyToProcess(int64_t pid, int virtualKeyCode) {
     if (pid <= 0) return;
     @autoreleasepool {
@@ -271,5 +293,7 @@ void unregisterGlobalHotkey() {}
 int screenIndexForProcess(int64_t) { return -1; }
 void configurePanelWindow(void*) {}
 void makePanelKey(void*) {}
+void attachChildWindow(void*, void*) {}
+void setIgnoresMouseEvents(void*, bool) {}
 }
 #endif

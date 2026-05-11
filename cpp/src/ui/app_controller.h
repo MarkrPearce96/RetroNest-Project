@@ -187,6 +187,16 @@ public:
     Q_INVOKABLE bool raNotifications() const;
     Q_INVOKABLE void raSetNotifications(bool enabled);
     Q_INVOKABLE bool raSoundEffects() const;
+
+    /**
+     * SP3.5: true iff the currently-running game is a libretro core whose
+     * adapter advertises Pattern B HW rendering (PCSX2 today; DuckStation /
+     * PPSSPP / Dolphin when those land as libretro). Used by the floating
+     * LibretroOverlayPanel + AppWindow.qml's toggleInGameMenu branch to
+     * route overlays through the path that renders above the game's Metal
+     * NSView.
+     */
+    Q_INVOKABLE bool gameUsesHardwareRender();
     Q_INVOKABLE void raSetSoundEffects(bool enabled);
     Q_INVOKABLE bool raEncoreMode() const;
     /** Toggling encore mid-session takes effect on the running rc_client
