@@ -15,6 +15,13 @@ MGBA_SRC="${MGBA_SRC:-$HOME/Documents/Projects/mgba-libretro}"
 
 CORES_DIR="$HOME/Documents/RetroNest/emulators/libretro/cores"
 
+# Parallelism cap. Unbounded -j with PCSX2 + Qt link steps peaks at
+# ~2 GB/job; a 16 GB Mac with 10 cores will freeze under unrestricted
+# parallelism. Default 4 keeps peak RAM under ~10 GB. Override with
+# JOBS=N ./scripts/build-universal.sh if you have headroom.
+JOBS="${JOBS:-4}"
+echo "Building with -j $JOBS (override via JOBS=N env var)."
+
 # 1. Preflight: both brew prefixes have qt.
 echo "=== preflight ==="
 test -f /opt/homebrew/opt/qt/lib/QtCore.framework/Versions/A/QtCore \
@@ -32,15 +39,16 @@ echo "=== building RetroNest arm64 ==="
 arch -arm64 cmake -S cpp -B cpp/build-arm64 \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DCMAKE_PREFIX_PATH="/opt/homebrew/opt/qt;/opt/homebrew/opt/sdl2"
-arch -arm64 cmake --build cpp/build-arm64 -j
-/opt/homebrew/opt/qt/bin/macdeployqt cpp/build-arm64/RetroNest.app -qmldir=qml
+arch -arm64 cmake --build cpp/build-arm64 -j "$JOBS"
+# -qmldir is relative to $ROOT (we cd'd to it above) — QML lives under cpp/qml/.
+/opt/homebrew/opt/qt/bin/macdeployqt cpp/build-arm64/RetroNest.app -qmldir=cpp/qml
 
 echo "=== building RetroNest x86_64 ==="
 arch -x86_64 cmake -S cpp -B cpp/build-x86_64 \
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
     -DCMAKE_PREFIX_PATH="/usr/local/opt/qt;/usr/local/opt/sdl2"
-arch -x86_64 cmake --build cpp/build-x86_64 -j
-arch -x86_64 /usr/local/opt/qt/bin/macdeployqt cpp/build-x86_64/RetroNest.app -qmldir=qml
+arch -x86_64 cmake --build cpp/build-x86_64 -j "$JOBS"
+arch -x86_64 /usr/local/opt/qt/bin/macdeployqt cpp/build-x86_64/RetroNest.app -qmldir=cpp/qml
 
 echo "=== merging RetroNest.app ==="
 ./scripts/lipo-merge-app.sh \
@@ -55,14 +63,14 @@ echo "=== building pcsx2_libretro arm64 ==="
     -DENABLE_LIBRETRO=ON -DENABLE_QT_UI=OFF \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DCMAKE_PREFIX_PATH="/opt/homebrew" \
-  && arch -arm64 cmake --build build-arm64 --target pcsx2_libretro -j )
+  && arch -arm64 cmake --build build-arm64 --target pcsx2_libretro -j "$JOBS" )
 
 echo "=== building pcsx2_libretro x86_64 ==="
 ( cd "$PCSX2_SRC" && arch -x86_64 cmake -B build-x86_64 \
     -DENABLE_LIBRETRO=ON -DENABLE_QT_UI=OFF \
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
     -DCMAKE_PREFIX_PATH="/usr/local" \
-  && arch -x86_64 cmake --build build-x86_64 --target pcsx2_libretro -j )
+  && arch -x86_64 cmake --build build-x86_64 --target pcsx2_libretro -j "$JOBS" )
 
 ./scripts/lipo-merge-dylib.sh \
     "$PCSX2_SRC/build-arm64/pcsx2-libretro/pcsx2_libretro.dylib" \
@@ -75,13 +83,13 @@ if [[ -d "$MGBA_SRC" ]]; then
     ( cd "$MGBA_SRC" && arch -arm64 cmake -B build-arm64 \
         -DBUILD_LIBRETRO=ON -DBUILD_QT=OFF -DBUILD_SDL=OFF -DBUILD_GL=OFF \
         -DCMAKE_OSX_ARCHITECTURES=arm64 \
-      && arch -arm64 cmake --build build-arm64 --target mgba_libretro -j )
+      && arch -arm64 cmake --build build-arm64 --target mgba_libretro -j "$JOBS" )
 
     echo "=== building mgba_libretro x86_64 ==="
     ( cd "$MGBA_SRC" && arch -x86_64 cmake -B build-x86_64 \
         -DBUILD_LIBRETRO=ON -DBUILD_QT=OFF -DBUILD_SDL=OFF -DBUILD_GL=OFF \
         -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_PREFIX_PATH="/usr/local" \
-      && arch -x86_64 cmake --build build-x86_64 --target mgba_libretro -j )
+      && arch -x86_64 cmake --build build-x86_64 --target mgba_libretro -j "$JOBS" )
 
     ./scripts/lipo-merge-dylib.sh \
         "$MGBA_SRC/build-arm64/mgba_libretro.dylib" \
