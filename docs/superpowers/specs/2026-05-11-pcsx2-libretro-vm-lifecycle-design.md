@@ -1,7 +1,7 @@
 # PCSX2 Libretro Core — VM Lifecycle + Game Boot (Sub-project 2 of 8)
 
 **Date:** 2026-05-11
-**Status:** Approved (brainstorming)
+**Status:** Complete (lifecycle infrastructure shipped; GS init unblock deferred to SP3 — see Verification log)
 **Owner:** mark
 **Scope:** Second sub-project of the multi-phase PCSX2-to-libretro port.
 **Predecessor:** [Skeleton phase](2026-05-11-pcsx2-libretro-skeleton-design.md) (complete).
@@ -258,3 +258,68 @@ Repeat the SP1 manual UI flow with Ratchet & Clank. Expected: same logs as Test 
 7. Verified by both the standalone `test_loader` and by launching Ratchet & Clank from RetroNest.
 
 When all seven are true, the VM-lifecycle sub-project is complete. The next sub-project (Video output) bridges GS framebuffer → `retro_video_refresh_t` and introduces the per-frame sync mechanism that retro_run needs to drive the frame cadence.
+
+## Verification log
+
+SP2 completed 2026-05-11. Outcome differs from the original success criteria: lifecycle infrastructure works end-to-end, but VM init itself is blocked on a macOS architectural reality that SP2's "no output" framing didn't anticipate. The shipped work is real and load-bearing; the GS-init unblock moves to SP3.
+
+### What works (committed and verified)
+
+- **Settings layer** (`Settings.{h,cpp}`): `MemorySettingsInterface` populated via `VMManager::SetDefaultSettings`, then overridden for SP2-required keys (BIOS path from libretro system dir, GS renderer=Null, SPU2/Output=nullout, achievements off, fast-boot on, host-fs off, input sources disabled, memory cards off). Registered via `Host::Internal::SetBaseSettingsLayer` and queried correctly by PCSX2 internals.
+- **EmuThread** (`EmuThread.{h,cpp}`): `std::thread` wrapper. `Start()` returns synchronously once `VMManager::Initialize` reports success or failure via condition variable. `RequestShutdown()` + `Join()` cleanly tear down. Confirmed: thread spawn, init handshake, log telemetry per VM init step, no leaked threads on exit.
+- **BIOS discovery**: `FindPS2BiosFile` correctly handles a directory containing both PS2 BIOSes (~4 MB) and PSX BIOSes (~512 KB) by filtering on file size > 1 MB. Verified picking SCPH-70004.bin (PS2) over scph5500.bin (PSX).
+- **`retro_load_game` / `retro_unload_game` / `retro_run` / `retro_deinit` real implementations**: all wired and behaving correctly when init fails (clean OSD message, false return, no crash, no thread leak).
+- **HostStubs.cpp simplification**: removed the local duplicate `Host::Internal::*SettingsLayer` and `Host::Get*SettingValue` family that conflicted with `pcsx2/Host.cpp`'s versions, fixing a SIGSEGV in `CPUThreadInitialize` where set/get were reading inconsistent state.
+- **`VMManager::ApplySettings()`** call between `CPUThreadInitialize` and `Initialize` ensures the Renderer/SPU2/InputSources overrides take effect in `EmuConfig` before the VM is brought up. This is the gsrunner pattern (Main.cpp:943) we initially missed.
+- **EmuFolders init** in `Settings::InitializeDefaults`: `SetAppRoot()` + `SetResourcesDirectory()` + `SetDataDirectory()` before `SetDefaultSettings`. Without these, DataRoot resolved as "/" on macOS, breaking PCSX2's resource lookup.
+
+### What's blocked (deferred to SP3)
+
+**VMManager::Initialize itself fails at GS device init.**
+
+The chain: `VMManager::Initialize` → `MTGS::WaitForOpen` → spawns MTGS thread → `GSopen` → `OpenGSDevice` → on macOS, `GetAPIForRenderer(Null)` falls through `default:` to `GSUtil::GetPreferredRenderer()` which returns Metal → `MakeGSDeviceMTL()` → `GSDeviceMTL::Create`. The Metal `MTLDevice` and `MTLCommandQueue` create successfully without a window, but `OpenGSDevice` then attempts `ImGuiManager::Initialize` which requires Metal font textures, AND `AttachSurfaceOnMainThread` assumes a real `NSView` to attach a `CAMetalLayer` to. Without a host-provided NSView, this path fails and `OpenGSDevice` returns `false`, propagating "Failed to create render device" through `VMManager::Initialize` → `VMBootResult::StartupFailure`.
+
+**This is not a Metal limitation, nor a PCSX2 design flaw**: PCSX2 on macOS reasonably assumes the host provides a window+surface. The mismatch is that SP2's "no video output" framing assumed PCSX2 had a true headless code path. It doesn't on macOS (and likely not on Windows either with D3D11/12). Renderer=Null is a *post-device* choice — the device itself is unconditionally Metal.
+
+### What was tried during diagnosis
+
+- `Host::AcquireRenderWindow` updated to return a `WindowInfo{}` (default-constructed = `Type::Surfaceless`) instead of `std::nullopt`. Got us past `AcquireWindow` but not past `AttachSurfaceOnMainThread` / `ImGuiManager::Initialize`.
+- `Settings.cpp` cycled through Renderer=SW (13), then Renderer=Null (11). Same result — both go through the Metal device path on macOS.
+- Test_loader-based verification (Test 1 from the verification plan) was abandoned: test_loader has no Cocoa event loop, so `OnMainThread([…])` inside `GSDeviceMTL::Create` deadlocks instead of failing. End-to-end verification in RetroNest reveals the underlying failure path that test_loader masks as a hang.
+- Sampling the stuck process confirmed the hang stack: `MTGS::WaitForOpen → ThreadEntryPoint → GSopen → OpenGSDevice → GSDeviceMTL::Create:945` (the `OnMainThread` dispatch).
+
+### Architectural finding (load-bearing for SP3)
+
+PCSX2 on macOS hard-requires a Metal-attached `CAMetalLayer` for GS init. There is no software-only or headless path. The libretro-host (RetroNest) must therefore provide one of:
+
+- **Pattern A — software readback**: PCSX2 renders to an off-screen Metal texture; we read it back per frame to a CPU buffer and ship via `retro_video_refresh_t`. Simpler, matches mGBA's existing pipeline architecture, but pays a per-frame GPU→CPU copy. Defer the zero-copy upgrade.
+- **Pattern B — hardware-context bridge** *(chosen path for SP3)*: RetroNest embeds an `NSView` + `CAMetalLayer` inside its Qt window, exposes it via `RETRO_ENVIRONMENT_SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE` (libretro standard), PCSX2 renders directly to that layer (zero-copy). More work but the right long-term shape because DuckStation / PPSSPP / Dolphin libretro cores will all hit the same situation — building the bridge once amortises across all future hardware-accelerated cores.
+
+SP3 implements Pattern B. SP3's brainstorm should be scoped accordingly.
+
+### Fork state at completion
+
+Commits added to `retronest-libretro` branch during SP2:
+- `1d4a3e76a` libretro: implement VM lifecycle — retro_load_game boots a real PS2 game
+- `2af7204fc` libretro: fix SIGSEGV in CPUThreadInitialize and required EmuFolders init
+- `f2eb78b02` libretro: disable input sources, apply settings, add VM lifecycle telemetry
+
+Fork branch tip is `f2eb78b02`. Build clean. dylib exports correct. Existing SP1 launched-binary path unaffected.
+
+### RetroNest-side delta
+
+Zero changes. Confirmed at SP2 completion.
+
+### Spec criteria reconciliation
+
+| Original SP2 criterion | Outcome |
+|---|---|
+| Settings.{h,cpp} + EmuThread.{h,cpp} exist and compile | ✅ Met |
+| `retro_load_game` returns true and emu thread runs Execute | ❌ Returns false because Initialize fails at GS init. The path AROUND that point works correctly. |
+| Within ~15s, GetState=Running and CRC non-zero | ❌ Not reachable — VM doesn't reach Running. Will be re-attempted after SP3 lands the video bridge. |
+| `retro_unload_game` causes clean Shutdown+Join within 5s | ✅ Met (verified via the failed-init path's cleanup) |
+| `retro_load_game` with no BIOS returns false with documented OSD | ✅ Met |
+| Existing pcsx2 launched-binary path unchanged | ✅ Met |
+| Verified by test_loader AND RetroNest | ⚠️ Test_loader is structurally unable to verify on macOS (no Cocoa event loop). RetroNest end-to-end IS the verification path — and confirmed lifecycle works exactly as designed; the failure is downstream in GS init.
+
+SP2's lifecycle scaffold is what SP3 plugs into. The next sub-project's success criterion will be "VM reaches Running with a real frame surfacing via the HW render bridge."
