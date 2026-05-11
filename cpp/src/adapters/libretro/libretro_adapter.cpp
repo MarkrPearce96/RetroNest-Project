@@ -180,7 +180,18 @@ void LibretroAdapter::prepareRuntime() {
 }
 
 void LibretroAdapter::releaseRuntime() {
-    m_runtime.reset();
+    if (m_runtime) {
+        // SP3.5: CoreRuntime is a QObject. Schedule deletion via deleteLater
+        // instead of immediate destruction. This matters because the finished
+        // signal that triggers this release dispatches on the main thread
+        // while CoreRuntime::stop() is pumping the event loop from inside
+        // itself — an immediate delete frees `this`, and the next iteration
+        // of stop()'s while loop dereferences m_thread on a freed CoreRuntime,
+        // crashing. With deleteLater the CoreRuntime stays alive until the
+        // next event-loop iteration, by which point stop() has returned
+        // cleanly.
+        m_runtime.release()->deleteLater();
+    }
     // Force reload-on-next-access so we don't return stale in-memory state
     // (the runtime may have written new values to options.json before exit).
     m_persistentOptions.reset();

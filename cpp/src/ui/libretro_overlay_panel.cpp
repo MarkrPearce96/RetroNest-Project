@@ -90,14 +90,21 @@ void LibretroOverlayPanel::showForCurrentGame() {
 
 void LibretroOverlayPanel::hide() {
     if (!m_window) return;
+    // Reset to "no menu open, click-through" state so the next session
+    // starts fresh visually. Do NOT destroy the QQuickWindow: it's a
+    // macOS child window of RetroNest's main NSWindow (the parent
+    // retains us via addChildWindow:). Destroying it during gameFinished
+    // races PCSX2's MTGS thread which is concurrently tearing down the
+    // Metal layer via OnMainThread() — first attempt at destroy-on-end
+    // crashed on Save & Quit and deadlocked on Quit. The QQuickWindow
+    // is small enough to keep alive; AppController owns the C++ panel
+    // for its lifetime and Qt cleans the window up at app shutdown.
+    QMetaObject::invokeMethod(m_window, "closeMenu");
+    void* nsView = reinterpret_cast<void*>(m_window->winId());
+    MacFullscreen::setIgnoresMouseEvents(nsView, true);
     m_window->hide();
-    // Destroying the QQuickWindow forces a fresh scene graph on the next
-    // game start; matches the agreed-upon "created at game start,
-    // destroyed at game end" lifecycle and avoids stale state from a
-    // prior session leaking forward.
-    m_window->deleteLater();
-    m_window.clear();
     m_menuOpen = false;
+    emit menuVisibleChanged();
 }
 
 void LibretroOverlayPanel::openMenu() {

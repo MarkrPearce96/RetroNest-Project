@@ -1,5 +1,8 @@
 #include "core_runtime.h"
+#include <QCoreApplication>
 #include <QDebug>
+#include <QElapsedTimer>
+#include <QEventLoop>
 #include <QFile>
 #include <chrono>
 #include <thread>
@@ -27,7 +30,26 @@ CoreRuntime::CoreRuntime(QObject* parent) : QObject(parent) {
 }
 
 CoreRuntime::~CoreRuntime() {
-    if (m_thread) { stop(); }
+    // SP3.5: stop() is non-blocking. This destructor runs from the event
+    // loop after the worker has signalled finished() and our owner has
+    // deleteLater'd us, so the QThread is guaranteed exited by now. Still
+    // request stop defensively, then join + delete the QThread.
+    if (m_thread) {
+        m_stopRequested = true;
+        resume();
+        // Bounded wait — by here the worker has already exited in the
+        // common path; the timeout is just a safety net for unexpected
+        // paths (e.g. direct destruction without prior stop()).
+        m_thread->wait(2000);
+        if (m_thread->isRunning()) {
+            qWarning() << "[CoreRuntime] worker still running at destructor; "
+                          "terminating forcibly";
+            m_thread->terminate();
+            m_thread->wait(500);
+        }
+        delete m_thread;
+        m_thread = nullptr;
+    }
 }
 
 EnvironmentContext* CoreRuntime::tlsCtx() {
@@ -86,9 +108,25 @@ void CoreRuntime::stop() {
     if (!m_thread) return;
     m_stopRequested = true;
     resume();  // unblock condvar if paused
-    m_thread->wait(5000);
-    delete m_thread;
-    m_thread = nullptr;
+
+    // SP3.5: non-blocking. The worker exits on its own and emits the
+    // CoreRuntime::finished() Qt signal (queued to the main thread).
+    // GameSession's slot for that signal calls m_libretroAdapter->
+    // releaseRuntime() which deleteLater's this CoreRuntime; the
+    // ~CoreRuntime destructor then waits for and deletes the QThread.
+    //
+    // Why non-blocking: PCSX2's MTGS shutdown posts Metal-layer release
+    // work via Host::OnMainThread(). Any synchronous wait here blocks
+    // the main thread, those callbacks never run, and the worker
+    // deadlocks. Pumping events inside the wait avoids the deadlock but
+    // re-enters QML/Cocoa timer state mid-shutdown and corrupts
+    // CFRunLoopTimer arrays (verified via two distinct EXC_BAD_ACCESS
+    // crash reports). Returning immediately lets the main event loop
+    // service OnMainThread() callbacks naturally between Qt events.
+    //
+    // mGBA isn't affected by either failure mode (no OnMainThread
+    // usage); for it the worker exits immediately after we set the
+    // stop flag, and finished() fires before this function returns.
 }
 
 void CoreRuntime::pause() {

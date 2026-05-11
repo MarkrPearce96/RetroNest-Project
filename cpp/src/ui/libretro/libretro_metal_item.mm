@@ -37,13 +37,18 @@ LibretroMetalItem::LibretroMetalItem(QQuickItem* parent)
 
 LibretroMetalItem::~LibretroMetalItem()
 {
-    // m_window is owned; Qt will tear it down. PCSX2's CAMetalLayer was
-    // installed on the NSView; when the view is destroyed the layer
-    // detaches with it. GameSession::registerHardwareView(0) is expected
-    // to be called from QML's Component.onDestruction BEFORE this dtor
-    // runs.
-    delete m_window;
-    m_window = nullptr;
+    // Defer the QWindow destruction. The EmulationView pops during
+    // mainStack.pop()'s transition animation; the destructor can fire
+    // while macOS is still compositing this NSView. A direct delete
+    // crashes the entire app; deleteLater queues destruction to the
+    // next event-loop iteration, by which point compositing is done
+    // and PCSX2's CAMetalLayer has fully detached.
+    // GameSession::registerHardwareView(0) is called from QML's
+    // Component.onDestruction before this dtor runs.
+    if (m_window) {
+        m_window->deleteLater();
+        m_window = nullptr;
+    }
 }
 
 qulonglong LibretroMetalItem::nativeView() const
