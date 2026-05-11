@@ -290,6 +290,15 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 # Without this, LS can cache a stale path for com.markpearce.retronest and
 # launch an older copy (or fail silently) after moves/renames.
 if(APPLE)
+    set_source_files_properties(
+        src/ui/libretro/libretro_metal_item.mm
+        PROPERTIES
+        COMPILE_FLAGS "-fobjc-arc"
+    )
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        "-framework QuartzCore"
+        "-framework Metal"
+    )
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
                 -f "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>"
@@ -381,7 +390,9 @@ qt_add_qml_module(appui_backing
         qml/AppUI/EmulatorLogos.js
     SOURCES
         src/ui/libretro/libretro_video_item.h
+        src/ui/libretro/libretro_metal_item.h
         src/ui/libretro/libretro_video_item.cpp
+        src/ui/libretro/libretro_metal_item.mm
     RESOURCES
         qml/AppUI/images/pcsx2_logo.png
         qml/AppUI/images/duckstation_logo.png

@@ -36,6 +36,7 @@ class GameSession : public QObject {
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
     Q_PROPERTY(QString libretroAspectMode READ libretroAspectMode NOTIFY libretroFrontendChanged)
     Q_PROPERTY(bool libretroIntegerScale READ libretroIntegerScale NOTIFY libretroFrontendChanged)
+    Q_PROPERTY(QString libretroBackend READ libretroBackend NOTIFY libretroBackendChanged)
 
 public:
     explicit GameSession(QObject* parent = nullptr);
@@ -72,6 +73,8 @@ public:
     QString libretroAspectMode() const;
     /** Current integer-scale flag from the libretro frontend settings store. */
     bool libretroIntegerScale() const;
+    /** Current render backend for the libretro core: "software" or "metal". */
+    QString libretroBackend() const { return m_libretroBackend; }
 
     /** Pause emulation for the in-game menu. Libretro path: stops the core
      *  thread's retro_run loop and routes SDL events back to QML navigation
@@ -98,6 +101,11 @@ public:
      *  (true = FF on). No-op for process emulators. */
     Q_INVOKABLE bool toggleFastForwardLibretro();
 
+    /** Register (or clear) the NSView pointer for the active hardware-render
+     *  item. Called from QML via LibretroMetalItem.nativeView(). Pass 0 to
+     *  clear when the item is destroyed. */
+    Q_INVOKABLE void registerHardwareView(qulonglong view_ptr);
+
     /** The adapter for the currently running emulator. Null if not running. */
     EmulatorAdapter* adapter() const { return m_adapter; }
 
@@ -108,6 +116,7 @@ signals:
     void runningChanged();
     void started();
     void finished(int exitCode, bool crashed);
+    void libretroBackendChanged();
     void errorOccurred(const QString& error);
     /** Emitted for each rendered frame (libretro path only). Used by EmulationView. */
     void frameReady(const QImage& frame);
@@ -161,6 +170,7 @@ private:
     QString m_currentRomPath;
     LibretroAdapter* m_libretroAdapter = nullptr;
     bool m_libretroFastForward = false;
+    QString m_libretroBackend = QStringLiteral("software"); // "software" | "metal"
 
     SdlInputManager* m_sdlInputManager = nullptr;
     LibretroRaConfig m_raConfig;

@@ -35,22 +35,50 @@ Item {
         color: "black"
     }
 
-    LibretroVideoItem {
-        id: video
+    // Loader switches between software (LibretroVideoItem) and Metal
+    // (LibretroMetalItem) based on the active core's backend preference.
+    Loader {
+        id: videoLoader
         anchors.fill: parent
-        // Bind aspect-ratio and integer-scale from the active libretro
-        // frontend settings store. When no game is running the session
-        // properties return safe defaults ("native" / false).
-        aspectMode:   root.session ? root.session.libretroAspectMode   : "native"
-        integerScale: root.session ? root.session.libretroIntegerScale  : false
+        sourceComponent: (root.session && root.session.libretroBackend === "metal")
+            ? metalComponent
+            : softwareComponent
+
+        Component {
+            id: softwareComponent
+            LibretroVideoItem {
+                anchors.fill: parent
+                aspectMode:   root.session ? root.session.libretroAspectMode   : "native"
+                integerScale: root.session ? root.session.libretroIntegerScale  : false
+            }
+        }
+
+        Component {
+            id: metalComponent
+            LibretroMetalItem {
+                anchors.fill: parent
+                Component.onCompleted: {
+                    if (root.session)
+                        root.session.registerHardwareView(nativeView())
+                }
+                Component.onDestruction: {
+                    if (root.session)
+                        root.session.registerHardwareView(0)
+                }
+            }
+        }
     }
 
-    // Route frameReady from the GameSession to the video item.
+    // Route frameReady from the GameSession to the active video item.
     // Connections.target may be null before a game starts — Qt silently
     // ignores a null target, so no guard is needed.
+    // LibretroMetalItem.setFrame is a no-op (frames go via CAMetalLayer directly).
     Connections {
         target: root.session
-        function onFrameReady(frame) { video.setFrame(frame) }
+        function onFrameReady(frame) {
+            if (videoLoader.item && videoLoader.item.setFrame)
+                videoLoader.item.setFrame(frame)
+        }
     }
 
     // Keyboard: Escape or B-button (Key_Back) opens the in-game menu

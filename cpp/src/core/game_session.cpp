@@ -129,8 +129,24 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     auto* lr = dynamic_cast<LibretroAdapter*>(adapter);
     if (!lr) { emit errorOccurred("Adapter is not LibretroAdapter"); return false; }
     m_libretroAdapter = lr;
+
+    // SP3: detect whether this adapter wants the HW render bridge.
+    const bool hw = lr->prefersHardwareRender();
+    const QString new_backend = hw ? QStringLiteral("metal") : QStringLiteral("software");
+    if (new_backend != m_libretroBackend) {
+        m_libretroBackend = new_backend;
+        emit libretroBackendChanged();
+    }
+
     lr->prepareRuntime();
     auto* rt = lr->runtime();
+
+    // NSView registration happens from QML once LibretroMetalItem is realized.
+    // For now, ensure the runtime knows there's no view registered yet for
+    // software backends (defensive — clears any stale value from a prior game).
+    if (rt && !hw) {
+        rt->setActiveNSView(nullptr);
+    }
 
     const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
 
@@ -346,6 +362,13 @@ bool GameSession::toggleFastForwardLibretro() {
     m_libretroFastForward = !m_libretroFastForward;
     m_libretroAdapter->runtime()->setSpeedMultiplier(m_libretroFastForward ? 4.0 : 1.0);
     return m_libretroFastForward;
+}
+
+void GameSession::registerHardwareView(qulonglong view_ptr) {
+    if (!m_libretroAdapter) return;
+    auto* rt = m_libretroAdapter->runtime();
+    if (!rt) return;
+    rt->setActiveNSView(reinterpret_cast<void*>(view_ptr));
 }
 
 bool GameSession::isRunning() const {
