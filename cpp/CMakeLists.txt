@@ -78,6 +78,7 @@ set(SOURCES
     src/core/libretro/rcheevos_runtime.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
+    src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/environment_callbacks.cpp
@@ -145,6 +146,7 @@ set(HEADERS
     src/adapters/dolphin_adapter.h
     src/adapters/libretro/libretro_adapter.h
     src/adapters/libretro/mgba_libretro_adapter.h
+    src/adapters/libretro/pcsx2_libretro_adapter.h
     src/core/libretro/core_loader.h
     src/core/libretro/core_runtime.h
     src/core/libretro/rcheevos_runtime.h
@@ -472,6 +474,7 @@ add_executable(test_rom_scanner
     src/adapters/dolphin_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
+    src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/environment_callbacks.cpp
@@ -687,6 +690,7 @@ add_executable(test_controller_bindings_view
     src/adapters/dolphin_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
+    src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/environment_callbacks.cpp
@@ -776,6 +780,7 @@ add_executable(test_quick_settings_file_field
     src/adapters/dolphin_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
+    src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/environment_callbacks.cpp

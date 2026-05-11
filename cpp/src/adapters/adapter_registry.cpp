@@ -4,6 +4,7 @@
 #include "ppsspp_adapter.h"
 #include "dolphin_adapter.h"
 #include "libretro/mgba_libretro_adapter.h"
+#include "libretro/pcsx2_libretro_adapter.h"
 
 #include <QDebug>
 
@@ -18,6 +19,7 @@ void AdapterRegistry::registerBuiltinAdapters() {
     registerAdapter("ppsspp", std::make_unique<PPSSPPAdapter>());
     registerAdapter("dolphin", std::make_unique<DolphinAdapter>());
     registerAdapter("mgba", std::make_unique<MgbaLibretroAdapter>());
+    registerAdapter("pcsx2-libretro", std::make_unique<Pcsx2LibretroAdapter>());
 }
 
 void AdapterRegistry::registerAdapter(const QString& id, std::unique_ptr<EmulatorAdapter> adapter) {
