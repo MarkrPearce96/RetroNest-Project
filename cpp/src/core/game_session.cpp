@@ -6,6 +6,7 @@
 #include "core/libretro/frontend_settings_store.h"
 #include "core/libretro/input_router.h"
 #include "core/libretro/rcheevos_runtime.h"
+#include "core/platform/host_arch.h"
 #include "core/sdl_input_manager.h"
 
 #include <QCoreApplication>
@@ -132,6 +133,21 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     auto* lr = dynamic_cast<LibretroAdapter*>(adapter);
     if (!lr) { emit errorOccurred("Adapter is not LibretroAdapter"); return false; }
     m_libretroAdapter = lr;
+
+    // SP10: warn the user when launching the PS2 libretro core in arm64
+    // mode — they'll get the interpreter ceiling (~65-70% speed) instead
+    // of recompiler speed. Dismissable per session. Reuses the existing
+    // generic info toast plumbing → AchievementToast QML.
+    if (HostArch::isArm64() && lr->coreId() == QStringLiteral("pcsx2")
+        && !m_slowModeNoticeShown) {
+        m_slowModeNoticeShown = true;
+        emit raInfoToast(
+            QStringLiteral("Performance"),
+            QStringLiteral("PS2 emulation is faster under Rosetta"),
+            QStringLiteral("Quit, right-click RetroNest in Finder → Get Info → "
+                           "tick \"Open using Rosetta\", and relaunch."),
+            QString(), 8000);
+    }
 
     // SP3: detect whether this adapter wants the HW render bridge.
     const bool hw = lr->prefersHardwareRender();

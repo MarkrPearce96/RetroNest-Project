@@ -179,6 +179,10 @@ private:
     bool m_libretroFastForward = false;
     QString m_libretroBackend = QStringLiteral("software"); // "software" | "metal"
 
+    // SP10: gate the "switch to Rosetta for full speed" notice to one
+    // emission per RetroNest session.
+    bool m_slowModeNoticeShown = false;
+
     SdlInputManager* m_sdlInputManager = nullptr;
     LibretroRaConfig m_raConfig;
 };
