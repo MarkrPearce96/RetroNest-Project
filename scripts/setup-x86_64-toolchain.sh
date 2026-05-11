@@ -28,9 +28,9 @@ fi
 # PCSX2 dep list sourced from pcsx2-master/.github/workflows/macos-build.yml.
 DEPS=(
     qt@6 sdl2
-    fmt libwebp libzip libpng zstd lz4
-    soundtouch ffmpeg
-    pkg-config cmake ninja
+    fmt webp libzip libpng zstd lz4
+    sound-touch ffmpeg
+    pkgconf cmake ninja
 )
 
 for dep in "${DEPS[@]}"; do
