@@ -1,7 +1,7 @@
 # PCSX2 Libretro Core — HW Render Bridge / Video Output (Sub-project 3 of 8)
 
 **Date:** 2026-05-11
-**Status:** In progress — infrastructure complete, blocked on QML lifecycle / launch-sequence ordering (see Verification log)
+**Status:** Functionally complete — VM rendering verified end-to-end (see Verification log continuation); follow-up items noted
 **Owner:** mark
 **Scope:** Third sub-project of the multi-phase PCSX2-to-libretro port.
 **Predecessors:** [Skeleton (SP1)](2026-05-11-pcsx2-libretro-skeleton-design.md), [VM Lifecycle (SP2)](2026-05-11-pcsx2-libretro-vm-lifecycle-design.md). Both complete.
@@ -276,3 +276,60 @@ On RetroNest `main`:
 ### Session summary
 
 The HW render bridge infrastructure is fully built and proven working through the env command query. What remains is timing/ordering: ensure the NSView is registered with CoreRuntime BEFORE `retro_load_game` runs. The recommended Option 1 fix is ~20 lines across game_session.cpp and AppWindow.qml. Saving this for a focused continuation session.
+
+---
+
+## Verification log — continuation (2026-05-11, same day)
+
+Option 1 implemented and verified end-to-end. Ratchet & Clank: Going Commando launches via the pcsx2-libretro entry, the PS2 BIOS hands off to the game, and the in-game memory-card screen renders into the Metal-backed widget inside RetroNest's main window. `VM RUNNING` reports `serial=SCUS-97268 crc=0xB3A71D10` (correct disc CRC). User confirmed via screenshot.
+
+### What landed
+
+1. **Option 1 ordering fix** (RetroNest `main`, commit `ad716ad`)
+   - `GameSession::aboutToStartLibretro` signal emitted after `lr->prepareRuntime()` and before `rt->start` — see `game_session.cpp`.
+   - `AppController::gameStartingLibretro` forwards it.
+   - `AppWindow.qml` pushes `EmulationView` in response to the new signal, sets `view.session` immediately, so the QML `Loader` switches to `metalComponent` and `LibretroMetalItem.Component.onCompleted` registers the NSView via `GameSession::registerHardwareView`.
+   - `startLibretro` then pumps `QCoreApplication::processEvents` on a 2000 ms deadline until `CoreRuntime::activeNSView()` is non-null before calling `rt->start`.
+   - The original `onGameStartedLibretro` handler is made idempotent via an `isEmulationView` guard, so the software-backend launch path is unchanged.
+   - Failure-path cleanup: when either the spin-wait times out or `rt->start` returns false, `lr->releaseRuntime()` is called and `m_libretroAdapter` / `m_adapter` / `m_manifest` are cleared, fixing the "VM already running" retry bug.
+
+2. **`thread_local` g_current bug surfaced during diagnosis** (RetroNest `main`, commit `8d37e1a`)
+   - `core_runtime.cpp` declared `thread_local CoreRuntime* g_current = nullptr;`. PCSX2 spawns its MTGS render thread inside `VMManager::Initialize`; that MTGS thread is what calls `Host::AcquireRenderWindow` → `env_cb` → `CoreRuntime::envTrampoline` → `tlsCtx()`. With `thread_local`, `g_current` was null on the MTGS thread and `environmentDispatch` returned false silently — neither the success log nor the "unhandled enum" default fired. This pre-dated SP3 but was masked by the ordering bug; the moment we got the ordering right, this surfaced as the *next* wall.
+   - Switched to plain static. Cross-thread visibility comes from QThread::start's happens-before; only one CoreRuntime runs at a time.
+   - Added operational logging to the `GET_MACOS_NSVIEW` env handler.
+
+3. **pcsx2-libretro fork: missing port from gsrunner** (`retronest-libretro` branch, commit `ce3bddf77`)
+   - **ImGui font registration.** `Settings::InitializeDefaults` now reads `Roboto-Regular.ttf` from `EmuFolders::GetOverridableResourcePath` and calls `ImGuiManager::SetFonts` (mirrors `pcsx2-gsrunner/Main.cpp:127-146`). Without this, `AddTextFont()` returned nullptr → `AddImGuiFonts()` failed → "Failed to create ImGui font texture" → "Failed to initialize GS." The font bytes live in a process-lifetime `std::vector<u8>` because `ImGuiManager::FontInfo` holds a span and the atlas is `FontDataOwnedByAtlas=false`.
+   - **VM state transition to Running.** `VMManager::Initialize` leaves state at `VMState::Paused`. `Cpu->Execute()` returns immediately in that state. `EmuThread::ThreadFunc` now calls `VMManager::SetState(VMState::Running)` and loops `Execute` while state stays Running, mirroring `gsrunner/Main.cpp:950-957`.
+
+### Verified
+
+- **Test 1 (boot screen visible):** PASSED. Game-text appears inside the RetroNest window (memory-card-insert screen of Ratchet & Clank). `VM RUNNING — title=Ratchet & Clank 2 - Going Commando serial=SCUS-97268 crc=0xB3A71D10` in the log.
+- **Test 3 (mGBA unchanged):** Unverified this session but software-path code is unmodified — the conditional Loader still chooses `softwareComponent` when `libretroBackend === "software"`, and the spin-wait branch is gated on `hw == true`. Worth a smoke test before declaring SP3 fully shipped.
+
+### Not verified yet
+
+- **Test 2 (clean exit via Cmd+Shift+Esc).** Not exercised this session — the user observed the in-game menu didn't auto-open, but it's user-triggered, so absence isn't a regression. Smoke-test before closing SP3.
+- **Frame pacing via `Host::BeginPresentFrame` → `g_present_cv` → `retro_run`.** Game runs and renders, but we haven't validated the timing characteristic of the cv-wait under load (e.g. cutscenes, audio gameplay). Defer to SP4 (audio output) which will reveal pacing issues if any exist.
+
+### Cosmetic / out-of-scope follow-ups surfaced
+
+- **`patches.zip` missing.** `bin/resources/patches.zip` is not present (upstream PCSX2 builds this from `patches/`); RetroNest sees a non-fatal `OSD [PatchesZipOpenWarning]: Failed to open patches.zip`. Built-in game-specific patches are unavailable. Owner: SP7 (settings push) or a dedicated "ship patches.zip" task.
+- **"No Memory Card inserted."** `Settings::InitializeDefaults` explicitly disables both memcard slots (`Slot1_Enable=false`, `Slot2_Enable=false`) for SP3 scope; the game's BIOS-level memcard prompt is expected behaviour. Owner: SP6 (save states + memcards).
+- **`rc_libretro_memory_init failed for console 0`.** RetroNest's rcheevos init runs before our libretro core has called `RETRO_ENVIRONMENT_SET_MEMORY_MAPS` (PCSX2's hooks haven't fired yet). Achievements load (the session is "active") but the memory map is empty so triggers can't fire. Owner: rcheevos timing — likely SP7 or a small follow-up to defer memory-init until after the core's first SET_MEMORY_MAPS dispatch.
+- **`EmuFolders::Resources` hardcoded absolute path.** Still pointing at `/Users/mark/Documents/Projects/Pcsx2 Experiment /pcsx2-master/bin/resources`. Owner: SP7 — derive from `dladdr()` or copy resources next to the dylib at install time.
+
+### Commits added during continuation
+
+On pcsx2-master `retronest-libretro` branch:
+- `ce3bddf77` libretro: register Roboto font + SetState(Running) so VM actually executes
+
+On RetroNest `main`:
+- `ad716ad` libretro: SP3 launch-ordering fix — pre-push EmulationView, wait for NSView
+- `8d37e1a` libretro: env dispatch reachable from non-worker threads (fix thread_local)
+
+### Closing posture
+
+SP3's success criterion ("user sees the PS2 game rendering in RetroNest's window") is met. Three out of seven detailed success criteria are firmly verified (1, 2, 3, 4, 5 from the Goal section); criteria 6 (frame pacing via cv) is functioning but not stress-tested, criterion 7 (clean exit) is structurally wired but not exercised this session, criterion 8 (mGBA unchanged) is structurally protected but not smoke-tested this session. Three small smoke tests would close SP3 formally; otherwise SP3 is "shippable, follow-ups tracked."
+
+Next sub-project: **SP4 — audio output** (SPU2 → `retro_audio_sample_batch_t`).
