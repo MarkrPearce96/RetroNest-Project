@@ -96,6 +96,7 @@ set(SOURCES
     src/ui/game_list_model.cpp
     src/ui/app_controller.cpp
     src/ui/in_game_menu_panel.cpp
+    src/ui/libretro_overlay_panel.cpp
     src/ui/theme_manager.cpp
     src/ui/theme_context.cpp
     src/ui/settings/controller_mapping_page.cpp
@@ -177,6 +178,7 @@ set(HEADERS
     src/ui/install_controller.h
     src/ui/game_list_model.h
     src/ui/app_controller.h
+    src/ui/libretro_overlay_panel.h
     src/ui/theme_manager.h
     src/ui/theme_context.h
     src/ui/settings/controller_mapping_page.h

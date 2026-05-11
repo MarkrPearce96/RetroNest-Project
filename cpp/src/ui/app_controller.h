@@ -25,6 +25,7 @@ class AppController : public QObject {
     Q_PROPERTY(int settingsCategory READ settingsCategory WRITE setSettingsCategory NOTIFY settingsCategoryChanged)
     Q_PROPERTY(bool gameRunning READ isGameRunning NOTIFY gameRunningChanged)
     Q_PROPERTY(bool inGameMenuPanelVisible READ inGameMenuPanelVisible NOTIFY inGameMenuPanelVisibleChanged)
+    Q_PROPERTY(bool libretroOverlayMenuVisible READ libretroOverlayMenuVisible NOTIFY libretroOverlayMenuVisibleChanged)
     Q_PROPERTY(GameSession* gameSession READ gameSession CONSTANT)
 
 public:
@@ -72,6 +73,13 @@ public:
     Q_INVOKABLE void openInGameMenuPanel();
     Q_INVOKABLE void closeInGameMenuPanel();
     bool inGameMenuPanelVisible() const;
+
+    // SP3.5: floating overlay panel for Pattern B HW-render libretro
+    // cores. Lazy-instantiated on first showLibretroOverlayPanel()
+    // call (triggered by gameStartingLibretro when hw-render is true).
+    Q_INVOKABLE void openLibretroOverlayMenu();
+    Q_INVOKABLE void closeLibretroOverlayMenu();
+    bool libretroOverlayMenuVisible() const;
 
     // Inject the QML engine after construction so the panel can be
     // built lazily on first open. Called from main.cpp after the
@@ -224,6 +232,7 @@ signals:
     void gamesChanged();
     void gameRunningChanged();
     void inGameMenuPanelVisibleChanged();
+    void libretroOverlayMenuVisibleChanged();
     void gameStarted();
     /** Emitted instead of gameStarted() when the backend is libretro (in-process). */
     void gameStartedLibretro();
@@ -307,6 +316,12 @@ private:
 
     QQmlEngine* m_qmlEngine = nullptr;
     InGameMenuPanel* m_inGameMenuPanel = nullptr;
+    class LibretroOverlayPanel* m_libretroOverlayPanel = nullptr;
+
+    // SP3.5: lazy-create m_libretroOverlayPanel (wiring its action
+    // signals to GameSession exactly once) and call showForCurrentGame.
+    // Idempotent on repeated calls within one session.
+    void showLibretroOverlayPanelForCurrentGame();
 
     // True between paired Space-keystroke sends to the emulator
     // (the TogglePause hotkey is a toggle, so we must track which

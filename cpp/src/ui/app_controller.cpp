@@ -5,6 +5,7 @@
 #include "core/paths.h"
 #include "core/scraper.h"
 #include "in_game_menu_panel.h"
+#include "libretro_overlay_panel.h"
 #include "core/sdl_input_manager.h"
 
 #include <QQmlEngine>
@@ -76,6 +77,18 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     // retro_load_game runs inside startLibretro().
     connect(m_gameService.session(), &GameSession::aboutToStartLibretro,
             this, &AppController::gameStartingLibretro);
+    // SP3.5: lazy-create and show the LibretroOverlayPanel for Pattern B
+    // HW-render libretro cores so the in-game menu, RA toasts, RA badge,
+    // and indicator bar can render above the Metal NSView. The panel's
+    // QWindow is destroyed on game end so each session gets a fresh
+    // scene; the C++ instance is reused.
+    connect(this, &AppController::gameStartingLibretro, this, [this] {
+        if (gameUsesHardwareRender())
+            showLibretroOverlayPanelForCurrentGame();
+    });
+    connect(&m_gameService, &GameService::gameFinished, this, [this](int, bool) {
+        if (m_libretroOverlayPanel) m_libretroOverlayPanel->hide();
+    });
     connect(&m_gameService, &GameService::gameFinished, this, &AppController::gameFinished);
     // Register global Cmd+Escape hotkey and wire to signal.
     // QPointer guards against use-after-free if AppController is ever
@@ -967,4 +980,80 @@ void AppController::closeInGameMenuPanel() {
 
 bool AppController::inGameMenuPanelVisible() const {
     return m_inGameMenuPanel && m_inGameMenuPanel->isVisible();
+}
+
+// ── SP3.5: LibretroOverlayPanel (Pattern B HW-render libretro cores) ──
+
+void AppController::showLibretroOverlayPanelForCurrentGame() {
+    if (!m_qmlEngine) {
+        qWarning() << "[AppController] showLibretroOverlayPanel before QML engine set";
+        return;
+    }
+    if (!m_libretroOverlayPanel) {
+        m_libretroOverlayPanel = new LibretroOverlayPanel(m_qmlEngine, this);
+
+        // Forward the panel's six overlay-action signals to GameSession.
+        // The panel itself manages menu open/close + setIgnoresMouseEvents;
+        // we only need to wire what happens once the user picks an action.
+        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::resumeRequested,
+                this, [this] {
+                    if (auto* s = gameSession()) s->resumeEmulation();
+                    m_libretroOverlayPanel->closeMenu();
+                });
+        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::saveStateRequested,
+                this, [this] {
+                    if (auto* s = gameSession()) {
+                        s->saveStateLibretro(1);
+                        s->resumeEmulation();
+                    }
+                    m_libretroOverlayPanel->closeMenu();
+                });
+        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::loadStateRequested,
+                this, [this] {
+                    if (auto* s = gameSession()) {
+                        s->loadStateLibretro(1);
+                        s->resumeEmulation();
+                    }
+                    m_libretroOverlayPanel->closeMenu();
+                });
+        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::toggleFastForwardRequested,
+                this, [this] {
+                    if (auto* s = gameSession()) s->toggleFastForwardLibretro();
+                    // Leave the menu open — FF is a state toggle and the
+                    // user should confirm and resume manually. Mirrors
+                    // AppWindow.qml's libretro path.
+                });
+        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::exitWithSaveRequested,
+                this, [this] {
+                    if (auto* s = gameSession()) s->resumeEmulation();
+                    m_libretroOverlayPanel->closeMenu();
+                    saveAndStopGame(1);
+                });
+        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::exitWithoutSaveRequested,
+                this, [this] {
+                    if (auto* s = gameSession()) s->resumeEmulation();
+                    m_libretroOverlayPanel->closeMenu();
+                    stopGame();
+                });
+        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::menuVisibleChanged,
+                this, &AppController::libretroOverlayMenuVisibleChanged);
+    }
+
+    m_libretroOverlayPanel->showForCurrentGame();
+}
+
+void AppController::openLibretroOverlayMenu() {
+    if (!m_libretroOverlayPanel) return;
+    if (auto* s = gameSession()) s->pauseEmulation();
+    m_libretroOverlayPanel->openMenu();
+}
+
+void AppController::closeLibretroOverlayMenu() {
+    if (!m_libretroOverlayPanel) return;
+    m_libretroOverlayPanel->closeMenu();
+    if (auto* s = gameSession()) s->resumeEmulation();
+}
+
+bool AppController::libretroOverlayMenuVisible() const {
+    return m_libretroOverlayPanel && m_libretroOverlayPanel->isMenuOpen();
 }
