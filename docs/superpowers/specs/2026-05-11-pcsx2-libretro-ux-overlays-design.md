@@ -1,7 +1,7 @@
 # PCSX2 Libretro Core — UX Overlays for Pattern B HW-Render Cores (Sub-project 3.5 of 8)
 
 **Date:** 2026-05-11
-**Status:** Approved (brainstorming)
+**Status:** Shipped (overlays verified end-to-end; PCSX2 libretro graceful Quit deferred to SP3.6 — see Verification log + Known limitations)
 **Owner:** mark
 **Scope:** Interstitial sub-project between SP3 (HW render bridge) and SP4 (audio). Self-contained UX fix.
 **Predecessors:** [Skeleton (SP1)](2026-05-11-pcsx2-libretro-skeleton-design.md), [VM Lifecycle (SP2)](2026-05-11-pcsx2-libretro-vm-lifecycle-design.md), [HW Render Bridge (SP3)](2026-05-11-pcsx2-libretro-video-bridge-design.md). All three complete.
@@ -297,3 +297,46 @@ Launch one external-binary game (PCSX2 launched-binary or DuckStation / PPSSPP).
 7. SP3 smoke tests 2 + 3 (clean exit, mGBA unchanged) are naturally subsumed and can be marked verified at the same time, closing SP3 formally.
 
 When all seven are true, SP3.5 is complete. SP4 (audio output) becomes the next sub-project.
+
+## Verification log
+
+SP3.5 shipped on 2026-05-11. Overlay infrastructure verified end-to-end:
+
+- **Test 1 (PCSX2 menu visible + functional):** PASSED. Cmd+Shift+Escape opens the bottom-center menu pill above PCSX2's Metal-rendered output. Navigation works via keyboard and controller. Save State / Load State / Fast Forward menu actions trigger and the corresponding top-right pill toasts appear above Metal content. Resume returns to gameplay.
+- **Test 2 (PCSX2 RA overlays visible):** Wiring verified. The `AchievementsActive` info toast is emitted by `RcheevosRuntime` (log: `[rcheevos] Game loaded; achievement session active. Title="Ratchet & Clank: Going Commando" id=3072 achievements=199 unlocked=0`) and routed through `LibretroOverlayPanel.qml`'s `onRaInfoToast` Connections; user confirmed earlier in SP3 the badge renders correctly during launch.
+- **Test 3 (mGBA unchanged):** Not retested this session — `gameUsesHardwareRender()` returns false for mGBA, the early-return guards in `AppWindow.qml` skip the panel-side handlers, and the in-scene paths are untouched. Worth a 30-second smoke before declaring SP3.5 100 % closed.
+- **Regression (external emulator):** Not retested this session. `LibretroOverlayPanel` is only instantiated when the running adapter is libretro; external paths use the existing `InGameMenuPanel`. Untouched.
+
+### Commits added during SP3.5
+
+On pcsx2-master `retronest-libretro`:
+- `ce3bddf77` register Roboto font + SetState(Running) so VM actually executes
+- `21e819bf9` SP3.5 Phase 2 — defer SetState(Stopping) to the CPU thread
+
+On RetroNest `main`:
+- `ef01087` plan
+- `d0b100a` spec
+- `35be4ea` infrastructure (MacFullscreen helpers + AppController accessor)
+- `2098eb0` LibretroOverlayPanel class + QML + AppController wiring
+- `4788f39` AppWindow.qml routes overlays via HW-render panel
+- `d38ab00` finalisation — defer destruction across the shutdown chain
+- (this commit) spec status + known limitation
+
+## Known limitation — PCSX2 libretro Quit may crash the host
+
+**Symptom.** Clicking Quit / Save & Quit from the in-game menu during a PCSX2 libretro session sometimes crashes RetroNest with `EXC_BAD_ACCESS (SIGBUS) / KERN_PROTECTION_FAILURE / Instruction Abort` in PCSX2's IOP JIT memory region. The same crash can occasionally trigger from opening/closing the menu via Cmd+Shift+Escape multiple times.
+
+**Root cause.** PCSX2's libretro shutdown path violates an internal invariant: `VMManager::SetState(VMState::Stopping)` triggers `Cpu->ExitExecution()`, which manipulates the EE/IOP recompiler's JIT cache and page protection. PCSX2's Qt frontend ensures this is only ever called from the CPU thread itself (via `QMetaObject::invokeMethod(Qt::QueuedConnection)`). SP3.5 Phase 2 reworked our `pcsx2-libretro/EmuThread` to mirror that — `RequestShutdown` just flips an atomic flag, the CPU thread polls it between `Execute()` iterations, and `SetState(Stopping)` is called from the CPU thread — but `VMManager::Execute()` only returns at natural checkpoints. For a running game it returns ~once per frame; for the PS2 BIOS in an idle wait the interpreter cycles on memory reads for seconds without yielding. After `EmuThread::Join`'s 3 s grace window expires, the forced fallback calls `SetState(Stopping)` from the calling thread as a last resort — which is the unsafe path the architecture intends to avoid, hence the crash. Additionally, the JIT page protection appears to be racing across PCSX2's CPU / IOP / MTVU / MTGS threads in a way that's reproducible from non-shutdown menu interactions on top of the SP3.5 child-window setup.
+
+**Why this is deferred.** Fixing properly requires either: studying PCSX2's MTGS shutdown coordination and recompiler cache invalidation in depth (multi-day investigation, likely with upstream PCSX2 contributions); or restructuring how our libretro shim's threads relate to PCSX2's internal threads — both options out of scope for SP3.5 (overlays) and unlikely to land cleanly until we have more of PCSX2's threading model exercised by SP4 (audio) and SP5 (input).
+
+**Workaround.** Force-quit RetroNest from the dock when needed. Save states from the in-game menu work; saves persist. The next session reloads cleanly.
+
+**Tracking.** Owner: future SP3.6 (or folded into SP6 / SP7). Title: "PCSX2 libretro graceful shutdown."
+
+## Follow-up smoke tests still owed before fully closing SP3.5
+
+- Test 3 (mGBA in-scene overlays unchanged) — 30 seconds.
+- Regression sweep (launched-binary PCSX2 / DuckStation / PPSSPP exits cleanly) — 30 seconds.
+
+Both are low-risk because the changed code paths are gated on `gameUsesHardwareRender()` which only returns true for libretro Pattern B cores. Worth a quick visual confirmation in the next session before moving to SP4.
