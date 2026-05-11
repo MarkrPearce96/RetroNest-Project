@@ -5,7 +5,15 @@
 #include <thread>
 
 namespace {
-thread_local CoreRuntime* g_current = nullptr;
+// Plain static (not thread_local): PCSX2 spawns its own MTGS render thread
+// inside VMManager::Initialize and that thread is what calls
+// Host::AcquireRenderWindow → env_cb. A thread_local g_current is null on
+// the MTGS thread because we only ever set it on the CoreRuntime worker
+// thread (runLoop), which silently breaks the SP3 NSView env command.
+// Cross-thread visibility is provided by QThread::start's happens-before
+// edge (this assignment runs in runLoop before any core code spawns
+// downstream threads). We run exactly one CoreRuntime at a time.
+CoreRuntime* g_current = nullptr;
 }
 
 CoreRuntime::CoreRuntime(QObject* parent) : QObject(parent) {

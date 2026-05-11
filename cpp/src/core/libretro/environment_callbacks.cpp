@@ -64,10 +64,20 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             *static_cast<const char**>(data) = ctx->saveDirectory.constData();
             return true;
         case RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW: {
-            if (!data) return false;
-            if (!ctx->runtime) return false;
+            if (!data) {
+                qWarning("[libretro/env] GET_MACOS_NSVIEW: data=null");
+                return false;
+            }
+            if (!ctx->runtime) {
+                qWarning("[libretro/env] GET_MACOS_NSVIEW: ctx->runtime=null");
+                return false;
+            }
             void* ns_view = coreRuntimeGetActiveNSView(ctx->runtime);
-            if (!ns_view) return false;
+            if (!ns_view) {
+                qWarning("[libretro/env] GET_MACOS_NSVIEW: activeNSView returned null");
+                return false;
+            }
+            qInfo("[libretro/env] GET_MACOS_NSVIEW: returning ns_view=%p", ns_view);
             *reinterpret_cast<void**>(data) = ns_view;
             return true;
         }
