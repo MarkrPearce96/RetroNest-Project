@@ -1,7 +1,7 @@
 # PCSX2 Libretro Core — Skeleton Phase (Sub-project 1 of 8)
 
 **Date:** 2026-05-11
-**Status:** Approved (brainstorming)
+**Status:** Complete (skeleton verified end-to-end — see Verification log)
 **Owner:** mark
 **Scope:** First sub-project of the multi-phase PCSX2-to-libretro port. Skeleton only.
 
@@ -358,3 +358,48 @@ Validates: end-to-end RetroNest ↔ libretro core integration, including manifes
 5. Existing `pcsx2` launched-binary path continues to work unchanged.
 
 When all five are true, the skeleton sub-project is complete. The next sub-project (VM lifecycle + game boot) begins.
+
+## Verification log
+
+Skeleton phase completed 2026-05-11. All three tests from the success-criteria summary pass:
+
+- **Test 1 (build):** PASSED. `cmake -B build -DENABLE_LIBRETRO=ON -DENABLE_QT_UI=OFF` configures clean. `cmake --build build --target pcsx2_libretro` produces `build/pcsx2-libretro/pcsx2_libretro.dylib` (Mach-O 64-bit bundle arm64, ~8.5 MB). `nm -gU` confirms all required `retro_*` symbols exported as defined-text. Symbol visibility hiding works (no PCSX2 internal `_ZN4Host*` symbols leaked).
+- **Test 2 (neutral libretro host):** PASSED. `retroarch` not installed on this machine; verified via the fallback `pcsx2-libretro/tools/test_loader` (committed in the fork). Output:
+  ```
+  retro_api_version() = 1
+  library_name     = PCSX2
+  library_version  = skeleton-0.1
+  valid_extensions = iso|chd|cso|bin|cue|m3u|gz
+  retro_load_game returned: FALSE
+  ```
+- **Test 3 (RetroNest end-to-end):** PASSED. Manifest discovered, dylib loaded by `LibretroAdapter`, `retro_load_game` reached our shim with the real ISO path, returned `false`, `retro_deinit` ran cleanly, no crash/hang. Verified with Ratchet & Clank - Going Commando. Existing `pcsx2` launched-binary manifest untouched and continues to work for other PS2 games.
+
+### Observations and follow-ups uncovered during verification
+
+1. **Spec assumption corrected (Task 4):** The plan claimed CMake would not validate `target_sources()` files at configure time. CMake 4.3.1 does. The implementer added `set_source_files_properties(... GENERATED TRUE)` to `pcsx2-libretro/CMakeLists.txt` to compile-defer source-existence checks; this was removed in Task 8 once the sources existed on disk. Net: pcsx2-libretro's CMakeLists now matches the original Task 3 spec, with no GENERATED marker. Future plan iterations should land all source files BEFORE the first configure pass to avoid this round-trip.
+
+2. **Spec assumption corrected ("Zero new C++ in RetroNest"):** The spec stated "we don't even need a subclass — we'll let `LibretroAdapter` handle it generically." That was wrong — `LibretroAdapter::coreId()` is pure virtual, so the adapter registry can't instantiate it directly. The skeleton phase added a minimal `Pcsx2LibretroAdapter` (header + empty .cpp) that overrides only `coreId() = "pcsx2"`, plus registration in `adapter_registry.cpp`. Net code addition on RetroNest side: ~25 lines. Header is at `cpp/src/adapters/libretro/pcsx2_libretro_adapter.h`; .cpp exists solely so AUTOMOC emits the Q_OBJECT vtable. Later phases fill in PS2-specific overrides (settings schema, controller bindings, BIOS paths, RA console ID, resume-file lookup).
+
+3. **Plan miscounted prefix lines (Task 2):** The vendor-pin comment block at the top of `pcsx2-libretro/libretro.h` is 7 lines (5 comment lines + `*/` + blank), not 6 as the plan stated. The byte-identity verification (`tail -n +8` instead of `+7`) caught this trivially. Cosmetic; no behavior impact.
+
+4. **Plan miss on Host:: function discovery:** The plan listed Host:: function names from `pcsx2/Host.h` alone, but several real Host:: declarations live in headers like `pcsx2/ImGui/FullscreenUI.h` and `pcsx2/ImGui/ImGuiManager.h`. The Task 8 link surface check exposed these and the implementer added missing includes to `HostStubs.cpp`. Net: 2 additional includes, 0 additional stub functions (gsrunner's implementations covered all the bodies). For sub-project 2, the plan should specify "use gsrunner/Main.cpp as the canonical Host:: inventory" — which is what Task 6 already did, this is just a reinforcement.
+
+5. **RetroNest feature gap: emulator-selection per game.** All PS2 games were tagged with `emulator_id = "pcsx2"` at scan time (when only the standalone manifest existed). RetroNest has no in-app UI to change a game's preferred emulator after the fact, even when the tagged emulator becomes uninstalled. For verification we patched a single DB row directly. Sub-project 8 (adapter rewrite) is the natural place to add a "change emulator for this game" action AND/OR an auto-fallback rule ("if tagged emulator isn't installed, fall back to any other installed emulator that handles this system").
+
+6. **RetroNest feature gap: `RETRO_ENVIRONMENT_SET_MESSAGE` not handled.** RetroNest's libretro env-callback dispatcher logged `unhandled enum 6` when our shim sent the OSD refusal message. The shim's refusal text never reached the user — they saw RetroNest's generic "Launch failed" indicator instead. The libretro core itself is well-formed (the test_loader and retroarch would both surface the message correctly); this is a RetroNest-side gap to address before sub-project 8 or alongside it.
+
+### Fork state at completion
+
+- `pcsx2-master/` is on branch `retronest-libretro`, pinned to `upstream/master @ dead00eb62a7ca9b3321ede510eb79aab0328922`.
+- Three commits on the fork branch:
+  - `c33251197` libretro: scaffold pcsx2-libretro frontend directory
+  - `9ac6ed64f` libretro: align ENABLE_LIBRETRO block indentation with file style
+  - `0c6309724` libretro: implement skeleton retro_* exports and Host:: stubs
+  - `7bd65a708` libretro: fix build — remove GENERATED flag and add missing ImGui includes
+  - `2140698e6` libretro: add minimal standalone test loader for skeleton verification
+- RetroNest commits on `main`:
+  - `7295318` docs: pcsx2-libretro skeleton — spec + implementation plan
+  - `236ef85` docs(specs): pin pcsx2 libretro skeleton spec to upstream commit
+  - `5bbf96d` manifests: add pcsx2-libretro entry for the in-progress libretro core
+  - `4b50fb3` adapters: register Pcsx2LibretroAdapter for the new libretro core
+
