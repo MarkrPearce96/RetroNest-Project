@@ -64,7 +64,9 @@ git reset --hard upstream/master
 git checkout -b retronest-libretro
 ```
 
-The upstream commit hash that `git reset --hard upstream/master` lands on is recorded as the **work-start pin** in this spec and committed in the first commit on `retronest-libretro` (will be filled in at plan-execution time, e.g. `pin: upstream/master @ <40-char-sha>`).
+The upstream commit hash that `git reset --hard upstream/master` lands on is recorded as the **work-start pin** in this spec and committed in the first commit on `retronest-libretro`.
+
+`pin: upstream/master @ dead00eb62a7ca9b3321ede510eb79aab0328922`
 
 Optionally push to a private GitHub fork (`markpearce/pcsx2-retronest`) for offsite backup — not required for skeleton work but recommended.
 
