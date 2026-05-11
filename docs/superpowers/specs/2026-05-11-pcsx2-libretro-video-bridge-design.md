@@ -1,7 +1,7 @@
 # PCSX2 Libretro Core — HW Render Bridge / Video Output (Sub-project 3 of 8)
 
 **Date:** 2026-05-11
-**Status:** Approved (brainstorming)
+**Status:** In progress — infrastructure complete, blocked on QML lifecycle / launch-sequence ordering (see Verification log)
 **Owner:** mark
 **Scope:** Third sub-project of the multi-phase PCSX2-to-libretro port.
 **Predecessors:** [Skeleton (SP1)](2026-05-11-pcsx2-libretro-skeleton-design.md), [VM Lifecycle (SP2)](2026-05-11-pcsx2-libretro-vm-lifecycle-design.md). Both complete.
@@ -213,3 +213,66 @@ User launches a GBA game via the existing mGBA entry. mGBA's software rendering 
 7. mGBA software path unchanged.
 
 When all seven are true, SP3 is complete. SP4 (audio output) becomes the next sub-project: SPU2 → `retro_audio_sample_batch_t` → RetroNest's existing audio sink.
+
+## Verification log (in progress)
+
+SP3 implementation completed through Task 12. Tasks 13-16 (end-to-end verification + spec completion) blocked on a launch-sequence ordering bug.
+
+### What works (verified)
+
+- **Env infrastructure end-to-end.** `RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW` (0x20001) is registered, CoreRuntime::setActiveNSView / activeNSView store the pointer atomically, the env handler returns the pointer correctly when set.
+- **Adapter flag dispatch.** `Pcsx2LibretroAdapter::prefersHardwareRender() = true` is wired and consulted by GameSession; `libretroBackend` becomes `"metal"` for PCSX2 launches, `"software"` for mGBA.
+- **LibretroMetalItem widget.** Builds clean as Objective-C++, links against AppKit / QuartzCore / Metal frameworks, hosts a native QWindow with `QSurface::MetalSurface`, exposes `nativeView()` as `Q_INVOKABLE qulonglong`. QML_ELEMENT registration via Qt 6's auto-registration works.
+- **EmulationView.qml Loader.** Switches between LibretroVideoItem (software) and LibretroMetalItem (metal) based on session.libretroBackend.
+- **`Host::AcquireRenderWindow` reaching the env command.** Confirmed via a hard fopen-based diagnostic in `/tmp/sp3_trace.log`. The function is called, environ_cb is valid, and the env command query happens.
+- **`Folders/Resources` override.** Directly assigning `EmuFolders::Resources` after `SetResourcesDirectory()` correctly points PCSX2 at pcsx2-master's `bin/resources/`. The Metal shader library loads (no more "Failed to create GS device" before AcquireWindow).
+- **System console enabled.** `Logging/EnableSystemConsole = true` + `EnableVerbose = true` surfaces PCSX2's `Console.WriteLn` / `Console.Error` output through stderr → essential for diagnosis.
+- **Renderer = Auto (-1).** Resolves to Metal via `GSUtil::GetPreferredRenderer()` on macOS; the GS device path actually reaches `AcquireWindow` instead of erroring at shader-lib load.
+
+### What's blocked
+
+`Host::AcquireRenderWindow` is called, but `RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW` returns **false** because RetroNest's `CoreRuntime` doesn't have an NSView registered at the time `retro_load_game` runs.
+
+**Root cause: launch-sequence ordering.** The flow is:
+
+1. User clicks Launch.
+2. `GameSession::startLibretro` runs.
+3. `rt->start(cfg)` is called inside startLibretro — this triggers `retro_load_game` on the core, which during `VMManager::Initialize` calls our `Host::AcquireRenderWindow`.
+4. `rt->start` succeeds → `started` signal fires → AppController emits `gameStartedLibretro` → AppWindow.qml's Connections (`function onGameStartedLibretro()`) pushes EmulationView.
+5. EmulationView's Loader instantiates LibretroMetalItem → `Component.onCompleted` → `session.registerHardwareView(nativeView())` → `CoreRuntime::setActiveNSView(...)`.
+
+Step 3 calls `retro_load_game` BEFORE step 5 registers the NSView. So `AcquireRenderWindow`'s env command query returns null. `OpenGSDevice` reports "Failed to acquire render window" → init fails → user sees "Emulator crashed."
+
+A naive spin-wait inside `startLibretro` (calling `QCoreApplication::processEvents` until `activeNSView` is non-null) does not help because EmulationView isn't pushed until *after* `startLibretro` returns successfully — it's reactive to the post-start signal.
+
+### Path forward
+
+Three viable architectural fixes:
+
+1. **Pre-push EmulationView.** Emit a new `gameStartingLibretro` signal at the top of `GameSession::startLibretro` (or hijack `libretroBackendChanged`). AppWindow.qml pushes EmulationView in response. Loader instantiates LibretroMetalItem synchronously during the QML scene update. Then `startLibretro` spin-waits (with `processEvents`) for `activeNSView()` to be non-null before calling `rt->start`. This requires a small AppWindow.qml change + a small game_session.cpp signal addition.
+
+2. **Asynchronous launch.** Split `rt->start` into two phases: phase 1 dlopens the core + calls `retro_set_environment` / `retro_init` + emits "core loaded" signal that triggers EmulationView push. Phase 2 (`rt->beginLoad` or similar) calls `retro_load_game` only after the NSView is registered. More invasive but cleaner architecturally.
+
+3. **Singleton NSView.** Have LibretroMetalItem (or a parallel "MetalSurface" QObject) be a persistent singleton owned by main.cpp, not by EmulationView's lifecycle. CoreRuntime always knows about it because it's registered at app startup. EmulationView just makes it visible. Cleanest from a state-management perspective but requires re-architecting how the widget participates in the QML scene.
+
+**Recommended path for SP3 continuation:** Option 1 — smallest delta from current state, surgical.
+
+### Known side issue
+
+After a failed PCSX2 launch attempt, the second click reports "VM already running" — there's a state leak where `m_libretroAdapter` isn't cleared after `rt->start` fails (the `finished` signal's cleanup only runs on successful runs that end). This compounds the "Emulator crashed" UX. Belongs in the same SP3 continuation: clear `m_libretroAdapter` / call `releaseRuntime()` on `rt->start` failure inside `startLibretro`.
+
+### Commits added during SP3
+
+On pcsx2-master `retronest-libretro` branch:
+- `3f64a93a9` libretro: HW render — query host NSView, frame-paced retro_run
+- `a384f33fa` libretro: HW render diagnostics — Auto renderer, system console, Resources fix
+
+On RetroNest `main`:
+- `913f87d` libretro: scaffold HW render context env command + adapter flag
+- `5401cb0` libretro: LibretroMetalItem + EmulationView HW render switching
+- `3205012` docs(specs): pcsx2-libretro SP3 — HW render bridge / video output
+- `743ae72` docs: pcsx2-libretro SP3 implementation plan — HW render bridge
+
+### Session summary
+
+The HW render bridge infrastructure is fully built and proven working through the env command query. What remains is timing/ordering: ensure the NSView is registered with CoreRuntime BEFORE `retro_load_game` runs. The recommended Option 1 fix is ~20 lines across game_session.cpp and AppWindow.qml. Saving this for a focused continuation session.
