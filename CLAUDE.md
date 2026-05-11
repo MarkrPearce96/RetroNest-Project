@@ -41,6 +41,29 @@ mode is enforced by RetroNest at runtime (writing `portable.txt` / setting
 the PPSSPP `NSUserDefaults` key) before spawning each emulator, regardless
 of how RetroNest itself was started.
 
+### Universal (Rosetta-capable) builds
+
+For PS2 perf parity with standalone PCSX2 (which only ships x86_64), the
+build can produce a universal `arm64;x86_64` RetroNest.app whose x86_64
+slice runs PCSX2's recompilers under Rosetta:
+
+```sh
+./scripts/setup-x86_64-toolchain.sh   # one-time x86_64 Homebrew + deps
+./scripts/build-universal.sh           # full universal build
+./scripts/verify-universal.sh          # artifact-verification gate
+```
+
+The merged `.app` lands at `cpp/build-universal/RetroNest.app`. Libretro
+cores are installed in-place at `~/Documents/RetroNest/emulators/libretro/cores/`.
+
+The user switches between native arm64 and Rosetta x86_64 via Finder →
+Get Info → "Open using Rosetta" on the .app. RetroNest does no auto-
+relaunching; dyld picks the matching dylib slice automatically.
+
+**Policy:** all libretro cores RetroNest ships are universal binaries.
+This eliminates host/core arch-mismatch failure modes. New cores
+(future DuckStation libretro, PPSSPP libretro) follow the same rule.
+
 ## Architecture
 - **Manifests** (`manifests/*.json`) = metadata (id, name, systems, github_repo, executable, launch_args)
 - **Adapters** (`adapters/`) own all emulator behavior (config patching, platform paths, launch logic)
