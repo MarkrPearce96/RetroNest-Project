@@ -44,6 +44,14 @@ static bool handleCoreOptionsV2(EnvironmentContext* ctx, void* data) {
     return true;
 }
 
+// Weak stub; overridden by core_runtime.cpp when linking full app.
+// This allows test_environment_callbacks to link without core_runtime dependencies.
+extern "C" void* coreRuntimeGetActiveNSView(void* runtime_opaque) __attribute__((weak));
+void* coreRuntimeGetActiveNSView(void* runtime_opaque) {
+    (void)runtime_opaque;  // unused in stub
+    return nullptr;
+}
+
 bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
     if (!ctx) return false;
     switch (cmd) {
@@ -55,6 +63,14 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
         case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
             *static_cast<const char**>(data) = ctx->saveDirectory.constData();
             return true;
+        case RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW: {
+            if (!data) return false;
+            if (!ctx->runtime) return false;
+            void* ns_view = coreRuntimeGetActiveNSView(ctx->runtime);
+            if (!ns_view) return false;
+            *reinterpret_cast<void**>(data) = ns_view;
+            return true;
+        }
         case RETRO_ENVIRONMENT_GET_VARIABLE:
             return handleGetVariable(ctx, data);
         case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:

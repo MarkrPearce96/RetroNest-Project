@@ -12,4 +12,5 @@ class Pcsx2LibretroAdapter : public LibretroAdapter {
     Q_OBJECT
 public:
     QString coreId() const override { return "pcsx2"; }
+    bool prefersHardwareRender() const override { return true; }
 };

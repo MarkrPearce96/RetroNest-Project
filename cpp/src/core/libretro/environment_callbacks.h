@@ -1,5 +1,15 @@
 #pragma once
 #include "libretro.h"
+
+// RetroNest-private env command IDs (RETRO_ENVIRONMENT_PRIVATE = 0x20000).
+//
+// 0x20001 — RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW
+//           Used by pcsx2_libretro (and future Metal-backed cores) to fetch
+//           the NSView* that hosts the core's CAMetalLayer. Output pointer
+//           is `void**` written to by the host. Returns false if no native
+//           view is registered (mGBA / software cores hit this case).
+#define RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW (1 | RETRO_ENVIRONMENT_PRIVATE)
+
 #include <QByteArray>
 #include <QString>
 #include <QVector>
@@ -12,6 +22,7 @@ struct EnvironmentContext {
     QByteArray saveDirectory;
     retro_pixel_format pixelFormat = RETRO_PIXEL_FORMAT_0RGB1555;
     OptionsStore* options = nullptr;
+    void* runtime = nullptr;  // CoreRuntime* (opaque to avoid circular includes)
     QVector<CoreOption> declaredOptions;  // captured from SET_CORE_OPTIONS_V2
 
     // Scratch storage so returned const char* buffers stay alive across calls.
@@ -30,3 +41,11 @@ struct EnvironmentContext {
 
 /** Returns true if the enum was handled (libretro semantics). */
 bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data);
+
+/**
+ * Bridge function to get the NSView from a CoreRuntime.
+ * Implemented in core_runtime.cpp; used by environmentDispatch for
+ * RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW.
+ * (Weak stub in environment_callbacks.cpp is overridden by strong implementation in core_runtime.cpp)
+ */
+extern "C" void* coreRuntimeGetActiveNSView(void* runtime_opaque);

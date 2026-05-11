@@ -84,6 +84,17 @@ public:
      */
     void setSpeedMultiplier(double multiplier);
 
+    /**
+     * Register a native NSView pointer for the libretro core to consume via
+     * RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW. Call before retro_load_game when
+     * the active adapter prefers hardware rendering. Pass nullptr to clear.
+     *
+     * Stored as void* so this header doesn't drag in Objective-C++. The actual
+     * NSView* is provided by LibretroMetalItem on macOS.
+     */
+    void setActiveNSView(void* ns_view);
+    void* activeNSView() const;
+
     InputRouter& input() { return m_input; }
     OptionsStore& options() { return m_options; }
     RcheevosRuntime& rcheevos() { return m_rcheevos; }
@@ -129,6 +140,7 @@ private:
     QString m_pendingLoadPath;
 
     std::atomic<double> m_speedMultiplier{1.0};
+    std::atomic<void*> m_active_ns_view{nullptr};
 
     double m_frameDurationSec = 1.0 / 60.0;
     int m_sampleRate = 48000;

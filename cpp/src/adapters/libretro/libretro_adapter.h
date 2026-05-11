@@ -80,6 +80,14 @@ public:
         return {};
     }
 
+    /**
+     * True if this core requires a hardware-rendering host context (CAMetalLayer
+     * on macOS). When true, EmulationView hosts LibretroMetalItem and registers
+     * its NSView with CoreRuntime before retro_load_game. When false (default),
+     * EmulationView hosts LibretroVideoItem and the core renders in software.
+     */
+    virtual bool prefersHardwareRender() const { return false; }
+
 protected:
     /** Static path: {root}/emulators/libretro/cores/{core_dylib} */
     static QString coreDylibPath(const EmulatorManifest& manifest);

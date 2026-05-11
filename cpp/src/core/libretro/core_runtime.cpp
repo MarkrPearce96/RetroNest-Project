@@ -168,6 +168,7 @@ void CoreRuntime::runLoop() {
     m_envCtx.systemDirectory = m_cfg.systemDir.toUtf8();
     m_envCtx.saveDirectory   = m_cfg.saveDir.toUtf8();
     m_envCtx.options         = &m_options;
+    m_envCtx.runtime         = static_cast<void*>(this);
 
     auto& s = m_loader.symbols();
     s.retro_set_environment(&CoreRuntime::envTrampoline);
@@ -267,4 +268,20 @@ void CoreRuntime::runLoop() {
     m_loader.close();
     g_current = nullptr;
     emit finished(false);
+}
+
+void CoreRuntime::setActiveNSView(void* ns_view) {
+    m_active_ns_view.store(ns_view, std::memory_order_release);
+}
+
+void* CoreRuntime::activeNSView() const {
+    return m_active_ns_view.load(std::memory_order_acquire);
+}
+
+// Strong implementation of weak stub from environment_callbacks.cpp
+// This function is called by environmentDispatch for RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW
+extern "C" void* coreRuntimeGetActiveNSView(void* runtime_opaque) {
+    if (!runtime_opaque) return nullptr;
+    auto* runtime = static_cast<CoreRuntime*>(runtime_opaque);
+    return runtime->activeNSView();
 }
