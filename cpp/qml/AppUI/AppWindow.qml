@@ -29,6 +29,18 @@ ApplicationWindow {
     }
 
     function toggleInGameMenu() {
+        // SP3.5: Pattern B HW-render libretro cores route through the
+        // floating LibretroOverlayPanel so the menu renders above the
+        // game's Metal NSView. mGBA / software libretro stay on the
+        // in-scene branch below.
+        if (app.gameUsesHardwareRender()) {
+            if (app.libretroOverlayMenuVisible)
+                app.closeLibretroOverlayMenu();
+            else
+                app.openLibretroOverlayMenu();
+            return;
+        }
+
         if (isLibretroGame()) {
             // Libretro path: in-window HUD. Pause/resume the core
             // explicitly because we don't get PauseOnFocusLoss.
@@ -340,6 +352,9 @@ ApplicationWindow {
     Connections {
         target: app
         function onRaAchievementUnlocked(id, title, description, imageUrl) {
+            // SP3.5: skip when LibretroOverlayPanel handles overlays so
+            // we don't double-fire the toast for Pattern B HW-render cores.
+            if (app.gameUsesHardwareRender()) return;
             achievementToast.show(title, description, imageUrl)
             // Chime — gated on the user's "Sound Effects" preference
             // (Settings → RetroAchievements). Source-length check is
@@ -352,12 +367,16 @@ ApplicationWindow {
         // banner, game-mastered celebration, hardcore reset notice, and
         // server-error notice. The C++ side picks the header text.
         function onRaInfoToast(header, title, description, imageUrl, durationMs) {
+            // SP3.5: skip for Pattern B HW-render cores — LibretroOverlayPanel handles it.
+            if (app.gameUsesHardwareRender()) return;
             achievementToast.showWithHeader(header, title, description,
                                              imageUrl, durationMs)
         }
         // Persistent indicator updates — RAIndicatorBar dispatches
         // internally based on `kind` (rc_client event-type integers).
         function onRaIndicator(kind, data) {
+            // SP3.5: skip for Pattern B HW-render cores — LibretroOverlayPanel handles it.
+            if (app.gameUsesHardwareRender()) return;
             raIndicators.dispatch(kind, data)
         }
     }
