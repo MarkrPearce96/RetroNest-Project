@@ -71,6 +71,11 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
         else
             emit gameStarted();
     });
+    // SP3: forward GameSession's pre-start libretro signal so QML can push
+    // EmulationView (and realise LibretroMetalItem's NSView) before
+    // retro_load_game runs inside startLibretro().
+    connect(m_gameService.session(), &GameSession::aboutToStartLibretro,
+            this, &AppController::gameStartingLibretro);
     connect(&m_gameService, &GameService::gameFinished, this, &AppController::gameFinished);
     // Register global Cmd+Escape hotkey and wire to signal.
     // QPointer guards against use-after-free if AppController is ever

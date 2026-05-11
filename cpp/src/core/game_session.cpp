@@ -8,7 +8,10 @@
 #include "core/libretro/rcheevos_runtime.h"
 #include "core/sdl_input_manager.h"
 
+#include <QCoreApplication>
 #include <QDir>
+#include <QElapsedTimer>
+#include <QEventLoop>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QDebug>
@@ -138,8 +141,23 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         emit libretroBackendChanged();
     }
 
+    // Create the runtime BEFORE emitting aboutToStartLibretro: the QML
+    // handler for that signal pushes EmulationView synchronously, which
+    // makes LibretroMetalItem's Component.onCompleted fire registerHardware-
+    // View(...) → m_libretroAdapter->runtime()->setActiveNSView(...). If
+    // the runtime doesn't exist yet, that call is silently dropped and the
+    // spin-wait below times out even though QML did its job.
     lr->prepareRuntime();
     auto* rt = lr->runtime();
+
+    // SP3 ordering fix: announce the libretro launch BEFORE we call rt->start
+    // (which dlopens the core and runs retro_load_game → AcquireRenderWindow).
+    // AppController/AppWindow react by pushing EmulationView; the Metal-backed
+    // LibretroMetalItem then realises its NSView and registers it with
+    // CoreRuntime via registerHardwareView(), so by the time the spin-wait
+    // below resolves, RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW returns the
+    // correct pointer to the core.
+    emit aboutToStartLibretro();
 
     // NSView registration happens from QML once LibretroMetalItem is realized.
     // For now, ensure the runtime knows there's no view registered yet for
@@ -231,8 +249,59 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     // immediately (before any change signal fires).
     emit libretroFrontendChanged();
 
-    if (!rt->start(cfg))
+    // SP3 ordering fix: for the metal backend, pump the Qt event loop until
+    // LibretroMetalItem has been instantiated by EmulationView's Loader and
+    // its Component.onCompleted has called registerHardwareView() (which
+    // populates CoreRuntime::activeNSView). Without this wait, rt->start
+    // would call retro_load_game → Host::AcquireRenderWindow with the
+    // NSView pointer still null, and GS device init would fail.
+    //
+    // Bounded by an elapsed-time deadline so a misconfigured QML stack
+    // (e.g. EmulationView.qml missing, registerHardwareView never called)
+    // surfaces as a clean error instead of an infinite spin.
+    if (hw) {
+        qInfo() << "[GameSession] spin-wait: waiting for LibretroMetalItem NSView registration";
+        constexpr int kHardwareViewWaitMs = 2000;
+        QElapsedTimer waitTimer;
+        waitTimer.start();
+        while (!rt->activeNSView()) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+            if (waitTimer.elapsed() >= kHardwareViewWaitMs) {
+                qWarning() << "[GameSession] Timed out after"
+                           << kHardwareViewWaitMs
+                           << "ms waiting for LibretroMetalItem NSView registration; "
+                              "aborting libretro launch.";
+                emit errorOccurred(QStringLiteral(
+                    "Hardware render view was not ready in time. "
+                    "Cannot start the libretro core."));
+                // Match the rt->start-failure cleanup below.
+                lr->releaseRuntime();
+                m_libretroAdapter = nullptr;
+                m_adapter = nullptr;
+                m_manifest = nullptr;
+                return false;
+            }
+        }
+    }
+
+    if (hw) {
+        qInfo("[GameSession] spin-wait done: activeNSView=%p — calling rt->start",
+              rt->activeNSView());
+    }
+
+    if (!rt->start(cfg)) {
+        // SP3 follow-up: on start failure the CoreRuntime::finished slot above
+        // never fires (the runtime never reached the running state), so the
+        // adapter pointer would otherwise stay set and subsequent launches
+        // would hit "VM already running" / isRunning() == true.  Release the
+        // runtime and clear state explicitly here.
+        lr->releaseRuntime();
+        m_libretroAdapter = nullptr;
+        m_adapter = nullptr;
+        m_manifest = nullptr;
+        emit runningChanged();
         return false;
+    }
 
     // Populate the InputRouter from persisted bindings in controls.ini so that
     // user remappings are reflected at runtime. ensureConfig() seeds the file
@@ -365,6 +434,10 @@ bool GameSession::toggleFastForwardLibretro() {
 }
 
 void GameSession::registerHardwareView(qulonglong view_ptr) {
+    qInfo("[GameSession] registerHardwareView(0x%llx) adapter=%p runtime=%p",
+          view_ptr,
+          static_cast<void*>(m_libretroAdapter),
+          m_libretroAdapter ? static_cast<void*>(m_libretroAdapter->runtime()) : nullptr);
     if (!m_libretroAdapter) return;
     auto* rt = m_libretroAdapter->runtime();
     if (!rt) return;

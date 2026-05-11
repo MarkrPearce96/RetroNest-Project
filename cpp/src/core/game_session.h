@@ -115,6 +115,13 @@ public:
 signals:
     void runningChanged();
     void started();
+    /** Emitted at the top of startLibretro, BEFORE the libretro core is
+     *  dlopened / retro_load_game runs. Used by AppController/AppWindow to
+     *  pre-push EmulationView so LibretroMetalItem realises its NSView
+     *  before the core queries it via AcquireRenderWindow. The signal fires
+     *  for every libretro start (both software and metal backends); the
+     *  software path simply doesn't need the NSView. */
+    void aboutToStartLibretro();
     void finished(int exitCode, bool crashed);
     void libretroBackendChanged();
     void errorOccurred(const QString& error);

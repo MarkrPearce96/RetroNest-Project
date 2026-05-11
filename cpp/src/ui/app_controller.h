@@ -217,6 +217,11 @@ signals:
     void gameStarted();
     /** Emitted instead of gameStarted() when the backend is libretro (in-process). */
     void gameStartedLibretro();
+    /** Emitted BEFORE a libretro game starts (before retro_load_game runs).
+     *  AppWindow uses this to pre-push EmulationView so LibretroMetalItem's
+     *  NSView is realised and registered with CoreRuntime before the core's
+     *  Host::AcquireRenderWindow queries it. SP3 launch-ordering fix. */
+    void gameStartingLibretro();
     void gameFinished(int exitCode, bool crashed);
     void globalHotkeyPressed();
     void emulatorInstalled(const QString& emuId);

@@ -731,14 +731,35 @@ ApplicationWindow {
         }
     }
 
-    // Libretro game start — push EmulationView on top of the theme
+    // SP3 launch-ordering fix: push EmulationView BEFORE retro_load_game runs.
+    //
+    // gameStartingLibretro fires from GameSession::startLibretro before
+    // rt->start (and thus before Host::AcquireRenderWindow queries the host
+    // for an NSView). Pushing the view here lets the Loader instantiate
+    // LibretroMetalItem synchronously, which realises its child QWindow's
+    // NSView and immediately calls registerHardwareView() back into
+    // CoreRuntime — satisfying RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW by
+    // the time the core's spin-wait inside startLibretro resolves.
+    //
+    // Idempotent vs gameStartedLibretro: we guard so we don't push twice.
     Connections {
         target: app
-        function onGameStartedLibretro() {
+        function onGameStartingLibretro() {
+            if (mainStack.currentItem && mainStack.currentItem.isEmulationView)
+                return
             var view = mainStack.push("EmulationView.qml")
-            // Bind the session so frameReady flows through
             view.session = app.gameSession
-            // In-game menu toggle (keyboard Esc path inside the view)
+            view.inGameMenuRequested.connect(window.toggleInGameMenu)
+        }
+        function onGameStartedLibretro() {
+            // After SP3 the view is already pushed by onGameStartingLibretro,
+            // but keep this branch for software-backend launches that don't
+            // need the pre-push (still cheap and idempotent thanks to the
+            // isEmulationView guard).
+            if (mainStack.currentItem && mainStack.currentItem.isEmulationView)
+                return
+            var view = mainStack.push("EmulationView.qml")
+            view.session = app.gameSession
             view.inGameMenuRequested.connect(window.toggleInGameMenu)
         }
     }
