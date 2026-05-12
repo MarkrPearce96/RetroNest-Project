@@ -84,14 +84,37 @@ void CoreRuntime::audioSampleTrampoline(int16_t l, int16_t r) {
 void CoreRuntime::inputPollTrampoline() {}
 
 int16_t CoreRuntime::inputStateTrampoline(unsigned port, unsigned device,
-                                          unsigned /*index*/, unsigned id) {
+                                          unsigned index, unsigned id) {
     // NOTE: InputRouter::lookup() is NOT used from the core thread; lookups
     // happen on the Qt thread (via SdlInputManager) which then writes the
-    // atomic bitmask via setButtonPressed(). We only call buttonPressed() here,
-    // which reads an atomic<uint32_t> — safe across threads without a lock.
-    if (!g_current || device != RETRO_DEVICE_JOYPAD) return 0;
-    auto slot = static_cast<RetroPadSlot>(id);
-    return g_current->m_input.buttonPressed(static_cast<int>(port), slot) ? 1 : 0;
+    // atomic state. We only call buttonPressed() / axis() here, both of which
+    // read atomics — safe across threads without a lock.
+    if (!g_current) return 0;
+
+    if (device == RETRO_DEVICE_JOYPAD) {
+        auto slot = static_cast<RetroPadSlot>(id);
+        return g_current->m_input.buttonPressed(static_cast<int>(port), slot) ? 1 : 0;
+    }
+
+    if (device == RETRO_DEVICE_ANALOG) {
+        // Map (index, id) → RetroPadAxis. Unknown combinations return 0
+        // (forward-compat with future libretro spec extensions).
+        RetroPadAxis a = RetroPadAxis::Count;
+        if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT) {
+            if      (id == RETRO_DEVICE_ID_ANALOG_X) a = RetroPadAxis::LeftX;
+            else if (id == RETRO_DEVICE_ID_ANALOG_Y) a = RetroPadAxis::LeftY;
+        } else if (index == RETRO_DEVICE_INDEX_ANALOG_RIGHT) {
+            if      (id == RETRO_DEVICE_ID_ANALOG_X) a = RetroPadAxis::RightX;
+            else if (id == RETRO_DEVICE_ID_ANALOG_Y) a = RetroPadAxis::RightY;
+        } else if (index == RETRO_DEVICE_INDEX_ANALOG_BUTTON) {
+            if      (id == RETRO_DEVICE_ID_JOYPAD_L2) a = RetroPadAxis::L2;
+            else if (id == RETRO_DEVICE_ID_JOYPAD_R2) a = RetroPadAxis::R2;
+        }
+        if (a == RetroPadAxis::Count) return 0;
+        return g_current->m_input.axis(static_cast<int>(port), a);
+    }
+
+    return 0;
 }
 
 bool CoreRuntime::start(const StartConfig& cfg) {
