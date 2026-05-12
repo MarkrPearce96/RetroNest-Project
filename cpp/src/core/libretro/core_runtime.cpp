@@ -5,6 +5,7 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <thread>
@@ -19,6 +20,12 @@ namespace {
 // edge (this assignment runs in runLoop before any core code spawns
 // downstream threads). We run exactly one CoreRuntime at a time.
 CoreRuntime* g_current = nullptr;
+
+// Env-gated audio diagnostic (RETRONEST_AUDIO_TRACE=1).
+bool audioTraceEnabled() {
+    static const bool v = (std::getenv("RETRONEST_AUDIO_TRACE") != nullptr);
+    return v;
+}
 
 // Env-gated input diagnostic (RETRONEST_INPUT_TRACE=1).
 bool inputTraceEnabled() {
@@ -80,8 +87,13 @@ void CoreRuntime::videoTrampoline(const void* data, unsigned w, unsigned h, size
 }
 
 size_t CoreRuntime::audioBatchTrampoline(const int16_t* data, size_t frames) {
-    if (g_current) g_current->m_audio.writeSamples(data, static_cast<int>(frames));
-    return frames;
+    // SP4.x: return real acceptance so PCSX2's pending-buffer absorbs any
+    // overflow when the sink's queue ceiling kicks in. Without backpressure
+    // a single overdraining frame can put the queue into a state where it
+    // never recovers (was the original SP4 bug — see SP4.x trace evidence).
+    if (!g_current) return frames; // no sink yet → claim accepted (avoid spin)
+    return static_cast<size_t>(
+        g_current->m_audio.writeSamples(data, static_cast<int>(frames)));
 }
 
 void CoreRuntime::audioSampleTrampoline(int16_t l, int16_t r) {
@@ -343,11 +355,52 @@ void CoreRuntime::runLoop() {
         // emits the loaded state's video/audio (post-run flush would
         // discard the just-rendered frame).
         flushPendingLoadState(s);
+        const auto frame_start = clock::now();
         s.retro_run();
+        const auto frame_end = clock::now();
         m_rcheevos.frame();
         flushPendingSaveState(s);
         const double mult = m_speedMultiplier.load();
-        next += std::chrono::nanoseconds(static_cast<long long>(m_frameDurationSec * 1e9 / mult));
+        const long long target_ns =
+            static_cast<long long>(m_frameDurationSec * 1e9 / mult);
+        next += std::chrono::nanoseconds(target_ns);
+
+        // SP4.x: bound the deadline-vs-real-time slip. retro_run is
+        // internally wall-clock-paced by PCSX2's framelimiter via
+        // g_present_cv, so a runaway `next` doesn't cause audio drift
+        // (sleep_until just no-ops while next is in the past). But the
+        // slip grows monotonically when exec_ms slightly exceeds target
+        // (visible as bursts_so_far ≈ frame count in AUDIO_TRACE).
+        // Resetting at 50 ms means the loop self-recovers from any
+        // single-frame spike without piling up phantom debt.
+        const auto behind = std::chrono::duration_cast<std::chrono::milliseconds>(
+            clock::now() - next);
+        if (behind > std::chrono::milliseconds(50)) {
+            next = clock::now();
+        }
+
+        if (audioTraceEnabled()) {
+            static std::atomic<uint64_t> count{0};
+            static std::atomic<uint64_t> bursts{0};
+            const auto exec_ns =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    frame_end - frame_start).count();
+            const auto overrun_ns =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    clock::now() - next).count();
+            if (overrun_ns > 0)
+                bursts.fetch_add(1, std::memory_order_relaxed);
+            const uint64_t n = count.fetch_add(1, std::memory_order_relaxed);
+            if ((n % 60) == 0) {
+                qWarning().nospace().noquote()
+                    << "[AUDIO_TRACE] runloop frame=" << n
+                    << " exec_ms=" << QString::number(exec_ns / 1e6, 'f', 2)
+                    << " target_ms=" << QString::number(target_ns / 1e6, 'f', 2)
+                    << " overrun_ms=" << QString::number(overrun_ns / 1e6, 'f', 2)
+                    << " bursts_so_far=" << bursts.load(std::memory_order_relaxed);
+            }
+        }
+
         std::this_thread::sleep_until(next);
     }
 

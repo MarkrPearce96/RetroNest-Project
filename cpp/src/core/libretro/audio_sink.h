@@ -19,8 +19,12 @@ public:
      *  while the libretro worker thread is blocked on the pause cond. */
     void setPaused(bool paused);
 
-    /** writeSamples: stereo int16 frames; `frames` is per-channel pair count. */
-    void writeSamples(const int16_t* data, int frames);
+    /** writeSamples: stereo int16 frames; `frames` is per-channel pair count.
+     *  Returns the number of frames accepted (== frames in steady state).
+     *  Returns 0 when the SDL queue is at the defensive ceiling — callers
+     *  must respect this (libretro's audio_batch_cb contract: the core
+     *  re-queues unaccepted samples). */
+    int writeSamples(const int16_t* data, int frames);
     uint64_t totalFramesWritten() const { return m_totalFrames.load(); }
 
 private:
