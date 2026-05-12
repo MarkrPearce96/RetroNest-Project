@@ -14,6 +14,16 @@ public:
     QString coreId() const override { return "pcsx2"; }
     bool prefersHardwareRender() const override { return true; }
 
+    // PS2 → rcheevos console ID 21 (RC_CONSOLE_PLAYSTATION_2).
+    // Without this override, the base returns 0 (UNKNOWN) →
+    // rc_libretro_memory_init fails → cheevo set loads with regions=0
+    // and achievements never trigger. Discovered during SP6 smoke
+    // testing (the SP6 spec assumed RetroNest side was fully wired —
+    // the adapter override was missing for PCSX2 specifically).
+    int raConsoleId(const QString& systemId) const override {
+        return (systemId == "ps2") ? 21 : 0;
+    }
+
     // SP5: PS2 DualShock 2 binding defs. Action keys match
     // retroPadSlotFromKey() so the InputRouter resolves bindings on launch.
     // Analog sticks / L2/R2 analog triggers route as digital here (RetroNest's
