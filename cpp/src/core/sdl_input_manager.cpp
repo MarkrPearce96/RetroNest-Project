@@ -315,6 +315,21 @@ QString SdlInputManager::canonicalName(const char* sdlName) {
     return canonicalMap().value(QString(sdlName).toLower(), QString(sdlName));
 }
 
+// Map SDL_GameControllerAxis -> RetroPadAxis. Returns RetroPadAxis::Count
+// for SDL axes we don't surface as analog (currently none — all 6 SDL axes
+// map onto our enum).
+static RetroPadAxis sdlAxisToRetroPadAxis(SDL_GameControllerAxis a) {
+    switch (a) {
+        case SDL_CONTROLLER_AXIS_LEFTX:        return RetroPadAxis::LeftX;
+        case SDL_CONTROLLER_AXIS_LEFTY:        return RetroPadAxis::LeftY;
+        case SDL_CONTROLLER_AXIS_RIGHTX:       return RetroPadAxis::RightX;
+        case SDL_CONTROLLER_AXIS_RIGHTY:       return RetroPadAxis::RightY;
+        case SDL_CONTROLLER_AXIS_TRIGGERLEFT:  return RetroPadAxis::L2;
+        case SDL_CONTROLLER_AXIS_TRIGGERRIGHT: return RetroPadAxis::R2;
+        default:                               return RetroPadAxis::Count;
+    }
+}
+
 void SdlInputManager::setEmulationMode(InputRouter* target) {
     m_emulationTarget = target;
     qInfo() << "[SdlInput] Emulation mode ON — routing via InputRouter";
@@ -431,7 +446,7 @@ void SdlInputManager::pollEvents() {
                     const QString canonical = canonicalName(btnName);
                     const RetroPadSlot slot = m_emulationTarget->lookup(devIdx, canonical);
                     if (slot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(0, slot, true);
+                        m_emulationTarget->setButtonPressed(devIdx, slot, true);
                 }
             } else {
                 auto type = m_controllerTypes.value(event.cbutton.which, Xbox);
@@ -506,7 +521,7 @@ void SdlInputManager::pollEvents() {
                     const QString canonical = canonicalName(btnName);
                     const RetroPadSlot slot = m_emulationTarget->lookup(devIdx, canonical);
                     if (slot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(0, slot, false);
+                        m_emulationTarget->setButtonPressed(devIdx, slot, false);
                 }
             } else if (!m_capturing) {
                 auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);
@@ -534,12 +549,15 @@ void SdlInputManager::pollEvents() {
                 }
                 emit bindingCaptured(devIdx, element, true, positive);
             } else if (m_emulationTarget && !m_capturing) {
-                // Route axis polarity to the InputRouter so analog-mapped-to-
-                // RetroPad bindings work (e.g. D-Pad Up = SDL-0/-LeftY).
-                // Resolve both "+{axis}" and "-{axis}" via lookup; only the
-                // bound polarity gets a press, the opposite gets released.
-                const char* axisName = SDL_GameControllerGetStringForAxis(
-                    static_cast<SDL_GameControllerAxis>(event.caxis.axis));
+                // Two-fold routing on every axis event:
+                //  1. Existing: '+axis'/'-axis' bindings write digital presses
+                //     into the InputRouter bitmask. Keeps D-Pad-bound-to-stick
+                //     and other digital-emulation bindings working.
+                //  2. SP5.5: write the raw int16 magnitude into the axis
+                //     storage. PCSX2's analog bindings ("-LeftY", "+L2", ...)
+                //     query this via RETRO_DEVICE_ANALOG.
+                const auto sdlAxis = static_cast<SDL_GameControllerAxis>(event.caxis.axis);
+                const char* axisName = SDL_GameControllerGetStringForAxis(sdlAxis);
                 const QString axis = canonicalName(axisName);
                 const QString posEl = "+" + axis;
                 const QString negEl = "-" + axis;
@@ -547,21 +565,29 @@ void SdlInputManager::pollEvents() {
                 const auto posSlot = m_emulationTarget->lookup(devIdx, posEl);
                 const auto negSlot = m_emulationTarget->lookup(devIdx, negEl);
 
+                // (1) Digital emulation, unchanged in behaviour; port fixed.
                 if (value > kAxisDeadzone) {
                     if (posSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(0, posSlot, true);
+                        m_emulationTarget->setButtonPressed(devIdx, posSlot, true);
                     if (negSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(0, negSlot, false);
+                        m_emulationTarget->setButtonPressed(devIdx, negSlot, false);
                 } else if (value < -kAxisDeadzone) {
                     if (negSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(0, negSlot, true);
+                        m_emulationTarget->setButtonPressed(devIdx, negSlot, true);
                     if (posSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(0, posSlot, false);
+                        m_emulationTarget->setButtonPressed(devIdx, posSlot, false);
                 } else if (std::abs(value) <= kAxisDeadzone / 2) {
                     if (posSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(0, posSlot, false);
+                        m_emulationTarget->setButtonPressed(devIdx, posSlot, false);
                     if (negSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(0, negSlot, false);
+                        m_emulationTarget->setButtonPressed(devIdx, negSlot, false);
+                }
+
+                // (2) Analog magnitude — raw int16, deadzone applied at read time.
+                const RetroPadAxis rpAxis = sdlAxisToRetroPadAxis(sdlAxis);
+                if (rpAxis != RetroPadAxis::Count) {
+                    m_emulationTarget->setAxis(devIdx, rpAxis,
+                                               static_cast<int16_t>(value));
                 }
             } else if (!m_capturing && std::abs(value) > kAxisDeadzone) {
                 auto axis = static_cast<SDL_GameControllerAxis>(event.caxis.axis);
