@@ -6,9 +6,15 @@
 #include <QSet>
 #include <QVariantMap>
 #include <cmath>
+#include <cstdlib>
 
 // Deadzone threshold for axis capture (out of 32767)
 static constexpr int kAxisDeadzone = 16000;
+
+static bool inputTraceEnabled() {
+    static const bool v = (std::getenv("RETRONEST_INPUT_TRACE") != nullptr);
+    return v;
+}
 
 // SDL button/axis name -> canonical name mapping
 static const QMap<QString, QString>& canonicalMap() {
@@ -364,6 +370,9 @@ bool SdlInputManager::setRumbleMotor(int port, unsigned motor,
 
     const uint16_t low  = m_rumbleCache[port].low.load(std::memory_order_relaxed);
     const uint16_t high = m_rumbleCache[port].high.load(std::memory_order_relaxed);
+    if (inputTraceEnabled()) {
+        qDebug("[rumble] port=%d low=%u high=%u", port, low, high);
+    }
     SDL_GameControllerRumble(ctrl, low, high, kRumbleDurationMs);
     return true;
 }
@@ -632,6 +641,10 @@ void SdlInputManager::pollEvents() {
                 if (rpAxis != RetroPadAxis::Count) {
                     m_emulationTarget->setAxis(devIdx, rpAxis,
                                                static_cast<int16_t>(value));
+                    if (inputTraceEnabled()) {
+                        qDebug("[sdl] port=%d axis=%d raw=%d", devIdx,
+                               static_cast<int>(rpAxis), value);
+                    }
                 }
             } else if (!m_capturing && std::abs(value) > kAxisDeadzone) {
                 auto axis = static_cast<SDL_GameControllerAxis>(event.caxis.axis);

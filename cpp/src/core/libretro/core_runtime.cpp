@@ -6,6 +6,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <chrono>
+#include <cstdlib>
 #include <thread>
 
 namespace {
@@ -18,6 +19,12 @@ namespace {
 // edge (this assignment runs in runLoop before any core code spawns
 // downstream threads). We run exactly one CoreRuntime at a time.
 CoreRuntime* g_current = nullptr;
+
+// Env-gated input diagnostic (RETRONEST_INPUT_TRACE=1).
+bool inputTraceEnabled() {
+    static const bool v = (std::getenv("RETRONEST_INPUT_TRACE") != nullptr);
+    return v;
+}
 }
 
 CoreRuntime::CoreRuntime(QObject* parent) : QObject(parent) {
@@ -112,7 +119,17 @@ int16_t CoreRuntime::inputStateTrampoline(unsigned port, unsigned device,
             else if (id == RETRO_DEVICE_ID_JOYPAD_R2) a = RetroPadAxis::R2;
         }
         if (a == RetroPadAxis::Count) return 0;
-        return g_current->m_input.axis(static_cast<int>(port), a);
+        const int16_t rd = g_current->m_input.axis(static_cast<int>(port), a);
+        if (inputTraceEnabled()) {
+            // Rate-limit: log only every Nth read to keep output sane.
+            // 6 axes × 60 fps = 360 reads/sec without limit.
+            static thread_local int counter = 0;
+            if ((counter++ % 60) == 0) {
+                qDebug("[input] port=%u axis=%d rd=%d", port,
+                       static_cast<int>(a), rd);
+            }
+        }
+        return rd;
     }
 
     return 0;
