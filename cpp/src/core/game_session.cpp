@@ -305,6 +305,14 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
               rt->activeNSView());
     }
 
+    // SP5.5 followup: register the SdlInputManager BEFORE rt->start() spawns
+    // the worker thread. QThread::start() provides a happens-before edge for
+    // anything written before it, so the worker sees m_sdlInput as non-null
+    // when PCSX2 queries the rumble interface during retro_init. Setting it
+    // after start() would be a formal data race on the non-atomic pointer.
+    if (m_sdlInputManager)
+        rt->setSdlInputManager(m_sdlInputManager);
+
     if (!rt->start(cfg)) {
         // SP3 follow-up: on start failure the CoreRuntime::finished slot above
         // never fires (the runtime never reached the running state), so the
@@ -350,11 +358,11 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         }
     }
 
-    // SP5.5: register the manager on the runtime so the rumble bridge can find it.
-    if (m_sdlInputManager) {
-        rt->setSdlInputManager(m_sdlInputManager);
+    // Start routing SDL events into the InputRouter. Bindings have just
+    // been loaded above; setSdlInputManager() was wired before rt->start()
+    // so the rumble bridge already sees the manager.
+    if (m_sdlInputManager)
         m_sdlInputManager->setEmulationMode(&rt->input());
-    }
 
     return true;
 }
