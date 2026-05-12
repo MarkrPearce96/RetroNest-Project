@@ -3,24 +3,32 @@
 **Date:** 2026-05-12
 **Status:** Design — implementation pending
 **Owner:** mark
-**Scope:** Implements `retro_serialize_size` / `retro_serialize` / `retro_unserialize` for the PCSX2 libretro core by wrapping PCSX2's canonical `SaveState_DownloadState` path in an **in-memory libzip container**. Forces uncompressed entries (`ZIP_CM_STORE`) for a deterministic, probe-once buffer size. No upstream PCSX2 file changes. No RetroNest source changes.
+**Scope:** Implements `retro_serialize_size` / `retro_serialize` / `retro_unserialize` for the PCSX2 libretro core by wrapping PCSX2's canonical `SaveState_DownloadState` path in an **in-memory libzip container**. Forces uncompressed entries (`ZIP_CM_STORE`) for a deterministic, probe-once buffer size. Adds **one sanctioned upstream function** `SaveState_UnzipFromMemory(buf, size, error)` (~26 lines, comment-flagged `// pcsx2-libretro: SP6.5`) so the load path can reuse PCSX2's stateful `PreLoadPrep`/`PostLoadPrep` TLB-diff and MTGS-sync helpers without forking them. No RetroNest source changes.
 **Predecessors:** [SP6 — Memory Cards, Memory Map & Reset](2026-05-12-pcsx2-libretro-savestate-memcard-design.md). SP6 shipped and verified end-to-end on R&C 2; save state was the deferred fourth task.
 
 ## Context
 
 SP6 shipped `retro_reset`, memory cards, and `SET_MEMORY_MAPS`. The fourth SP6 task — wiring save state via `memSavingState` / `memLoadingState` directly — was implemented (commit `2eddc63de`) and reverted (`f164c4f5f`) when code review caught a missing canonical step. The reverted code called only `FreezeBios()` + `FreezeInternals()`. The full PCSX2 save path (`pcsx2/SaveState.cpp:713-755`) also iterates a `SavestateEntries[]` table of 14 components — EE main RAM (`SavestateEntry_EmotionMemory`), IOP RAM, HW registers, IOP HW registers, Scratchpad, VU0/VU1 mem + program, SPU2, USB, PAD, GS, and Achievements — calling `entry->FreezeOut(saveme)` for each. Without that loop, saves contain BIOS + a handful of internal PCSX2 registers and **none of the actual game state**; round-trips would appear to succeed but the game would not resume.
 
-The symmetric load is **fundamentally zip-coupled**: `BaseSavestateEntry::FreezeIn(zip_file_t*)` (`SaveState.cpp:469`) takes a libzip file handle, not a `SaveStateBase&`. Per-entry data is read with `zip_fread`; there is no flat-buffer `FreezeIn` equivalent. Any save-state implementation that uses the canonical `SavestateEntries[]` path on the way in is forced into one of:
+The symmetric load is **fundamentally zip-coupled**: `BaseSavestateEntry::FreezeIn(zip_file_t*)` (`SaveState.cpp:469`) takes a libzip file handle, not a `SaveStateBase&`. Per-entry data is read with `zip_fread`; there is no flat-buffer `FreezeIn` equivalent. Additionally, the load path depends on two **stateful file-static helpers** in `pcsx2/SaveState.cpp` that aren't easily replicated from a sibling directory:
 
-- **(A) In-memory libzip.** Wrap a `std::vector<u8>` behind libzip's `zip_source_function` callback API. Build the zip in memory using the same `SaveState_DownloadState` → `ArchiveEntryList` flow as PCSX2-Qt; force `ZIP_CM_STORE` to keep output deterministic. Load: open a `zip_t*` from the caller's read-only buffer and reuse a forked copy of `SaveState_UnzipFromDisk`'s logic that accepts a `zip_t*` instead of a filename.
+- **`PreLoadPrep`** (`SaveState.cpp:51-65`) — waits VU1 + MTGS, copies the global `tlb[48]` into a file-static `s_tlb_backup`, resets mmap block tracking, clears CPU execution caches.
+- **`PostLoadPrep`** (`SaveState.cpp:67-88`) — `resetCache()`, TLB diff/restore against `s_tlb_backup` (using `UnmapTLB`/`MapTLB`), Goemon TLB hack, breakpoint skip-first resets, `UpdateVSyncRate(true)`, `R5900SymbolImporter.OnElfLoadedInMemory()` if an ELF has booted.
+
+Forking these into `pcsx2-libretro/` would require pulling in `R5900.h`, `MTGS.h`, `vu1.h`, `mmap.h`, `CBreakpoints.h`, `R5900SymbolImporter.h` plus maintaining a duplicate `s_tlb_backup` array — ~150 lines of duplicated internal logic, fragile across monthly rebases.
+
+Any save-state implementation that uses the canonical `SavestateEntries[]` path is therefore forced into one of:
+
+- **(A) In-memory libzip with sanctioned upstream addition.** Wrap a `std::vector<u8>` behind libzip's `zip_source_function` callback API. Build the zip in memory using the same `SaveState_DownloadState` → `ArchiveEntryList` flow as PCSX2-Qt; force `ZIP_CM_STORE` to keep output deterministic. Load: add **one upstream function** `SaveState_UnzipFromMemory(buf, size, error)` (~26 lines, mirrors the existing `SaveState_UnzipFromDisk`/`SaveState_ZipToDisk` pair) that opens a `zip_t*` from a memory buffer and invokes the same `PreLoadPrep` → per-entry `FreezeIn` → `PostLoadPrep` body. Comment-flagged `// pcsx2-libretro: SP6.5` for monthly-rebase review, identical to SP4's `AudioBackend::Libretro` and SP5's `InputSourceType::Libretro` sanctioned exceptions.
 - **(B) Disk-temp-file.** Write the zip to `EmuFolders::Cache + "/libretro_state.tmp"` via `SaveState_ZipToDisk`, read bytes back; reverse with `SaveState_UnzipFromDisk`. ~30 lines, but adds ~50–100 ms of disk I/O per save/load on SSD and requires (1) wiring `EmuFolders::Cache` in `pcsx2-libretro/Settings.cpp` and (2) a new env-handler in RetroNest for `RETRO_ENVIRONMENT_SET_SAVE_STATE_INFO_OVERRIDE` to deal with compressed/variable size.
 
 **SP6.5 adopts Option A.** Driving reasons:
 
 1. **Run-ahead and netplay are first-class libretro use cases** that call `retro_serialize` every frame. 50–100 ms of disk I/O per call makes those features unusable; in-memory keeps the door open even though SP6.5 doesn't ship either feature today.
-2. **Stays inside `pcsx2-libretro/`.** Option B grows scope into both `Settings.cpp` (Cache folder) and RetroNest (`RETRO_ENVIRONMENT_SET_SAVE_STATE_INFO_OVERRIDE` env handler, currently unhandled).
+2. **Smaller surface area.** Option B grows scope into `Settings.cpp` (Cache folder) AND RetroNest (`RETRO_ENVIRONMENT_SET_SAVE_STATE_INFO_OVERRIDE` env handler). Option A's upstream edit is bounded: one function, ~26 lines, in a directory the rebase reviewer already scans for `pcsx2-libretro:` markers.
 3. **The libzip-in-memory pattern is already in this file.** `SaveState_CompressScreenshot` (`SaveState.cpp:778-839`) uses `zip_source_buffer_create` + `zip_source_write` to write a zip to memory. SP6.5's source wrapper is the same idea, slightly generalized for write+read+seek.
 4. **Probe-once is deterministic by construction.** With `ZIP_CM_STORE` everywhere, the output size is `sum(entry_bytes) + sum(local_file_headers) + central_directory + EOCD` — fixed per (build, game). No "worst-case bound + pad" workaround needed.
+5. **Sanctioned exception fits the documented precedent.** `project_pcsx2_libretro_port.md` explicitly cites "save-state-backend" as an example of a seam that would fit the SP4/SP5 narrow-exception pattern.
 
 What carries over from the reverted commit `2eddc63de` (verified by code review at the time):
 
@@ -28,7 +36,7 @@ What carries over from the reverted commit `2eddc63de` (verified by code review 
 - The probe-once atomic + reset-on-`retro_unload_game` pattern.
 - Five of six `RETRONEST_STATE_TRACE` boundaries (the `retro_reset` boundary already shipped in SP6 Task 5 / `803262791`).
 
-All of those are lift-and-shift. SP6.5's new code is the libzip plumbing and the per-entry zip-walk on load.
+All of those are lift-and-shift. SP6.5's new code is the libzip plumbing on the save side plus the small upstream `SaveState_UnzipFromMemory` function on the load side.
 
 ## Goal
 
@@ -52,17 +60,19 @@ R&C 2 (and arbitrary PS2 games) in RetroNest:
 
 ## Architecture & components
 
-All changes live in `pcsx2-libretro/`. **No upstream PCSX2 files touched.** No RetroNest source changes. Rebase discipline preserved: the only upstream-edit exceptions remain SP4's `AudioStreamTypes.h`/`AudioStream.cpp` and SP5's `InputManager.{h,cpp}`. SP6.5 introduces no new ones.
+All new files live in `pcsx2-libretro/`. **One small, sanctioned upstream addition** to `pcsx2/SaveState.{h,cpp}` (`SaveState_UnzipFromMemory`, ~26 lines, comment-flagged `// pcsx2-libretro: SP6.5`). This widens the SP4/SP5 narrow-exception pattern by one function — explicitly fitting the "save-state-backend seam" example in `project_pcsx2_libretro_port.md`. No RetroNest source changes.
 
 ### New files
 
 - **`pcsx2-libretro/LibretroSaveState.h`** — declares `Pcsx2Libretro::SaveStateProbeSize()`, `SerializeToBuffer(void* dst, size_t len)`, `DeserializeFromBuffer(const void* src, size_t len)`, plus the existing `WaitForVmPaused` / `ResumeVm` handshake helpers (lifted from `LibretroFrontend.cpp` in the reverted commit so they're reusable and the frontend file doesn't grow by 250 lines).
-- **`pcsx2-libretro/LibretroSaveState.cpp`** — the implementation: `MemoryZipSink` source-function callback, the save/load orchestration, and a forked-from-`SaveState_UnzipFromDisk` zip-walk that accepts a `zip_t*`.
+- **`pcsx2-libretro/LibretroSaveState.cpp`** — the implementation: `MemoryZipSink` source-function callback, save/load orchestration, and a one-line `SaveState_UnzipFromMemory(src, len, &err)` call on the load path.
 
 ### Modified files
 
 - **`pcsx2-libretro/LibretroFrontend.cpp`** — three retro_* stubs become one-line delegates to `LibretroSaveState.{h,cpp}`. The `g_serialize_size` atomic moves to `LibretroSaveState.cpp` (still reset on `retro_unload_game` via a small `ResetSerializeSizeCache()` helper).
 - **`pcsx2-libretro/CMakeLists.txt`** — add the two new files to the target sources.
+- **`pcsx2/SaveState.h`** — single `extern bool SaveState_UnzipFromMemory(const void* buf, size_t size, Error* error);` declaration next to the existing `SaveState_UnzipFromDisk`. Comment-flagged `// pcsx2-libretro: SP6.5` per the rebase-discipline convention.
+- **`pcsx2/SaveState.cpp`** — `SaveState_UnzipFromMemory` definition (~26 lines: opens a `zip_t*` from a `zip_source_buffer`, then invokes the same body as `SaveState_UnzipFromDisk` after the zip-open step). The shared body lives in a new file-static `SaveState_UnzipFromZip(zip_t*, Error*)` helper extracted from `SaveState_UnzipFromDisk:1190-1245`, so both entry points share the `CheckVersion` + per-entry-existence check + `PreLoadPrep` + `LoadInternalStructuresState` + per-entry `FreezeIn` + `PostLoadPrep` flow with no duplication. Comment-flagged accordingly.
 
 ### `MemoryZipSink` (the libzip source-function wrapper)
 
@@ -114,26 +124,30 @@ Identical to the probe flow above, except: after `zip_close`, `memcpy(dst, sink.
 if !src || len == 0 || !HasValidVM: return false
 prev = WaitForVmPaused()
 if prev == Shutdown: return false
-{
-    MemoryZipSink source                       // read mode over src/len
-    zip_t* zf = zip_open_from_source(source.AsSource(), ZIP_RDONLY, &ze)
-    if !zf: log + bail
-    else:
-        ok = UnzipFromMemory(zf, &err)         // see below
-        if !ok: VMManager::Reset()             // mirror SaveState.cpp:1239
-        zip_close(zf)
-}
+ok = SaveState_UnzipFromMemory(src, len, &err)
+    // upstream-added function handles:
+    //   - zip_source_buffer + zip_open_from_source(ZIP_RDONLY)
+    //   - CheckVersion
+    //   - per-entry existence checks
+    //   - PreLoadPrep
+    //   - LoadInternalStructuresState
+    //   - per-entry FreezeIn loop
+    //   - VMManager::Reset() on mid-load failure (matches SaveState.cpp:1239)
+    //   - PostLoadPrep on success
 ResumeVm(prev)
 return ok
 ```
 
-### `UnzipFromMemory(zip_t* zf, Error* error)`
+### `SaveState_UnzipFromMemory` (upstream, sanctioned addition)
 
-A forked copy of `SaveState_UnzipFromDisk` (`SaveState.cpp:1175-1246`), modified only at the entry point: takes a `zip_t*` directly instead of opening one from a filename. Everything downstream — `CheckVersion`, `CheckFileExistsInState`, `LoadInternalStructuresState`, the `SavestateEntries[]` `FreezeIn(zip_file_t*)` loop, `PreLoadPrep` / `PostLoadPrep`, the failure → `VMManager::Reset()` path — is identical. ~50 lines of fork.
+Added to `pcsx2/SaveState.{h,cpp}` with `// pcsx2-libretro: SP6.5` comment markers (same convention as SP4's `AudioBackend::Libretro` and SP5's `InputSourceType::Libretro`). The implementation:
 
-**Why fork rather than refactor upstream:** SP6.5 must not touch upstream files outside the existing 4-line block in top-level `CMakeLists.txt`. The fork is one function and lives entirely in `pcsx2-libretro/LibretroSaveState.cpp`. If a future PCSX2 update changes the load semantics, monthly rebase will surface the divergence as a manual sync; that's acceptable for one function. Cleanly upstreaming a `zip_t*`-taking variant would be a separate PR to upstream PCSX2 — out of scope.
+1. **Refactor first** — extract the body of `SaveState_UnzipFromDisk:1190-1245` (CheckVersion onwards) into a new file-static `SaveState_UnzipFromZip(zip_t* zf, Error* error)`. The existing `SaveState_UnzipFromDisk` becomes a thin wrapper: open zip-from-file, delegate to `SaveState_UnzipFromZip`. Mechanical refactor, no behavior change.
+2. **Add `SaveState_UnzipFromMemory(const void* buf, size_t size, Error* error)`** — opens `zip_source_buffer(nullptr, buf, size, 0)` + `zip_open_from_source(zs, ZIP_RDONLY, &ze)`, then delegates to the same `SaveState_UnzipFromZip`. The buffer is owned by the caller (libretro frontend); the source is freed by `zip_close`. ~10 lines.
 
-`CheckVersion`, `CheckFileExistsInState`, `LoadInternalStructuresState`, `PreLoadPrep`, `PostLoadPrep` are file-static in `pcsx2/SaveState.cpp`, so they aren't directly callable from `LibretroSaveState.cpp`. The fork inlines each one inside `UnzipFromMemory`. Each is small (~15–30 lines); duplication cost is low and the duplicated logic is stable upstream (last touched by `BaseSavestateEntry` refactor in late 2024 per git log).
+Total upstream diff: ~26 lines added (one shared helper + the new function + a 4-line wrapper around the existing function). Both new functions plus the extraction site carry the `// pcsx2-libretro: SP6.5` marker for the monthly rebase reviewer.
+
+**Why extract rather than copy-paste:** the extraction keeps `SaveState_UnzipFromDisk` and `SaveState_UnzipFromMemory` literally sharing the load body. If upstream PCSX2 changes how loads work (new entry, different prep), both paths inherit the change automatically. The alternative (forking the body) would silently rot.
 
 ### Pause-stable handshake
 
@@ -226,24 +240,21 @@ retro_serialize_size  ─► [pause VM]
 retro_unserialize ───► [pause VM]
                           │
                           ▼
-                     MemoryZipSink (read mode over (src, len))
-                          │
-                          ▼
-                     zip_open_from_source(sink.AsSource(), ZIP_RDONLY)
-                          │
-                          ▼
-                     UnzipFromMemory(zf, &err):
-                          ├─ CheckVersion(zf)
-                          ├─ CheckFileExistsInState for each required entry
-                          ├─ PreLoadPrep()
-                          ├─ LoadInternalStructuresState(zf, internal_index)
-                          ├─ for each SavestateEntries[i]:
-                          │     zip_fopen_index_managed(zf, entryIndices[i])
-                          │     SavestateEntries[i]->FreezeIn(zff.get())
-                          │     │
-                          │     └─ failure ► VMManager::Reset(); return false
-                          ├─ PostLoadPrep()
-                          └─ return true
+                     SaveState_UnzipFromMemory(src, len, &err):  // upstream
+                          ├─ zip_source_buffer + zip_open_from_source(ZIP_RDONLY)
+                          ├─ SaveState_UnzipFromZip(zf, &err):     // upstream shared body
+                          │     ├─ CheckVersion(zf)
+                          │     ├─ CheckFileExistsInState for each required entry
+                          │     ├─ PreLoadPrep()
+                          │     ├─ LoadInternalStructuresState(zf, internal_index)
+                          │     ├─ for each SavestateEntries[i]:
+                          │     │     zip_fopen_index_managed(zf, entryIndices[i])
+                          │     │     SavestateEntries[i]->FreezeIn(zff.get())
+                          │     │     │
+                          │     │     └─ failure ► VMManager::Reset(); return false
+                          │     ├─ PostLoadPrep()
+                          │     └─ return true
+                          └─ zip_close(zf)
                           │
                           ▼
                      [resume VM]
@@ -282,7 +293,7 @@ retro_unserialize ───► [pause VM]
 
 - **`zip_source_function` callback complexity.** The 15-opcode dispatch is mechanical but easy to get subtle bugs wrong (off-by-one in seek; misuse of `command_data`; forgetting to handle a supported opcode). Mitigation: keep the implementation small, exercise read-mode and write-mode paths during the round-trip smoke test, and use the existing `SaveState_CompressScreenshot` pattern as the lower bound for "what libzip in memory looks like in this file". The subagent code-quality review (SP6 cycle pattern) is the second mitigation.
 - **`zip_close` cost.** The comment at `SaveState.cpp:1069` calls it "the expensive part with libzip". For our use case it's pure memory operations over a ~5–10 MB zip (most entries are uncompressed RAM regions). Expected cost: under 10 ms. If profiling shows this exceeds 30 ms, fold a future SP6.6 to investigate (e.g. preallocate `sink.bytes.reserve(probed_size)` after the first probe to skip vector growth).
-- **Fork of `SaveState_UnzipFromDisk`.** Roughly 50 lines of duplicated logic. Monthly rebase will surface any upstream changes as a manual merge. We accept this; the alternative (touching upstream `SaveState.cpp` to extract a `zip_t*`-taking variant) violates the rebase-discipline rule documented in `project_pcsx2_libretro_port.md` ("never modify upstream files outside the single 4-line block in top-level CMakeLists.txt").
+- **Upstream addition rebase risk.** `SaveState_UnzipFromMemory` + the `SaveState_UnzipFromZip` extraction (~26 lines total in `pcsx2/SaveState.{h,cpp}`) carry monthly-rebase risk. Mitigation: comment-flag every modified hunk with `// pcsx2-libretro: SP6.5` so the rebase reviewer sees the markers via `git grep`. The extracted helper shares the load body with `SaveState_UnzipFromDisk`, so any upstream load-flow change propagates automatically without manual sync.
 - **64 MB upper bound** on `destlist->GetBuffer()` is set in `SaveState_DownloadState`. If a future PCSX2 update grows past it, both upstream and our libretro path break together — not a new risk.
 - **Save state during BIOS / fast-boot.** SP6 settings hardcode `params.fast_boot = true` (`LibretroFrontend.cpp:284`). Until VM reaches Running, `retro_serialize_size` returns 0 and the frontend retries. No risk of writing a half-initialized state.
 
@@ -293,7 +304,7 @@ The implementation breaks into four commits, mirroring SP6's per-task cadence:
 1. **`LibretroSaveState.{h,cpp}` skeleton.** Move `WaitForVmPaused`/`ResumeVm`/`g_serialize_size`/`ResetSerializeSizeCache` out of `LibretroFrontend.cpp` into the new files. `retro_serialize_size`/`retro_serialize`/`retro_unserialize` become one-line delegates returning 0/false. CMakeLists.txt updated. Builds clean. (Mechanical refactor — no behavior change vs. current stubs.)
 2. **`MemoryZipSink` source-function callback** + factory helpers. Internal-only; not yet called from the retro_ entry points. Adds a developer-only unit-test-shaped check in `LibretroSaveState.cpp` (compile-time disabled by default — comment-out path) that verifies write→read round-trip on a 4-byte sentinel buffer. (Optional; if it bloats the diff, drop it.)
 3. **`retro_serialize_size` + `retro_serialize` implementation.** Wires the save flow. After this commit, save attempts produce a real zip blob; loads still return false. Smoke test: save state from RetroNest UI, confirm log line `probe_size=N` appears and is stable across repeated saves.
-4. **`retro_unserialize` + `UnzipFromMemory` fork.** Wires the load flow. After this commit, round-trip works. Run all four smoke tests above.
+4. **Upstream `SaveState_UnzipFromMemory` addition + wire `retro_unserialize`.** First half of the commit: extract `SaveState_UnzipFromZip` from `SaveState_UnzipFromDisk`, add `SaveState_UnzipFromMemory`, comment-flag all hunks. Second half: `retro_unserialize` calls `SaveState_UnzipFromMemory` from inside the pause/resume handshake. After this commit, round-trip works. Run all four smoke tests above.
 
 Each commit lands clean, builds, can be reverted in isolation. The reviewer's earlier observation that "save state is one unit, not three" (from SP6 retrospective) is respected at the spec level: the unit is SP6.5 as a whole; the sub-tasks are just safe progression checkpoints.
 
