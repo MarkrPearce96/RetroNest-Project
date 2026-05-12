@@ -904,7 +904,7 @@ QVector<SettingDef> PCSX2Adapter::settingsSchema() const {
     // ── Configuration ─────────────────────────────────────────────────
     // Audio enum combos use exact-case enum name strings, not integers — see
     // AudioStream::GetBackendName / GetExpansionModeName / GetSyncModeName in
-    // references/pcsx2-master/pcsx2/Host/AudioStream.cpp:148-221. Audit 2026-04-06.
+    // references/pcsx2-libretro/pcsx2/Host/AudioStream.cpp:148-221. Audit 2026-04-06.
     {
         SettingDef d{"Audio", "", "Configuration", "SPU2/Output", "Backend", "Backend", "",
                      SettingDef::Combo, "Cubeb",

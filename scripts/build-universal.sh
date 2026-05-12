@@ -9,7 +9,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 # Paths to source trees outside this repo.
-PCSX2_SRC="/Users/mark/Documents/Projects/Pcsx2 Experiment /pcsx2-master"
+PCSX2_SRC="${PCSX2_SRC:-$HOME/Documents/Projects/pcsx2-libretro}"
 # mGBA: edit if your local clone lives elsewhere.
 MGBA_SRC="${MGBA_SRC:-$HOME/Documents/Projects/mgba-libretro}"
 
