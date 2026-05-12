@@ -9,6 +9,7 @@
 #include <QKeyEvent>
 #include <SDL2/SDL.h>
 #include <atomic>
+#include <mutex>
 
 #include "core/libretro/input_router.h"
 
@@ -158,6 +159,15 @@ private:
         std::atomic<uint16_t> high{0};  // RETRO_RUMBLE_WEAK
     };
     RumbleCache m_rumbleCache[InputRouter::NUM_PORTS];
+
+    // Guards m_controllers / m_deviceIndices access and the SDL_GameController*
+    // pointer lifetime against the core thread's setRumbleMotor reads. Without
+    // this mutex, openController/closeController on the Qt thread can mutate
+    // QMaps and SDL_GameControllerClose handles while the core thread is
+    // mid-iterate / mid-SDL_GameControllerRumble — both are use-after-free
+    // races. Acquired by setRumbleMotor (core thread) and by
+    // openController/closeController (Qt thread).
+    mutable std::mutex m_controllerMx;
 
     // Emulation mode: non-null while a libretro game is running.
     // Button routing uses InputRouter::lookup() — no separate hardcoded map.

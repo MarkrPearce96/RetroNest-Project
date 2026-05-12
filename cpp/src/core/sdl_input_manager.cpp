@@ -358,7 +358,11 @@ bool SdlInputManager::setRumbleMotor(int port, unsigned motor,
     else
         return false;
 
-    // Reverse-lookup the SDL_JoystickID whose deviceIndex == port.
+    // Lock the QMap reads + the SDL_GameControllerRumble call together:
+    // the controller pointer's lifetime is tied to closeController on the
+    // Qt thread, which holds the same mutex around its SDL_GameControllerClose.
+    std::lock_guard<std::mutex> lock(m_controllerMx);
+
     SDL_JoystickID jid = -1;
     for (auto it = m_deviceIndices.constBegin(); it != m_deviceIndices.constEnd(); ++it) {
         if (it.value() == port) { jid = it.key(); break; }
@@ -402,6 +406,10 @@ void SdlInputManager::openController(int joystickIndex) {
     SDL_Joystick* joy = SDL_GameControllerGetJoystick(ctrl);
     SDL_JoystickID id = SDL_JoystickInstanceID(joy);
 
+    // Lock for the QMap mutations — paired with setRumbleMotor's lock so the
+    // core thread can never observe a half-updated map.
+    std::lock_guard<std::mutex> lock(m_controllerMx);
+
     // Skip if already tracked (SDL fires ADDED events for already-opened controllers)
     if (m_controllers.contains(id)) {
         SDL_GameControllerClose(ctrl);
@@ -424,6 +432,11 @@ void SdlInputManager::openController(int joystickIndex) {
 }
 
 void SdlInputManager::closeController(SDL_JoystickID instanceId) {
+    // Lock for the full duration: paired with setRumbleMotor's lock so the
+    // core thread cannot call SDL_GameControllerRumble on a handle we are
+    // mid-closing. The mutex covers the stop-rumble + close + map remove.
+    std::lock_guard<std::mutex> lock(m_controllerMx);
+
     if (auto* ctrl = m_controllers.value(instanceId, nullptr)) {
         qInfo() << "[SDL] Controller disconnected:" << SDL_GameControllerName(ctrl);
         const int port = m_deviceIndices.value(instanceId, -1);
