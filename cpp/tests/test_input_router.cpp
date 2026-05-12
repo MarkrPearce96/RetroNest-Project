@@ -92,6 +92,17 @@ private slots:
         QCOMPARE(r.axis(0, RetroPadAxis::LeftX), int16_t(12345));
     }
 
+    void testStickAtCenterWithZeroDeadzoneReturnsZero() {
+        // Regression: with dz=0 and both stick axes at 0, the radial
+        // path computed 0/0 = NaN and cast to int16 = UB. Should return 0.
+        InputRouter r;
+        r.setInnerDeadzone(0.0f);
+        r.setAxis(0, RetroPadAxis::LeftX, 0);
+        r.setAxis(0, RetroPadAxis::LeftY, 0);
+        QCOMPARE(r.axis(0, RetroPadAxis::LeftX), int16_t(0));
+        QCOMPARE(r.axis(0, RetroPadAxis::LeftY), int16_t(0));
+    }
+
     void testDeadzoneClampedToHalf() {
         InputRouter r;
         r.setInnerDeadzone(0.6f);   // should clamp to 0.5

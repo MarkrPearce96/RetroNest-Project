@@ -78,6 +78,7 @@ int16_t InputRouter::axis(int port, RetroPadAxis axis) const {
     const float otherF = static_cast<float>(other);
     const float mag = std::sqrt(rawF * rawF + otherF * otherF);
     if (mag < dz) return 0;
+    if (mag <= 0.0f) return 0;  // center: avoid 0/0 NaN when dz is also 0
 
     const float denom = 32767.0f - dz;
     if (denom <= 0.0f) return raw;
