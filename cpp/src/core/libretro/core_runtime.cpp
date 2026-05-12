@@ -1,4 +1,5 @@
 #include "core_runtime.h"
+#include "core/sdl_input_manager.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QElapsedTimer>
@@ -158,6 +159,13 @@ void CoreRuntime::pause() {
     // tail of samples queued for playback bleeds through while the
     // worker is blocked on the pause cond.
     m_audio.setPaused(true);
+    // Stop any active rumble so motors don't keep running while paused.
+    if (m_sdlInput) {
+        for (int port = 0; port < InputRouter::NUM_PORTS; ++port) {
+            m_sdlInput->setRumbleMotor(port, RETRO_RUMBLE_STRONG, 0);
+            m_sdlInput->setRumbleMotor(port, RETRO_RUMBLE_WEAK,   0);
+        }
+    }
 }
 
 void CoreRuntime::resume() {
@@ -330,6 +338,15 @@ void CoreRuntime::runLoop() {
     // (e.g. from GameSession::terminate → requestSaveState + stop).
     flushPendingSaveState(s);
 
+    // Zero all rumble motors on teardown so motors don't keep running
+    // after the game exits.
+    if (m_sdlInput) {
+        for (int port = 0; port < InputRouter::NUM_PORTS; ++port) {
+            m_sdlInput->setRumbleMotor(port, RETRO_RUMBLE_STRONG, 0);
+            m_sdlInput->setRumbleMotor(port, RETRO_RUMBLE_WEAK,   0);
+        }
+    }
+
     m_rcheevos.endSession();
     s.retro_unload_game();
     s.retro_deinit();
@@ -353,4 +370,18 @@ extern "C" void* coreRuntimeGetActiveNSView(void* runtime_opaque) {
     if (!runtime_opaque) return nullptr;
     auto* runtime = static_cast<CoreRuntime*>(runtime_opaque);
     return runtime->activeNSView();
+}
+
+// Strong implementation of weak stub from environment_callbacks.cpp.
+// Routes libretro's set_rumble_state calls through the SdlInputManager
+// registered via setSdlInputManager().
+extern "C" bool coreRuntimeSetRumbleMotor(void* runtime_opaque,
+                                          unsigned port,
+                                          unsigned effect,
+                                          uint16_t strength) {
+    if (!runtime_opaque) return false;
+    auto* rt = static_cast<CoreRuntime*>(runtime_opaque);
+    auto* sdl = rt->sdlInputManager();
+    if (!sdl) return false;
+    return sdl->setRumbleMotor(static_cast<int>(port), effect, strength);
 }

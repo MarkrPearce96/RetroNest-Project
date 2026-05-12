@@ -498,6 +498,7 @@ add_executable(test_rom_scanner
     src/core/libretro/options_store.cpp
     src/core/libretro/frontend_settings_store.cpp
     src/core/libretro/rcheevos_runtime.cpp
+    src/core/sdl_input_manager.cpp
     src/core/libretro/retro_log.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
@@ -777,6 +778,7 @@ set_target_properties(test_generic_hotkey_page PROPERTIES AUTOMOC ON)
 target_include_directories(test_generic_hotkey_page PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${SDL2_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
 )
 target_link_libraries(test_generic_hotkey_page PRIVATE
     Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Test ${SDL2_LIBRARIES}
@@ -811,6 +813,7 @@ add_executable(test_quick_settings_file_field
     src/core/paths.cpp
     src/core/database.cpp
     src/core/manifest_loader.cpp
+    src/core/sdl_input_manager.cpp
 )
 set_target_properties(test_quick_settings_file_field PROPERTIES AUTOMOC ON)
 target_include_directories(test_quick_settings_file_field PRIVATE
@@ -945,7 +948,8 @@ add_executable(test_core_runtime
     src/core/libretro/video_software.cpp
     src/core/libretro/audio_sink.cpp
     src/core/libretro/input_router.cpp
-    src/core/libretro/retro_log.cpp)
+    src/core/libretro/retro_log.cpp
+    src/core/sdl_input_manager.cpp)
 set_target_properties(test_core_runtime PROPERTIES AUTOMOC ON)
 target_include_directories(test_core_runtime PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src

@@ -350,9 +350,11 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         }
     }
 
-    // Fix 1: Switch SDL input into emulation mode so button events feed the InputRouter
-    if (m_sdlInputManager)
+    // SP5.5: register the manager on the runtime so the rumble bridge can find it.
+    if (m_sdlInputManager) {
+        rt->setSdlInputManager(m_sdlInputManager);
         m_sdlInputManager->setEmulationMode(&rt->input());
+    }
 
     return true;
 }
@@ -405,8 +407,10 @@ void GameSession::pauseEmulation() {
 void GameSession::resumeEmulation() {
     if (m_backend != Backend::Libretro) return;
     if (m_libretroAdapter && m_libretroAdapter->runtime()) {
-        if (m_sdlInputManager)
+        if (m_sdlInputManager) {
+            m_libretroAdapter->runtime()->setSdlInputManager(m_sdlInputManager);
             m_sdlInputManager->setEmulationMode(&m_libretroAdapter->runtime()->input());
+        }
         m_libretroAdapter->runtime()->resume();
     }
 }

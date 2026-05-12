@@ -1,4 +1,5 @@
 #include "sdl_input_manager.h"
+#include "libretro.h"   // retro_rumble_effect, RETRO_RUMBLE_STRONG/WEAK
 #include <QDebug>
 #include <QKeyEvent>
 #include <QKeySequence>
@@ -340,6 +341,33 @@ void SdlInputManager::clearEmulationMode() {
     qInfo() << "[SdlInput] Emulation mode OFF";
 }
 
+bool SdlInputManager::setRumbleMotor(int port, unsigned motor,
+                                     uint16_t strength) {
+    if (port < 0 || port >= InputRouter::NUM_PORTS) return false;
+
+    if (motor == static_cast<unsigned>(RETRO_RUMBLE_STRONG))
+        m_rumbleCache[port].low.store(strength, std::memory_order_relaxed);
+    else if (motor == static_cast<unsigned>(RETRO_RUMBLE_WEAK))
+        m_rumbleCache[port].high.store(strength, std::memory_order_relaxed);
+    else
+        return false;
+
+    // Reverse-lookup the SDL_JoystickID whose deviceIndex == port.
+    SDL_JoystickID jid = -1;
+    for (auto it = m_deviceIndices.constBegin(); it != m_deviceIndices.constEnd(); ++it) {
+        if (it.value() == port) { jid = it.key(); break; }
+    }
+    if (jid < 0) return false;
+
+    SDL_GameController* ctrl = m_controllers.value(jid, nullptr);
+    if (!ctrl) return false;
+
+    const uint16_t low  = m_rumbleCache[port].low.load(std::memory_order_relaxed);
+    const uint16_t high = m_rumbleCache[port].high.load(std::memory_order_relaxed);
+    SDL_GameControllerRumble(ctrl, low, high, kRumbleDurationMs);
+    return true;
+}
+
 void SdlInputManager::injectKey(int qtKey, QEvent::Type type) {
     if (!m_window) return;
     m_injectingKey = true;
@@ -389,15 +417,18 @@ void SdlInputManager::openController(int joystickIndex) {
 void SdlInputManager::closeController(SDL_JoystickID instanceId) {
     if (auto* ctrl = m_controllers.value(instanceId, nullptr)) {
         qInfo() << "[SDL] Controller disconnected:" << SDL_GameControllerName(ctrl);
-        // Zero this device's axes before removing it from m_deviceIndices,
-        // otherwise a straggler axis event for this jid would fall back to
-        // port=0 (the QMap::value default) and write a phantom analog value
-        // into player 1's storage that persists until P1 moves the stick.
-        // Digital writes are harmless (InputRouter no-ops out-of-range) and
-        // self-correct on the next button event; analog writes do not.
-        if (m_emulationTarget) {
-            const int port = m_deviceIndices.value(instanceId, -1);
-            if (port >= 0 && port < InputRouter::NUM_PORTS) {
+        const int port = m_deviceIndices.value(instanceId, -1);
+        if (port >= 0 && port < InputRouter::NUM_PORTS) {
+            // If this controller had rumble active, stop it before closing the
+            // SDL handle — otherwise the motors keep running until SDL's
+            // duration expires (or the OS scrubs them on close, which is
+            // platform-dependent).
+            SDL_GameControllerRumble(ctrl, 0, 0, 0);
+            m_rumbleCache[port].low.store(0, std::memory_order_relaxed);
+            m_rumbleCache[port].high.store(0, std::memory_order_relaxed);
+            // Zero this device's axes so straggler axis events don't fall
+            // back to port=0 and write phantom P1 input.
+            if (m_emulationTarget) {
                 for (int ax = 0; ax < static_cast<int>(RetroPadAxis::Count); ++ax)
                     m_emulationTarget->setAxis(port, static_cast<RetroPadAxis>(ax), 0);
             }

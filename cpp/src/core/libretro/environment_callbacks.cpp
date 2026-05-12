@@ -52,6 +52,31 @@ void* coreRuntimeGetActiveNSView(void* runtime_opaque) {
     return nullptr;
 }
 
+// Weak stub for the rumble bridge — strong override in core_runtime.cpp.
+extern "C" bool coreRuntimeSetRumbleMotor(void* runtime_opaque,
+                                          unsigned port,
+                                          unsigned effect,
+                                          uint16_t strength) __attribute__((weak));
+bool coreRuntimeSetRumbleMotor(void* runtime_opaque,
+                                unsigned port,
+                                unsigned effect,
+                                uint16_t strength) {
+    (void)runtime_opaque; (void)port; (void)effect; (void)strength;
+    return false;
+}
+
+// Static thunk the core stores via retro_rumble_interface.set_rumble_state.
+// libretro doesn't pass our context pointer to the thunk, so we route
+// through a file-scope pointer stashed at GET_RUMBLE_INTERFACE time.
+namespace {
+EnvironmentContext* g_rumbleCtx = nullptr;
+bool rumbleThunk(unsigned port, retro_rumble_effect effect, uint16_t strength) {
+    if (!g_rumbleCtx || !g_rumbleCtx->runtime) return false;
+    return coreRuntimeSetRumbleMotor(g_rumbleCtx->runtime, port,
+                                     static_cast<unsigned>(effect), strength);
+}
+}
+
 bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
     if (!ctx) return false;
     switch (cmd) {
@@ -91,6 +116,13 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             auto* cb = static_cast<retro_log_callback*>(data);
             if (!cb) return false;
             *cb = retroLogCallback();
+            return true;
+        }
+        case RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE: {
+            auto* iface = static_cast<retro_rumble_interface*>(data);
+            if (!iface) return false;
+            g_rumbleCtx = ctx;             // stash for the thunk
+            iface->set_rumble_state = &rumbleThunk;
             return true;
         }
         case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS:

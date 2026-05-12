@@ -15,6 +15,8 @@
 #include <condition_variable>
 #include <mutex>
 
+class SdlInputManager;
+
 class CoreRuntime : public QObject {
     Q_OBJECT
 public:
@@ -99,6 +101,16 @@ public:
     OptionsStore& options() { return m_options; }
     RcheevosRuntime& rcheevos() { return m_rcheevos; }
 
+    /**
+     * Register the SdlInputManager that backs this runtime's input. The
+     * runtime does not own the pointer; the caller (GameSession) ensures
+     * the manager outlives the runtime. Used by the rumble bridge to
+     * route libretro's set_rumble_state calls to SDL_GameControllerRumble.
+     * Pass nullptr to clear.
+     */
+    void setSdlInputManager(SdlInputManager* sdl) { m_sdlInput = sdl; }
+    SdlInputManager* sdlInputManager() const { return m_sdlInput; }
+
 signals:
     void started();
     void finished(bool crashed);
@@ -106,6 +118,8 @@ signals:
     void frameReady(const QImage& frame);
 
 private:
+    SdlInputManager* m_sdlInput = nullptr;
+
     static EnvironmentContext* tlsCtx();
     static bool envTrampoline(unsigned cmd, void* data);
     static void videoTrampoline(const void* data, unsigned w, unsigned h, size_t pitch);

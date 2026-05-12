@@ -1,5 +1,6 @@
 #pragma once
 #include "libretro.h"
+#include <cstdint>
 
 // RetroNest-private env command IDs (RETRO_ENVIRONMENT_PRIVATE = 0x20000).
 //
@@ -49,3 +50,19 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data);
  * (Weak stub in environment_callbacks.cpp is overridden by strong implementation in core_runtime.cpp)
  */
 extern "C" void* coreRuntimeGetActiveNSView(void* runtime_opaque);
+
+/**
+ * Bridge function to fire rumble on the SdlInputManager that the active
+ * CoreRuntime is wired to. Implemented in core_runtime.cpp; used by
+ * environment_callbacks for the RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE
+ * thunk. Weak stub in environment_callbacks.cpp lets test_environment_callbacks
+ * link without dragging in core_runtime.
+ *
+ * Returns true if the call reached a live controller, false otherwise.
+ * The libretro set_rumble_state contract has no failure semantics, so
+ * callers should ignore the return value in production.
+ */
+extern "C" bool coreRuntimeSetRumbleMotor(void* runtime_opaque,
+                                          unsigned port,
+                                          unsigned effect,
+                                          uint16_t strength);

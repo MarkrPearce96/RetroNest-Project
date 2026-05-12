@@ -8,6 +8,7 @@
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <SDL2/SDL.h>
+#include <atomic>
 
 #include "core/libretro/input_router.h"
 
@@ -68,6 +69,20 @@ public:
      * leak as in-game input.
      */
     bool isAnyActionButtonPressed() const;
+
+    static constexpr uint32_t kRumbleDurationMs = 100;
+
+    /**
+     * Fire one motor on the controller mapped to `port`. PCSX2's rumble
+     * interface delivers STRONG and WEAK as separate per-motor calls; we
+     * cache the last value of each and merge before invoking SDL so both
+     * motors stay alive when the core only updates one.
+     *
+     * Returns false if no controller is currently mapped to `port` (e.g.
+     * disconnected mid-game) — the libretro contract has no failure path
+     * for set_rumble_state, so the caller can ignore the return.
+     */
+    bool setRumbleMotor(int port, unsigned motor, uint16_t strength);
 
     /**
      * Switch to emulation mode: SDL gamepad button events write into the
@@ -137,6 +152,12 @@ private:
     QMap<SDL_JoystickID, int> m_deviceIndices;
     ControllerType m_activeControllerType = Xbox;
     QMap<SDL_JoystickID, ControllerType> m_controllerTypes;
+
+    struct RumbleCache {
+        std::atomic<uint16_t> low{0};   // RETRO_RUMBLE_STRONG
+        std::atomic<uint16_t> high{0};  // RETRO_RUMBLE_WEAK
+    };
+    RumbleCache m_rumbleCache[InputRouter::NUM_PORTS];
 
     // Emulation mode: non-null while a libretro game is running.
     // Button routing uses InputRouter::lookup() — no separate hardcoded map.
