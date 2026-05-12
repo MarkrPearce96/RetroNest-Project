@@ -30,4 +30,12 @@ public:
     // InputRouter is a 16-bit RetroPad bitmask); full analog requires future
     // RetroNest work to extend the router.
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
+
+    // SP6.5: resolve the per-game resume save state written by
+    // GameSession::terminate (cpp/src/core/game_session.cpp:392) on its way
+    // into retro_unload_game. Without this override the base class returns
+    // empty, GameSession's StartConfig.resumeStatePath stays unset, and
+    // launching the game cold-boots through BIOS even when a resume file
+    // exists on disk. Mirrors MgbaLibretroAdapter::findResumeFile.
+    QString findResumeFile(const QString& serial) const override;
 };

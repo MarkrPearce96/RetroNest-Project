@@ -1,6 +1,9 @@
 #include "pcsx2_libretro_adapter.h"
 
 #include "core/binding_def.h"
+#include "core/paths.h"
+
+#include <QDir>
 
 // SP5: PS2 DualShock 2 binding defs.
 //
@@ -42,4 +45,19 @@ QVector<BindingDef> Pcsx2LibretroAdapter::controllerBindingDefsForType(const QSt
         { BindingDef::Button, "Start",  "System", "Pad1", "Start",  "SDL-0/Start", "System", 0, 0, 0 },
         { BindingDef::Button, "Select", "System", "Pad1", "Select", "SDL-0/Back",  "System", 0, 0, 0 },
     };
+}
+
+// SP6.5: GameSession::terminate writes "{serial}.resume" under
+// emulators/pcsx2-libretro/ps2/savestates/. Look there. Base id is
+// "pcsx2-libretro" (the manifest id used by Paths::emulatorDataDir on
+// the save side at game_session.cpp:392); systemId is "ps2".
+QString Pcsx2LibretroAdapter::findResumeFile(const QString& serial) const {
+    if (serial.isEmpty())
+        return {};
+    const QString dir = Paths::emulatorDataDir("pcsx2-libretro", "ps2") + "/savestates";
+    QDir d(dir);
+    const auto entries = d.entryList({ serial + ".resume" }, QDir::Files);
+    if (!entries.isEmpty())
+        return d.absoluteFilePath(entries.first());
+    return {};
 }
