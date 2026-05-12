@@ -1,9 +1,9 @@
-# PCSX2 Libretro Core — Save States, Memory Cards, Memory Map & Reset (Sub-project 6)
+# PCSX2 Libretro Core — Memory Cards, Memory Map & Reset (Sub-project 6)
 
 **Date:** 2026-05-12
-**Status:** Design — pending implementation plan
+**Status:** Design — implementation in progress; save state deferred to SP6.5
 **Owner:** mark
-**Scope:** Wires up the four VMManager-state-lifecycle items that share the same architectural seam: in-memory save states, memory-card persistence, `RETRO_ENVIRONMENT_SET_MEMORY_MAPS` for PS2 RetroAchievements, and `retro_reset → VMManager::Reset()`.
+**Scope:** Wires up three VMManager-state-lifecycle items: memory-card persistence, `RETRO_ENVIRONMENT_SET_MEMORY_MAPS` for PS2 RetroAchievements, and `retro_reset → VMManager::Reset()`. **Save state deferred to SP6.5** after a Task 4 implementation revealed the spec's "FreezeBios() + FreezeInternals()" assumption was incomplete — the canonical path also iterates `SavestateEntries[]` (EE main RAM, IOP RAM, VU mem, SPU2, PAD, GS, Achievements) via `FreezeOut`, and the symmetric load via `FreezeIn` requires a `zip_file_t*` not a flat buffer. Proper save state needs either an in-memory libzip plumbing (~150 lines) or a custom container format — SP6.5 will spec the choice.
 **Predecessors:** [SP5.5 — Analog Input & Rumble](2026-05-12-pcsx2-libretro-analog-input-design.md), [SP5 — Input (digital)](2026-05-11-pcsx2-libretro-input-design.md), [SP4 — Audio Output](2026-05-11-pcsx2-libretro-audio-output-design.md), [SP3 — HW render bridge](2026-05-11-pcsx2-libretro-video-bridge-design.md). All complete.
 
 ## Context

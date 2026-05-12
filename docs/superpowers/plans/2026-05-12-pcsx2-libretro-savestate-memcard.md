@@ -1,8 +1,10 @@
-# PCSX2 Libretro Save States, Memory Cards, Memory Map & Reset (SP6) Implementation Plan
+# PCSX2 Libretro Memory Cards, Memory Map & Reset (SP6) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Wire the four VMManager-state-lifecycle items that share an architectural seam — in-memory save states, memory-card persistence, `RETRO_ENVIRONMENT_SET_MEMORY_MAPS` for PS2 RetroAchievements, and `retro_reset → VMManager::Reset()`. End state: closing/reopening RetroNest mid-game resumes from the same point; in-game memcard saves persist; RA cheevos trigger on R&C 2; reset returns the VM to BIOS without restarting the core.
+> **Scope change (2026-05-12):** Task 4 (save state) was implemented at commit `2eddc63de` and reverted at `f164c4f5f` after code review revealed the spec's "FreezeBios() + FreezeInternals()" assumption was incomplete — the canonical PCSX2 save path also iterates `SavestateEntries[]` (EE main RAM, IOP RAM, VU mem, SPU2, PAD, GS, Achievements) via `FreezeOut`, and the symmetric load via `FreezeIn` requires a `zip_file_t*` rather than a flat buffer. Proper save state needs either in-memory libzip plumbing or a custom container format — both more complex than the spec anticipated. **Save state deferred to SP6.5.** SP6 now ships three items: memcards, memory map, reset.
+
+**Goal:** Wire three VMManager-state-lifecycle items — memory-card persistence, `RETRO_ENVIRONMENT_SET_MEMORY_MAPS` for PS2 RetroAchievements, and `retro_reset → VMManager::Reset()`. End state: in-game memcard saves persist between sessions; RA cheevos trigger on R&C 2; frontend reset (and RA hardcore mode enable) returns the VM to BIOS without restarting the core.
 
 **Architecture:** All changes inside `pcsx2-libretro/`. **Zero RetroNest source changes** — the RetroNest side (CoreRuntime save/load plumbing, SET_MEMORY_MAPS env handler, retro_reset symbol loader) is already shipped. Save states use PCSX2's `memSavingState`/`memLoadingState` directly (raw uncompressed `VmStateBuffer`), with a probe-once `retro_serialize_size` cached as a constant. Memcards reuse PCSX2's existing `MemoryCardFile` plumbing — Settings.cpp configures slot 1 (file image, `Mcd001.ps2`) under a libretro `save_dir`-derived directory. Memory map issues a single descriptor for EE main RAM (32 MB at PS2-physical 0) from inside `retro_run` on the first frame reporting `VMState::Running`. `retro_reset` delegates to `VMManager::Reset()` which is thread-safe for the "outside-VM-thread while running" case.
 
@@ -436,7 +438,15 @@ EOF
 
 ---
 
-## Task 4 — Save state: probe-once + `memSavingState`/`memLoadingState`
+## Task 4 — Save state: probe-once + `memSavingState`/`memLoadingState` (DEFERRED TO SP6.5)
+
+> **2026-05-12 update:** This task was implemented at commit `2eddc63de` and reverted at `f164c4f5f`. Code review found the spec's "FreezeBios() + FreezeInternals()" assumption is incomplete — the canonical PCSX2 save path also iterates `SavestateEntries[]` (EE main RAM, IOP RAM, VU mem, SPU2, PAD, GS, Achievements) via `entry->FreezeOut(saveme)` (`SaveState.cpp:739-753`). The symmetric load via `FreezeIn` requires a `zip_file_t*` not a flat buffer — see `BaseSavestateEntry::FreezeIn(zip_file_t*)` at `SaveState.cpp:469`. The implementation as specified would have produced valid-looking saves that didn't actually round-trip game state.
+>
+> The Task 4 content below remains as a reference for SP6.5, which will choose between:
+> - **In-memory zip** via libzip's `zip_source_function` backing the zip with a `VmStateBuffer`, forcing `ZIP_CM_STORE` everywhere for deterministic size — ~150 lines of libzip plumbing.
+> - **Disk-temp-file** via `SaveState_ZipToDisk` / `SaveState_UnzipFromDisk` with `RETRO_ENVIRONMENT_SET_SAVE_STATE_INFO_OVERRIDE` declaring a 64 MB worst-case bound and pad-to-size — ~30 lines, but variable compression and disk I/O per save.
+>
+> SP6 ships without save state. SP6.5 will re-brainstorm and re-spec the container choice properly.
 
 The meat of SP6. Three pieces: a pause-stable handshake helper (shared by all three serialize entry points), the probe-once strategy for `retro_serialize_size`, and the actual `retro_serialize`/`retro_unserialize` bodies.
 
@@ -764,12 +774,14 @@ EOF
 
 ---
 
-## Task 5 — `RETRONEST_STATE_TRACE` env-gated diagnostics
+## Task 5 — `RETRONEST_STATE_TRACE` env-gated diagnostics (reduced scope)
 
-Mirrors the `RETRONEST_AUDIO_TRACE` / `RETRONEST_INPUT_TRACE` pattern from SP4/SP5: zero overhead when unset, structured `[STATE_TRACE]` log lines at the six boundaries listed in the spec testing section. Useful for any future save-state regression investigation.
+**SP6.5 reduction:** save-state and pause-handshake boundaries (2, 3, 6) are deferred along with the save-state implementation. SP6's Task 5 now only adds boundary 4 (`retro_reset` invocation). Boundary 5 (`SET_MEMORY_MAPS` issue) is already unconditionally logged by Task 2 — no new code there. Net effect: ~5 lines of new code in `retro_reset`.
+
+Mirrors the `RETRONEST_AUDIO_TRACE` / `RETRONEST_INPUT_TRACE` pattern from SP4/SP5: zero overhead when unset.
 
 **Files:**
-- Modify: `pcsx2-libretro/LibretroFrontend.cpp` — add a `g_state_trace_enabled` cached bool; add trace lines at six boundaries.
+- Modify: `pcsx2-libretro/LibretroFrontend.cpp` — add a `IsStateTraceEnabled()` cached helper; add one trace line in `retro_reset`.
 
 ### Step 5.1: Add the cached env flag
 
@@ -787,138 +799,46 @@ bool IsStateTraceEnabled()
 }
 ```
 
-### Step 5.2: Add trace lines at the six boundaries
+### Step 5.2: Add the `retro_reset` trace line
 
-Add the following trace lines. Each is one or two lines guarded by `if (IsStateTraceEnabled())`. The exact insertion point in each function is "first statement after argument validation".
-
-**Boundary 1: `retro_serialize_size` probe entry/exit.** Inside `retro_serialize_size`, immediately before the `WaitForVmPaused()` call:
+Inside `retro_reset` (the body from Task 1), insert ONE trace line immediately after the `HasValidVM` early-return guard but before the existing `"retro_reset → VMManager::Reset()"` log line. The current Task 1 body is:
 
 ```cpp
-    const auto trace_t0 = std::chrono::steady_clock::now();
-    if (IsStateTraceEnabled())
-        FrontendLog(RETRO_LOG_INFO, "[STATE_TRACE] retro_serialize_size probe begin");
-```
-
-Immediately before the final `return probed;` (post-`ResumeVm`):
-
-```cpp
-    if (IsStateTraceEnabled())
+RETRO_API void retro_reset(void)
+{
+    if (!VMManager::HasValidVM())
     {
-        const auto elapsed_ms =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - trace_t0).count();
-        FrontendLog(RETRO_LOG_INFO,
-            "[STATE_TRACE] retro_serialize_size probe end size=%zu elapsed=%lldms",
-            probed, static_cast<long long>(elapsed_ms));
+        FrontendLog(RETRO_LOG_INFO, "retro_reset called with no valid VM — ignoring");
+        return;
     }
-```
-
-**Boundary 2: `retro_serialize` entry/exit.** Inside `retro_serialize`, after argument validation but before `WaitForVmPaused`:
-
-```cpp
-    const auto trace_t0 = std::chrono::steady_clock::now();
-    if (IsStateTraceEnabled())
-        FrontendLog(RETRO_LOG_INFO,
-            "[STATE_TRACE] retro_serialize begin len=%zu", len);
-```
-
-Immediately before the final `return ok;`:
-
-```cpp
-    if (IsStateTraceEnabled())
-    {
-        const auto elapsed_ms =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - trace_t0).count();
-        FrontendLog(RETRO_LOG_INFO,
-            "[STATE_TRACE] retro_serialize end ok=%d elapsed=%lldms",
-            static_cast<int>(ok), static_cast<long long>(elapsed_ms));
-    }
-```
-
-**Boundary 3: `retro_unserialize` entry/exit.** Mirror Boundary 2's pattern inside `retro_unserialize`:
-
-```cpp
-    const auto trace_t0 = std::chrono::steady_clock::now();
-    if (IsStateTraceEnabled())
-        FrontendLog(RETRO_LOG_INFO,
-            "[STATE_TRACE] retro_unserialize begin len=%zu", len);
-```
-
-And before the final `return ok;`:
-
-```cpp
-    if (IsStateTraceEnabled())
-    {
-        const auto elapsed_ms =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - trace_t0).count();
-        FrontendLog(RETRO_LOG_INFO,
-            "[STATE_TRACE] retro_unserialize end ok=%d elapsed=%lldms",
-            static_cast<int>(ok), static_cast<long long>(elapsed_ms));
-    }
-```
-
-**Boundary 4: `retro_reset` invocation.** Inside `retro_reset`, immediately after the `HasValidVM` check, before the `VMManager::Reset()` call:
-
-```cpp
-    if (IsStateTraceEnabled())
-        FrontendLog(RETRO_LOG_INFO,
-            "[STATE_TRACE] retro_reset state=%d",
-            static_cast<int>(VMManager::GetState()));
-```
-
-**Boundary 5: `SET_MEMORY_MAPS` issue.** The existing `FrontendLog(... "SET_MEMORY_MAPS issued: ...")` line in Task 2 already covers this — no addition needed, but verify it logs unconditionally (it does — `SET_MEMORY_MAPS` is one-shot, so unconditional log is acceptable).
-
-**Boundary 6: pause-stable handshake transitions.** Inside `WaitForVmPaused`, immediately after `VMManager::SetPaused(true)`:
-
-```cpp
-    if (IsStateTraceEnabled())
-        FrontendLog(RETRO_LOG_INFO,
-            "[STATE_TRACE] WaitForVmPaused: paused requested (prev=%d)",
-            static_cast<int>(prev));
-```
-
-Inside the wait loop, replace the existing `if (s == VMState::Paused) { return prev; }` block with one that traces first:
-
-```cpp
-        if (s == VMState::Paused)
-        {
-            if (IsStateTraceEnabled())
-            {
-                const auto elapsed_ms =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::steady_clock::now() - start).count();
-                FrontendLog(RETRO_LOG_INFO,
-                    "[STATE_TRACE] WaitForVmPaused: reached Paused after %lldms",
-                    static_cast<long long>(elapsed_ms));
-            }
-            return prev;
-        }
-```
-
-Inside `ResumeVm`, the existing body is:
-
-```cpp
-    if (prev_state == VMState::Running &&
-        VMManager::GetState() == VMState::Paused)
-    {
-        VMManager::SetPaused(false);
-    }
+    FrontendLog(RETRO_LOG_INFO, "retro_reset → VMManager::Reset()");
+    VMManager::Reset();
+}
 ```
 
 Replace with:
 
 ```cpp
-    if (prev_state == VMState::Running &&
-        VMManager::GetState() == VMState::Paused)
+RETRO_API void retro_reset(void)
+{
+    if (!VMManager::HasValidVM())
     {
-        if (IsStateTraceEnabled())
-            FrontendLog(RETRO_LOG_INFO,
-                "[STATE_TRACE] ResumeVm: un-pausing (prev was Running)");
-        VMManager::SetPaused(false);
+        FrontendLog(RETRO_LOG_INFO, "retro_reset called with no valid VM — ignoring");
+        return;
     }
+    if (IsStateTraceEnabled())
+        FrontendLog(RETRO_LOG_INFO,
+            "[STATE_TRACE] retro_reset state=%d",
+            static_cast<int>(VMManager::GetState()));
+    FrontendLog(RETRO_LOG_INFO, "retro_reset → VMManager::Reset()");
+    VMManager::Reset();
+}
 ```
+
+**Other boundaries deferred to SP6.5:**
+- Boundaries 1, 2, 3 (serialize/unserialize entry/exit timing): land with the SP6.5 save-state implementation
+- Boundary 5 (SET_MEMORY_MAPS issue): already unconditionally logged from Task 2 — no new code
+- Boundary 6 (pause-stable handshake transitions): the `WaitForVmPaused`/`ResumeVm` helpers were reverted along with Task 4; will return in SP6.5
 
 ### Step 5.3: Build
 
@@ -928,39 +848,24 @@ cd /Users/mark/Documents/Projects/pcsx2-libretro && /opt/homebrew/bin/cmake --bu
 
 Expected: build succeeds.
 
-### Step 5.4: Verify trace by running R&C 2
+### Step 5.4: Verify trace by triggering a reset in R&C 2
 
-```sh
-cp /Users/mark/Documents/Projects/pcsx2-libretro/build-arm64/pcsx2-libretro/pcsx2_libretro.dylib \
-   ~/Documents/RetroNest/emulators/libretro/cores/pcsx2_libretro.dylib
-
-RETRONEST_STATE_TRACE=1 /Applications/RetroNest.app/Contents/MacOS/RetroNest 2>&1 | grep STATE_TRACE | head -20
-```
-
-(Or launch RetroNest from Finder and check `~/Library/Logs/RetroNest/` if logs are routed there. If RetroNest's launcher doesn't pass env through, prepend the env via terminal launch.)
-
-Expected: at least one `[STATE_TRACE] retro_serialize_size probe begin/end` pair shortly after game start. Trigger a manual save state in RetroNest UI → expect a `retro_serialize` pair. Trigger load → `retro_unserialize` pair.
-
-Also run **without** the env set and verify zero `[STATE_TRACE]` lines appear (overhead-free path).
+The user will run this manually as part of Task 6's smoke tests. Expected behavior: with `RETRONEST_STATE_TRACE=1` set, triggering `retro_reset` (frontend reset UI or RA hardcore mode toggle) produces a `[STATE_TRACE] retro_reset state=N` line; without the env set, no `[STATE_TRACE]` lines appear.
 
 ### Step 5.5: Commit
 
 ```sh
 cd /Users/mark/Documents/Projects/pcsx2-libretro && git add pcsx2-libretro/LibretroFrontend.cpp && git commit -m "$(cat <<'EOF'
-SP6 task 5: RETRONEST_STATE_TRACE env-gated diagnostics
+SP6 task 5: RETRONEST_STATE_TRACE env-gated diagnostics (reset only)
 
-Mirrors RETRONEST_AUDIO_TRACE (SP4) / RETRONEST_INPUT_TRACE (SP5):
-zero overhead when unset (single getenv cached as static bool),
-structured [STATE_TRACE] log lines at six boundaries:
+Adds the IsStateTraceEnabled() cached-bool helper and one trace line
+in retro_reset. Mirrors RETRONEST_AUDIO_TRACE (SP4) /
+RETRONEST_INPUT_TRACE (SP5): zero overhead when unset (single getenv
+cached as static bool).
 
-  1. retro_serialize_size probe begin/end (with measured size + ms)
-  2. retro_serialize begin/end (with len + ms + success)
-  3. retro_unserialize begin/end (with len + ms + success)
-  4. retro_reset invocation (with current VMState)
-  5. SET_MEMORY_MAPS issue (already unconditional from Task 2)
-  6. WaitForVmPaused / ResumeVm transitions
-
-Useful for any future save-state regression investigation.
+Save-state and pause-handshake trace boundaries are deferred to SP6.5
+along with the save-state implementation. SET_MEMORY_MAPS issue is
+already unconditionally logged from Task 2 — no new code there.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -971,7 +876,7 @@ EOF
 
 ## Task 6 — End-to-end smoke tests + universal rebuild for ship
 
-Validates the five spec smoke tests, then rebuilds universal so the change ships in production. Mirrors SP5.5 Task 6 cadence.
+Validates the three SP6 smoke tests (reset, memcard persistence, PS2 RA), then rebuilds universal so the change ships in production. Mirrors SP5.5 Task 6 cadence. Save-state smoke tests 1-2 are deferred to SP6.5.
 
 **Files:** none modified in this task (verification + rebuild only).
 
@@ -993,23 +898,9 @@ file ~/Documents/RetroNest/emulators/libretro/cores/pcsx2_libretro.dylib
 
 Expected: `Mach-O universal binary with 2 architectures: [x86_64:...] [arm64:...]`.
 
-### Step 6.2: Smoke test 1 — boot persistence (quit-resume)
+### Step 6.2-6.3: Save-state smoke tests — DEFERRED to SP6.5
 
-1. Launch R&C 2 in RetroNest (arm64 OR Rosetta — both should work; arm64 plays slow due to interpreter, but the save path is identical).
-2. Progress past intro into the first mission (or any non-BIOS scene with a recognizable position).
-3. Close RetroNest cleanly (Cmd+Q from menu bar; do NOT force-quit).
-4. Reopen RetroNest, click the same game.
-5. **Expected:** game resumes at the same position. The SP3 `GameSession::terminate → CoreRuntime::requestSaveState` path now succeeds because `retro_serialize` returns useful data.
-
-If this fails: check RetroNest's stderr for `requestSaveState` / `flushPendingSaveState` log lines and the `retro_serialize end ok=…` trace line (Task 5). If `ok=0`, check `FreezeInternals failed` warning earlier in the log.
-
-### Step 6.3: Smoke test 2 — round-trip save/load mid-session
-
-1. In R&C 2, advance to a clearly recognizable state (specific room, inventory, HP).
-2. Trigger RetroNest's in-game "Save State" action (via the in-game menu overlay).
-3. Advance gameplay another 30+ seconds.
-4. Trigger "Load State".
-5. **Expected:** position/inventory snap back to the save point. No audio desync. No video glitch. No crash.
+Smoke tests 1 (boot persistence / quit-resume) and 2 (mid-session save/load round-trip) require working save state, which was reverted from SP6. They are deferred to SP6.5's verification cycle. The `requestSaveState` plumbing on the RetroNest side remains in place and will resume working once SP6.5 implements `retro_serialize`/`retro_unserialize` properly.
 
 ### Step 6.4: Smoke test 3 — `retro_reset`
 
@@ -1050,33 +941,40 @@ If no toast and the cheevo set loads but never triggers: check RetroNest log for
 
 Edit `~/.claude/projects/-Users-mark-Documents-Projects-pcsx2-libretro/memory/project_pcsx2_libretro_port.md`:
 
-- Move sub-project 7 (`⏳ Save states + memory cards (SP6)`) from `⏳` to `✅` with the same shape as SP5.5's entry: spec/plan paths, smoke-test status, any deviation notes.
-- Remove the four bullet points from the "Known PCSX2 libretro compat gaps" section that SP6 closes:
+- Move sub-project 7 (`⏳ Save states + memory cards (SP6)`) from `⏳` to `✅ (PARTIAL — save state deferred to SP6.5)`. Include spec/plan paths, smoke-test status, the SP6.5 deferral note.
+- Add a new sub-project line for SP6.5: `⏳ Save state implementation (SP6.5)` with the two architectural options on record (in-memory libzip vs. disk-temp-file).
+- Remove the two bullet points from the "Known PCSX2 libretro compat gaps" section that SP6 closes:
   - `retro_reset is a no-op`
   - `RETRO_ENVIRONMENT_SET_MEMORY_MAPS not issued`
 - Leave the two SP7-bound entries (`retro_get_region` hardcodes NTSC, `av.timing.fps = 60.0` placeholder).
 
-Also update `~/.claude/projects/-Users-mark-Documents-Projects-pcsx2-libretro/memory/session_handoff_sp55_shipped.md`:
-- Mark "Task 6 (manual R&C 2 rumble smoke test)" status (if it ran during SP6's session by chance) — otherwise leave it noted as still owed.
-- Replace the "Next session: start SP6" section with a fresh "Next session: start SP7 (settings push)" pointer, or write a new handoff memory file dated 2026-05-12 for SP6.
+Also write a new session handoff memory file dated 2026-05-12 for SP6 (the prior `session_handoff_sp55_shipped.md` can be marked superseded or deleted) documenting:
+- SP6 commits shipped (1, 2, 3, 5)
+- Task 4 revert and SP6.5 deferral
+- Memcard verification status from the smoke tests
+- Pointer to start SP6.5 next session with brainstorming the save-state container-format choice
 
-### Step 6.8: Final commit (memory updates + plan-file checkmark)
+### Step 6.8: Final commit (plan-file checkmark)
 
-If any memory files changed, commit nothing to git (memory files aren't tracked). If you want to mark the plan-file checkboxes as completed, do so and commit on RetroNest:
+If you want to mark the plan-file checkboxes as completed, do so and commit on RetroNest:
 
 ```sh
 cd /Users/mark/Documents/Projects/RetroNest-Project && git add docs/superpowers/plans/2026-05-12-pcsx2-libretro-savestate-memcard.md && git commit -m "$(cat <<'EOF'
-docs: SP6 plan — mark all tasks complete
+docs: SP6 plan — mark in-scope tasks complete
 
-All five tasks shipped in pcsx2-libretro@retronest-libretro:
+Four tasks shipped in pcsx2-libretro@retronest-libretro:
 - retro_reset → VMManager::Reset()
 - SET_MEMORY_MAPS for EE main RAM (PS2 RA unlocked)
 - Memory cards slot 1 enabled under save_dir/memcards/
-- Save state via memSavingState/memLoadingState (probe-once)
-- RETRONEST_STATE_TRACE diagnostics
+- RETRONEST_STATE_TRACE diagnostics (reset boundary only)
 
-All five smoke tests pass on R&C 2 in RetroNest. Universal rebuild
-shipped.
+Save state (Task 4) reverted; deferred to SP6.5 after the
+FreezeBios()+FreezeInternals() approach was found incomplete. SP6.5
+will spec the container-format choice (in-memory libzip vs.
+disk-temp-file).
+
+Three SP6 smoke tests pass on R&C 2 in RetroNest (reset, memcard
+persistence, PS2 RetroAchievements). Universal rebuild shipped.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -1085,7 +983,7 @@ EOF
 
 ---
 
-## Self-review: spec coverage
+## Self-review: spec coverage (post-Task-4-revert)
 
 | Spec requirement | Task | Notes |
 |---|---|---|
@@ -1094,11 +992,11 @@ EOF
 | Memcard slot 1 enabled with file image + `Mcd001.ps2` | 3 | Per-game via `save_dir/memcards/` |
 | Slot 2 disabled | 3 | Explicit `false` |
 | `Folders/MemoryCards` rooted at libretro `save_dir` | 3 | With empty-`save_dir` fallback + warning |
-| `retro_serialize_size` probe-once → cached constant | 4 | g_serialize_size atomic; pre-Running returns 0 |
-| `retro_serialize` via `memSavingState` | 4 | Tail zero-pad on size < len |
-| `retro_unserialize` via `memLoadingState` | 4 | Trailing zero-padding ignored by FreezeInternals |
-| Pause-stable handshake (with fallback prototype path) | 4 | `WaitForVmPaused`/`ResumeVm` helpers, 200 ms ceiling |
-| `RETRONEST_STATE_TRACE` env-gated diagnostics at 6 boundaries | 5 | Mirrors SP4/SP5 pattern |
-| Manual smoke tests (quit-resume, mid-session round-trip, reset, memcard, RA) | 6 | Five smoke tests, each numbered |
+| `retro_serialize_size` probe-once → cached constant | **SP6.5** | Deferred — FreezeBios+FreezeInternals incomplete |
+| `retro_serialize` via `memSavingState` | **SP6.5** | Deferred — needs SavestateEntries loop |
+| `retro_unserialize` via `memLoadingState` | **SP6.5** | Deferred — needs libzip-from-memory plumbing |
+| Pause-stable handshake | **SP6.5** | Deferred along with save state |
+| `RETRONEST_STATE_TRACE` env-gated diagnostics (retro_reset only) | 5 | Reduced from six boundaries to one; rest deferred to SP6.5 |
+| Manual smoke tests (reset, memcard, RA) | 6 | Three SP6 smoke tests; save-state tests deferred to SP6.5 |
 | Universal rebuild | 6.1 | `scripts/build-universal.sh` |
 | Out-of-scope items (folder memcards, slot 2 UI, IOP/scratchpad/VU descriptors, thumbnails, `.p2s` interchange) | — | Explicitly not implemented; no task needed |
