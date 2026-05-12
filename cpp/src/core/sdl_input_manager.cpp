@@ -389,6 +389,19 @@ void SdlInputManager::openController(int joystickIndex) {
 void SdlInputManager::closeController(SDL_JoystickID instanceId) {
     if (auto* ctrl = m_controllers.value(instanceId, nullptr)) {
         qInfo() << "[SDL] Controller disconnected:" << SDL_GameControllerName(ctrl);
+        // Zero this device's axes before removing it from m_deviceIndices,
+        // otherwise a straggler axis event for this jid would fall back to
+        // port=0 (the QMap::value default) and write a phantom analog value
+        // into player 1's storage that persists until P1 moves the stick.
+        // Digital writes are harmless (InputRouter no-ops out-of-range) and
+        // self-correct on the next button event; analog writes do not.
+        if (m_emulationTarget) {
+            const int port = m_deviceIndices.value(instanceId, -1);
+            if (port >= 0 && port < InputRouter::NUM_PORTS) {
+                for (int ax = 0; ax < static_cast<int>(RetroPadAxis::Count); ++ax)
+                    m_emulationTarget->setAxis(port, static_cast<RetroPadAxis>(ax), 0);
+            }
+        }
         SDL_GameControllerClose(ctrl);
         m_controllers.remove(instanceId);
         m_deviceIndices.remove(instanceId);
