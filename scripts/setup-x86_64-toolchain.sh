@@ -25,11 +25,16 @@ else
 fi
 
 # 2. Install deps idempotently (RetroNest + PCSX2 + mGBA).
-# PCSX2 dep list sourced from pcsx2-master/.github/workflows/macos-build.yml.
+# PCSX2 dep list sourced from pcsx2-master/.github/workflows/macos-build.yml,
+# extended with the five formulas that surfaced as missing only at LINK time
+# during the SP10 build (cmake's find_package fell back to /opt/homebrew, then
+# the linker rejected arm64 dylibs into the x86_64 build): sdl3, rapidyaml,
+# plutosvg, plutovg, shaderc.
 DEPS=(
-    qt@6 sdl2
+    qt@6 sdl2 sdl3
     fmt webp libzip libpng zstd lz4
     sound-touch ffmpeg
+    rapidyaml plutosvg plutovg shaderc
     pkgconf cmake ninja
 )
 

@@ -16,13 +16,30 @@ if [[ ! -d "$X86_64_APP" ]]; then echo "missing: $X86_64_APP" >&2; exit 1; fi
 if [[ ! -f "$ENTITLEMENTS" ]]; then echo "missing: $ENTITLEMENTS" >&2; exit 1; fi
 
 # 1. Seed output bundle from arm64 (structural template).
+mkdir -p "$(dirname "$OUT_APP")"
 rm -rf "$OUT_APP"
 cp -R "$ARM64_APP" "$OUT_APP"
+
+# Absolutise paths — the find loop cd's into the arm64 bundle, which
+# would invalidate the original relative paths.
+ARM64_APP="$(cd "$ARM64_APP" && pwd)"
+X86_64_APP="$(cd "$X86_64_APP" && pwd)"
+OUT_APP="$(cd "$OUT_APP" && pwd)"
+ENTITLEMENTS="$(cd "$(dirname "$ENTITLEMENTS")" && pwd)/$(basename "$ENTITLEMENTS")"
 
 # 2. Walk every Mach-O in the arm64 bundle; for each, lipo with its
 #    x86_64 counterpart and overwrite in OUT_APP.
 cd "$ARM64_APP"
-find . -type f \( -perm -u+x -o -name '*.dylib' -o -name '*.so' \) | while read -r relpath; do
+# Include framework binaries (e.g. QtCore.framework/Versions/A/QtCore)
+# even though they're 644 and have no .dylib/.so suffix — the Mach-O
+# filter inside the loop drops the non-binary entries (Headers/,
+# Resources/, _CodeSignature/).
+find . -type f \( \
+        -perm -u+x \
+        -o -name '*.dylib' \
+        -o -name '*.so' \
+        -o -path '*.framework/Versions/*/*' \
+    \) | while read -r relpath; do
     arm_path="$ARM64_APP/$relpath"
     x86_path="$X86_64_APP/$relpath"
     out_path="$OUT_APP/$relpath"
