@@ -11,6 +11,21 @@
 //           view is registered (mGBA / software cores hit this case).
 #define RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW (1 | RETRO_ENVIRONMENT_PRIVATE)
 
+// 0x20002 — RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH
+//           Used by pcsx2_libretro to receive a resume-state path from
+//           RetroNest BEFORE the core's VM init runs, so PCSX2 can load
+//           the state via VMBootParameters::save_state — i.e., after
+//           full BIOS init / ELF discovery, which is the only ordering
+//           that produces a runnable VM for cold-resume on launch.
+//           Output is a `const char**` written with a UTF-8 path. The
+//           env handler sets EnvironmentContext::bootStatePathConsumed
+//           on read so CoreRuntime knows to skip the legacy post-load
+//           retro_unserialize block; the QByteArray storage stays alive
+//           for the env_cb call's synchronous duration (clearing it
+//           here would dangle the caller's pointer).
+//           Returns false if no path is set (mGBA / fresh-boot cases).
+#define RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH (2 | RETRO_ENVIRONMENT_PRIVATE)
+
 #include <QByteArray>
 #include <QString>
 #include <QVector>
@@ -21,6 +36,23 @@ class OptionsStore;
 struct EnvironmentContext {
     QByteArray systemDirectory;
     QByteArray saveDirectory;
+    // SP6.5 Task 4.5: resume-state path the libretro core consumes
+    // synchronously during retro_load_game via
+    // RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH. Set by CoreRuntime::runLoop
+    // before retro_load_game; consumed via bootStatePathConsumed flag
+    // (see below) so the storage stays alive for the duration of the
+    // env_cb call — calling clear() here would free the buffer that
+    // constData() pointed at and dangle the caller's path pointer
+    // (QByteArray refcount goes to 0 because toUtf8() returns an
+    // unshared QByteArray).
+    QByteArray bootStatePath;
+
+    // True once the core has called GET_BOOT_STATE_PATH and we've handed
+    // off the path. CoreRuntime checks this AFTER retro_load_game returns
+    // to decide whether the core consumed the path (skip the legacy
+    // retro_unserialize fallback) or not (mGBA: still run the fallback).
+    bool bootStatePathConsumed = false;
+
     retro_pixel_format pixelFormat = RETRO_PIXEL_FORMAT_0RGB1555;
     OptionsStore* options = nullptr;
     void* runtime = nullptr;  // CoreRuntime* (opaque to avoid circular includes)

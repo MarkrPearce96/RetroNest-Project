@@ -106,6 +106,33 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             *reinterpret_cast<void**>(data) = ns_view;
             return true;
         }
+        case RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH: {
+            // SP6.5 Task 4.5: one-shot delivery of a resume-state path
+            // to the libretro core during retro_load_game.
+            //
+            // Lifetime: ctx->bootStatePath stays alive for the duration
+            // of the env_cb call (and well past it). We do NOT clear()
+            // here — clear() on a refcount=1 QByteArray (which toUtf8()
+            // always produces) frees the internal buffer and dangles
+            // *out. Instead, set bootStatePathConsumed=true so
+            // CoreRuntime knows to skip the legacy retro_unserialize
+            // fallback after retro_load_game returns. The QByteArray's
+            // storage is reclaimed when EnvironmentContext is destroyed
+            // (game session ends) or when CoreRuntime resets it.
+            if (!data) {
+                qWarning("[libretro/env] GET_BOOT_STATE_PATH: data=null");
+                return false;
+            }
+            if (ctx->bootStatePathConsumed || ctx->bootStatePath.isEmpty()) {
+                // No path set (mGBA / fresh-boot) or already consumed.
+                return false;
+            }
+            auto** out = static_cast<const char**>(data);
+            *out = ctx->bootStatePath.constData();
+            ctx->bootStatePathConsumed = true;
+            qInfo("[libretro/env] GET_BOOT_STATE_PATH: handed off path to core");
+            return true;
+        }
         case RETRO_ENVIRONMENT_GET_VARIABLE:
             return handleGetVariable(ctx, data);
         case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
