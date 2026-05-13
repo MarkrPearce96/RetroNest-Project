@@ -72,25 +72,31 @@ QString Pcsx2LibretroAdapter::findResumeFile(const QString& serial) const {
 QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     QVector<SettingDef> s;
 
-    auto opt = [](const QString& key, const QString& label,
+    auto opt = [](const QString& category,
+                  const QString& group,
+                  const QString& key,
+                  const QString& label,
                   const QString& def,
                   const QVector<QPair<QString,QString>>& valuesAndLabels,
-                  const QString& tooltip) -> SettingDef {
+                  const QString& tooltip,
+                  const QString& dependsOn = {}) -> SettingDef {
         SettingDef d;
         d.storage = SettingDef::Storage::LibretroOption;
-        d.category = "Recommended";   // PPSSPP/mGBA pattern
+        d.category = category;
         d.subcategory = "";
-        d.group = "Emulation";
+        d.group = group;
         d.key = key;
         d.label = label;
         d.defaultValue = def;
         d.tooltip = tooltip;
         d.type = SettingDef::Combo;
-        d.options = valuesAndLabels;  // (display label, stored value) pairs per SettingDef contract
+        d.options = valuesAndLabels;
+        d.dependsOn = dependsOn;
         return d;
     };
 
     s.append(opt(
+        "Recommended", "Emulation",
         "pcsx2_renderer", "GS Renderer", "auto",
         {{"Auto", "auto"},
          {"Metal", "metal"},
@@ -102,6 +108,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Takes effect on next launch."));
 
     s.append(opt(
+        "Recommended", "Emulation",
         "pcsx2_mtvu", "Multi-Threaded VU1", "enabled",
         {{"Enabled", "enabled"},
          {"Disabled", "disabled"}},
@@ -112,12 +119,55 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Takes effect on next launch."));
 
     s.append(opt(
+        "Recommended", "Emulation",
         "pcsx2_fast_boot", "Fast Boot", "enabled",
         {{"Enabled", "enabled"},
          {"Disabled", "disabled"}},
         "Skip the PS2 BIOS Sony intro and region-check screen on launch. "
         "Disable if you want to see the BIOS screen (e.g. to verify your "
         "BIOS region or to use the BIOS browser). Takes effect on next launch."));
+
+    // SP7c Phase 1 — Speed Control (sub-group A of the Emulation card).
+    // Three Framerate scalars; values list mirrors the standalone PCSX2
+    // dialog exactly (RetroNest's cpp/src/adapters/pcsx2_adapter.cpp:200-218).
+    const QVector<QPair<QString,QString>> speedOptions = {
+        {"2% [1 FPS (NTSC) / 1 FPS (PAL)]",       "0.02"},
+        {"10% [6 FPS (NTSC) / 5 FPS (PAL)]",      "0.1"},
+        {"25% [15 FPS (NTSC) / 12 FPS (PAL)]",    "0.25"},
+        {"50% [30 FPS (NTSC) / 25 FPS (PAL)]",    "0.5"},
+        {"75% [45 FPS (NTSC) / 37 FPS (PAL)]",    "0.75"},
+        {"90% [54 FPS (NTSC) / 45 FPS (PAL)]",    "0.9"},
+        {"100% [60 FPS (NTSC) / 50 FPS (PAL)]",   "1"},
+        {"110% [66 FPS (NTSC) / 55 FPS (PAL)]",   "1.1"},
+        {"120% [72 FPS (NTSC) / 60 FPS (PAL)]",   "1.2"},
+        {"150% [90 FPS (NTSC) / 75 FPS (PAL)]",   "1.5"},
+        {"175% [105 FPS (NTSC) / 87 FPS (PAL)]",  "1.75"},
+        {"200% [120 FPS (NTSC) / 100 FPS (PAL)]", "2"},
+        {"300% [180 FPS (NTSC) / 150 FPS (PAL)]", "3"},
+        {"400% [240 FPS (NTSC) / 200 FPS (PAL)]", "4"},
+        {"500% [300 FPS (NTSC) / 250 FPS (PAL)]", "5"},
+        {"1000% [600 FPS (NTSC) / 500 FPS (PAL)]","10"},
+        {"Unlimited", "0"},
+    };
+
+    s.append(opt(
+        "Emulation", "Speed Control",
+        "pcsx2_normal_speed", "Normal Speed", "1",
+        speedOptions,
+        "Target emulation speed during normal gameplay (relative to PS2's "
+        "native rate). 100% is real-time. Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "Speed Control",
+        "pcsx2_fast_forward_speed", "Fast-Forward Speed", "2",
+        speedOptions,
+        "Target speed when fast-forward is engaged. Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "Speed Control",
+        "pcsx2_slow_motion_speed", "Slow-Motion Speed", "0.5",
+        speedOptions,
+        "Target speed when slow-motion is engaged. Takes effect on next launch."));
 
     return s;
 }
