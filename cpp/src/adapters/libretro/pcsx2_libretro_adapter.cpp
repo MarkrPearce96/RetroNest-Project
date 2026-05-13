@@ -655,5 +655,99 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "hidden by a CRT bezel. Exposes any garbage the game draws "
         "outside the safe area."));
 
+    // SP7c Phase 4 Task 3 — Rendering sub-tab (7 knobs).
+    //
+    // Value lists / defaults / labels mirror standalone PCSX2's
+    // pcsx2_adapter.cpp Graphics/Rendering rows verbatim (lines
+    // 451-503). check_schema_fidelity.py verifies byte-for-byte match
+    // against the core's CoreOptionsGraphics.cpp.
+    //
+    // filter row's dependsOn uses the libretro-key form
+    // (pcsx2_tri_filter!=2 && pcsx2_tri_filter!=3) — standalone stores
+    // INI keys in dependsOn but the libretro adapter stores libretro
+    // option keys (see pcsx2_libretro_adapter.cpp:302 for the
+    // VSync && SyncToHostRR precedent). setting_dependency.h's
+    // '!=' + '&&' grammar handles this.
+    s.append(gopt(
+        "Rendering", "Rendering",
+        "pcsx2_upscale_multiplier", "Internal Resolution", "1",
+        {{"1x Native (PS2) (Default)",     "1"},
+         {"2x Native (~720px/HD)",         "2"},
+         {"3x Native (~1080px/FHD)",       "3"},
+         {"4x Native (~1440px/QHD)",       "4"},
+         {"5x Native (~1800px/QHD+)",      "5"},
+         {"6x Native (~2160px/4K UHD)",    "6"},
+         {"7x Native (~2520px)",           "7"},
+         {"8x Native (~2880px/5K UHD)",    "8"},
+         {"9x Native (~3240px)",           "9"},
+         {"10x Native (~3600px/6K UHD)",  "10"},
+         {"11x Native (~3960px)",         "11"},
+         {"12x Native (~4320px/8K UHD)",  "12"}},
+        "Sets the internal rendering resolution. Higher values produce "
+        "sharper visuals at the cost of GPU performance."));
+
+    s.append(gopt(
+        "Rendering", "Rendering",
+        "pcsx2_filter", "Texture Filtering", "2",
+        {{"Nearest",                            "0"},
+         {"Bilinear (Forced)",                  "1"},
+         {"Bilinear (PS2) (Default)",           "2"},
+         {"Bilinear (Forced excluding sprite)", "3"}},
+        "Controls how textures are sampled when rendered. Bilinear (PS2) "
+        "matches the original hardware behavior; Forced options ignore "
+        "the game's preference.",
+        "pcsx2_tri_filter!=2 && pcsx2_tri_filter!=3"));
+
+    s.append(gopt(
+        "Rendering", "Rendering",
+        "pcsx2_tri_filter", "Trilinear Filtering", "-1",
+        {{"Auto (Default)",     "-1"},
+         {"Off",                 "0"},
+         {"Trilinear (PS2)",     "1"},
+         {"Trilinear (Forced)",  "2"}},
+        "Enables trilinear filtering for smoother transitions between "
+        "mipmap levels. Auto leaves this decision to each game."));
+
+    s.append(gopt(
+        "Rendering", "Rendering",
+        "pcsx2_max_anisotropy", "Anisotropic Filtering", "0",
+        {{"Off (Default)",  "0"},
+         {"2x",             "2"},
+         {"4x",             "4"},
+         {"8x",             "8"},
+         {"16x",           "16"}},
+        "Improves texture clarity at oblique viewing angles. Low cost on "
+        "modern GPUs and generally safe to raise."));
+
+    s.append(gopt(
+        "Rendering", "Rendering",
+        "pcsx2_dithering_ps2", "Dithering", "2",
+        {{"Off",                 "0"},
+         {"Scaled",              "1"},
+         {"Unscaled (Default)",  "2"},
+         {"Force 32bit",         "3"}},
+        "Controls how PS2 dithering patterns are applied to upscaled "
+        "rendering. Unscaled matches the original appearance."));
+
+    s.append(gopt(
+        "Rendering", "Rendering",
+        "pcsx2_accurate_blending_unit", "Blending Accuracy", "1",
+        {{"Minimum",          "0"},
+         {"Basic (Default)",  "1"},
+         {"Medium",           "2"},
+         {"High",             "3"},
+         {"Full",             "4"},
+         {"Maximum",          "5"}},
+        "Controls how accurately PS2 blending operations are emulated. "
+        "Higher levels improve compatibility with heavy effects at a "
+        "performance cost."));
+
+    s.append(gopt(
+        "Rendering", "Rendering",
+        "pcsx2_hw_mipmap", "Hardware Mipmapping", "enabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Emulates PS2 mipmapping when the hardware renderer is active. "
+        "Fixes texture aliasing at distance in supported games."));
+
     return s;
 }
