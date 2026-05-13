@@ -42,5 +42,13 @@ void Pcsx2LibretroSettingsDialog::onCategoryActivated(const QString& category) {
     connect(page, &GenericSettingsPage::settingFocused,
             this, &Pcsx2LibretroSettingsDialog::setFocusedSetting);
 
-    pushPage(page, /*hasSubTabs=*/false);
+    // SP7c Phase 4: Graphics is the only category with multiple sub-tabs
+    // (Display / Rendering / Texture Replacement / Post-Processing /
+    // On-Screen Display). Mirror the standalone dialog
+    // (pcsx2_settings_dialog.cpp). GenericSettingsPage auto-detects
+    // sub-tabs from the distinct SettingDef::subcategory values on the
+    // page's rows; hasSubTabs only controls the L1/R1 navigation hint
+    // chrome.
+    const bool hasSubTabs = (category == "Graphics");
+    pushPage(page, hasSubTabs);
 }
