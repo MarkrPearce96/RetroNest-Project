@@ -38,4 +38,11 @@ public:
     // launching the game cold-boots through BIOS even when a resume file
     // exists on disk. Mirrors MgbaLibretroAdapter::findResumeFile.
     QString findResumeFile(const QString& serial) const override;
+
+    // SP7b: declare libretro core options as user-tweakable rows in the
+    // per-emulator settings dialog. Three knobs (renderer / MTVU / FastBoot)
+    // are exposed; values mirror pcsx2-libretro/CoreOptions.cpp's
+    // kDefinitions[] table exactly so OptionsStore::load's whitelist check
+    // accepts persisted values.
+    QVector<SettingDef> settingsSchema() const override;
 };
