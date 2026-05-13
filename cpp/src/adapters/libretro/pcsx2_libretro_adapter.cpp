@@ -353,5 +353,60 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Mute all PS2 audio output. RetroNest's UI sounds and other "
         "non-PS2 audio sources are unaffected. Takes effect on next launch."));
 
+    // SP7c Phase 3 — Memory Cards card.
+    //
+    // 5 rows under category="Memory Cards" mirroring the standalone PCSX2
+    // dialog at cpp/src/adapters/pcsx2_adapter.cpp:986-1029. The 2 filename
+    // rows (Slot1_Filename / Slot2_Filename) are dropped — libretro core
+    // options are Combo-only, not free-form strings, so the filenames stay
+    // hardcoded in the core's Settings.cpp.
+    //
+    // Slot2_Enable defaults to "enabled" matching standalone (was "disabled"
+    // pre-Phase-3, a SP6 single-slot convention). Behavioral change is
+    // mostly invisible — PCSX2 only auto-creates Mcd002.ps2 on first WRITE
+    // to Slot 2, so users that don't actively use Slot 2 see no change.
+    //
+    // Value strings MUST match the core's CoreOptionsMemoryCards.cpp
+    // byte-for-byte. The check_schema_fidelity.py target verifies this
+    // mechanically.
+    s.append(opt(
+        "Memory Cards", "Memory Card Slots",
+        "pcsx2_mc_slot1_enable", "Memory Card Slot 1", "enabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Inserts a virtual memory card into Slot 1. Stored as Mcd001.ps2 "
+        "under the per-game memcards folder. Disabling prevents games "
+        "from saving/loading via Slot 1. Takes effect on next launch."));
+
+    s.append(opt(
+        "Memory Cards", "Memory Card Slots",
+        "pcsx2_mc_slot2_enable", "Memory Card Slot 2", "enabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Inserts a virtual memory card into Slot 2. Stored as Mcd002.ps2 "
+        "under the per-game memcards folder. PCSX2 only auto-creates the "
+        "file the first time a game writes to Slot 2. Takes effect on "
+        "next launch."));
+
+    s.append(opt(
+        "Memory Cards", "Multitap",
+        "pcsx2_mc_multitap1_slot2", "Multitap 1 - Slot 2", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Enables the second memory-card slot of Multitap 1. Only useful "
+        "when a game supports Multitap 1 and you need additional save "
+        "slots for extra players. Takes effect on next launch."));
+
+    s.append(opt(
+        "Memory Cards", "Multitap",
+        "pcsx2_mc_multitap1_slot3", "Multitap 1 - Slot 3", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Enables the third memory-card slot of Multitap 1. Takes effect "
+        "on next launch."));
+
+    s.append(opt(
+        "Memory Cards", "Multitap",
+        "pcsx2_mc_multitap1_slot4", "Multitap 1 - Slot 4", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Enables the fourth memory-card slot of Multitap 1. Takes effect "
+        "on next launch."));
+
     return s;
 }
