@@ -315,18 +315,25 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "values reduce audio latency at the cost of higher CPU pressure "
         "and a greater chance of underruns. Takes effect on next launch."));
 
+    // Volume + Fast-Forward Volume share the same 9-stop list. Shared
+    // identifier (mirrors the Phase 1 speedOptions precedent at line 133);
+    // check_schema_fidelity.py resolves the identifier via HOST_VALUES_REF_RE.
+    const QVector<QPair<QString,QString>> volumeOptions = {
+        {"0% (Muted)",       "0"},
+        {"25%",              "25"},
+        {"50%",              "50"},
+        {"75%",              "75"},
+        {"100% (default)",   "100"},
+        {"125%",             "125"},
+        {"150%",             "150"},
+        {"175%",             "175"},
+        {"200% (max)",       "200"},
+    };
+
     s.append(opt(
         "Audio", "Controls",
         "pcsx2_audio_volume", "Volume", "100",
-        {{"0% (Muted)",       "0"},
-         {"25%",              "25"},
-         {"50%",              "50"},
-         {"75%",              "75"},
-         {"100% (default)",   "100"},
-         {"125%",             "125"},
-         {"150%",             "150"},
-         {"175%",             "175"},
-         {"200% (max)",       "200"}},
+        volumeOptions,
         "Normal-play audio volume. 100% is the PS2's native output level. "
         "Values above 100% boost the signal digitally (may clip on loud "
         "passages). Takes effect on next launch."));
@@ -334,15 +341,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     s.append(opt(
         "Audio", "Controls",
         "pcsx2_audio_ff_volume", "Fast-Forward Volume", "100",
-        {{"0% (Muted)",       "0"},
-         {"25%",              "25"},
-         {"50%",              "50"},
-         {"75%",              "75"},
-         {"100% (default)",   "100"},
-         {"125%",             "125"},
-         {"150%",             "150"},
-         {"175%",             "175"},
-         {"200% (max)",       "200"}},
+        volumeOptions,
         "Volume during fast-forward. Independent from normal-play volume — "
         "useful for muting audio entirely during fast-forward. Takes "
         "effect on next launch."));
