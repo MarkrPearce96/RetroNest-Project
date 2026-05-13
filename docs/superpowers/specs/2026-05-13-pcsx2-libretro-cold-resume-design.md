@@ -60,12 +60,12 @@ A new private env constant defined in **both** `pcsx2-libretro/LibretroFrontend.
 
 The protocol is one-shot per `retro_load_game`:
 
-1. RetroNest sets `m_envCtx.bootStatePath = m_cfg.resumeStatePath.toUtf8()` before calling `retro_load_game`.
-2. The core may call `environ_cb(RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH, &out)`. If `bootStatePath` is non-empty, the env handler stores its `data()` pointer at `*out`, **clears `bootStatePath` to mark consumed**, and returns `true`.
-3. If `bootStatePath` is empty (already consumed, or never set), the handler returns `false`.
-4. After `retro_load_game` returns, RetroNest checks `m_envCtx.bootStatePath.isEmpty()`. If still non-empty, the core didn't handle the path — fall back to the existing `retro_unserialize` block (mGBA's path).
+1. RetroNest sets `m_envCtx.bootStatePath = m_cfg.resumeStatePath.toUtf8()` and `m_envCtx.bootStatePathConsumed = false` before calling `retro_load_game`.
+2. The core may call `environ_cb(RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH, &out)`. If `bootStatePath` is non-empty and not already consumed, the env handler stores its `constData()` pointer at `*out`, **sets `bootStatePathConsumed = true` to mark consumed**, and returns `true`. The QByteArray storage stays alive.
+3. If `bootStatePath` is empty or `bootStatePathConsumed` is true, the handler returns `false`.
+4. After `retro_load_game` returns, RetroNest checks `m_envCtx.bootStatePathConsumed`. If true, the core consumed the path and the legacy `retro_unserialize` block is skipped. If false (mGBA / cores that don't query), fall back to the existing `retro_unserialize` block.
 
-The "consumed" flag is the same `bootStatePath` field cleared in-place — no separate boolean needed. The path's lifetime is bounded by `retro_load_game`'s execution; the `data()` pointer is only valid within the synchronous env-callback chain.
+**Implementation note — deviation from earlier draft (commit `907fb12`):** an initial draft of this spec used `bootStatePath.clear()` inside the env handler as the consumed marker, and gated the legacy block on `bootStatePath.isEmpty()`. Code review caught a latent lifetime bug: `m_cfg.resumeStatePath.toUtf8()` returns a `QByteArray` with refcount=1, and `clear()` on a unique QByteArray frees the internal buffer immediately. The caller's `*out` pointer would then dangle as soon as the env handler returned. The fix introduced a separate `bool bootStatePathConsumed` flag — the QByteArray is never mutated inside the handler, so `constData()` stays valid for the caller's synchronous use, and the consumed-flag tracks one-shot semantics. Test coverage in `cpp/tests/test_environment_callbacks.cpp::testGetBootStatePathOneShot` pins this invariant against regression.
 
 ### Files
 
@@ -75,24 +75,26 @@ The "consumed" flag is the same `bootStatePath` field cleared in-place — no se
 
 **`RetroNest-Project/cpp/src/core/libretro/` (modify only):**
 
-- `environment_callbacks.h` — declare `RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH` and add a `QByteArray bootStatePath` field to `EnvironmentContext`. The field is plain UTF-8 bytes, no QString — so the `.data()` pointer returned via the env callback is stable for the call's duration and doesn't need re-encoding.
+- `environment_callbacks.h` — declare `RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH` and add two fields to `EnvironmentContext`: `QByteArray bootStatePath` (plain UTF-8 bytes; `constData()` is stable for the env_cb call) and `bool bootStatePathConsumed = false` (one-shot marker; see Implementation note above).
 - `environment_callbacks.cpp` — add one case in the dispatch:
   ```cpp
   case RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH: {
-      auto& ctx = ...;            // access pattern matches the existing cases
-      if (ctx.bootStatePath.isEmpty()) return false;
+      if (!data) return false;
+      if (ctx->bootStatePathConsumed || ctx->bootStatePath.isEmpty())
+          return false;
       auto** out = static_cast<const char**>(data);
-      *out = ctx.bootStatePath.constData();
-      // Mark consumed so core_runtime skips the legacy retro_unserialize fallback.
-      // The constData() pointer remains valid for the duration of this call;
-      // the core MUST copy or use it synchronously before returning.
-      ctx.bootStatePath.clear();
+      *out = ctx->bootStatePath.constData();
+      // DO NOT call clear() here — toUtf8() returns a refcount=1
+      // QByteArray; clear() would free the buffer that *out points at
+      // and dangle the caller's pointer. Set the flag instead; the
+      // QByteArray remains alive for the duration of EnvironmentContext.
+      ctx->bootStatePathConsumed = true;
       return true;
   }
   ```
 - `core_runtime.cpp` — two small changes:
-  1. Before `retro_load_game`: `m_envCtx.bootStatePath = m_cfg.resumeStatePath.toUtf8();`. (Empty by default for fresh launches.)
-  2. Gate the existing `retro_unserialize` block at line 315-321 on `m_envCtx.bootStatePath.isEmpty()` — i.e., only fall through when the core didn't consume the path. The gate inverts: "if path was NOT consumed (still set), read file and call retro_unserialize."
+  1. Before `retro_load_game`: `m_envCtx.bootStatePath = m_cfg.resumeStatePath.toUtf8();` and `m_envCtx.bootStatePathConsumed = false;`. (Both reset every `runLoop` invocation.)
+  2. Gate the existing `retro_unserialize` block at line 315-321 on `!m_envCtx.bootStatePathConsumed` (NOT `bootStatePath.isEmpty()`, per the lifetime fix above) — only fall through when the core didn't consume the path.
 
 That's the entire diff: ~15 lines on the pcsx2-libretro side, ~35 lines on the RetroNest side.
 
