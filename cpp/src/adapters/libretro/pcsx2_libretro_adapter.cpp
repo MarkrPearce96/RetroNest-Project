@@ -95,6 +95,38 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         return d;
     };
 
+    // SP7c Phase 4: Graphics-card rows carry a subcategory ("Display",
+    // "Rendering", "Texture Replacement", "Post-Processing",
+    // "On-Screen Display"). The dialog flips hasSubTabs=true for
+    // category="Graphics" so GenericSettingsPage's sub-tab bar picks up
+    // each distinct subcategory string. gopt() is opt() with category
+    // hardcoded to "Graphics" and subcategory pushed into d.subcategory.
+    // tools/check_schema_fidelity.py's HOST_BLOCK_RE accepts both opt()
+    // and gopt() callsites (the parser pulls (key, default, values) from
+    // the same positional layout in each).
+    auto gopt = [](const QString& subcategory,
+                   const QString& group,
+                   const QString& key,
+                   const QString& label,
+                   const QString& def,
+                   const QVector<QPair<QString,QString>>& valuesAndLabels,
+                   const QString& tooltip,
+                   const QString& dependsOn = {}) -> SettingDef {
+        SettingDef d;
+        d.storage = SettingDef::Storage::LibretroOption;
+        d.category = "Graphics";
+        d.subcategory = subcategory;
+        d.group = group;
+        d.key = key;
+        d.label = label;
+        d.defaultValue = def;
+        d.tooltip = tooltip;
+        d.type = SettingDef::Combo;
+        d.options = valuesAndLabels;
+        d.dependsOn = dependsOn;
+        return d;
+    };
+
     s.append(opt(
         "Recommended", "Emulation",
         "pcsx2_renderer", "GS Renderer", "auto",
@@ -407,6 +439,221 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
         "Enables the fourth memory-card slot of Multitap 1. Takes effect "
         "on next launch."));
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SP7c Phase 4 — Graphics card
+    // ═══════════════════════════════════════════════════════════════════
+    //
+    // Mirrors the standalone PCSX2 dialog's Graphics widget sub-tab
+    // structure. Subcategory drives the sub-tab grouping in
+    // GenericSettingsPage once the dialog's hasSubTabs flag is set
+    // (Phase 4 Task 7 flips it for category="Graphics").
+    //
+    // Renderer remains under category="Recommended" from Phase 0 — the
+    // libretro variant's Renderer enum is libretro-side (Auto/Metal/
+    // Software/Null) not standalone-side (Auto/OpenGL/Vulkan/Metal/
+    // Software). Phase 5 will decide whether to cross-list under
+    // Graphics/Display.
+
+    // ── Graphics > Display (16 knobs) — Phase 4 Task 2 ────────────────
+
+    // Aspect-ratio enum combo: values match the INI string verbatim.
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_aspect_ratio", "Aspect Ratio", "4:3",
+        {{"Auto (4:3 Interlaced / 3:2 Progressive)", "Auto 4:3/3:2"},
+         {"4:3 (Standard)",                          "4:3"},
+         {"16:9 (Widescreen)",                       "16:9"},
+         {"10:7 (Full/Native)",                      "10:7"},
+         {"Stretch",                                 "Stretch"}},
+        "Controls the aspect ratio of the emulated display. Auto picks "
+        "4:3 for interlaced games and 3:2 for progressive games. 16:9 "
+        "stretches the image for widescreen TVs; Stretch fills the whole "
+        "window."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_fmv_aspect_ratio", "FMV Aspect Ratio Override", "Off",
+        {{"Off (Default)",                              "Off"},
+         {"Auto (4:3 Interlaced / 3:2 Progressive)",    "Auto 4:3/3:2"},
+         {"4:3 (Standard)",                             "4:3"},
+         {"16:9 (Widescreen)",                          "16:9"},
+         {"10:7 (Full/Native)",                         "10:7"}},
+        "Overrides the aspect ratio only while full-motion video (FMV) "
+        "is playing. Useful for games with widescreen cutscenes inside "
+        "a 4:3 main game."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_deinterlace_mode", "Deinterlacing", "0",
+        {{"Automatic (Default)", "0"},
+         {"Off",                 "1"},
+         {"Weave (Top)",         "2"},
+         {"Weave (Bottom)",      "3"},
+         {"Bob (Top)",           "4"},
+         {"Bob (Bottom)",        "5"},
+         {"Blend (Top)",         "6"},
+         {"Blend (Bottom)",      "7"},
+         {"Adaptive (Top)",      "8"},
+         {"Adaptive (Bottom)",   "9"}},
+        "Selects how interlaced frames are combined for progressive "
+        "display. Automatic picks the best option per game; Weave "
+        "preserves detail; Bob and Blend smooth motion at the cost of "
+        "vertical resolution."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_linear_present_mode", "Bilinear Filtering", "1",
+        {{"None",                         "0"},
+         {"Bilinear (Smooth) (Default)",  "1"},
+         {"Bilinear (Sharp)",             "2"}},
+        "Applies a bilinear filter when scaling the final image to the "
+        "window. Smooth is the standard option; Sharp uses a pixel-art-"
+        "friendly variant that keeps edges crisp."));
+
+    // ── Stretch + crop (5 int-as-Combo knobs) ──
+    // Standalone is a 1%-step Qt slider; libretro is Combo-only so we
+    // expose enumerated stops clustered near the default.
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_stretch_y", "Vertical Stretch", "100",
+        {{"50%",            "50"},
+         {"75%",            "75"},
+         {"90%",            "90"},
+         {"100% (Default)", "100"},
+         {"110%",           "110"},
+         {"125%",           "125"},
+         {"150%",           "150"},
+         {"200%",           "200"},
+         {"300%",           "300"}},
+        "Multiplies the display height after aspect-ratio fitting. "
+        "Values above 100% make the image taller than its letterbox; "
+        "values below leave extra vertical space. Standalone PCSX2 "
+        "exposes a 10-300% slider; libretro offers enumerated stops."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_crop_left", "Crop - Left", "0",
+        {{"0 px (Default)", "0"},
+         {"1 px",           "1"},
+         {"2 px",           "2"},
+         {"3 px",           "3"},
+         {"5 px",           "5"},
+         {"10 px",          "10"},
+         {"15 px",          "15"},
+         {"20 px",          "20"},
+         {"30 px",          "30"},
+         {"50 px",          "50"},
+         {"100 px",         "100"}},
+        "Trims pixels from the left edge of the source image before "
+        "it's fit to the display window. Useful for games with garbage "
+        "pixels at the border."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_crop_top", "Crop - Top", "0",
+        {{"0 px (Default)", "0"},
+         {"1 px",           "1"},
+         {"2 px",           "2"},
+         {"3 px",           "3"},
+         {"5 px",           "5"},
+         {"10 px",          "10"},
+         {"15 px",          "15"},
+         {"20 px",          "20"},
+         {"30 px",          "30"},
+         {"50 px",          "50"},
+         {"100 px",         "100"}},
+        "Trims pixels from the top edge of the source image before "
+        "it's fit to the display window."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_crop_right", "Crop - Right", "0",
+        {{"0 px (Default)", "0"},
+         {"1 px",           "1"},
+         {"2 px",           "2"},
+         {"3 px",           "3"},
+         {"5 px",           "5"},
+         {"10 px",          "10"},
+         {"15 px",          "15"},
+         {"20 px",          "20"},
+         {"30 px",          "30"},
+         {"50 px",          "50"},
+         {"100 px",         "100"}},
+        "Trims pixels from the right edge of the source image before "
+        "it's fit to the display window."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_crop_bottom", "Crop - Bottom", "0",
+        {{"0 px (Default)", "0"},
+         {"1 px",           "1"},
+         {"2 px",           "2"},
+         {"3 px",           "3"},
+         {"5 px",           "5"},
+         {"10 px",          "10"},
+         {"15 px",          "15"},
+         {"20 px",          "20"},
+         {"30 px",          "30"},
+         {"50 px",          "50"},
+         {"100 px",         "100"}},
+        "Trims pixels from the bottom edge of the source image before "
+        "it's fit to the display window."));
+
+    // ── Display bools (7) ──
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_enable_widescreen_patches", "Apply Widescreen Patches", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Automatically applies community widescreen patches to supported "
+        "games. Reshapes the rendering to true 16:9 instead of stretching "
+        "the 4:3 picture."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_enable_no_interlacing_patches", "Apply No-Interlacing Patches", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Automatically applies community no-interlacing patches to "
+        "supported games. Removes flicker in games that render in "
+        "interlaced mode."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_pcrtc_antiblur", "Anti-Blur", "enabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Enables internal anti-blur hacks that remove the PS2's GS smear "
+        "on commonly-affected games. Safe to leave on."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_integer_scaling", "Integer Scaling", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Snaps the rendered image to an integer multiple of the source "
+        "pixel size. Produces crisp pixel-art scaling at the cost of "
+        "leaving letterbox bars."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_pcrtc_offsets", "Screen Offsets", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Enables PCRTC offsets so the screen is positioned exactly where "
+        "the game requests. Fixes games that deliberately offset the "
+        "viewport."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_disable_interlace_offset", "Disable Interlace Offset", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Disables the half-pixel interlace offset which can reduce "
+        "jitter on some games that render at half vertical resolution."));
+
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_pcrtc_overscan", "Show Overscan", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Shows the overscan area of the display that would normally be "
+        "hidden by a CRT bezel. Exposes any garbage the game draws "
+        "outside the safe area."));
 
     return s;
 }
