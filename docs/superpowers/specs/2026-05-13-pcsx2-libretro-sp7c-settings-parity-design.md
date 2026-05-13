@@ -244,7 +244,7 @@ Smoke gate: SP7b's live-smoke flow on R&C 2 reproduces exactly. Three knobs stil
 
 Estimated commits: 4–6 (one per task).
 
-### Phase 1 — Emulation card — CODE-SHIPPED 2026-05-13 (awaiting user smoke gate)
+### Phase 1 — Emulation card — ✅ SHIPPED 2026-05-13
 
 **Goal:** expose the remaining ~14 Emulation knobs (3 already done in Phase 0).
 
@@ -257,7 +257,7 @@ Workflow per knob: add to `kEmulationDefinitions[]`, add field to `Resolved::Emu
 
 Smoke gate: tweak EECycleRate to -1 on R&C 2 + observe behavior. Toggle EnableCheats and verify no regression. Note: some Emulation knobs (e.g. SyncToHostRefreshRate) may interact with libretro's frame pacing; document any quirks in code comments.
 
-**Delivery (2026-05-13):** pcsx2-libretro `retronest-libretro` HEAD `6474dd0c6` (6 commits `31e07fedf` → `6474dd0c6`); RetroNest-Project `main` HEAD `0be1407` (3 host commits). 15 knobs across 3 sub-groups; schema-fidelity 18 core keys / 18 host keys byte-for-byte. Plan at `docs/superpowers/plans/2026-05-13-pcsx2-libretro-sp7c-phase1-emulation.md`. **Pending: user runs Task 7 manual UI smoke before Phase 1 flips to ✅ shipped.**
+**Delivery (2026-05-13):** pcsx2-libretro `retronest-libretro` HEAD `1c4b31d71` (8 commits incl. 2 post-smoke followups: `a5b432c2f` InitializeDefaults re-apply fix + `1c4b31d71` diagnostic log expansion); RetroNest-Project `main` HEAD `e7ad5a2` (4 host commits incl. Emulation-card hub fix `e7ad5a2`). 15 knobs across 3 sub-groups; schema-fidelity 18 core keys / 18 host keys byte-for-byte. **Live smoke verified on R&C 2 (NTSC)**: Normal Speed=0.5 → half-rate visuals + slow-pitch audio; EE Cycle Rate=-3 → PCSX2 OSD "Cycle rate/skip is not at default" warning fires. **Two bugs caught during smoke and fixed**: (1) Phase 1 originally deferred hub expansion to Phase 5, so the 15 new rows were unreachable from the UI; added an Emulation card to `Pcsx2LibretroCategoryHub` (host commit `e7ad5a2`). (2) `Settings::InitializeDefaults` had a `g_initialized` early-return that made every knob sticky for the RetroNest process lifetime — split into one-shot init + per-call user-options apply (core commit `a5b432c2f`). **Lesson for Phases 2-5**: each phase that adds rows under a NEW category MUST also add the matching `makeCard` call to `Pcsx2LibretroCategoryHub`. Plan at `docs/superpowers/plans/2026-05-13-pcsx2-libretro-sp7c-phase1-emulation.md`.
 
 ### Phase 2 — Audio card
 
