@@ -275,6 +275,16 @@ void CoreRuntime::runLoop() {
     m_envCtx.saveDirectory   = m_cfg.saveDir.toUtf8();
     m_envCtx.options         = &m_options;
     m_envCtx.runtime         = static_cast<void*>(this);
+    // SP6.5 Task 4.5: one-shot delivery to the libretro core via
+    // RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH during retro_load_game.
+    // Set bootStatePathConsumed=false explicitly here — the EnvironmentContext
+    // is a member that persists across runs of runLoop, so we must reset the
+    // flag for each session. If the core consumes the path during
+    // retro_load_game (pcsx2-libretro will, mGBA won't), the env handler
+    // sets bootStatePathConsumed=true; we check that flag below to decide
+    // whether to skip the legacy post-load retro_unserialize block.
+    m_envCtx.bootStatePath        = m_cfg.resumeStatePath.toUtf8();
+    m_envCtx.bootStatePathConsumed = false;
 
     auto& s = m_loader.symbols();
     s.retro_set_environment(&CoreRuntime::envTrampoline);
@@ -312,7 +322,19 @@ void CoreRuntime::runLoop() {
     m_audio.open(static_cast<int>(av.timing.sample_rate));
     m_frameDurationSec = (av.timing.fps > 0.0) ? (1.0 / av.timing.fps) : (1.0 / 60.0);
 
-    if (!m_cfg.resumeStatePath.isEmpty()) {
+    // SP6.5 Task 4.5: cold-resume fallback path.
+    //
+    // If the core consumed RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH during
+    // retro_load_game (pcsx2-libretro does), m_envCtx.bootStatePathConsumed
+    // is true and the VM is already in the loaded state via
+    // VMBootParameters::save_state → VMManager::Initialize → DoLoadState.
+    // Skip the post-load retro_unserialize in that case.
+    //
+    // If the core didn't query (mGBA and any non-PCSX2 libretro core),
+    // bootStatePathConsumed stays false — fall back to the legacy
+    // retro_unserialize path that loads the state AFTER retro_load_game.
+    // mGBA's BIOS-init is trivial enough that this works for it.
+    if (!m_cfg.resumeStatePath.isEmpty() && !m_envCtx.bootStatePathConsumed) {
         QFile f(m_cfg.resumeStatePath);
         if (f.exists() && f.open(QIODevice::ReadOnly)) {
             QByteArray state = f.readAll();
