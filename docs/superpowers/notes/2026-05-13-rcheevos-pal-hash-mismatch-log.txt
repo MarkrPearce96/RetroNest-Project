@@ -1,0 +1,54 @@
+40:[core] [pcsx2_libretro] retro_load_game: /Users/mark/Documents/RetroNest/roms/ps2/Ratchet & Clank - Going Commando (USA) (v2.00).iso
+117:[34m[1misoFile open ok: /Users/mark/Documents/RetroNest/roms/ps2/Ratchet & Clank - Going Commando (USA) (v2.00).iso
+123:[32m[1mDisc changed to Ratchet & Clank - Going Commando (USA) (v2.00).iso.
+124:[32m[1m  Name: Ratchet & Clank 2 - Going Commando
+125:[32m[1m  Serial: SCUS-97268
+203:[core] [pcsx2_libretro] VM RUNNING — title=Ratchet & Clank 2 - Going Commando serial=SCUS-97268 crc=0xB3A71D10
+206:[rcheevos] Game loaded; achievement session active. Title="Ratchet & Clank: Going Commando" id=3072 achievements=199 unlocked=0 regions=2 region_total_bytes=33570816
+225:[0mAdd 4 seconds play time to SCUS-97268 -> now 638
+252:[GameService] Save-and-quit completed for "/Users/mark/Documents/RetroNest/roms/ps2/Ratchet & Clank - Going Commando (USA) (v2.00).iso"
+262:[core] [pcsx2_libretro] retro_load_game: /Users/mark/Documents/RetroNest/roms/ps2/Ratchet & Clank - Going Commando (USA) (v2.00).iso
+337:[34m[1misoFile open ok: /Users/mark/Documents/RetroNest/roms/ps2/Ratchet & Clank - Going Commando (USA) (v2.00).iso
+341:[32m[1mDisc changed to Ratchet & Clank - Going Commando (USA) (v2.00).iso.
+342:[32m[1m  Name: Ratchet & Clank 2 - Going Commando
+343:[32m[1m  Serial: SCUS-97268
+420:[core] [pcsx2_libretro] VM RUNNING — title=Ratchet & Clank 2 - Going Commando serial=SCUS-97268 crc=0xB3A71D10
+425:[rcheevos] Game loaded; achievement session active. Title="Ratchet & Clank: Going Commando" id=3072 achievements=199 unlocked=0 regions=2 region_total_bytes=33570816
+442:[0mAdd 3 seconds play time to SCUS-97268 -> now 641
+469:[GameService] Save-and-quit completed for "/Users/mark/Documents/RetroNest/roms/ps2/Ratchet & Clank - Going Commando (USA) (v2.00).iso"
+478:[core] [pcsx2_libretro] retro_load_game: /Users/mark/Documents/RetroNest/roms/ps2/Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso
+551:[34m[1misoFile open ok: /Users/mark/Documents/RetroNest/roms/ps2/Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso
+555:[32m[1mDisc changed to Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso.
+556:[32m[1m  Name: Dragon Ball Z - Budokai Tenkaichi 2
+557:[32m[1m  Serial: SLES-54164
+617:[34m[1mELF Loading: cdrom0:\SLES_541.64;1, Game CRC = 278722BF, EntryPoint = 0x00100008
+618:[core] [pcsx2_libretro] VM RUNNING — title=Dragon Ball Z - Budokai Tenkaichi 2 serial=SLES-54164 crc=0x278722BF
+620:[rcheevos] rc_client_begin_identify_and_load_game failed: Unknown game
+621:[32m[1mELF cdrom0:\SLES_541.64;1 with entry point at 0x00100008 is executing.
+622:[35m[1mELF changed, active CRC 278722BF (cdrom0:\SLES_541.64;1)
+663:[0mAdd 13 seconds play time to SLES-54164 -> now 13
+690:[GameService] Save-and-quit completed for "/Users/mark/Documents/RetroNest/roms/ps2/Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso"
+693:[ThemeContext] Resuming with state file: "/Users/mark/Documents/RetroNest/emulators/pcsx2-libretro/ps2/savestates/SLES_541.64.resume"
+700:[core] [pcsx2_libretro] retro_load_game: /Users/mark/Documents/RetroNest/roms/ps2/Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso
+704:[core] [pcsx2_libretro] retro_load_game: cold-boot via save state /Users/mark/Documents/RetroNest/emulators/pcsx2-libretro/ps2/savestates/SLES_541.64.resume
+775:[34m[1misoFile open ok: /Users/mark/Documents/RetroNest/roms/ps2/Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso
+779:[32m[1mDisc changed to Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso.
+780:[32m[1m  Name: Dragon Ball Z - Budokai Tenkaichi 2
+781:[32m[1m  Serial: SLES-54164
+837:[35m[1mELF changed, active CRC 278722BF (cdrom0:\SLES_541.64;1)
+857:[core] [pcsx2_libretro] VM RUNNING — title=Dragon Ball Z - Budokai Tenkaichi 2 serial=SLES-54164 crc=0x278722BF
+860:[rcheevos] rc_client_begin_identify_and_load_game failed: Unknown game
+879:[0mAdd 13 seconds play time to SLES-54164 -> now 26
+906:[GameService] Save-and-quit completed for "/Users/mark/Documents/RetroNest/roms/ps2/Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso"
+909:[ThemeContext] Resuming with state file: "/Users/mark/Documents/RetroNest/emulators/pcsx2-libretro/ps2/savestates/SLES_541.64.resume"
+916:[core] [pcsx2_libretro] retro_load_game: /Users/mark/Documents/RetroNest/roms/ps2/Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso
+920:[core] [pcsx2_libretro] retro_load_game: cold-boot via save state /Users/mark/Documents/RetroNest/emulators/pcsx2-libretro/ps2/savestates/SLES_541.64.resume
+991:[34m[1misoFile open ok: /Users/mark/Documents/RetroNest/roms/ps2/Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso
+995:[32m[1mDisc changed to Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso.
+996:[32m[1m  Name: Dragon Ball Z - Budokai Tenkaichi 2
+997:[32m[1m  Serial: SLES-54164
+1053:[35m[1mELF changed, active CRC 278722BF (cdrom0:\SLES_541.64;1)
+1073:[core] [pcsx2_libretro] VM RUNNING — title=Dragon Ball Z - Budokai Tenkaichi 2 serial=SLES-54164 crc=0x278722BF
+1076:[rcheevos] rc_client_begin_identify_and_load_game failed: Unknown game
+1095:[0mAdd 4 seconds play time to SLES-54164 -> now 30
+1122:[GameService] Save-and-quit completed for "/Users/mark/Documents/RetroNest/roms/ps2/Dragon Ball Z - Budokai Tenkaichi 2 (Europe, Australia) (En,Ja,Fr,De,Es,It).iso"
