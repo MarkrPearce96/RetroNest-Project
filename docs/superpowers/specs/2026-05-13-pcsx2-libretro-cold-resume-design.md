@@ -53,10 +53,10 @@ A new private env constant defined in **both** `pcsx2-libretro/LibretroFrontend.
 // core reads (returns true), the frontend marks the path consumed so
 // it doesn't fall back to the post-load retro_unserialize compat path.
 #define RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH \
-    (0x01 | RETRO_ENVIRONMENT_PRIVATE)
+    (0x02 | RETRO_ENVIRONMENT_PRIVATE)
 ```
 
-`RETRO_ENVIRONMENT_PRIVATE` is `0x20000` per `libretro.h`. The number `0x20001` is RetroNest-private and can't collide with any standard libretro env call.
+`RETRO_ENVIRONMENT_PRIVATE` is `0x20000` per `libretro.h`. `0x20001` is already taken by `RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW` (per `environment_callbacks.h:12`); `0x20002` is the next free RetroNest-private slot and can't collide with any standard libretro env call.
 
 The protocol is one-shot per `retro_load_game`:
 
@@ -207,7 +207,7 @@ The new line is at INFO level, not under `[STATE_TRACE]`, so a future maintainer
 
 ## Risks
 
-- **Env number collision.** `0x20001` is in `RETRO_ENVIRONMENT_PRIVATE` namespace per libretro.h convention. Standard libretro env calls top out around `0x4F` (76), so 0x20001 is comfortably above. Other private cores using the same number would only matter if they shared the same RetroNest binary AND queried with a different intent. None of RetroNest's other shipped cores (mGBA at minimum) use private env calls in this range today. Low risk; documenting the constant + `// pcsx2-libretro: SP6.5 Task 4.5` comment marker is sufficient.
+- **Env number collision.** `0x20002` is in `RETRO_ENVIRONMENT_PRIVATE` namespace (`0x20000`) per libretro.h convention. `0x20001` is taken by `RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW`; `0x20002` is the next free slot. Standard libretro env calls top out around `0x4F` (76), so the 0x20000 range is comfortably above. Other private cores using the same number would only matter if they shared the same RetroNest binary AND queried with a different intent — none of RetroNest's shipped cores (mGBA at minimum) use private env calls in this range today. Low risk; documenting the constant + `// pcsx2-libretro: SP6.5 Task 4.5` comment marker is sufficient.
 - **`VMManager::Initialize` returning failure after `DoLoadState` fails.** A corrupt resume file would cause `retro_load_game` to return false, surfacing as a launch failure. The mitigation is that the resume file was written by our own `Serialize` minutes earlier; corruption between write and read is unlikely in normal operation. If it does happen, the user picks Start Fresh in the dialog and proceeds. No data loss (the resume file is supplementary to the user's memcard saves).
 - **MTGS framebuffer presentation after cold-boot load.** SP6.5 mid-session loads showed the game visually resuming cleanly. The cold-boot load path runs through the SAME `DoLoadState` → `SaveState_UnzipFromZip` → `SavestateEntries[]` loop, so the same MTGS state-restore happens. Verified by the existing PCSX2-Qt launch-with-state flow being well-tested upstream.
 - **Race between `bootStatePath` write and core query.** Both happen on the runtime worker thread synchronously: write before `retro_load_game`, query during. No threads involved; no race.
