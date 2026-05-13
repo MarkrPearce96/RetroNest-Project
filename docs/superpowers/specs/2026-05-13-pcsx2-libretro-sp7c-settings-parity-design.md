@@ -244,20 +244,20 @@ Smoke gate: SP7b's live-smoke flow on R&C 2 reproduces exactly. Three knobs stil
 
 Estimated commits: 4–6 (one per task).
 
-### Phase 1 — Emulation card
+### Phase 1 — Emulation card — CODE-SHIPPED 2026-05-13 (awaiting user smoke gate)
 
 **Goal:** expose the remaining ~14 Emulation knobs (3 already done in Phase 0).
 
 Tasks per knob group (3 sub-groups in standalone Emulation card):
 - **Speed Control (3 knobs):** NominalScalar, TurboScalar, SlomoScalar.
-- **System Settings (8 new knobs, 1 already done):** EECycleRate, EECycleSkip, EnableThreadPinning, EnableCheats, HostFs, CdvdPrecache, EnableFastBootFastForward, ... (skip EnableFastBoot — already in Phase 0 — and skip vuThread — already in Phase 0).
+- **System Settings (7 new knobs):** EECycleRate, EECycleSkip, EnableThreadPinning, EnableCheats, HostFs, CdvdPrecache, EnableFastBootFastForward. (vuThread and EnableFastBoot already shipped in Phase 0.)
 - **Frame Pacing (5 knobs):** VsyncQueueSize, SyncToHostRefreshRate, VsyncEnable, UseVSyncForTiming, SkipDuplicateFrames.
 
 Workflow per knob: add to `kEmulationDefinitions[]`, add field to `Resolved::Emulation`, add parse line to `ParseEmulation`, add apply line to `ApplyEmulationDefaults`, add SettingDef row to host adapter, run schema fidelity check, run unit test.
 
 Smoke gate: tweak EECycleRate to -1 on R&C 2 + observe behavior. Toggle EnableCheats and verify no regression. Note: some Emulation knobs (e.g. SyncToHostRefreshRate) may interact with libretro's frame pacing; document any quirks in code comments.
 
-Estimated commits: 4–6 (batched by knob group).
+**Delivery (2026-05-13):** pcsx2-libretro `retronest-libretro` HEAD `6474dd0c6` (6 commits `31e07fedf` → `6474dd0c6`); RetroNest-Project `main` HEAD `0be1407` (3 host commits). 15 knobs across 3 sub-groups; schema-fidelity 18 core keys / 18 host keys byte-for-byte. Plan at `docs/superpowers/plans/2026-05-13-pcsx2-libretro-sp7c-phase1-emulation.md`. **Pending: user runs Task 7 manual UI smoke before Phase 1 flips to ✅ shipped.**
 
 ### Phase 2 — Audio card
 
