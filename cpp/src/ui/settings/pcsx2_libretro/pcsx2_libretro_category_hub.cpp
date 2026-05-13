@@ -10,13 +10,19 @@ Pcsx2LibretroCategoryHub::Pcsx2LibretroCategoryHub(QWidget* parent)
     auto* grid = new QGridLayout();
     grid->setSpacing(14);
 
-    // SP7b currently exposes three knobs (renderer / MTVU / FastBoot)
-    // all under the "Recommended" category. The full-width card mirrors
-    // the layout convention of the other emulators' hubs.
+    // SP7b's three knobs (renderer / MTVU / FastBoot) sit under
+    // category="Recommended"; SP7c Phase 1 adds 15 rows under
+    // category="Emulation". Phase 2 (Audio) + Phase 3 (Memory Cards) +
+    // Phase 5 (full hub reorg per the spec) will add the remaining cards.
     grid->addWidget(makeCard(QStringLiteral("\U0001F4A1"), "Recommended",
                              "GS renderer, multi-threaded VU1, fast boot",
                              countSettings("Recommended"), "Recommended"),
                     0, 0, 1, 3);
+
+    grid->addWidget(makeCard(QStringLiteral("\U0001F3AE"), "Emulation",
+                             "Speed control, system, frame pacing",
+                             countSettings("Emulation"), "Emulation"),
+                    1, 0);
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
