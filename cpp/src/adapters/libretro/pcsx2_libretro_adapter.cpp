@@ -169,5 +169,67 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         speedOptions,
         "Target speed when slow-motion is engaged. Takes effect on next launch."));
 
+    // SP7c Phase 1 — System Settings (sub-group B of the Emulation card).
+    s.append(opt(
+        "Emulation", "System Settings",
+        "pcsx2_ee_cycle_rate", "EE Cycle Rate", "0",
+        {{"50% (Underclock)",  "-3"},
+         {"60% (Underclock)",  "-2"},
+         {"75% (Underclock)",  "-1"},
+         {"100% (Normal Speed)","0"},
+         {"130% (Overclock)",  "1"},
+         {"180% (Overclock)",  "2"},
+         {"300% (Overclock)",  "3"}},
+        "Underclocks or overclocks the emulated Emotion Engine CPU. "
+        "Most games should stay at 100%. Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "System Settings",
+        "pcsx2_ee_cycle_skip", "EE Cycle Skipping", "0",
+        {{"Disabled",            "0"},
+         {"Mild Underclock",     "1"},
+         {"Moderate Underclock", "2"},
+         {"Maximum Underclock",  "3"}},
+        "Makes the EE skip cycles. Stronger underclock than EE Cycle Rate; "
+        "can recover frame-rate in slow scenes at the cost of visible "
+        "glitches. Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "System Settings",
+        "pcsx2_thread_pinning", "Thread Pinning", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Pin emulation threads to specific CPU cores. Can reduce stutter "
+        "on heterogeneous-core CPUs. Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "System Settings",
+        "pcsx2_cheats", "Enable Cheats", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Load pnach cheat files on game launch. Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "System Settings",
+        "pcsx2_host_fs", "Enable Host Filesystem", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Allow the emulated PS2 to read host files. Homebrew-only feature; "
+        "retail games never use it. Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "System Settings",
+        "pcsx2_cdvd_precache", "CDVD Precache", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Load the entire disc image into RAM before booting. Eliminates "
+        "disc-read stutter at the cost of memory and a slower initial "
+        "boot. Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "System Settings",
+        "pcsx2_fast_boot_ff", "Fast-Forward Through BIOS", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "When Fast Boot is enabled, also fast-forward the brief BIOS boot "
+        "animation. No effect when Fast Boot is disabled. Takes effect on "
+        "next launch.",
+        "pcsx2_fast_boot"));
+
     return s;
 }
