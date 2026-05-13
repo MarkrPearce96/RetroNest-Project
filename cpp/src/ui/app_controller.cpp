@@ -19,6 +19,7 @@
 #include "settings/ppsspp/ppsspp_settings_dialog.h"
 #include "settings/dolphin/dolphin_settings_dialog.h"
 #include "settings/mgba/mgba_settings_dialog.h"
+#include "settings/pcsx2_libretro/pcsx2_libretro_settings_dialog.h"
 #include "settings/hotkey_settings_dialog.h"
 
 #include <QFileDialog>
@@ -480,6 +481,12 @@ void AppController::showEmulatorSettings(const QString& emuId) {
     }
     if (emuId == QLatin1String("mgba")) {
         auto* dialog = new MgbaSettingsDialog(this, emuId);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->show();
+        return;
+    }
+    if (emuId == QLatin1String("pcsx2-libretro")) {
+        auto* dialog = new Pcsx2LibretroSettingsDialog(this, emuId);
         dialog->setAttribute(Qt::WA_DeleteOnClose);
         dialog->show();
         return;
