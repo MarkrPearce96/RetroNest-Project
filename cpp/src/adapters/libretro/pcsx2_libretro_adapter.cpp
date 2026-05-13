@@ -276,5 +276,83 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Don't re-present a frame if the GS hasn't produced new output. "
         "Mostly cosmetic in libretro mode. Takes effect on next launch."));
 
+    // SP7c Phase 2 — Audio card.
+    //
+    // 5 rows under category="Audio". Audio routes through
+    // LibretroAudioStream (SP4), so Cubeb-only knobs from the standalone
+    // dialog (Backend / DriverName / DeviceName / ExpansionMode /
+    // OutputLatencyMS / OutputLatencyMinimal) are dropped — they are
+    // silently inert in libretro mode. ExpansionMode is additionally
+    // forced to Disabled by the core's Settings.cpp because the libretro
+    // audio_batch_cb is stereo-only.
+    //
+    // Value strings MUST match the core's CoreOptionsAudio.cpp byte-for-byte
+    // (and the SyncMode strings must match PCSX2's ParseSyncMode). The
+    // check_schema_fidelity.py target verifies this mechanically.
+    s.append(opt(
+        "Audio", "Configuration",
+        "pcsx2_audio_sync_mode", "Audio Sync Mode", "TimeStretch",
+        {{"Disabled (Noisy)",         "Disabled"},
+         {"TimeStretch (Recommended)","TimeStretch"}},
+        "How emulated audio is paced against host audio. TimeStretch "
+        "resamples audio (via SoundTouch) so pitch stays correct when "
+        "emulation speed differs from 100%. Disabled passes raw samples "
+        "through — fastest but produces audible artefacts during any "
+        "speed deviation. Takes effect on next launch."));
+
+    s.append(opt(
+        "Audio", "Configuration",
+        "pcsx2_audio_buffer_ms", "Audio Buffer Size", "50",
+        {{"10 ms (lowest latency)", "10"},
+         {"20 ms",                  "20"},
+         {"30 ms",                  "30"},
+         {"50 ms (default)",        "50"},
+         {"75 ms",                  "75"},
+         {"100 ms",                 "100"},
+         {"150 ms",                 "150"},
+         {"200 ms",                 "200"}},
+        "Ring-buffer size for emulated audio in milliseconds. Smaller "
+        "values reduce audio latency at the cost of higher CPU pressure "
+        "and a greater chance of underruns. Takes effect on next launch."));
+
+    s.append(opt(
+        "Audio", "Controls",
+        "pcsx2_audio_volume", "Volume", "100",
+        {{"0% (Muted)",       "0"},
+         {"25%",              "25"},
+         {"50%",              "50"},
+         {"75%",              "75"},
+         {"100% (default)",   "100"},
+         {"125%",             "125"},
+         {"150%",             "150"},
+         {"175%",             "175"},
+         {"200% (max)",       "200"}},
+        "Normal-play audio volume. 100% is the PS2's native output level. "
+        "Values above 100% boost the signal digitally (may clip on loud "
+        "passages). Takes effect on next launch."));
+
+    s.append(opt(
+        "Audio", "Controls",
+        "pcsx2_audio_ff_volume", "Fast-Forward Volume", "100",
+        {{"0% (Muted)",       "0"},
+         {"25%",              "25"},
+         {"50%",              "50"},
+         {"75%",              "75"},
+         {"100% (default)",   "100"},
+         {"125%",             "125"},
+         {"150%",             "150"},
+         {"175%",             "175"},
+         {"200% (max)",       "200"}},
+        "Volume during fast-forward. Independent from normal-play volume — "
+        "useful for muting audio entirely during fast-forward. Takes "
+        "effect on next launch."));
+
+    s.append(opt(
+        "Audio", "Controls",
+        "pcsx2_audio_muted", "Mute Audio", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Mute all PS2 audio output. RetroNest's UI sounds and other "
+        "non-PS2 audio sources are unaffected. Takes effect on next launch."));
+
     return s;
 }
