@@ -259,17 +259,36 @@ Smoke gate: tweak EECycleRate to -1 on R&C 2 + observe behavior. Toggle EnableCh
 
 **Delivery (2026-05-13):** pcsx2-libretro `retronest-libretro` HEAD `1c4b31d71` (8 commits incl. 2 post-smoke followups: `a5b432c2f` InitializeDefaults re-apply fix + `1c4b31d71` diagnostic log expansion); RetroNest-Project `main` HEAD `e7ad5a2` (4 host commits incl. Emulation-card hub fix `e7ad5a2`). 15 knobs across 3 sub-groups; schema-fidelity 18 core keys / 18 host keys byte-for-byte. **Live smoke verified on R&C 2 (NTSC)**: Normal Speed=0.5 → half-rate visuals + slow-pitch audio; EE Cycle Rate=-3 → PCSX2 OSD "Cycle rate/skip is not at default" warning fires. **Two bugs caught during smoke and fixed**: (1) Phase 1 originally deferred hub expansion to Phase 5, so the 15 new rows were unreachable from the UI; added an Emulation card to `Pcsx2LibretroCategoryHub` (host commit `e7ad5a2`). (2) `Settings::InitializeDefaults` had a `g_initialized` early-return that made every knob sticky for the RetroNest process lifetime — split into one-shot init + per-call user-options apply (core commit `a5b432c2f`). **Lesson for Phases 2-5**: each phase that adds rows under a NEW category MUST also add the matching `makeCard` call to `Pcsx2LibretroCategoryHub`. Plan at `docs/superpowers/plans/2026-05-13-pcsx2-libretro-sp7c-phase1-emulation.md`.
 
-### Phase 2 — Audio card
+### Phase 2 — Audio card — ✅ SHIPPED 2026-05-13
 
-**Goal:** expose the 6 Audio knobs that apply to libretro.
+**Goal:** expose the Audio knobs that apply to libretro.
 
-Knobs: ExpansionMode, SyncMode, BufferMS, OutputLatencyMS, OutputLatencyMinimal, StandardVolume, FastForwardVolume, OutputMuted. (Note: that's 8 candidates from the inventory; final count may be lower after verifying each value actually flows through `LibretroAudioStream`. BufferMS and OutputLatencyMS in particular may not have effect since libretro audio bypasses Cubeb.)
+**Final knob count: 5** (not 6 as originally estimated). `StretchSequenceLengthMS` was dropped during plan-writing because the standalone PCSX2 dialog at `pcsx2_adapter.cpp` Audio rows (lines 909-977) does not expose it — and "identical layout to standalone" parity is the source of truth.
 
-**Verify-during-implementation:** for each Audio knob, confirm the INI key is read by something other than the Cubeb backend. Knobs whose only consumer is `SPU2::Initialize`'s Cubeb path get dropped (silently inert).
+**Knobs shipped:**
 
-Smoke gate: StandardVolume slider visible + value persists in options.json.
+| Core option key | INI key | Type | Default |
+|---|---|---|---|
+| `pcsx2_audio_sync_mode` | `SyncMode` | Combo (2: Disabled / TimeStretch) | `TimeStretch` |
+| `pcsx2_audio_buffer_ms` | `BufferMS` | Combo (8 stops, 10–200 ms) | `50` |
+| `pcsx2_audio_volume` | `StandardVolume` | Combo (9 stops, 0–200%) | `100` |
+| `pcsx2_audio_ff_volume` | `FastForwardVolume` | Combo (9 stops, 0–200%) | `100` |
+| `pcsx2_audio_muted` | `OutputMuted` | Bool | `disabled` |
 
-Estimated commits: 2–3.
+**SyncMode enum correction:** the kickoff section had `(TimeStretch / ASync / None)` as candidates; the actual upstream enum at `pcsx2/Config.h:960-965` is only `{Disabled, TimeStretch}` (2 values). Plan corrected against `pcsx2/Pcsx2Config.cpp:1180` `s_spu2_sync_mode_names` + standalone adapter `pcsx2_adapter.cpp:941-944`.
+
+**Knobs explicitly DROPPED (silently inert in libretro mode):**
+
+| Standalone candidate | INI key | Why dropped |
+|---|---|---|
+| `ExpansionMode` | `SPU2/Output/ExpansionMode` | Forced `Disabled` by `Settings.cpp:232` because libretro `audio_batch_cb` is stereo-only; `LibretroAudioStream` ctor asserts this. |
+| `OutputLatencyMS` | StreamParameters | Logged at `AudioStream.cpp:117` but not consumed by `BaseInitialize` or `LibretroAudioStream` — Cubeb/SDL path only. |
+| `OutputLatencyMinimal` | StreamParameters | Same as above — Cubeb-only. |
+| `Backend` | `SPU2/Output/Backend` | Hardcoded `Libretro` by `Settings.cpp:226` (SP4). |
+| `DriverName` / `DeviceName` | StreamParameters | Cubeb-only backend selector. |
+| `StretchSequenceLengthMS` | StreamParameters | Not in standalone adapter rows; "identical layout" parity. (Note: it IS consumed via SoundTouch when stretch is enabled, so it's NOT inert — but standalone doesn't show it, so we don't either.) |
+
+**Delivery (2026-05-13):** pcsx2-libretro `retronest-libretro` HEAD `91bf9f4bf` (3 core commits incl. one followup); RetroNest-Project `main` HEAD `fbc8c4b` (3 host commits incl. one followup + hub-card commit). Schema-fidelity 23 core keys / 23 host keys byte-for-byte. **Live smoke verified via x86_64 Rosetta launch** — Mute, Volume 25%, Volume 200% round-tripped through `[CoreOptions] audio:` echo log; `LibretroAudioStream` constructed correctly per launch; no WARN/ERROR logs about unknown values or parse failures. Hub now renders 3 cards (Recommended + Emulation + Audio). Plan at `docs/superpowers/plans/2026-05-13-pcsx2-libretro-sp7c-phase2-audio.md`.
 
 ### Phase 3 — Memory Cards
 
