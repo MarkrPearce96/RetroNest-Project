@@ -231,5 +231,50 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "next launch.",
         "pcsx2_fast_boot"));
 
+    // SP7c Phase 1 — Frame Pacing / Latency Control (sub-group C).
+    s.append(opt(
+        "Emulation", "Frame Pacing / Latency Control",
+        "pcsx2_vsync_queue_size", "Maximum Frame Latency", "2",
+        {{"Optimal (Frame Pacing)", "0"},
+         {"1 frame",                "1"},
+         {"2 frames",               "2"},
+         {"3 frames",               "3"}},
+        "Frames the GS can queue before the EE must wait. Lower values "
+        "reduce input latency at the cost of pacing smoothness. Takes "
+        "effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "Frame Pacing / Latency Control",
+        "pcsx2_sync_to_host_rr", "Sync to Host Refresh Rate", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Adjust emulation speed slightly to align with the host display's "
+        "refresh rate. May be cosmetic in libretro mode. Takes effect on "
+        "next launch."));
+
+    s.append(opt(
+        "Emulation", "Frame Pacing / Latency Control",
+        "pcsx2_vsync", "Vertical Sync (VSync)", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Synchronize frame submission with the host display's vblank. "
+        "May be cosmetic in libretro mode. Takes effect on next launch."));
+
+    // pcsx2_use_vsync_timing gates on the compound (VSync && SyncToHostRR);
+    // SettingDef.dependsOn accepts "A && B" multi-master expressions.
+    s.append(opt(
+        "Emulation", "Frame Pacing / Latency Control",
+        "pcsx2_use_vsync_timing", "Use Host VSync Timing", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Drive emulation timing from host vsync instead of the emulated "
+        "console's refresh. Only takes effect when both VSync and Sync "
+        "to Host Refresh Rate are enabled. Takes effect on next launch.",
+        "pcsx2_vsync && pcsx2_sync_to_host_rr"));
+
+    s.append(opt(
+        "Emulation", "Frame Pacing / Latency Control",
+        "pcsx2_skip_duplicate_frames", "Skip Presenting Duplicate Frames", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Don't re-present a frame if the GS hasn't produced new output. "
+        "Mostly cosmetic in libretro mode. Takes effect on next launch."));
+
     return s;
 }
