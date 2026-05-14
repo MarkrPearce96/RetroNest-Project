@@ -749,5 +749,71 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Emulates PS2 mipmapping when the hardware renderer is active. "
         "Fixes texture aliasing at distance in supported games."));
 
+    // ── Graphics > Texture Replacement (Phase 4 Task 4) ──────────────────
+    //
+    // 6 bools mirroring standalone's GraphicsTextureReplacementSettingsTab.
+    // Standalone gates every row on Renderer!=13 (Software). The libretro
+    // variant uses pcsx2_renderer!=software (string-valued Combo, not int
+    // enum). dependsOn libretro-key form is battle-tested from Task 3's
+    // pcsx2_tri_filter!=2 && pcsx2_tri_filter!=3.
+    //
+    // The texture-search-directory picker is dropped — RetroNest manages
+    // EmuFolders::Textures from SP1 (texture dumps land per-game-serial
+    // natively via Path::Combine(EmuFolders::Textures, s_current_serial)).
+    s.append(gopt(
+        "Texture Replacement", "Options",
+        "pcsx2_load_texture_replacements", "Load Textures", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Loads replacement textures from the texture-replacement folder "
+        "(per-game subdirectory keyed by disc serial). Only effective "
+        "with a hardware renderer.",
+        "pcsx2_renderer!=software"));
+
+    s.append(gopt(
+        "Texture Replacement", "Options",
+        "pcsx2_dump_replaceable_textures", "Dump Textures", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Dumps the game's textures to disk so they can be edited and "
+        "loaded back as replacements. Writes to the per-game texture-"
+        "replacement subdirectory. Only effective with a hardware "
+        "renderer.",
+        "pcsx2_renderer!=software"));
+
+    s.append(gopt(
+        "Texture Replacement", "Options",
+        "pcsx2_load_texture_replacements_async", "Asynchronous Texture Loading", "enabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Loads replacement textures on a background thread to avoid "
+        "stutter at first sight of each texture. Disable only for "
+        "deterministic capture or debugging.",
+        "pcsx2_load_texture_replacements && pcsx2_renderer!=software"));
+
+    s.append(gopt(
+        "Texture Replacement", "Options",
+        "pcsx2_precache_texture_replacements", "Precache Replacements", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Loads every replacement texture for the current game at boot "
+        "instead of on-demand. Uses more memory but eliminates load "
+        "stutter mid-game.",
+        "pcsx2_load_texture_replacements && pcsx2_renderer!=software"));
+
+    s.append(gopt(
+        "Texture Replacement", "Options",
+        "pcsx2_dump_replaceable_mipmaps", "Dump Mipmaps", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "When dumping textures, also writes each mipmap level. Useful "
+        "for replacing distance LODs explicitly. Only meaningful with "
+        "Dump Textures enabled.",
+        "pcsx2_dump_replaceable_textures && pcsx2_renderer!=software"));
+
+    s.append(gopt(
+        "Texture Replacement", "Options",
+        "pcsx2_dump_textures_with_fmv_active", "Dump Textures During FMV", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Includes textures used during full-motion video in dumps. Off "
+        "by default because FMV frames produce a large volume of one-"
+        "off textures.",
+        "pcsx2_dump_replaceable_textures && pcsx2_renderer!=software"));
+
     return s;
 }
