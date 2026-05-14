@@ -752,10 +752,29 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // ── Graphics > Texture Replacement (Phase 4 Task 4) ──────────────────
     //
     // 6 bools mirroring standalone's GraphicsTextureReplacementSettingsTab.
-    // Standalone gates every row on Renderer!=13 (Software). The libretro
-    // variant uses pcsx2_renderer!=software (string-valued Combo, not int
-    // enum). dependsOn libretro-key form is battle-tested from Task 3's
-    // pcsx2_tri_filter!=2 && pcsx2_tri_filter!=3.
+    //
+    // Renderer-gate dropped (Option B from the prep doc, after Option A
+    // failed live-smoke): standalone gates every row on Renderer!=13
+    // (Software). We initially translated that to
+    // `pcsx2_renderer!=software` on the host side, but
+    // GenericSettingsPage::refreshDependencies() builds masterValues
+    // from `findChildren<SettingsComboRow *>()` of the current page only
+    // — pcsx2_renderer lives on the Recommended page, so its value is
+    // not visible to dependency evaluation here. The result was the
+    // expression `"" != "software"` evaluating true and the row staying
+    // editable in Software mode. Cross-page master propagation is a
+    // dialog-level architectural change deferred as an SP7c followup.
+    //
+    // Master-bool chains within this page still work normally — both
+    // pcsx2_load_texture_replacements and pcsx2_dump_replaceable_textures
+    // are right here, so the four downstream rows grey correctly.
+    //
+    // UX impact of dropping the renderer gate: in Software mode the 6
+    // rows stay editable but silently inert (PCSX2 ignores
+    // LoadTextureReplacements etc. when GSConfig.UseHardwareRenderer()
+    // is false). A minor wart for a niche scenario (user explicitly
+    // switched to Software AND wants to twiddle texture-replacement
+    // knobs).
     //
     // The texture-search-directory picker is dropped — RetroNest manages
     // EmuFolders::Textures from SP1 (texture dumps land per-game-serial
@@ -766,8 +785,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
         "Loads replacement textures from the texture-replacement folder "
         "(per-game subdirectory keyed by disc serial). Only effective "
-        "with a hardware renderer.",
-        "pcsx2_renderer!=software"));
+        "with a hardware renderer."));
 
     s.append(gopt(
         "Texture Replacement", "Options",
@@ -776,8 +794,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Dumps the game's textures to disk so they can be edited and "
         "loaded back as replacements. Writes to the per-game texture-"
         "replacement subdirectory. Only effective with a hardware "
-        "renderer.",
-        "pcsx2_renderer!=software"));
+        "renderer."));
 
     s.append(gopt(
         "Texture Replacement", "Options",
@@ -786,7 +803,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Loads replacement textures on a background thread to avoid "
         "stutter at first sight of each texture. Disable only for "
         "deterministic capture or debugging.",
-        "pcsx2_load_texture_replacements && pcsx2_renderer!=software"));
+        "pcsx2_load_texture_replacements"));
 
     s.append(gopt(
         "Texture Replacement", "Options",
@@ -795,7 +812,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Loads every replacement texture for the current game at boot "
         "instead of on-demand. Uses more memory but eliminates load "
         "stutter mid-game.",
-        "pcsx2_load_texture_replacements && pcsx2_renderer!=software"));
+        "pcsx2_load_texture_replacements"));
 
     s.append(gopt(
         "Texture Replacement", "Options",
@@ -804,7 +821,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "When dumping textures, also writes each mipmap level. Useful "
         "for replacing distance LODs explicitly. Only meaningful with "
         "Dump Textures enabled.",
-        "pcsx2_dump_replaceable_textures && pcsx2_renderer!=software"));
+        "pcsx2_dump_replaceable_textures"));
 
     s.append(gopt(
         "Texture Replacement", "Options",
@@ -813,7 +830,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Includes textures used during full-motion video in dumps. Off "
         "by default because FMV frames produce a large volume of one-"
         "off textures.",
-        "pcsx2_dump_replaceable_textures && pcsx2_renderer!=software"));
+        "pcsx2_dump_replaceable_textures"));
 
     return s;
 }
