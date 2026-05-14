@@ -958,5 +958,247 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "libretro offers enumerated stops.",
         "pcsx2_shade_boost"));
 
+    // ── Graphics > On-Screen Display (Phase 4 Task 6) ───────────────────
+    //
+    // 23 knobs mirroring standalone PCSX2's Graphics/On-Screen Display
+    // sub-tab. 22 stored under [EmuCore/GS]; WarnAboutUnsafeSettings
+    // under [EmuCore] (split-section, handled core-side in
+    // CoreOptionsGraphics::ApplyDefaults).
+    //
+    // Five groups: "On-Screen Display" (5 rows, no dependsOn);
+    // "Performance Stats" (9 rows, all dependsOn pcsx2_osd_performance_pos!=0);
+    // "System Information" (2 rows, both dependsOn pcsx2_osd_performance_pos!=0);
+    // "Settings & Inputs" (6 rows, mixed dependsOn — see per-row notes);
+    // "Messages" (1 row, dependsOn pcsx2_osd_messages_pos!=0).
+    //
+    // OsdScale + OsdMargin are int sliders standalone-side; libretro v2
+    // is Combo-only, so they use enumerated stops (Task 2 Crop + Task 5
+    // CAS Sharpness precedent).
+    //
+    // dependsOn audit: every key referenced (pcsx2_osd_performance_pos,
+    // pcsx2_osd_messages_pos, pcsx2_osd_show_settings,
+    // pcsx2_load_texture_replacements) lives within the Graphics card.
+    // Cross-category limitation (refreshDependencies findChildren scope)
+    // does NOT apply — see memory cross_category_dependson_limitation.
+
+    // -- "On-Screen Display" group (5 rows, no dependsOn) --
+
+    s.append(gopt(
+        "On-Screen Display", "On-Screen Display",
+        "pcsx2_osd_scale", "OSD Scale", "100",
+        {{"50%", "50"},
+         {"75%", "75"},
+         {"100% (Default)", "100"},
+         {"125%", "125"},
+         {"150%", "150"},
+         {"200%", "200"},
+         {"300%", "300"},
+         {"500%", "500"}},
+        "Global multiplier applied to every OSD overlay. 100% matches "
+        "standalone PCSX2's default size. Standalone exposes a "
+        "25-500% slider; libretro offers enumerated stops."));
+
+    s.append(gopt(
+        "On-Screen Display", "On-Screen Display",
+        "pcsx2_osd_margin", "OSD Margin", "10",
+        {{"0px", "0"},
+         {"5px", "5"},
+         {"10px (Default)", "10"},
+         {"15px", "15"},
+         {"20px", "20"},
+         {"30px", "30"},
+         {"50px", "50"},
+         {"100px", "100"}},
+        "Pixel offset between the OSD elements and the screen edge. "
+        "Standalone exposes a 0-100px slider; libretro offers "
+        "enumerated stops."));
+
+    s.append(gopt(
+        "On-Screen Display", "On-Screen Display",
+        "pcsx2_osd_messages_pos", "OSD Messages Position", "1",
+        {{"None", "0"},
+         {"Top Left (Default)", "1"},
+         {"Top Center", "2"},
+         {"Top Right", "3"},
+         {"Center Left", "4"},
+         {"Center", "5"},
+         {"Center Right", "6"},
+         {"Bottom Left", "7"},
+         {"Bottom Center", "8"},
+         {"Bottom Right", "9"}},
+        "Corner where transient messages (save-state loaded, shader "
+        "reload, etc.) are drawn. Set to None to hide them entirely."));
+
+    s.append(gopt(
+        "On-Screen Display", "On-Screen Display",
+        "pcsx2_osd_performance_pos", "OSD Performance Position", "3",
+        {{"None", "0"},
+         {"Top Left", "1"},
+         {"Top Center", "2"},
+         {"Top Right (Default)", "3"},
+         {"Center Left", "4"},
+         {"Center", "5"},
+         {"Center Right", "6"},
+         {"Bottom Left", "7"},
+         {"Bottom Center", "8"},
+         {"Bottom Right", "9"}},
+        "Corner where the performance stats column (FPS/Speed/CPU/GPU/"
+        "etc.) is drawn. Set to None to hide the column and grey out "
+        "every Performance Stats / System Information toggle."));
+
+    s.append(gopt(
+        "On-Screen Display", "On-Screen Display",
+        "pcsx2_osd_bold_text", "OSD Text Style (Bold)", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Renders OSD text in bold. Easier to read on bright scenes."));
+
+    // -- "Performance Stats" group (9 rows, all dependsOn pcsx2_osd_performance_pos!=0) --
+
+    s.append(gopt(
+        "On-Screen Display", "Performance Stats",
+        "pcsx2_osd_show_speed", "Show Speed Percentages", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays the emulation speed as a percentage. Red below 95%, "
+        "green above 105%.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "Performance Stats",
+        "pcsx2_osd_show_fps", "Show FPS", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays the current frame rate reported by the GS. Useful "
+        "for spotting performance issues.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "Performance Stats",
+        "pcsx2_osd_show_vps", "Show VPS", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays vertical syncs per second — the PS2 display refresh "
+        "reported by the GS.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "Performance Stats",
+        "pcsx2_osd_show_resolution", "Show Resolution", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays the PS2 internal render resolution and interlacing "
+        "mode.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "Performance Stats",
+        "pcsx2_osd_show_gs_stats", "Show GS Statistics", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays per-frame GS statistics: draw-call count, VRAM use, "
+        "and a frame-time summary.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "Performance Stats",
+        "pcsx2_osd_show_cpu", "Show CPU Usage", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays per-component CPU usage (EE, GS, VU).",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "Performance Stats",
+        "pcsx2_osd_show_gpu", "Show GPU Usage", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays GPU usage percentage and frame time in milliseconds.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "Performance Stats",
+        "pcsx2_osd_show_indicators", "Show Status Indicators", "enabled",
+        {{"Enabled (Default)", "enabled"}, {"Disabled", "disabled"}},
+        "Displays icons for pause, fast-forward, slow-motion, and "
+        "turbo modes in the top-right corner.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "Performance Stats",
+        "pcsx2_osd_show_frame_times", "Show Frame Times", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays a rolling graph of recent frame times to visualise "
+        "stutter.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    // -- "System Information" group (2 rows, both dependsOn pcsx2_osd_performance_pos!=0) --
+
+    s.append(gopt(
+        "On-Screen Display", "System Information",
+        "pcsx2_osd_show_hardware_info", "Show Hardware Info", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays the CPU and GPU model names as two lines in the "
+        "performance column.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "System Information",
+        "pcsx2_osd_show_version", "Show PCSX2 Version", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays the PCSX2 version string in the performance column.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    // -- "Settings & Inputs" group (6 rows, mixed dependsOn) --
+
+    s.append(gopt(
+        "On-Screen Display", "Settings & Inputs",
+        "pcsx2_osd_show_settings", "Show Settings", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays a compact summary of active emulation settings in "
+        "the bottom-right corner.",
+        "pcsx2_osd_messages_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "Settings & Inputs",
+        "pcsx2_osd_show_patches", "Show Patches", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Appends active patches (widescreen, no-interlacing, etc.) to "
+        "the settings line. Requires Show Settings to be enabled.",
+        "pcsx2_osd_show_settings"));
+
+    s.append(gopt(
+        "On-Screen Display", "Settings & Inputs",
+        "pcsx2_osd_show_inputs", "Show Inputs", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays the current controller input state at the "
+        "bottom-left corner."));
+
+    s.append(gopt(
+        "On-Screen Display", "Settings & Inputs",
+        "pcsx2_osd_show_video_capture", "Show Video Capture Status", "enabled",
+        {{"Enabled (Default)", "enabled"}, {"Disabled", "disabled"}},
+        "Displays a recording indicator while video capture is "
+        "active. (Inert in the libretro variant — no FFmpeg capture "
+        "is driven from this build.)"));
+
+    s.append(gopt(
+        "On-Screen Display", "Settings & Inputs",
+        "pcsx2_osd_show_input_rec", "Show Input Recording Status", "enabled",
+        {{"Enabled (Default)", "enabled"}, {"Disabled", "disabled"}},
+        "Displays an indicator while input recording is active. "
+        "(Inert in the libretro variant — input recording UI is not "
+        "driven from this build.)"));
+
+    s.append(gopt(
+        "On-Screen Display", "Settings & Inputs",
+        "pcsx2_osd_show_texture_replacements", "Show Texture Replacement Status", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays an indicator when replacement textures are loaded "
+        "for the current game. Requires Texture Replacement → Load "
+        "Textures to be enabled.",
+        "pcsx2_load_texture_replacements"));
+
+    // -- "Messages" group (1 row, dependsOn pcsx2_osd_messages_pos!=0) --
+
+    s.append(gopt(
+        "On-Screen Display", "Messages",
+        "pcsx2_warn_about_unsafe_settings", "Warn About Unsafe Settings", "enabled",
+        {{"Enabled (Default)", "enabled"}, {"Disabled", "disabled"}},
+        "Shows a startup warning if any unsafe settings are enabled.",
+        "pcsx2_osd_messages_pos!=0"));
+
     return s;
 }
