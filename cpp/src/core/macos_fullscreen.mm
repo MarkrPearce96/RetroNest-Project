@@ -153,12 +153,26 @@ int screenIndexForProcess(int64_t pid) {
 // without this, [window makeKeyWindow] is a no-op and keyboard input
 // flows to the (still-foreground) emulator instead of our HUD panel.
 // Isa-swizzling rather than allocating a new NSWindow keeps Qt's view
-// hierarchy and event delivery intact. The dynamic subclass is created
-// once per original class (cached) so multiple panels share it.
+// hierarchy and event delivery intact.
+//
+// Idempotency: the function is safe to call multiple times on the same
+// window. Without the suffix guard, each call would append another
+// _RNKeyEnabled to the class name (the cache lookup uses the window's
+// current class, which has already been swapped on the prior call), so
+// LibretroOverlayPanel — which calls configurePanelWindow on every
+// game-launch cycle on a kept-alive window — would accumulate one
+// subclass layer per cycle. That growth shows up at app shutdown as an
+// NSRangeException + SIGABRT in -[NSWindow dealloc] when AppKit tries
+// to remove a KVO observer from a class chain whose registration count
+// doesn't match the removal count.
 static void promoteToKeyEnabled(NSWindow* window) {
     Class originalClass = [window class];
+    NSString* currentName = NSStringFromClass(originalClass);
+    if ([currentName hasSuffix:@"_RNKeyEnabled"]) {
+        return;
+    }
     NSString* subclassName = [NSString stringWithFormat:@"%@_RNKeyEnabled",
-                              NSStringFromClass(originalClass)];
+                              currentName];
     Class subclass = NSClassFromString(subclassName);
     if (!subclass) {
         subclass = objc_allocateClassPair(originalClass,
