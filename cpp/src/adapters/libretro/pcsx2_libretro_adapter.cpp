@@ -832,5 +832,131 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "off textures.",
         "pcsx2_dump_replaceable_textures"));
 
+    // ── Graphics > Post-Processing (Phase 4 Task 5) ──────────────────────
+    //
+    // 9 knobs mirroring standalone's GraphicsPostProcessingSettingsTab.
+    // Two groups: "Sharpening/Anti-Aliasing" (CAS×2 + FXAA) and
+    // "Filters" (TV Shader, ShadeBoost master + 4 ShadeBoost sliders).
+    // INI section is [EmuCore/GS] for all 9 (handled core-side in
+    // CoreOptionsGraphics::ApplyDefaults).
+    //
+    // 5 standalone-side int sliders (CAS Sharpness + 4 ShadeBoost
+    // rows) become Combo with stops 0/25/50/75/100 because libretro
+    // core options v2 is Combo-only. Default 50 hits a stop and is the
+    // neutral midpoint of PCSX2's shader formula value/50 (verified
+    // against pcsx2/Config.h:741-744,894).
+    //
+    // dependsOn: pcsx2_cas_sharpness gates on pcsx2_cas_mode!=0
+    // (value-equality form, Task 3 precedent: pcsx2_tri_filter!=2).
+    // The 4 ShadeBoost sliders gate on pcsx2_shade_boost (master-bool
+    // bare-key form, Task 4 precedent). All 5 dependsOn keys live
+    // within the Graphics card — findChildren resolution works
+    // correctly. Cross-category limitation does not apply here.
+
+    s.append(gopt(
+        "Post-Processing", "Sharpening/Anti-Aliasing",
+        "pcsx2_cas_mode", "Contrast Adaptive Sharpening (CAS)", "0",
+        {{"Disabled (Default)", "0"},
+         {"Sharpen Only (Internal Resolution)", "1"},
+         {"Sharpen and Resize (Display Resolution)", "2"}},
+        "AMD's Contrast Adaptive Sharpening pass on the final image. "
+        "Sharpen Only sharpens at the internal render resolution; "
+        "Sharpen and Resize sharpens at the display resolution."));
+
+    s.append(gopt(
+        "Post-Processing", "Sharpening/Anti-Aliasing",
+        "pcsx2_cas_sharpness", "CAS Sharpness", "50",
+        {{"0%", "0"},
+         {"25%", "25"},
+         {"50% (Default)", "50"},
+         {"75%", "75"},
+         {"100%", "100"}},
+        "Strength of the CAS sharpening pass. Higher values produce a "
+        "sharper image with more visible noise. Standalone PCSX2 exposes "
+        "a 1-100% slider; libretro offers enumerated stops.",
+        "pcsx2_cas_mode!=0"));
+
+    s.append(gopt(
+        "Post-Processing", "Sharpening/Anti-Aliasing",
+        "pcsx2_fxaa", "FXAA", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Fast Approximate Anti-Aliasing. A single-pass shader that "
+        "softens jagged edges with low GPU cost."));
+
+    s.append(gopt(
+        "Post-Processing", "Filters",
+        "pcsx2_tv_shader", "TV Shader", "0",
+        {{"None (Default)", "0"},
+         {"Scanline Filter", "1"},
+         {"Diagonal Filter", "2"},
+         {"Triangular Filter", "3"},
+         {"Wave Filter", "4"},
+         {"Lottes CRT", "5"},
+         {"4xRGSS Downsampling", "6"},
+         {"NxAGSS Downsampling", "7"}},
+        "Applies a CRT-style filter to the final output for an authentic "
+        "retro look. None disables the filter."));
+
+    s.append(gopt(
+        "Post-Processing", "Filters",
+        "pcsx2_shade_boost", "Shade Boost", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Master toggle for manual brightness, contrast, saturation, and "
+        "gamma adjustment via the Shade Boost shader."));
+
+    s.append(gopt(
+        "Post-Processing", "Filters",
+        "pcsx2_shade_boost_brightness", "Shade Boost — Brightness", "50",
+        {{"0%", "0"},
+         {"25%", "25"},
+         {"50% (Default — Neutral)", "50"},
+         {"75%", "75"},
+         {"100%", "100"}},
+        "Brightness multiplier when Shade Boost is enabled. 50% is "
+        "neutral (no change); 0% blacks out the image; 100% is double "
+        "brightness. Standalone PCSX2 exposes a 1-100% slider; libretro "
+        "offers enumerated stops.",
+        "pcsx2_shade_boost"));
+
+    s.append(gopt(
+        "Post-Processing", "Filters",
+        "pcsx2_shade_boost_contrast", "Shade Boost — Contrast", "50",
+        {{"0%", "0"},
+         {"25%", "25"},
+         {"50% (Default — Neutral)", "50"},
+         {"75%", "75"},
+         {"100%", "100"}},
+        "Contrast multiplier when Shade Boost is enabled. 50% is neutral "
+        "(no change). Standalone PCSX2 exposes a 1-100% slider; libretro "
+        "offers enumerated stops.",
+        "pcsx2_shade_boost"));
+
+    s.append(gopt(
+        "Post-Processing", "Filters",
+        "pcsx2_shade_boost_saturation", "Shade Boost — Saturation", "50",
+        {{"0%", "0"},
+         {"25%", "25"},
+         {"50% (Default — Neutral)", "50"},
+         {"75%", "75"},
+         {"100%", "100"}},
+        "Color-saturation multiplier when Shade Boost is enabled. 50% is "
+        "neutral (no change); 0% produces grayscale. Standalone PCSX2 "
+        "exposes a 1-100% slider; libretro offers enumerated stops.",
+        "pcsx2_shade_boost"));
+
+    s.append(gopt(
+        "Post-Processing", "Filters",
+        "pcsx2_shade_boost_gamma", "Shade Boost — Gamma", "50",
+        {{"0%", "0"},
+         {"25%", "25"},
+         {"50% (Default — Neutral)", "50"},
+         {"75%", "75"},
+         {"100%", "100"}},
+        "Gamma-correction multiplier when Shade Boost is enabled. 50% is "
+        "neutral (no change); lower values darken midtones, higher values "
+        "brighten midtones. Standalone PCSX2 exposes a 1-100% slider; "
+        "libretro offers enumerated stops.",
+        "pcsx2_shade_boost"));
+
     return s;
 }
