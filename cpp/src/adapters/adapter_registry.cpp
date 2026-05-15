@@ -1,5 +1,4 @@
 #include "adapter_registry.h"
-#include "pcsx2_adapter.h"
 #include "duckstation_adapter.h"
 #include "ppsspp_adapter.h"
 #include "dolphin_adapter.h"
@@ -14,12 +13,11 @@ AdapterRegistry& AdapterRegistry::instance() {
 }
 
 void AdapterRegistry::registerBuiltinAdapters() {
-    registerAdapter("pcsx2", std::make_unique<PCSX2Adapter>());
     registerAdapter("duckstation", std::make_unique<DuckStationAdapter>());
     registerAdapter("ppsspp", std::make_unique<PPSSPPAdapter>());
     registerAdapter("dolphin", std::make_unique<DolphinAdapter>());
     registerAdapter("mgba", std::make_unique<MgbaLibretroAdapter>());
-    registerAdapter("pcsx2-libretro", std::make_unique<Pcsx2LibretroAdapter>());
+    registerAdapter("pcsx2", std::make_unique<Pcsx2LibretroAdapter>());
 }
 
 void AdapterRegistry::registerAdapter(const QString& id, std::unique_ptr<EmulatorAdapter> adapter) {

@@ -1,11 +1,14 @@
 {
   "id": "pcsx2",
   "name": "PCSX2",
-  "description": "PCSX2 is a PlayStation 2 emulator. Play PS2 games in HD with save states, controller support, and custom configurations.",
+  "description": "PlayStation 2 emulator (libretro core)",
   "systems": ["ps2"],
-  "github_repo": "PCSX2/pcsx2",
-  "executable": "pcsx2-qt",
-  "install_folder": "pcsx2",
-  "rom_extensions": ["iso", "bin", "chd", "gz", "cso", "m3u"],
-  "launch_args": ["-batch", "-fullscreen", "{rom_path}"]
+  "github_repo": "markpearce/pcsx2-retronest",
+  "executable": "pcsx2_libretro.dylib",
+  "install_folder": "libretro",
+  "rom_extensions": ["iso", "chd", "cso", "bin", "cue", "m3u", "gz"],
+  "launch_args": [],
+  "backend": "libretro",
+  "core_dylib": "pcsx2_libretro.dylib",
+  "core_buildbot_path": "pcsx2_libretro.dylib.zip"
 }
