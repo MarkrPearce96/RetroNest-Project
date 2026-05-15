@@ -48,13 +48,13 @@ QVector<BindingDef> Pcsx2LibretroAdapter::controllerBindingDefsForType(const QSt
 }
 
 // SP6.5: GameSession::terminate writes "{serial}.resume" under
-// emulators/pcsx2-libretro/ps2/savestates/. Look there. Base id is
-// "pcsx2-libretro" (the manifest id used by Paths::emulatorDataDir on
-// the save side at game_session.cpp:392); systemId is "ps2".
+// emulators/pcsx2/ps2/savestates/. Look there. Base id is "pcsx2"
+// (the manifest id used by Paths::emulatorDataDir on the save side
+// at game_session.cpp:392); systemId is "ps2".
 QString Pcsx2LibretroAdapter::findResumeFile(const QString& serial) const {
     if (serial.isEmpty())
         return {};
-    const QString dir = Paths::emulatorDataDir("pcsx2-libretro", "ps2") + "/savestates";
+    const QString dir = Paths::emulatorDataDir("pcsx2", "ps2") + "/savestates";
     QDir d(dir);
     const auto entries = d.entryList({ serial + ".resume" }, QDir::Files);
     if (!entries.isEmpty())
