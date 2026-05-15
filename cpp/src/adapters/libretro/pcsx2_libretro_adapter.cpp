@@ -1346,3 +1346,48 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
 
     return s;
 }
+
+// SP7c Phase 5 — Preview wiring.
+// Mirrors PCSX2Adapter::previewSpec (adapters/pcsx2_adapter.cpp ~1767). The
+// preview widgets (cpp/src/ui/settings/widgets/preview/{aspect_ratio_preview,
+// osd_preview}.{h,cpp}) are adapter-agnostic; they expose Qt properties
+// named exactly as the values in keyToProperty below, and
+// GenericSettingsPage::wirePreviewBinding routes schema-row changes into
+// those properties via Qt's meta-object system.
+//
+// Empty PreviewSpec from every other (category, subcategory) — no preview
+// pane rendered. See memory/sp7c_followup_ui_parity.md for the broader
+// Phase 5 motivation.
+PreviewSpec Pcsx2LibretroAdapter::previewSpec(const QString& category,
+                                              const QString& subcategory) const {
+    if (category == "Recommended" && subcategory.isEmpty()) {
+        return {"aspect", {
+            {"pcsx2_aspect_ratio", "aspectMode"},
+        }};
+    }
+    if (category == "Graphics" && subcategory == "On-Screen Display") {
+        return {"osd", {
+            {"pcsx2_osd_show_fps",                  "showFps"},
+            {"pcsx2_osd_show_speed",                "showSpeed"},
+            {"pcsx2_osd_show_vps",                  "showVps"},
+            {"pcsx2_osd_show_resolution",           "showResolution"},
+            {"pcsx2_osd_show_cpu",                  "showCpu"},
+            {"pcsx2_osd_show_gpu",                  "showGpu"},
+            {"pcsx2_osd_show_settings",             "showSettings"},
+            {"pcsx2_osd_show_patches",              "showPatches"},
+            {"pcsx2_osd_show_inputs",               "showInputs"},
+            {"pcsx2_osd_show_frame_times",          "showFrameTimes"},
+            {"pcsx2_osd_show_indicators",           "showIndicators"},
+            {"pcsx2_osd_show_gs_stats",             "showGsStats"},
+            {"pcsx2_osd_show_hardware_info",        "showHardwareInfo"},
+            {"pcsx2_osd_show_version",              "showVersion"},
+            {"pcsx2_osd_show_video_capture",        "showVideoCapture"},
+            {"pcsx2_osd_show_input_rec",            "showInputRec"},
+            {"pcsx2_osd_show_texture_replacements", "showTextureReplacements"},
+            {"pcsx2_osd_messages_pos",              "messagesPos"},
+            {"pcsx2_osd_performance_pos",           "performancePos"},
+            {"pcsx2_osd_scale",                     "osdScale"},
+        }};
+    }
+    return {};
+}
