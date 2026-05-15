@@ -127,41 +127,11 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         return d;
     };
 
-    s.append(opt(
-        "Recommended", "Emulation",
-        "pcsx2_renderer", "GS Renderer", "auto",
-        {{"Auto", "auto"},
-         {"Metal", "metal"},
-         {"Software", "software"},
-         {"Null", "null"}},
-        "PCSX2 graphics backend. Auto picks Metal on macOS. Software is "
-        "CPU-only and much slower; useful for debugging rendering bugs "
-        "or working around hardware-renderer regressions in specific games. "
-        "Takes effect on next launch."));
-
-    s.append(opt(
-        "Recommended", "Emulation",
-        "pcsx2_mtvu", "Multi-Threaded VU1", "enabled",
-        {{"Enabled", "enabled"},
-         {"Disabled", "disabled"}},
-        "Run the VU1 microprogram on its own thread instead of the EE "
-        "thread. Compatible with the vast majority of games and "
-        "significantly reduces EE-thread saturation on Apple Silicon. "
-        "Disable only if a specific game shows MTVU-related glitches. "
-        "Takes effect on next launch."));
-
-    s.append(opt(
-        "Recommended", "Emulation",
-        "pcsx2_fast_boot", "Fast Boot", "enabled",
-        {{"Enabled", "enabled"},
-         {"Disabled", "disabled"}},
-        "Skip the PS2 BIOS Sony intro and region-check screen on launch. "
-        "Disable if you want to see the BIOS screen (e.g. to verify your "
-        "BIOS region or to use the BIOS browser). Takes effect on next launch."));
-
-    // SP7c Phase 1 — Speed Control (sub-group A of the Emulation card).
-    // Three Framerate scalars; values list mirrors the standalone PCSX2
-    // dialog exactly (RetroNest's cpp/src/adapters/pcsx2_adapter.cpp:200-218).
+    // Shared value lists. Hoisted ahead of the Recommended block (which
+    // references both) so they're in scope for every use site below. The
+    // schema-fidelity tool (tools/check_schema_fidelity.py) resolves the
+    // identifier via HOST_VALUES_REF_RE, so referencing by identifier is
+    // first-class supported.
     const QVector<QPair<QString,QString>> speedOptions = {
         {"2% [1 FPS (NTSC) / 1 FPS (PAL)]",       "0.02"},
         {"10% [6 FPS (NTSC) / 5 FPS (PAL)]",      "0.1"},
@@ -181,7 +151,192 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         {"1000% [600 FPS (NTSC) / 500 FPS (PAL)]","10"},
         {"Unlimited", "0"},
     };
+    const QVector<QPair<QString,QString>> volumeOptions = {
+        {"0% (Muted)",       "0"},
+        {"25%",              "25"},
+        {"50%",              "50"},
+        {"75%",              "75"},
+        {"100% (default)",   "100"},
+        {"125%",             "125"},
+        {"150%",             "150"},
+        {"175%",             "175"},
+        {"200% (max)",       "200"},
+    };
 
+    // SP7c followup — Recommended card mirrors the standalone Pcsx2Adapter
+    // "Recommended" page (cpp/src/adapters/pcsx2_adapter.cpp:43-185). Curated
+    // view: each row references an existing pcsx2_* core option from Phases 1-4
+    // so the user can tweak the most-common knobs without hunting through
+    // sub-tabs. Edits route to the same backing core option as the per-tab
+    // row, so the two views stay in lock-step automatically. Audio Backend
+    // intentionally omitted — the libretro variant forces backend="Libretro"
+    // (SP4 architectural decision); a configurable backend row would be
+    // misleading.
+
+    // ── Performance ──────────────────────────────────────────────────────
+    s.append(opt(
+        "Recommended", "Performance",
+        "pcsx2_renderer", "GS Renderer", "auto",
+        {{"Auto", "auto"},
+         {"Metal", "metal"},
+         {"Software", "software"},
+         {"Null", "null"}},
+        "PCSX2 graphics backend. Auto picks Metal on macOS. Software is "
+        "CPU-only and much slower; useful for debugging rendering bugs "
+        "or working around hardware-renderer regressions in specific games. "
+        "Takes effect on next launch."));
+
+    s.append(opt(
+        "Recommended", "Performance",
+        "pcsx2_mtvu", "Multi-Threaded VU1", "enabled",
+        {{"Enabled", "enabled"},
+         {"Disabled", "disabled"}},
+        "Run the VU1 microprogram on its own thread instead of the EE "
+        "thread. Compatible with the vast majority of games and "
+        "significantly reduces EE-thread saturation on Apple Silicon. "
+        "Disable only if a specific game shows MTVU-related glitches. "
+        "Takes effect on next launch."));
+
+    s.append(opt(
+        "Recommended", "Performance",
+        "pcsx2_ee_cycle_rate", "EE Cycle Rate", "0",
+        {{"50% (Underclock)",  "-3"},
+         {"60% (Underclock)",  "-2"},
+         {"75% (Underclock)",  "-1"},
+         {"100% (Normal Speed)","0"},
+         {"130% (Overclock)",  "1"},
+         {"180% (Overclock)",  "2"},
+         {"300% (Overclock)",  "3"}},
+        "Underclocks or overclocks the emulated Emotion Engine CPU. "
+        "Most games should stay at 100%. Takes effect on next launch."));
+
+    // ── Visual Quality ───────────────────────────────────────────────────
+    s.append(opt(
+        "Recommended", "Visual Quality",
+        "pcsx2_upscale_multiplier", "Internal Resolution", "1",
+        {{"1x Native (PS2) (Default)",     "1"},
+         {"2x Native (~720px/HD)",         "2"},
+         {"3x Native (~1080px/FHD)",       "3"},
+         {"4x Native (~1440px/QHD)",       "4"},
+         {"5x Native (~1800px/QHD+)",      "5"},
+         {"6x Native (~2160px/4K UHD)",    "6"},
+         {"7x Native (~2520px)",           "7"},
+         {"8x Native (~2880px/5K UHD)",    "8"},
+         {"9x Native (~3240px)",           "9"},
+         {"10x Native (~3600px/6K UHD)",  "10"},
+         {"11x Native (~3960px)",         "11"},
+         {"12x Native (~4320px/8K UHD)",  "12"}},
+        "Sets the internal rendering resolution. Higher values produce "
+        "sharper visuals at the cost of GPU performance."));
+
+    s.append(opt(
+        "Recommended", "Visual Quality",
+        "pcsx2_aspect_ratio", "Aspect Ratio", "4:3",
+        {{"Auto (4:3 Interlaced / 3:2 Progressive)", "Auto 4:3/3:2"},
+         {"4:3 (Standard)",                          "4:3"},
+         {"16:9 (Widescreen)",                       "16:9"},
+         {"10:7 (Full/Native)",                      "10:7"},
+         {"Stretch",                                 "Stretch"}},
+        "Controls the aspect ratio of the emulated display. Auto picks "
+        "4:3 for interlaced games and 3:2 for progressive games. 16:9 "
+        "stretches the image for widescreen TVs; Stretch fills the whole "
+        "window."));
+
+    s.append(opt(
+        "Recommended", "Visual Quality",
+        "pcsx2_enable_widescreen_patches", "Apply Widescreen Patches", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Automatically applies community widescreen patches to supported "
+        "games. Reshapes the rendering to true 16:9 instead of stretching "
+        "the 4:3 picture."));
+
+    s.append(opt(
+        "Recommended", "Visual Quality",
+        "pcsx2_accurate_blending_unit", "Blending Accuracy", "1",
+        {{"Minimum",          "0"},
+         {"Basic (Default)",  "1"},
+         {"Medium",           "2"},
+         {"High",             "3"},
+         {"Full",             "4"},
+         {"Maximum",          "5"}},
+        "Controls how accurately PS2 blending operations are emulated. "
+        "Higher levels improve compatibility with heavy effects at a "
+        "performance cost."));
+
+    s.append(opt(
+        "Recommended", "Visual Quality",
+        "pcsx2_max_anisotropy", "Anisotropic Filtering", "0",
+        {{"Off (Default)",  "0"},
+         {"2x",             "2"},
+         {"4x",             "4"},
+         {"8x",             "8"},
+         {"16x",           "16"}},
+        "Improves texture clarity at oblique viewing angles. Low cost on "
+        "modern GPUs and generally safe to raise."));
+
+    s.append(opt(
+        "Recommended", "Visual Quality",
+        "pcsx2_filter", "Texture Filtering", "2",
+        {{"Nearest",                            "0"},
+         {"Bilinear (Forced)",                  "1"},
+         {"Bilinear (PS2) (Default)",           "2"},
+         {"Bilinear (Forced excluding sprite)", "3"}},
+        "Controls how textures are sampled when rendered. Bilinear (PS2) "
+        "matches the original hardware behavior; Forced options ignore "
+        "the game's preference."));
+
+    // ── Frame Pacing ─────────────────────────────────────────────────────
+    s.append(opt(
+        "Recommended", "Frame Pacing",
+        "pcsx2_vsync", "Vertical Sync (VSync)", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Synchronize frame submission with the host display's vblank. "
+        "May be cosmetic in libretro mode. Takes effect on next launch."));
+
+    s.append(opt(
+        "Recommended", "Frame Pacing",
+        "pcsx2_sync_to_host_rr", "Sync to Host Refresh Rate", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Adjust emulation speed slightly to align with the host display's "
+        "refresh rate. May be cosmetic in libretro mode. Takes effect on "
+        "next launch."));
+
+    // ── Audio ────────────────────────────────────────────────────────────
+    s.append(opt(
+        "Recommended", "Audio",
+        "pcsx2_audio_volume", "Volume", "100",
+        volumeOptions,
+        "Normal-play audio volume. 100% is the PS2's native output level. "
+        "Values above 100% boost the signal digitally (may clip on loud "
+        "passages). Takes effect on next launch."));
+
+    // ── Convenience ──────────────────────────────────────────────────────
+    s.append(opt(
+        "Recommended", "Convenience",
+        "pcsx2_normal_speed", "Normal Speed", "1",
+        speedOptions,
+        "Target emulation speed during normal gameplay (relative to PS2's "
+        "native rate). 100% is real-time. Takes effect on next launch."));
+
+    s.append(opt(
+        "Recommended", "Convenience",
+        "pcsx2_fast_boot", "Fast Boot", "enabled",
+        {{"Enabled", "enabled"},
+         {"Disabled", "disabled"}},
+        "Skip the PS2 BIOS Sony intro and region-check screen on launch. "
+        "Disable if you want to see the BIOS screen (e.g. to verify your "
+        "BIOS region or to use the BIOS browser). Takes effect on next launch."));
+
+    s.append(opt(
+        "Recommended", "Convenience",
+        "pcsx2_cheats", "Enable Cheats", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
+        "Load pnach cheat files on game launch. Takes effect on next launch."));
+
+    // SP7c Phase 1 — Speed Control (sub-group A of the Emulation card).
+    // speedOptions hoisted to the top of this function (shared with the
+    // Recommended-card mirror); values list mirrors the standalone PCSX2
+    // dialog exactly (RetroNest's cpp/src/adapters/pcsx2_adapter.cpp:200-218).
     s.append(opt(
         "Emulation", "Speed Control",
         "pcsx2_normal_speed", "Normal Speed", "1",
@@ -347,21 +502,10 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "values reduce audio latency at the cost of higher CPU pressure "
         "and a greater chance of underruns. Takes effect on next launch."));
 
-    // Volume + Fast-Forward Volume share the same 9-stop list. Shared
-    // identifier (mirrors the Phase 1 speedOptions precedent at line 133);
-    // check_schema_fidelity.py resolves the identifier via HOST_VALUES_REF_RE.
-    const QVector<QPair<QString,QString>> volumeOptions = {
-        {"0% (Muted)",       "0"},
-        {"25%",              "25"},
-        {"50%",              "50"},
-        {"75%",              "75"},
-        {"100% (default)",   "100"},
-        {"125%",             "125"},
-        {"150%",             "150"},
-        {"175%",             "175"},
-        {"200% (max)",       "200"},
-    };
-
+    // Volume + Fast-Forward Volume share the same 9-stop list. volumeOptions
+    // hoisted to the top of this function (shared with the Recommended-card
+    // mirror); check_schema_fidelity.py resolves the identifier via
+    // HOST_VALUES_REF_RE.
     s.append(opt(
         "Audio", "Controls",
         "pcsx2_audio_volume", "Volume", "100",
