@@ -383,6 +383,17 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
 
     s.append(opt(
         "Emulation", "System Settings",
+        "pcsx2_mtvu", "Multi-Threaded VU1", "enabled",
+        {{"Enabled", "enabled"},
+         {"Disabled", "disabled"}},
+        "Run the VU1 microprogram on its own thread instead of the EE "
+        "thread. Compatible with the vast majority of games and "
+        "significantly reduces EE-thread saturation on Apple Silicon. "
+        "Disable only if a specific game shows MTVU-related glitches. "
+        "Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "System Settings",
         "pcsx2_thread_pinning", "Thread Pinning", "disabled",
         {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
         "Pin emulation threads to specific CPU cores. Can reduce stutter "
@@ -408,6 +419,15 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Load the entire disc image into RAM before booting. Eliminates "
         "disc-read stutter at the cost of memory and a slower initial "
         "boot. Takes effect on next launch."));
+
+    s.append(opt(
+        "Emulation", "System Settings",
+        "pcsx2_fast_boot", "Fast Boot", "enabled",
+        {{"Enabled", "enabled"},
+         {"Disabled", "disabled"}},
+        "Skip the PS2 BIOS Sony intro and region-check screen on launch. "
+        "Disable if you want to see the BIOS screen (e.g. to verify your "
+        "BIOS region or to use the BIOS browser). Takes effect on next launch."));
 
     s.append(opt(
         "Emulation", "System Settings",
@@ -476,6 +496,18 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // Value strings MUST match the core's CoreOptionsAudio.cpp byte-for-byte
     // (and the SyncMode strings must match PCSX2's ParseSyncMode). The
     // check_schema_fidelity.py target verifies this mechanically.
+    // SP7c Phase 5 — Audio Configuration parity note.
+    // Standalone Pcsx2Adapter (pcsx2_adapter.cpp Audio > Configuration)
+    // exposes 8 rows; the libretro variant deliberately surfaces only the
+    // 2 that are user-tweakable in this architecture:
+    //   • Backend — FORCED to "Libretro" per SP4 (libretro audio_batch_cb
+    //     is the only path; Cubeb/SDL/etc. are bypassed). Skipped.
+    //   • DriverName / DeviceName / OutputLatencyMS / OutputLatencyMinimal
+    //     — owned by RetroNest's host SDL audio sink, which sits upstream
+    //     of the libretro core. Skipped (host-side concern).
+    //   • ExpansionMode — FORCED to "Disabled" per SP4 (audio_batch_cb is
+    //     stereo-only). Skipped.
+    // The two libretro-applicable rows (SyncMode, BufferMS) follow.
     s.append(opt(
         "Audio", "Configuration",
         "pcsx2_audio_sync_mode", "Audio Sync Mode", "TimeStretch",
@@ -545,6 +577,15 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // Value strings MUST match the core's CoreOptionsMemoryCards.cpp
     // byte-for-byte. The check_schema_fidelity.py target verifies this
     // mechanically.
+    // SP7c Phase 5 — Memory Card Slots parity note.
+    // Standalone Pcsx2Adapter exposes Slot1_Filename + Slot2_Filename as
+    // free-form text inputs ("Mcd001.ps2" / "Mcd002.ps2" by default).
+    // libretro core options are Combo-only (no free-form string control
+    // type), so the filenames are hardcoded in pcsx2-libretro/Settings.cpp
+    // to the same defaults. User-tweakable filename support would require
+    // either a new control type in the core-options ABI or an out-of-band
+    // RetroNest-side override — deferred. Slot enables + Multitap slots
+    // follow as user-tweakable rows.
     s.append(opt(
         "Memory Cards", "Memory Card Slots",
         "pcsx2_mc_slot1_enable", "Memory Card Slot 1", "enabled",
