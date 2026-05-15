@@ -436,6 +436,11 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "When Fast Boot is enabled, also fast-forward the brief BIOS boot "
         "animation. No effect when Fast Boot is disabled. Takes effect on "
         "next launch.",
+        // dependsOn resolves to the Emulation > System Settings
+        // pcsx2_fast_boot row (Phase 5); the Recommended-card copy is also a
+        // valid master. Same-card resolution is more robust against future
+        // cross-category-dependsOn changes — see memory cross_category_
+        // dependson_limitation.
         "pcsx2_fast_boot"));
 
     // SP7c Phase 1 — Frame Pacing / Latency Control (sub-group C).
@@ -483,31 +488,28 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Don't re-present a frame if the GS hasn't produced new output. "
         "Mostly cosmetic in libretro mode. Takes effect on next launch."));
 
-    // SP7c Phase 2 — Audio card.
+    // Audio card.
     //
-    // 5 rows under category="Audio". Audio routes through
-    // LibretroAudioStream (SP4), so Cubeb-only knobs from the standalone
-    // dialog (Backend / DriverName / DeviceName / ExpansionMode /
-    // OutputLatencyMS / OutputLatencyMinimal) are dropped — they are
-    // silently inert in libretro mode. ExpansionMode is additionally
-    // forced to Disabled by the core's Settings.cpp because the libretro
-    // audio_batch_cb is stereo-only.
+    // Standalone Pcsx2Adapter (pcsx2_adapter.cpp Audio > Configuration)
+    // exposes 8 rows under Audio > Configuration; the libretro variant
+    // deliberately surfaces only the 2 that are user-tweakable in this
+    // architecture, because audio routes through LibretroAudioStream
+    // (libretro audio_batch_cb is the only audio path; Cubeb/SDL/etc. are
+    // bypassed):
+    //   • Backend — FORCED to "Libretro" in pcsx2-libretro/Settings.cpp
+    //     (LibretroAudioStream is the only audio path). Skipped.
+    //   • DriverName / DeviceName / OutputLatencyMS / OutputLatencyMinimal
+    //     — owned by RetroNest's host SDL audio sink, which sits upstream
+    //     of the libretro core. Skipped (host-side concern).
+    //   • ExpansionMode — FORCED to "Disabled" in pcsx2-libretro/Settings.cpp
+    //     because the libretro audio_batch_cb is stereo-only. Skipped.
+    //
+    // The two libretro-applicable rows (SyncMode, BufferMS) follow, plus
+    // a Controls sub-group (Volume, Fast-Forward Volume, Mute).
     //
     // Value strings MUST match the core's CoreOptionsAudio.cpp byte-for-byte
     // (and the SyncMode strings must match PCSX2's ParseSyncMode). The
     // check_schema_fidelity.py target verifies this mechanically.
-    // SP7c Phase 5 — Audio Configuration parity note.
-    // Standalone Pcsx2Adapter (pcsx2_adapter.cpp Audio > Configuration)
-    // exposes 8 rows; the libretro variant deliberately surfaces only the
-    // 2 that are user-tweakable in this architecture:
-    //   • Backend — FORCED to "Libretro" per SP4 (libretro audio_batch_cb
-    //     is the only path; Cubeb/SDL/etc. are bypassed). Skipped.
-    //   • DriverName / DeviceName / OutputLatencyMS / OutputLatencyMinimal
-    //     — owned by RetroNest's host SDL audio sink, which sits upstream
-    //     of the libretro core. Skipped (host-side concern).
-    //   • ExpansionMode — FORCED to "Disabled" per SP4 (audio_batch_cb is
-    //     stereo-only). Skipped.
-    // The two libretro-applicable rows (SyncMode, BufferMS) follow.
     s.append(opt(
         "Audio", "Configuration",
         "pcsx2_audio_sync_mode", "Audio Sync Mode", "TimeStretch",
@@ -561,13 +563,18 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Mute all PS2 audio output. RetroNest's UI sounds and other "
         "non-PS2 audio sources are unaffected. Takes effect on next launch."));
 
-    // SP7c Phase 3 — Memory Cards card.
+    // Memory Cards card.
     //
     // 5 rows under category="Memory Cards" mirroring the standalone PCSX2
-    // dialog at cpp/src/adapters/pcsx2_adapter.cpp:986-1029. The 2 filename
-    // rows (Slot1_Filename / Slot2_Filename) are dropped — libretro core
-    // options are Combo-only, not free-form strings, so the filenames stay
-    // hardcoded in the core's Settings.cpp.
+    // dialog at cpp/src/adapters/pcsx2_adapter.cpp:986-1029, with these
+    // intentional drops:
+    //   • Slot1_Filename / Slot2_Filename — standalone exposes these as
+    //     free-form text inputs ("Mcd001.ps2" / "Mcd002.ps2" by default).
+    //     libretro core options are Combo-only (no free-form string control
+    //     type), so the filenames are hardcoded to the same defaults in
+    //     pcsx2-libretro/Settings.cpp. User-tweakable filename support
+    //     would require either a new control type in the core-options ABI
+    //     or an out-of-band RetroNest-side override — deferred.
     //
     // Slot2_Enable defaults to "enabled" matching standalone (was "disabled"
     // pre-Phase-3, a SP6 single-slot convention). Behavioral change is
@@ -577,15 +584,6 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // Value strings MUST match the core's CoreOptionsMemoryCards.cpp
     // byte-for-byte. The check_schema_fidelity.py target verifies this
     // mechanically.
-    // SP7c Phase 5 — Memory Card Slots parity note.
-    // Standalone Pcsx2Adapter exposes Slot1_Filename + Slot2_Filename as
-    // free-form text inputs ("Mcd001.ps2" / "Mcd002.ps2" by default).
-    // libretro core options are Combo-only (no free-form string control
-    // type), so the filenames are hardcoded in pcsx2-libretro/Settings.cpp
-    // to the same defaults. User-tweakable filename support would require
-    // either a new control type in the core-options ABI or an out-of-band
-    // RetroNest-side override — deferred. Slot enables + Multitap slots
-    // follow as user-tweakable rows.
     s.append(opt(
         "Memory Cards", "Memory Card Slots",
         "pcsx2_mc_slot1_enable", "Memory Card Slot 1", "enabled",
