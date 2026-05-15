@@ -640,6 +640,18 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
 
     // ── Graphics > Display (16 knobs) — Phase 4 Task 2 ────────────────
 
+    s.append(gopt(
+        "Display", "Display",
+        "pcsx2_renderer", "Renderer", "auto",
+        {{"Auto", "auto"},
+         {"Metal", "metal"},
+         {"Software", "software"},
+         {"Null", "null"}},
+        "PCSX2 graphics backend. Auto picks Metal on macOS. Software is "
+        "CPU-only and much slower; useful for debugging rendering bugs "
+        "or working around hardware-renderer regressions in specific games. "
+        "Takes effect on next launch."));
+
     // Aspect-ratio enum combo: values match the INI string verbatim.
     s.append(gopt(
         "Display", "Display",
@@ -926,7 +938,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "performance cost."));
 
     s.append(gopt(
-        "Rendering", "Rendering",
+        "Rendering", "Hardware Rendering Options",
         "pcsx2_hw_mipmap", "Hardware Mipmapping", "enabled",
         {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
         "Emulates PS2 mipmapping when the hardware renderer is active. "
@@ -1307,23 +1319,6 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "stutter.",
         "pcsx2_osd_performance_pos!=0"));
 
-    // -- "System Information" group (2 rows, both dependsOn pcsx2_osd_performance_pos!=0) --
-
-    s.append(gopt(
-        "On-Screen Display", "System Information",
-        "pcsx2_osd_show_hardware_info", "Show Hardware Info", "disabled",
-        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
-        "Displays the CPU and GPU model names as two lines in the "
-        "performance column.",
-        "pcsx2_osd_performance_pos!=0"));
-
-    s.append(gopt(
-        "On-Screen Display", "System Information",
-        "pcsx2_osd_show_version", "Show PCSX2 Version", "disabled",
-        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
-        "Displays the PCSX2 version string in the performance column.",
-        "pcsx2_osd_performance_pos!=0"));
-
     // -- "Settings & Inputs" group (6 rows, mixed dependsOn) --
 
     s.append(gopt(
@@ -1374,6 +1369,23 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Textures to be enabled.",
         "pcsx2_load_texture_replacements"));
 
+    // -- "System Information" group (2 rows, both dependsOn pcsx2_osd_performance_pos!=0) --
+
+    s.append(gopt(
+        "On-Screen Display", "System Information",
+        "pcsx2_osd_show_hardware_info", "Show Hardware Info", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays the CPU and GPU model names as two lines in the "
+        "performance column.",
+        "pcsx2_osd_performance_pos!=0"));
+
+    s.append(gopt(
+        "On-Screen Display", "System Information",
+        "pcsx2_osd_show_version", "Show PCSX2 Version", "disabled",
+        {{"Enabled", "enabled"}, {"Disabled (Default)", "disabled"}},
+        "Displays the PCSX2 version string in the performance column.",
+        "pcsx2_osd_performance_pos!=0"));
+
     // -- "Messages" group (1 row, dependsOn pcsx2_osd_messages_pos!=0) --
 
     s.append(gopt(
@@ -1382,6 +1394,23 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         {{"Enabled (Default)", "enabled"}, {"Disabled", "disabled"}},
         "Shows a startup warning if any unsafe settings are enabled.",
         "pcsx2_osd_messages_pos!=0"));
+
+    // SP7c Phase 5 — Media Capture sub-tab parity note.
+    // Standalone Pcsx2Adapter (pcsx2_adapter.cpp Graphics > Media Capture)
+    // exposes 18 rows across "Screenshot Capture Setup" (3) and
+    // "Video Recording Setup" (15) — codec selection, container, bitrate,
+    // resolution-mode, etc.
+    //
+    // The libretro variant deliberately skips Media Capture entirely:
+    // RetroNest's host application owns the screenshot + video-recording
+    // pipeline (libretro frontends are responsible for capture; PCSX2's
+    // own capture code path is inert when running inside a libretro
+    // shell). Duplicating a feature RetroNest already provides would be
+    // confusing — same architectural reasoning as the Achievements card
+    // skip (RetroNest owns rcheevos host-side).
+    //
+    // If a future RetroNest UI surfaces capture configuration, those
+    // settings live in RetroNest-Project's own settings hub, not here.
 
     return s;
 }
