@@ -12,7 +12,6 @@
 #include <QtTest>
 
 #include "core/binding_def.h"
-#include "adapters/pcsx2_adapter.h"
 #include "adapters/duckstation_adapter.h"
 #include "adapters/ppsspp_adapter.h"
 
@@ -32,47 +31,6 @@ private:
     }
 
 private slots:
-    void pcsx2_completeness() {
-        PCSX2Adapter adapter;
-        const auto defs = adapter.hotkeyBindingDefs();
-
-        QCOMPARE(defs.size(), 60);
-
-        const QStringList keys = keysOf(defs);
-        // Overlay-conflict trim list — these MUST NOT appear.
-        QVERIFY(!keys.contains("ToggleFullscreen"));
-        QVERIFY(!keys.contains("OpenPauseMenu"));
-        QVERIFY(!keys.contains("TogglePause"));
-        QVERIFY(!keys.contains("ShutdownVM"));
-
-        // Sample present rows (covers Navigation / Speed / System / Save States / Audio / Graphics).
-        QVERIFY(keys.contains("OpenAchievementsList"));    // Navigation (newly added)
-        QVERIFY(keys.contains("FrameAdvance"));            // Speed
-        QVERIFY(keys.contains("ToggleMouseLock"));         // System (newly added)
-        QVERIFY(keys.contains("LoadStateFromSlot1"));      // Save States
-        QVERIFY(keys.contains("Mute"));                    // Audio
-        QVERIFY(keys.contains("Screenshot"));              // Graphics (newly added)
-        QVERIFY(keys.contains("ToggleSoftwareRendering")); // Graphics (newly added)
-
-        // Group renames / placements.
-        const HotkeyDef* frameAdvance = findKey(defs, "FrameAdvance");
-        QVERIFY(frameAdvance);
-        QCOMPARE(frameAdvance->group, QStringLiteral("Speed"));  // was "Speed Control"
-
-        const HotkeyDef* screenshot = findKey(defs, "Screenshot");
-        QVERIFY(screenshot);
-        QCOMPARE(screenshot->group, QStringLiteral("Graphics"));
-
-        const HotkeyDef* openAchievements = findKey(defs, "OpenAchievementsList");
-        QVERIFY(openAchievements);
-        QCOMPARE(openAchievements->group, QStringLiteral("Navigation"));
-
-        // Default value retained from our curated F-key set.
-        const HotkeyDef* toggleTurbo = findKey(defs, "ToggleTurbo");
-        QVERIFY(toggleTurbo);
-        QCOMPARE(toggleTurbo->defaultValue, QStringLiteral("Keyboard/Period"));
-    }
-
     void duckstation_completeness() {
         DuckStationAdapter adapter;
         const auto defs = adapter.hotkeyBindingDefs();

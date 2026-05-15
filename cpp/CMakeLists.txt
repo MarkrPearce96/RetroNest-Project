@@ -60,7 +60,6 @@ set(SOURCES
     src/core/game_session.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
     src/adapters/dolphin_adapter.cpp
@@ -120,8 +119,6 @@ set(SOURCES
     src/ui/settings/widgets/hotkey_binding_row.cpp
     src/ui/settings/widgets/preview/aspect_ratio_preview.cpp
     src/ui/settings/widgets/preview/osd_preview.cpp
-    src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
-    src/ui/settings/pcsx2/pcsx2_category_hub.cpp
     src/ui/settings/dolphin/dolphin_settings_dialog.cpp
     src/ui/settings/dolphin/dolphin_category_hub.cpp
     src/ui/settings/mgba/mgba_settings_dialog.cpp
@@ -143,7 +140,6 @@ set(HEADERS
     src/core/game_session.h
     src/adapters/emulator_adapter.h
     src/adapters/adapter_registry.h
-    src/adapters/pcsx2_adapter.h
     src/adapters/duckstation_adapter.h
     src/adapters/ppsspp_adapter.h
     src/adapters/dolphin_adapter.h
@@ -464,7 +460,6 @@ add_test(NAME PatchIniKeys COMMAND test_patch_ini_keys)
 add_executable(test_format_binding
     tests/test_format_binding.cpp
     src/adapters/emulator_adapter.cpp
-    src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
     src/adapters/dolphin_adapter.cpp
@@ -487,7 +482,6 @@ add_executable(test_rom_scanner
     src/core/iso9660_reader.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
     src/adapters/dolphin_adapter.cpp
@@ -655,43 +649,69 @@ target_include_directories(test_duckstation_controller_schema PRIVATE ${CMAKE_CU
 target_link_libraries(test_duckstation_controller_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME DuckStationControllerSchema COMMAND test_duckstation_controller_schema)
 
-add_executable(test_pcsx2_preview_spec
-    tests/test_pcsx2_preview_spec.cpp
-    src/adapters/pcsx2_adapter.cpp
+set(PCSX2_LIBRETRO_TEST_SOURCES
     src/adapters/emulator_adapter.cpp
+    src/adapters/libretro/libretro_adapter.cpp
+    src/adapters/libretro/pcsx2_libretro_adapter.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/frontend_settings_store.cpp
+    src/core/libretro/retro_log.cpp
+    src/core/libretro/rcheevos_runtime.cpp
     src/core/ini_file.cpp
     src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
     src/core/paths.cpp
 )
+
+add_executable(test_pcsx2_preview_spec
+    tests/test_pcsx2_preview_spec.cpp
+    ${PCSX2_LIBRETRO_TEST_SOURCES}
+)
 set_target_properties(test_pcsx2_preview_spec PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_preview_spec PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_pcsx2_preview_spec PRIVATE Qt6::Core Qt6::Test chdr-static)
+target_include_directories(test_pcsx2_preview_spec PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+)
+target_link_libraries(test_pcsx2_preview_spec PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test
+    chdr-static rcheevos_static ${CMAKE_DL_LIBS}
+)
 add_test(NAME Pcsx2PreviewSpec COMMAND test_pcsx2_preview_spec)
 
 add_executable(test_pcsx2_schema
     tests/test_pcsx2_schema.cpp
-    src/adapters/pcsx2_adapter.cpp
-    src/adapters/emulator_adapter.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/paths.cpp
+    ${PCSX2_LIBRETRO_TEST_SOURCES}
 )
 set_target_properties(test_pcsx2_schema PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_pcsx2_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
+target_include_directories(test_pcsx2_schema PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+)
+target_link_libraries(test_pcsx2_schema PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test
+    chdr-static rcheevos_static ${CMAKE_DL_LIBS}
+)
 add_test(NAME Pcsx2Schema COMMAND test_pcsx2_schema)
 
 add_executable(test_pcsx2_controller_schema
     tests/test_pcsx2_controller_schema.cpp
-    src/adapters/pcsx2_adapter.cpp
-    src/adapters/emulator_adapter.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/paths.cpp
+    ${PCSX2_LIBRETRO_TEST_SOURCES}
 )
 set_target_properties(test_pcsx2_controller_schema PROPERTIES AUTOMOC ON)
-target_include_directories(test_pcsx2_controller_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_pcsx2_controller_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
+target_include_directories(test_pcsx2_controller_schema PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+)
+target_link_libraries(test_pcsx2_controller_schema PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test
+    chdr-static rcheevos_static ${CMAKE_DL_LIBS}
+)
 add_test(NAME Pcsx2ControllerSchema COMMAND test_pcsx2_controller_schema)
 
 add_executable(test_controller_bindings_view
@@ -704,7 +724,6 @@ add_executable(test_controller_bindings_view
     src/ui/settings/widgets/settings_slider_row.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
     src/adapters/dolphin_adapter.cpp
@@ -756,7 +775,6 @@ add_test(NAME HotkeyBindingRow COMMAND test_hotkey_binding_row)
 
 add_executable(test_hotkey_defs
     tests/test_hotkey_defs.cpp
-    src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
     src/adapters/emulator_adapter.cpp
@@ -795,7 +813,6 @@ add_executable(test_quick_settings_file_field
     src/services/config_service.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/pcsx2_adapter.cpp
     src/adapters/duckstation_adapter.cpp
     src/adapters/ppsspp_adapter.cpp
     src/adapters/dolphin_adapter.cpp
