@@ -980,9 +980,15 @@ void GenericSettingsPage::wirePreviewBinding(const PreviewSpec &spec,
     // here in case any future schema stores a bool as "0"/"1".
     if (ok && type != SettingDef::Combo && type != SettingDef::Bool) {
       preview->setProperty(propName.toUtf8().constData(), asInt);
-    } else if (val.compare("true", Qt::CaseInsensitive) == 0) {
+    } else if (val.compare("true", Qt::CaseInsensitive) == 0 ||
+               val.compare("enabled", Qt::CaseInsensitive) == 0) {
+      // Libretro core-options use "enabled"/"disabled" rather than
+      // "true"/"false"; treat both conventions as the same bool axis so
+      // adapters can bind a Combo row to a bool preview property without
+      // a per-adapter translation layer.
       preview->setProperty(propName.toUtf8().constData(), true);
-    } else if (val.compare("false", Qt::CaseInsensitive) == 0) {
+    } else if (val.compare("false", Qt::CaseInsensitive) == 0 ||
+               val.compare("disabled", Qt::CaseInsensitive) == 0) {
       preview->setProperty(propName.toUtf8().constData(), false);
     } else {
       preview->setProperty(propName.toUtf8().constData(), val);
@@ -1015,7 +1021,18 @@ void GenericSettingsPage::wirePreviewBinding(const PreviewSpec &spec,
     const QString prop = spec.keyToProperty.value(key);
     connect(combo, &SettingsComboRow::valueChanged, preview,
             [preview, prop](const QString &v) {
-              preview->setProperty(prop.toUtf8().constData(), v);
+              // Match the seed()-time enabled/disabled → bool translation so
+              // libretro Combo rows that drive bool preview properties stay
+              // consistent across initial render and user changes.
+              if (v.compare("enabled", Qt::CaseInsensitive) == 0 ||
+                  v.compare("true", Qt::CaseInsensitive) == 0) {
+                preview->setProperty(prop.toUtf8().constData(), true);
+              } else if (v.compare("disabled", Qt::CaseInsensitive) == 0 ||
+                         v.compare("false", Qt::CaseInsensitive) == 0) {
+                preview->setProperty(prop.toUtf8().constData(), false);
+              } else {
+                preview->setProperty(prop.toUtf8().constData(), v);
+              }
             });
   }
   for (auto *tog : findChildren<SettingsToggleRow *>()) {
