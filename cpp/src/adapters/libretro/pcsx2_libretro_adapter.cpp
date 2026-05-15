@@ -632,14 +632,19 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // GenericSettingsPage once the dialog's hasSubTabs flag is set
     // (Phase 4 Task 7 flips it for category="Graphics").
     //
-    // Renderer remains under category="Recommended" from Phase 0 — the
-    // libretro variant's Renderer enum is libretro-side (Auto/Metal/
-    // Software/Null) not standalone-side (Auto/OpenGL/Vulkan/Metal/
-    // Software). Phase 5 will decide whether to cross-list under
-    // Graphics/Display.
+    // Renderer is cross-listed under category="Recommended" (Phase 0) AND
+    // category="Graphics" subcategory="Display" (Phase 5). The libretro
+    // variant's Renderer enum is libretro-side (Auto/Metal/Software/Null),
+    // not standalone-side (Auto/OpenGL/Vulkan/Metal/Software). Both rows
+    // point at the same backing core option pcsx2_renderer; edits in
+    // either view route to the same storage. Keep their value lists +
+    // tooltips in sync — Recommended source-of-truth row lives at the top
+    // of settingsSchema().
 
-    // ── Graphics > Display (16 knobs) — Phase 4 Task 2 ────────────────
+    // ── Graphics > Display (17 knobs) — Phase 4 Task 2 + Phase 5 ──────
 
+    // Mirrors the Recommended → Performance row; keep value list and
+    // tooltip in sync with the source-of-truth row above.
     s.append(gopt(
         "Display", "Display",
         "pcsx2_renderer", "Renderer", "auto",
@@ -1406,11 +1411,8 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // pipeline (libretro frontends are responsible for capture; PCSX2's
     // own capture code path is inert when running inside a libretro
     // shell). Duplicating a feature RetroNest already provides would be
-    // confusing — same architectural reasoning as the Achievements card
-    // skip (RetroNest owns rcheevos host-side).
-    //
-    // If a future RetroNest UI surfaces capture configuration, those
-    // settings live in RetroNest-Project's own settings hub, not here.
+    // confusing — same architectural reasoning as the silently-omitted
+    // Achievements card (RetroNest owns rcheevos host-side).
 
     return s;
 }
