@@ -57,6 +57,21 @@ Item {
             id: metalComponent
             LibretroMetalItem {
                 anchors.fill: parent
+                // Mirror the software path's aspect handling so the HW
+                // render bridge doesn't stretch the renderer's output to
+                // fill the host window. session.libretroAspectMode is
+                // sourced from the libretro adapter's frontend store
+                // (defaults to "native"); nativeAspect=4/3 covers the
+                // PS2 case (PCSX2 reports av_info.geometry.aspect_ratio
+                // = 4/3 via the libretro shell). If a future adapter
+                // exposes the av-info aspect dynamically, plumb it
+                // through here instead of the 4/3 constant.
+                aspectMode: root.session ? root.session.libretroAspectMode : "native"
+                // Dynamic — sourced from av_info.geometry.aspect_ratio
+                // (PCSX2 reports 4/3; any future core reporting 16:9, 8:7
+                // etc. flows through automatically). Falls back to 4/3
+                // when the session isn't yet bound.
+                nativeAspect: root.session ? root.session.libretroAspectRatio : (4.0 / 3.0)
                 Component.onCompleted: {
                     if (root.session)
                         root.session.registerHardwareView(nativeView())

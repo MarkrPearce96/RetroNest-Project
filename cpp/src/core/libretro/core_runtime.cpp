@@ -319,6 +319,11 @@ void CoreRuntime::runLoop() {
                         static_cast<int>(av.geometry.base_height),
                         static_cast<int>(av.geometry.max_width),
                         static_cast<int>(av.geometry.max_height));
+    // Surface the core's display-aspect hint to GameSession (it forwards
+    // to QML's LibretroMetalItem.nativeAspect so the HW render bridge
+    // letterboxes correctly). Zero is a valid "not specified" sentinel —
+    // GameSession::setLibretroAspectRatio handles the fallback.
+    emit aspectRatioReported(static_cast<qreal>(av.geometry.aspect_ratio));
     m_audio.open(static_cast<int>(av.timing.sample_rate));
     m_frameDurationSec = (av.timing.fps > 0.0) ? (1.0 / av.timing.fps) : (1.0 / 60.0);
 

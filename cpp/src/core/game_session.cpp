@@ -233,6 +233,8 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     connect(rt, &CoreRuntime::errorOccurred, this, [this](const QString& m) {
         emit errorOccurred(m);
     });
+    connect(rt, &CoreRuntime::aspectRatioReported,
+            this, &GameSession::setLibretroAspectRatio);
     connect(rt, &CoreRuntime::frameReady, this, &GameSession::frameReady,
             Qt::UniqueConnection);
 
@@ -496,6 +498,17 @@ bool GameSession::libretroIntegerScale() const {
     if (auto* store = m_libretroAdapter->frontendSettingsStore())
         return store->get(QStringLiteral("integer_scale")).compare("ON", Qt::CaseInsensitive) == 0;
     return false;
+}
+
+void GameSession::setLibretroAspectRatio(qreal ratio) {
+    // CoreRuntime calls this once per session after retro_get_system_av_info.
+    // Sentinels: 0 means "core didn't fill the field" — fall back to the
+    // sensible PS2 default (4/3). qFuzzyCompare avoids a useless emit when
+    // the core re-reports the same value.
+    if (ratio <= 0.0) ratio = 4.0 / 3.0;
+    if (qFuzzyCompare(m_libretroAspectRatio, ratio)) return;
+    m_libretroAspectRatio = ratio;
+    emit libretroAspectRatioChanged();
 }
 
 void GameSession::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {

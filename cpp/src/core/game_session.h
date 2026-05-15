@@ -36,6 +36,12 @@ class GameSession : public QObject {
     Q_PROPERTY(bool running READ isRunning NOTIFY runningChanged)
     Q_PROPERTY(QString libretroAspectMode READ libretroAspectMode NOTIFY libretroFrontendChanged)
     Q_PROPERTY(bool libretroIntegerScale READ libretroIntegerScale NOTIFY libretroFrontendChanged)
+    // Core-reported display aspect ratio (av_info.geometry.aspect_ratio).
+    // Populated by CoreRuntime on retro_get_system_av_info; PCSX2 reports
+    // 4/3 for PS2 content. Used by LibretroMetalItem.nativeAspect so the
+    // HW render bridge letterboxes correctly without hardcoding 4/3.
+    // Defaults to 4/3 before any core has been loaded.
+    Q_PROPERTY(qreal libretroAspectRatio READ libretroAspectRatio NOTIFY libretroAspectRatioChanged)
     Q_PROPERTY(QString libretroBackend READ libretroBackend NOTIFY libretroBackendChanged)
 
 public:
@@ -71,6 +77,8 @@ public:
     /** Current aspect mode from the libretro frontend settings store.
      *  Returns "native" when no libretro game is running or no store. */
     QString libretroAspectMode() const;
+    qreal libretroAspectRatio() const { return m_libretroAspectRatio; }
+    void setLibretroAspectRatio(qreal ratio);  // CoreRuntime calls this after av_info read
     /** Current integer-scale flag from the libretro frontend settings store. */
     bool libretroIntegerScale() const;
     /** Current render backend for the libretro core: "software" or "metal". */
@@ -129,6 +137,7 @@ signals:
     void frameReady(const QImage& frame);
     /** Emitted when a libretro frontend setting (aspect mode, integer scale) changes. */
     void libretroFrontendChanged();
+    void libretroAspectRatioChanged();
     /** Forwarded from the in-process rcheevos runtime (libretro path only).
      *  GameService re-emits this onto RAService::notifyAchievementUnlocked
      *  via a queued connection set up in service-layer wiring — keeps
@@ -177,6 +186,7 @@ private:
     QString m_currentRomPath;
     LibretroAdapter* m_libretroAdapter = nullptr;
     bool m_libretroFastForward = false;
+    qreal m_libretroAspectRatio = 4.0 / 3.0;  // sensible default before av_info is read
     QString m_libretroBackend = QStringLiteral("software"); // "software" | "metal"
 
     // SP10: gate the "switch to Rosetta for full speed" notice to one

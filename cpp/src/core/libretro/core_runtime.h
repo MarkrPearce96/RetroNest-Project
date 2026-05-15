@@ -116,6 +116,13 @@ signals:
     void finished(bool crashed);
     void errorOccurred(const QString& message);
     void frameReady(const QImage& frame);
+    // Emitted once per session right after retro_get_system_av_info, with
+    // the value the core filled into av_info.geometry.aspect_ratio. PCSX2
+    // reports 4/3 for PS2 content; mGBA reports the GBA's native 3:2.
+    // GameSession routes this into m_libretroAspectRatio so the QML
+    // HW-render bridge (LibretroMetalItem.nativeAspect) letterboxes
+    // correctly without hardcoding per-core constants.
+    void aspectRatioReported(qreal aspectRatio);
 
 private:
     SdlInputManager* m_sdlInput = nullptr;

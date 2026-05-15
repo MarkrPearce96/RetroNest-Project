@@ -4,8 +4,10 @@
 
 #include <QGuiApplication>
 #include <QQuickWindow>
+#include <QScreen>
 #include <QWindow>
 #include <QDebug>
+#include <cmath>
 
 #import <AppKit/AppKit.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -57,6 +59,22 @@ qulonglong LibretroMetalItem::nativeView() const
     return static_cast<qulonglong>(m_window->winId());
 }
 
+void LibretroMetalItem::setAspectMode(const QString& mode)
+{
+    if (m_aspectMode == mode) return;
+    m_aspectMode = mode;
+    emit aspectModeChanged();
+    updateInnerGeometry();
+}
+
+void LibretroMetalItem::setNativeAspect(qreal a)
+{
+    if (qFuzzyCompare(m_nativeAspect, a) || a <= 0.0) return;
+    m_nativeAspect = a;
+    emit nativeAspectChanged();
+    updateInnerGeometry();
+}
+
 void LibretroMetalItem::itemChange(ItemChange change, const ItemChangeData& value)
 {
     QQuickItem::itemChange(change, value);
@@ -67,9 +85,18 @@ void LibretroMetalItem::itemChange(ItemChange change, const ItemChangeData& valu
     if (change == QQuickItem::ItemSceneChange && value.window) {
         if (m_window) {
             m_window->setParent(value.window);
-            const QRect r = mapRectToScene(boundingRect()).toRect();
-            m_window->setGeometry(r);
+            updateInnerGeometry();
+            syncContentsScale();
             m_window->show();
+        }
+        // Track DPR changes (screen change, dock/undock, etc.) so the
+        // CAMetalLayer's contentsScale stays in sync with the host
+        // window's backingScaleFactor. Without this, PCSX2 renders at
+        // logical-pixel resolution and macOS upscales the result via
+        // bilinear, visibly blurring every frame.
+        if (value.window) {
+            connect(value.window, &QWindow::screenChanged,
+                    this, &LibretroMetalItem::syncContentsScale);
         }
     }
 }
@@ -77,8 +104,92 @@ void LibretroMetalItem::itemChange(ItemChange change, const ItemChangeData& valu
 void LibretroMetalItem::geometryChange(const QRectF& newGeometry, const QRectF& oldGeometry)
 {
     QQuickItem::geometryChange(newGeometry, oldGeometry);
-    if (m_window && window()) {
-        const QRect r = mapRectToScene(newGeometry).toRect();
-        m_window->setGeometry(r);
+    updateInnerGeometry();
+    syncContentsScale();
+}
+
+void LibretroMetalItem::updateInnerGeometry()
+{
+    if (!m_window || !window()) return;
+    const QRectF bounds = mapRectToScene(boundingRect());
+
+    const double bw = bounds.width();
+    const double bh = bounds.height();
+    if (bw < 1.0 || bh < 1.0) {
+        m_window->setGeometry(bounds.toRect());
+        return;
+    }
+
+    // Stretch mode = fill the whole item rect, no letterbox.
+    if (m_aspectMode == QStringLiteral("stretch")) {
+        m_window->setGeometry(bounds.toRect());
+        return;
+    }
+
+    // Target aspect: explicit override modes win; "native" falls back to
+    // m_nativeAspect (libretro av_info.geometry.aspect_ratio — 4/3 for PS2).
+    double targetAR;
+    if (m_aspectMode == QStringLiteral("4_3")) {
+        targetAR = 4.0 / 3.0;
+    } else if (m_aspectMode == QStringLiteral("16_9")) {
+        targetAR = 16.0 / 9.0;
+    } else {
+        targetAR = (m_nativeAspect > 0.0) ? m_nativeAspect : (4.0 / 3.0);
+    }
+
+    // Fit targetAR inside bounds with KeepAspectRatio semantics.
+    const double boundsAR = bw / bh;
+    double tw, th;
+    if (targetAR > boundsAR) {
+        tw = bw;
+        th = bw / targetAR;
+    } else {
+        tw = bh * targetAR;
+        th = bh;
+    }
+
+    const int x = static_cast<int>(std::floor(bounds.x() + (bw - tw) / 2.0));
+    const int y = static_cast<int>(std::floor(bounds.y() + (bh - th) / 2.0));
+    const int w = static_cast<int>(std::floor(tw));
+    const int h = static_cast<int>(std::floor(th));
+    m_window->setGeometry(QRect(x, y, w, h));
+}
+
+void LibretroMetalItem::syncContentsScale()
+{
+    if (!m_window) return;
+    NSView* view = (__bridge NSView*)reinterpret_cast<void*>(m_window->winId());
+    if (!view) return;
+
+    // Use the host QQuickWindow's DPR when present; fall back to the
+    // primary screen when the item isn't parented to a window yet (the
+    // child QWindow has its own screen but Qt's QWindow::devicePixelRatio
+    // returns 1.0 until it's actually shown on that screen).
+    qreal scale = 1.0;
+    if (window()) {
+        scale = window()->devicePixelRatio();
+    } else if (auto* screen = QGuiApplication::primaryScreen()) {
+        scale = screen->devicePixelRatio();
+    }
+    if (scale < 1.0) scale = 1.0;
+
+    if (view.layer) {
+        view.layer.contentsScale = scale;
+        // PCSX2's GSDeviceMTL attaches its CAMetalLayer as a sublayer of
+        // the NSView's backing layer (or replaces it). Propagate
+        // contentsScale to every sublayer so any layer PCSX2 installs
+        // also renders at backing-scale resolution.
+        for (CALayer* sub in view.layer.sublayers) {
+            sub.contentsScale = scale;
+            // CAMetalLayer specifically needs drawableSize bumped too,
+            // otherwise its texture stays logical-pixel sized. Update
+            // it from the layer's bounds * contentsScale.
+            if ([sub isKindOfClass:[CAMetalLayer class]]) {
+                CAMetalLayer* metalLayer = (CAMetalLayer*)sub;
+                const CGSize bounds = metalLayer.bounds.size;
+                metalLayer.drawableSize = CGSizeMake(bounds.width * scale,
+                                                     bounds.height * scale);
+            }
+        }
     }
 }
