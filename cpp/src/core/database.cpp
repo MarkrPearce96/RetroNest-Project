@@ -54,7 +54,7 @@ void Database::close() {
     QSqlDatabase::removeDatabase(DB_CONNECTION);
 }
 
-static const int CURRENT_SCHEMA_VERSION = 6;
+static const int CURRENT_SCHEMA_VERSION = 7;
 
 bool Database::createTables() {
     auto db = QSqlDatabase::database(DB_CONNECTION);
@@ -263,6 +263,29 @@ bool Database::runMigrations() {
             return false;
         }
         qInfo() << "[Database] Migrated schema v5 → v6 (added serial column)";
+    }
+
+    if (current < 7) {
+        // SP8: pcsx2-libretro id retired in favour of plain "pcsx2".
+        // Rewrite every scanned game's emulator_id so existing libraries
+        // keep launching under the renamed adapter.
+        auto db = QSqlDatabase::database(DB_CONNECTION);
+        if (!db.transaction()) {
+            qCritical() << "[Database] Failed to begin transaction for v6→v7 migration";
+            return false;
+        }
+        QSqlQuery q(db);
+        if (!q.exec("UPDATE games SET emulator_id = 'pcsx2' WHERE emulator_id = 'pcsx2-libretro'")) {
+            qCritical() << "[Database] Migration v6→v7 failed:" << q.lastError().text();
+            db.rollback();
+            return false;
+        }
+        if (!db.commit()) {
+            qCritical() << "[Database] Failed to commit v6→v7 migration";
+            db.rollback();
+            return false;
+        }
+        qInfo() << "[Database] Migrated schema v6 → v7 (renamed pcsx2-libretro → pcsx2)";
     }
 
     if (current < CURRENT_SCHEMA_VERSION) {

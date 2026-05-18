@@ -54,6 +54,7 @@ include(dev_credentials.cmake OPTIONAL)
 set(SOURCES
     src/main.cpp
     src/core/manifest_loader.cpp
+    src/core/migration_pcsx2.cpp
     src/core/paths.cpp
     src/services/emulator_installer.cpp
     src/services/config_service.cpp
@@ -921,6 +922,16 @@ target_link_libraries(test_core_runtime PRIVATE
     Qt6::Core Qt6::Gui Qt6::Network Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES} rcheevos_static)
 add_dependencies(test_core_runtime fake_libretro_core)
 add_test(NAME CoreRuntime COMMAND test_core_runtime)
+
+add_executable(test_migration_pcsx2
+    tests/test_migration_pcsx2.cpp
+    src/core/migration_pcsx2.cpp
+    src/core/paths.cpp
+)
+set_target_properties(test_migration_pcsx2 PROPERTIES AUTOMOC ON)
+target_include_directories(test_migration_pcsx2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_migration_pcsx2 PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME MigrationPcsx2 COMMAND test_migration_pcsx2)
 
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
 set_target_properties(fake_libretro_core PROPERTIES
