@@ -683,10 +683,38 @@ void GenericSettingsPage::saveValue(const QString &section, const QString &key,
 }
 
 void GenericSettingsPage::refreshDependencies() {
-  // Master state maps populated from every Toggle / Combo on the page:
+  // Public entry point: refresh this page locally, then broadcast to all
+  // sibling GenericSettingsPage instances on the same dialog so cross-card
+  // master changes propagate. Without this broadcast, changing
+  // pcsx2_renderer on the Recommended card wouldn't grey out the
+  // dependent rows on the Graphics card until the user happened to tweak
+  // something on Graphics directly. See
+  // [[cross-category-dependson-limitation]] for the bug this fixes.
+  // Siblings call refreshDependenciesLocal (not refreshDependencies),
+  // so this is not recursive.
+  refreshDependenciesLocal();
+  if (m_dlg) {
+    for (auto *page : m_dlg->findChildren<GenericSettingsPage *>()) {
+      if (page == this) continue;
+      page->refreshDependenciesLocal();
+    }
+  }
+}
+
+void GenericSettingsPage::refreshDependenciesLocal() {
+  // Master state maps populated from every Toggle / Combo across ALL
+  // pages on this dialog (not just `this`). Pre-fix, findChildren ran on
+  // `this` so cross-card dependsOn (e.g. a Graphics row gating on
+  // pcsx2_renderer from Recommended) silently evaluated against an
+  // empty-string master and stayed editable. Running findChildren on
+  // m_dlg makes every other page's masters visible. Fallback to `this`
+  // if the dialog pointer is null (defensive; should not happen in
+  // practice — m_dlg is set at construction).
   //   masterStates[key] = is the master "active"? (truthy / non-disabled)
   //   masterValues[key] = the master's current raw value (combo equality
   //                       atoms in the dependsOn DSL compare against this).
+  QObject *masterRoot = m_dlg ? static_cast<QObject *>(m_dlg)
+                              : static_cast<QObject *>(this);
   QHash<QString, bool> masterStates;
   QHash<QString, QString> masterValues;
   // For inverted toggles, the displayed `isChecked()` is the OPPOSITE of
@@ -694,7 +722,7 @@ void GenericSettingsPage::refreshDependencies() {
   // value (so e.g. `dependsOn = "BBoxEnable"` means "true when BBox is
   // enabled in the INI"), so we un-invert here before populating the
   // master maps.
-  for (auto *tog : findChildren<SettingsToggleRow *>()) {
+  for (auto *tog : masterRoot->findChildren<SettingsToggleRow *>()) {
     const bool stored = tog->settingDef().inverted ? !tog->isChecked()
                                                    : tog->isChecked();
     masterStates.insert(tog->settingDef().key, stored);
@@ -704,7 +732,7 @@ void GenericSettingsPage::refreshDependencies() {
 
   // Combos can also act as masters (per setting_def.h:39-42): a combo is
   // 'active' when its value is not in {"", "0", "false", "Disabled", "None"}.
-  for (auto *combo : findChildren<SettingsComboRow *>()) {
+  for (auto *combo : masterRoot->findChildren<SettingsComboRow *>()) {
     const QString v = combo->value();
     const bool active = !v.isEmpty() && v != "0" &&
                         v.compare("false", Qt::CaseInsensitive) != 0 &&

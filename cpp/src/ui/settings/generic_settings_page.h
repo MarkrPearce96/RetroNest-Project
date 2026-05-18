@@ -50,7 +50,17 @@ private:
     void buildSubcategory(const QString& subcategory);
     void loadValues();
     void saveValue(const QString& section, const QString& key, const QString& value);
+    // Two-tier so cross-card masters work: refreshDependencies() applies
+    // local changes AND broadcasts to sibling GenericSettingsPage instances
+    // on the same dialog. refreshDependenciesLocal() does the actual row
+    // re-evaluation — gathering masters via m_dlg->findChildren so other
+    // pages' Combos / Toggles are visible. Without the broadcast,
+    // changing pcsx2_renderer in Recommended wouldn't grey out dependent
+    // rows in Graphics until the user happened to tweak something on
+    // Graphics directly (see [[cross-category-dependson-limitation]] for
+    // the bug this addresses).
     void refreshDependencies();
+    void refreshDependenciesLocal();
     SettingsCard* findNextCardSpatial(SettingsCard* current, int key) const;
     QWidget* mountPreviewWidget(const QString& previewType, QWidget* parent);
     void wirePreviewBinding(const PreviewSpec& spec, QWidget* preview);
