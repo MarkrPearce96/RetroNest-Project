@@ -57,6 +57,7 @@ set(SOURCES
     src/core/migration_pcsx2.cpp
     src/core/paths.cpp
     src/services/emulator_installer.cpp
+    src/services/installer_utils.cpp
     src/services/config_service.cpp
     src/core/game_session.cpp
     src/adapters/emulator_adapter.cpp
@@ -138,6 +139,7 @@ set(HEADERS
     src/core/manifest_loader.h
     src/core/paths.h
     src/services/emulator_installer.h
+    src/services/installer_utils.h
     src/core/game_session.h
     src/adapters/emulator_adapter.h
     src/adapters/adapter_registry.h

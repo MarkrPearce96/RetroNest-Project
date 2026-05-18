@@ -64,14 +64,6 @@ private:
                                        const QString& installPath,
                                        const QString& tagName,
                                        const QString& publishedAt);
-    /** Compute the SHA256 of the file at path. Returns lower-case hex on
-     *  success, empty QString on read failure. */
-    static QString computeSha256(const QString& path);
-    /** Returns true if `expected` is empty (verification skipped) or matches
-     *  the file's actual SHA256. False on mismatch — caller deletes the
-     *  partial download and reports an integrity error. */
-    static bool verifySha256(const QString& path, const QString& expected);
-
     /**
      * Start an async download + extract pipeline given a fully-resolved
      * (assetName, downloadUrl, version, publishedAt) tuple. Used by both

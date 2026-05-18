@@ -1,7 +1,7 @@
 #include "emulator_installer.h"
+#include "installer_utils.h"
 
 #include <QCoreApplication>
-#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -20,66 +20,6 @@
 #include <QFutureWatcher>
 
 #include "adapters/adapter_registry.h"
-
-// ============================================================================
-// SHA256 verification (skip if expected hash is empty)
-// ============================================================================
-
-QString EmulatorInstaller::computeSha256(const QString& path) {
-    QFile f(path);
-    if (!f.open(QIODevice::ReadOnly)) return {};
-    QCryptographicHash hash(QCryptographicHash::Sha256);
-    if (!hash.addData(&f)) return {};
-    return QString::fromLatin1(hash.result().toHex());
-}
-
-bool EmulatorInstaller::verifySha256(const QString& path, const QString& expected) {
-    if (expected.isEmpty()) return true;  // verification opt-in only
-    const QString actual = computeSha256(path);
-    if (actual.isEmpty()) {
-        qWarning() << "[Installer] SHA256: failed to read" << path;
-        return false;
-    }
-    if (actual.compare(expected, Qt::CaseInsensitive) != 0) {
-        qWarning() << "[Installer] SHA256 MISMATCH for" << path
-                   << "expected" << expected << "got" << actual;
-        return false;
-    }
-    qInfo() << "[Installer] SHA256 verified for" << path;
-    return true;
-}
-
-// ============================================================================
-// HTTP helpers (synchronous via local event loop)
-// ============================================================================
-
-static QByteArray httpGet(const QString& url) {
-    QNetworkAccessManager nam;
-    QNetworkRequest req{QUrl(url)};
-    req.setHeader(QNetworkRequest::UserAgentHeader, "RetroNest/1.0");
-    req.setRawHeader("Accept", "application/json");
-    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                     QNetworkRequest::NoLessSafeRedirectPolicy);
-
-    QNetworkReply* reply = nam.get(req);
-    QEventLoop loop;
-    QTimer timeout;
-    timeout.setSingleShot(true);
-    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    QObject::connect(&timeout, &QTimer::timeout, reply, &QNetworkReply::abort);
-    timeout.start(30000);
-    loop.exec();
-
-    if (reply->error() != QNetworkReply::NoError) {
-        qWarning() << "[Installer] HTTP error:" << reply->errorString();
-        reply->deleteLater();
-        return {};
-    }
-
-    QByteArray data = reply->readAll();
-    reply->deleteLater();
-    return data;
-}
 
 // ============================================================================
 // Synchronous file download (used by installSync / CLI mode)
@@ -294,7 +234,7 @@ EmulatorInstaller::ReleaseInfo EmulatorInstaller::fetchReleaseInfo(const Emulato
     }
 
     const QString apiUrl = "https://api.github.com/repos/" + manifest.github_repo + "/releases/latest";
-    QByteArray releaseJson = httpGet(apiUrl);
+    QByteArray releaseJson = InstallerUtils::httpGet(apiUrl, 30000, "[Installer]");
     if (releaseJson.isEmpty()) {
         info.errorMessage = "Failed to fetch release info from GitHub";
         return info;
@@ -451,7 +391,7 @@ EmulatorInstaller::InstallResult EmulatorInstaller::installSync(
     }
 
     // 2.5. Verify integrity (no-op if upstream didn't provide a digest).
-    if (!verifySha256(tempFile, release.sha256)) {
+    if (!InstallerUtils::verifySha256(tempFile, release.sha256)) {
         QFile::remove(tempFile);
         result.message = "Integrity check failed (SHA256 mismatch).";
         return result;
@@ -652,7 +592,7 @@ void EmulatorInstaller::startDirectDownload(const QString& assetName,
 
                 QFuture<InstallResult> future = QtConcurrent::run(
                     [tempFile, installPath, tagName, publishedAt, sha256]() -> InstallResult {
-                        if (!verifySha256(tempFile, sha256)) {
+                        if (!InstallerUtils::verifySha256(tempFile, sha256)) {
                             QFile::remove(tempFile);
                             return InstallResult{
                                 false,
