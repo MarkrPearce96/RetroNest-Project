@@ -129,6 +129,7 @@ set(SOURCES
     src/ui/settings/mgba/mgba_category_hub.cpp
     src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
     src/ui/settings/pcsx2/pcsx2_category_hub.cpp
+    src/ui/settings/pcsx2/pcsx2_patches_page.cpp
     src/ui/settings/duckstation/duckstation_settings_dialog.cpp
     src/ui/settings/duckstation/duckstation_category_hub.cpp
     # PPSSPP settings — schema-driven via GenericSettingsPage; no bespoke pages.
@@ -209,6 +210,7 @@ set(HEADERS
     # PCSX2 settings
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
+    src/ui/settings/pcsx2/pcsx2_patches_page.h
     # DuckStation settings
     src/ui/settings/duckstation/duckstation_settings_dialog.h
     src/ui/settings/duckstation/duckstation_category_hub.h
@@ -225,6 +227,7 @@ set(HEADERS
     src/ui/settings/widgets/preview/osd_preview.h
     src/ui/settings/pcsx2/pcsx2_settings_dialog.h
     src/ui/settings/pcsx2/pcsx2_category_hub.h
+    src/ui/settings/pcsx2/pcsx2_patches_page.h
     # PPSSPP settings — schema-driven via GenericSettingsPage; no bespoke pages.
     src/ui/settings/ppsspp/ppsspp_category_hub.h
     src/ui/settings/ppsspp/ppsspp_settings_dialog.h

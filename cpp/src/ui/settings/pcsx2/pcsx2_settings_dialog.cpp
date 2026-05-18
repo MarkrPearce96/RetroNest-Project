@@ -1,5 +1,6 @@
 #include "pcsx2_settings_dialog.h"
 #include "pcsx2_category_hub.h"
+#include "pcsx2_patches_page.h"
 #include "ui/settings/generic_settings_page.h"
 #include "ui/settings/settings_dialog_theme.h"
 #include "ui/app_controller.h"
@@ -23,6 +24,12 @@ void Pcsx2SettingsDialog::onCategoryActivated(const QString& category) {
     // ControllerMappingPage (works for any emulator with controllerTypes()).
     if (category == QStringLiteral("__controller__")) {
         m_app->showControllerMapping(m_emuId);
+        return;
+    }
+
+    if (category == QStringLiteral("Patches")) {
+        auto* page = new Pcsx2PatchesPage(m_app, this);
+        pushPage(page, /*hasSubTabs*/ false);
         return;
     }
 
