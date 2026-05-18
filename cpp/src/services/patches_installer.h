@@ -43,4 +43,27 @@ signals:
     /** success=true on successful fetch OR clean short-circuit ("up to date").
      *  On failure: success=false, message is a user-facing reason. */
     void finished(bool success, const QString& message, const QString& tag);
+
+private:
+    struct ReleaseInfo {
+        bool ok = false;
+        QString errorMessage;
+        QString tagName;
+        QString publishedAt;
+        QString downloadUrl;
+        QString sha256;  // empty = no digest provided
+    };
+
+    /** Hit the GitHub API and resolve the patches.zip asset. Synchronous;
+     *  call from a background thread. */
+    ReleaseInfo fetchReleaseInfo() const;
+
+    /** Synchronous download of `url` to `destPath` using a fresh
+     *  QNetworkAccessManager. Honors QCoreApplication::aboutToQuit
+     *  for clean cancellation. */
+    bool downloadTo(const QString& url, const QString& destPath);
+
+    /** Run the complete fetch pipeline. Called on a worker thread by
+     *  fetchAsync()'s QtConcurrent::run. */
+    void runFetch(const QString& resourcesDir, bool force);
 };

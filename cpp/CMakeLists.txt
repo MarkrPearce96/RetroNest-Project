@@ -951,10 +951,11 @@ add_executable(test_patches_installer
     tests/test_patches_installer.cpp
     src/services/patches_installer.cpp
     src/services/patches_sidecar.cpp
+    src/services/installer_utils.cpp
 )
 set_target_properties(test_patches_installer PROPERTIES AUTOMOC ON)
 target_include_directories(test_patches_installer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_patches_installer PRIVATE Qt6::Core)
+target_link_libraries(test_patches_installer PRIVATE Qt6::Core Qt6::Network Qt6::Concurrent)
 add_test(NAME PatchesInstaller COMMAND test_patches_installer)
 
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
