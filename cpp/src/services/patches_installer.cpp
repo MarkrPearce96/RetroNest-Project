@@ -14,6 +14,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPointer>
 #include <QtConcurrent>
 
 PatchesInstaller::PatchesInstaller(QObject* parent) : QObject(parent) {}
@@ -46,8 +47,9 @@ bool PatchesInstaller::isFetchNeeded(const QString& resourcesDir) const {
 }
 
 void PatchesInstaller::fetchAsync(const QString& resourcesDir, bool force) {
-    QtConcurrent::run([this, resourcesDir, force]() {
-        runFetch(resourcesDir, force);
+    QPointer<PatchesInstaller> guard(this);
+    QtConcurrent::run([guard, resourcesDir, force]() {
+        if (auto* self = guard.data()) self->runFetch(resourcesDir, force);
     });
 }
 
@@ -169,7 +171,7 @@ bool PatchesInstaller::downloadTo(const QString& url, const QString& destPath) {
     }
 
     QEventLoop loop;
-    QObject::connect(reply, &QNetworkReply::readyRead, &out, [&]() {
+    QObject::connect(reply, &QNetworkReply::readyRead, &out, [reply, &out]() {
         out.write(reply->readAll());
     });
     QObject::connect(reply, &QNetworkReply::downloadProgress, this,
@@ -184,10 +186,9 @@ bool PatchesInstaller::downloadTo(const QString& url, const QString& destPath) {
 
     loop.exec();
 
-    out.write(reply->readAll());
-    out.close();
-
     const bool ok = reply->error() == QNetworkReply::NoError;
+    if (ok) out.write(reply->readAll());  // final flush only on success
+    out.close();
     if (!ok) qWarning() << "[Patches] Download error:" << reply->errorString();
     reply->deleteLater();
     return ok;
