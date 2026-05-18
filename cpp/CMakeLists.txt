@@ -59,6 +59,7 @@ set(SOURCES
     src/services/emulator_installer.cpp
     src/services/installer_utils.cpp
     src/services/patches_sidecar.cpp
+    src/services/patches_installer.cpp
     src/services/config_service.cpp
     src/core/game_session.cpp
     src/adapters/emulator_adapter.cpp
@@ -142,6 +143,7 @@ set(HEADERS
     src/services/emulator_installer.h
     src/services/installer_utils.h
     src/services/patches_sidecar.h
+    src/services/patches_installer.h
     src/core/game_session.h
     src/adapters/emulator_adapter.h
     src/adapters/adapter_registry.h
@@ -944,6 +946,16 @@ add_executable(test_patches_sidecar
 target_include_directories(test_patches_sidecar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_patches_sidecar PRIVATE Qt6::Core)
 add_test(NAME PatchesSidecar COMMAND test_patches_sidecar)
+
+add_executable(test_patches_installer
+    tests/test_patches_installer.cpp
+    src/services/patches_installer.cpp
+    src/services/patches_sidecar.cpp
+)
+set_target_properties(test_patches_installer PROPERTIES AUTOMOC ON)
+target_include_directories(test_patches_installer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_patches_installer PRIVATE Qt6::Core)
+add_test(NAME PatchesInstaller COMMAND test_patches_installer)
 
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
 set_target_properties(fake_libretro_core PROPERTIES
