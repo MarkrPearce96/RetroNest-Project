@@ -10,6 +10,7 @@
 #include "services/config_service.h"
 #include <QObject>
 #include <QGuiApplication>
+#include <QPointer>
 #include <QVariantList>
 #include <QStringList>
 
@@ -34,6 +35,11 @@ public:
     void setSdlInputManager(SdlInputManager* mgr);
     void attachPatchesInstaller(PatchesInstaller* installer);
     SdlInputManager* sdlInputManager() const { return m_inputManager; }
+
+public slots:
+    /** Triggered by the PCSX2 settings "Refresh PCSX2 patches" button (Task 7).
+     *  Forces a fetch and surfaces both success AND failure toasts. */
+    void refreshPcsx2Patches();
 
     // Game session (for QML binding to frameReady signal)
     GameSession* gameSession();
@@ -288,11 +294,13 @@ signals:
 
 private:
     void setStatus(const QString& msg);
+    void emitPatchesToast(bool success, const QString& message,
+                          bool isManualRefresh);
 
     ManifestLoader* m_loader;
     Database* m_db;
     SdlInputManager* m_inputManager = nullptr;
-    PatchesInstaller* m_patchesInstaller = nullptr;
+    QPointer<PatchesInstaller> m_patchesInstaller;
     GameService m_gameService;
     ScraperService m_scraperService;
     EmulatorService m_emuService;
