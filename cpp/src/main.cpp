@@ -160,10 +160,7 @@ int main(int argc, char* argv[]) {
     // PatchesInstaller::downloadTo).
     PatchesInstaller patchesInstaller;
     {
-        const QString libretroCoresDir =
-            Paths::emulatorsDir("libretro") + "/cores";
-        const QString resourcesDir =
-            libretroCoresDir + "/pcsx2_libretro_resources";
+        const QString resourcesDir = Paths::pcsx2ResourcesDir();
         QDir().mkpath(resourcesDir);
 
         // Connect logging before kicking off the fetch.

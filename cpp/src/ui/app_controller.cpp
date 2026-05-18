@@ -164,36 +164,26 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
 void AppController::attachPatchesInstaller(PatchesInstaller* installer) {
     m_patchesInstaller = installer;
     if (!m_patchesInstaller) return;
-    // Startup-path connection: success toast only.
     connect(m_patchesInstaller, &PatchesInstaller::finished, this,
             [this](bool success, const QString& message, const QString& /*tag*/) {
-                if (success) emitPatchesToast(true, message, /*isManualRefresh*/ false);
-                // Failures suppressed on startup path per spec.
+                const bool manual = m_patchesManualRefresh;
+                m_patchesManualRefresh = false;
+                // Startup path: success-only toast (don't nag offline users).
+                // Manual path: both success and failure toast (user asked).
+                if (manual || success) emitPatchesToast(success, message);
             });
 }
 
 void AppController::refreshPcsx2Patches() {
     if (!m_patchesInstaller) {
-        emitPatchesToast(false, "Patches installer not available", true);
+        emitPatchesToast(false, "Patches installer not available");
         return;
     }
-    const QString resourcesDir =
-        Paths::emulatorsDir("libretro") + "/cores/pcsx2_libretro_resources";
-    // One-shot connection for manual-refresh path: emit both success and
-    // failure toasts. Disconnects itself after firing.
-    auto* once = new QObject(this);
-    connect(m_patchesInstaller, &PatchesInstaller::finished, once,
-            [this, once](bool success, const QString& message,
-                         const QString& /*tag*/) {
-                emitPatchesToast(success, message, /*isManualRefresh*/ true);
-                once->deleteLater();
-            });
-    m_patchesInstaller->fetchAsync(resourcesDir, /*force*/ true);
+    m_patchesManualRefresh = true;
+    m_patchesInstaller->fetchAsync(Paths::pcsx2ResourcesDir(), /*force*/ true);
 }
 
-void AppController::emitPatchesToast(bool success, const QString& message,
-                                     bool isManualRefresh) {
-    Q_UNUSED(isManualRefresh);  // Reserved for future styling differences.
+void AppController::emitPatchesToast(bool success, const QString& message) {
     emit raInfoToast(
         /*header*/      "PCSX2 Patches",
         /*title*/       success ? "Updated" : "Update failed",

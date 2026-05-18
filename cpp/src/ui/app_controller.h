@@ -294,8 +294,10 @@ signals:
 
 private:
     void setStatus(const QString& msg);
-    void emitPatchesToast(bool success, const QString& message,
-                          bool isManualRefresh);
+    bool m_patchesManualRefresh = false;  // true while a user-triggered refresh is in flight
+
+    /** Emit the PCSX2 Patches toast with success/failure formatting. */
+    void emitPatchesToast(bool success, const QString& message);
 
     ManifestLoader* m_loader;
     Database* m_db;

@@ -20,6 +20,12 @@ public:
 
     static QString emulatorsDir(const QString& emuId = {});
 
+    /** Resource dir consumed by the PCSX2 libretro core
+     *  (`<emulators>/libretro/cores/pcsx2_libretro_resources`). Where
+     *  patches.zip, Roboto-Regular.ttf, and similar dladdr-resolved
+     *  bundle assets live. */
+    static QString pcsx2ResourcesDir();
+
     /**
      * Single per-emulator, per-system data root. Every runtime folder an
      * emulator needs (savestates, memcards, screenshots, cache, cheats,

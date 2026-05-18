@@ -35,6 +35,10 @@ QString Paths::emulatorsDir(const QString& emuId) {
     return s_root + "/emulators/" + emuId;
 }
 
+QString Paths::pcsx2ResourcesDir() {
+    return s_root + "/emulators/libretro/cores/pcsx2_libretro_resources";
+}
+
 QString Paths::emulatorDataDir(const QString& emuId, const QString& systemId) {
     return s_root + "/emulators/" + emuId + "/" + systemId;
 }
