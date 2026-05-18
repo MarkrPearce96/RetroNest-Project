@@ -27,11 +27,14 @@ Item {
     property int actionOffset: biosButtonVisible ? 1 : 0
     // Whether the "Hotkeys" entry point is shown for this emulator
     property bool hotkeysButtonVisible: app.hasHotkeys(root.emuId)
+    // Whether the PCSX2-specific "Refresh PCSX2 Patches" action is shown.
+    property bool patchesRefreshVisible: root.emuId === "pcsx2"
 
     // ── Keyboard / controller navigation ────────────────────────────────
     Keys.onPressed: function(event) {
         var baseRows = root.emuId === "dolphin" ? 7 : 6
         var actionRows = baseRows - (hotkeysButtonVisible ? 0 : 1)
+                                  + (patchesRefreshVisible ? 1 : 0)
         var maxIndex = root.emuInfo.installed ? (actionOffset + actionRows - 1) : 0
 
         if (event.key === Qt.Key_Up) {
@@ -64,24 +67,31 @@ Item {
         var hotkeySlot = root.emuId === "dolphin" ? 3 : 2
         // When the Hotkeys button is hidden, indices >= hotkeySlot shift down by 1
         if (!hotkeysButtonVisible && idx >= hotkeySlot) idx += 1
+        // PCSX2 patches button slot (after Hotkeys if both shown; after Controller
+        // Mapping if Hotkeys hidden). When the patches button is HIDDEN (any non-PCSX2
+        // emulator), indices >= patchesSlot shift down by 1.
+        var patchesSlot = (root.emuId === "dolphin" ? 4 : 3)
+        if (!patchesRefreshVisible && idx >= patchesSlot) idx += 1
         if (root.emuId === "dolphin") {
             switch (idx) {
             case 0: app.showEmulatorSettings(root.emuId); break
             case 1: app.showControllerMapping(root.emuId, "GCPad1"); break
             case 2: app.showControllerMapping(root.emuId, "Wiimote1"); break
             case 3: if (hotkeysButtonVisible) app.showHotkeySettings(root.emuId); break
-            case 4: root.beginInstall(); break
-            case 5: resetDialog.open(); break
-            case 6: uninstallDialog.open(); break
+            case 4: /* patches slot — never visible for dolphin */ break
+            case 5: root.beginInstall(); break
+            case 6: resetDialog.open(); break
+            case 7: uninstallDialog.open(); break
             }
         } else {
             switch (idx) {
             case 0: app.showEmulatorSettings(root.emuId); break
             case 1: app.showControllerMapping(root.emuId); break
             case 2: if (hotkeysButtonVisible) app.showHotkeySettings(root.emuId); break
-            case 3: root.beginInstall(); break
-            case 4: resetDialog.open(); break
-            case 5: uninstallDialog.open(); break
+            case 3: if (patchesRefreshVisible) app.refreshPcsx2Patches(); break
+            case 4: root.beginInstall(); break
+            case 5: resetDialog.open(); break
+            case 6: uninstallDialog.open(); break
             }
         }
     }
@@ -403,12 +413,25 @@ Item {
                         onClicked: app.showHotkeySettings(root.emuId)
                     }
 
-                    // After-Hotkeys buttons shift up by 1 when Hotkeys is hidden
+                    DetailButton {
+                        visible: root.patchesRefreshVisible
+                        label: "Refresh PCSX2 Patches"
+                        bgColor: SettingsTheme.card
+                        textColor: SettingsTheme.text
+                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 4 : 3) - (root.hotkeysButtonVisible ? 0 : 1)
+                        onClicked: app.refreshPcsx2Patches()
+                    }
+
+                    // After-Hotkeys buttons shift up by 1 when Hotkeys is hidden;
+                    // shift down by 1 when patchesRefreshVisible.
                     DetailButton {
                         label: "Reinstall / Update"
                         bgColor: SettingsTheme.accentDim
                         textColor: SettingsTheme.accent
-                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 4 : 3) - (root.hotkeysButtonVisible ? 0 : 1)
+                        isFocused: root.focusIndex === root.actionOffset
+                                   + (root.emuId === "dolphin" ? 4 : 3)
+                                   - (root.hotkeysButtonVisible ? 0 : 1)
+                                   + (root.patchesRefreshVisible ? 1 : 0)
                         onClicked: root.beginInstall()
                     }
 
@@ -416,7 +439,10 @@ Item {
                         label: "Reset Configuration"
                         bgColor: SettingsTheme.card
                         textColor: SettingsTheme.text
-                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 5 : 4) - (root.hotkeysButtonVisible ? 0 : 1)
+                        isFocused: root.focusIndex === root.actionOffset
+                                   + (root.emuId === "dolphin" ? 5 : 4)
+                                   - (root.hotkeysButtonVisible ? 0 : 1)
+                                   + (root.patchesRefreshVisible ? 1 : 0)
                         onClicked: resetDialog.open()
                     }
 
@@ -424,7 +450,10 @@ Item {
                         label: "Uninstall"
                         bgColor: SettingsTheme.errorDim
                         textColor: SettingsTheme.error
-                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 6 : 5) - (root.hotkeysButtonVisible ? 0 : 1)
+                        isFocused: root.focusIndex === root.actionOffset
+                                   + (root.emuId === "dolphin" ? 6 : 5)
+                                   - (root.hotkeysButtonVisible ? 0 : 1)
+                                   + (root.patchesRefreshVisible ? 1 : 0)
                         onClicked: uninstallDialog.open()
                     }
                 }

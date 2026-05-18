@@ -38,11 +38,6 @@ Pcsx2CategoryHub::Pcsx2CategoryHub(QWidget* parent)
                              countSettings("Memory Cards"), "Memory Cards"),
                     2, 0);
 
-    grid->addWidget(makeCard(QStringLiteral("\U0001F9E9"), "Patches",
-                             "Widescreen / no-interlacing / game-fixes",
-                             /*count*/ -1, "Patches"),
-                    2, 1);
-
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
 }

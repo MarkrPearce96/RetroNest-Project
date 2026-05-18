@@ -103,14 +103,10 @@ SettingsCard* EmulatorCategoryHubBase::makeCard(const QString& icon, const QStri
     v->addWidget(d);
     v->addStretch();
 
-    // count < 0 means "no count chip" (e.g. the Patches card which isn't
-    // a SettingDef-backed category and has no meaningful settings count).
-    if (settingCount >= 0) {
-        auto* c = new QLabel(QString("%1 settings  →").arg(settingCount), card);
-        c->setAlignment(Qt::AlignCenter);
-        c->setStyleSheet("color:#f59e0b;font-size:12px;font-weight:500;");
-        v->addWidget(c);
-    }
+    auto* c = new QLabel(QString("%1 settings  →").arg(settingCount), card);
+    c->setAlignment(Qt::AlignCenter);
+    c->setStyleSheet("color:#f59e0b;font-size:12px;font-weight:500;");
+    v->addWidget(c);
 
     QObject::connect(card, &SettingsCard::activated, this,
                      [this, categoryKey]{ emit categoryActivated(categoryKey); });
