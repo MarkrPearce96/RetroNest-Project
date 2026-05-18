@@ -391,7 +391,7 @@ EmulatorInstaller::InstallResult EmulatorInstaller::installSync(
     }
 
     // 2.5. Verify integrity (no-op if upstream didn't provide a digest).
-    if (!InstallerUtils::verifySha256(tempFile, release.sha256)) {
+    if (!InstallerUtils::verifySha256(tempFile, release.sha256, "[Installer]")) {
         QFile::remove(tempFile);
         result.message = "Integrity check failed (SHA256 mismatch).";
         return result;
@@ -592,7 +592,7 @@ void EmulatorInstaller::startDirectDownload(const QString& assetName,
 
                 QFuture<InstallResult> future = QtConcurrent::run(
                     [tempFile, installPath, tagName, publishedAt, sha256]() -> InstallResult {
-                        if (!InstallerUtils::verifySha256(tempFile, sha256)) {
+                        if (!InstallerUtils::verifySha256(tempFile, sha256, "[Installer]")) {
                             QFile::remove(tempFile);
                             return InstallResult{
                                 false,

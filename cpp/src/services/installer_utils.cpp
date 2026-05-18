@@ -47,19 +47,20 @@ QString computeSha256(const QString& path) {
     return QString::fromLatin1(hash.result().toHex());
 }
 
-bool verifySha256(const QString& path, const QString& expected) {
+bool verifySha256(const QString& path, const QString& expected,
+                  const QString& context) {
     if (expected.isEmpty()) return true;  // verification opt-in only
     const QString actual = computeSha256(path);
     if (actual.isEmpty()) {
-        qWarning() << "[Installer] SHA256: failed to read" << path;
+        qWarning() << context << "SHA256: failed to read" << path;
         return false;
     }
     if (actual.compare(expected, Qt::CaseInsensitive) != 0) {
-        qWarning() << "[Installer] SHA256 MISMATCH for" << path
+        qWarning() << context << "SHA256 MISMATCH for" << path
                    << "expected" << expected << "got" << actual;
         return false;
     }
-    qInfo() << "[Installer] SHA256 verified for" << path;
+    qInfo() << context << "SHA256 verified for" << path;
     return true;
 }
 
