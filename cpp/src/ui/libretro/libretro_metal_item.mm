@@ -130,12 +130,22 @@ void LibretroMetalItem::updateInnerGeometry()
         return;
     }
 
-    // Sentinel: core signaled "no aspect specified" (e.g. PCSX2 with
-    // pcsx2_aspect_ratio = Stretch — emits 0.0 per libretro.h convention).
-    // In "native" aspect mode the core's signal is what we follow, so fill
-    // the bounds the same way explicit stretch does. Explicit aspect-mode
-    // overrides ("4_3", "16_9") below are unaffected — they win regardless.
-    if (m_aspectMode == QStringLiteral("native") && m_nativeAspect <= 0.0) {
+    // Native aspect mode: give PCSX2 the full bounds and let it own the
+    // letterbox math. PCSX2 (via libretro) already letterboxes its rendered
+    // content according to pcsx2_aspect_ratio — when RetroNest letterboxes
+    // a second time on top, the visible bars double (e.g. 16:9 on a 16:10
+    // screen showed ~13% bars in RetroNest vs ~5% in standalone, because
+    // both layers fitted 16:9 inside their respective surfaces).
+    //
+    // Filling unconditionally in native mode (rather than only on the 0.0
+    // sentinel) matches standalone PCSX2's behavior: standalone owns its
+    // window directly and computes the letterbox once. Here, "owning the
+    // window" means m_window covers the whole item rect, and PCSX2's
+    // GSRenderer::CalculateDrawDstRect picks the letterbox.
+    //
+    // Explicit aspect-mode overrides ("4_3", "16_9", "stretch") below are
+    // unaffected — they still force their specific ratio regardless.
+    if (m_aspectMode == QStringLiteral("native")) {
         m_window->setGeometry(bounds.toRect());
         return;
     }
