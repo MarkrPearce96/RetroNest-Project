@@ -178,6 +178,20 @@ SdlInputManager::DetailedControllerType SdlInputManager::detailedControllerTypeF
 SdlInputManager::SdlInputManager(QObject* parent)
     : QObject(parent)
 {
+    // SP5.5: enable HIDAPI drivers explicitly before SDL_Init so the PS5
+    // driver (which handles DualSense rumble + battery + lightbar) is
+    // active when it's built into the SDL2 library. SDL2 builds normally
+    // default this to enabled, but some package-manager builds may have
+    // it off, and SDL_SetHint must run before SDL_Init for these hints to
+    // take effect. SDL_HINT_JOYSTICK_HIDAPI is the master switch;
+    // SDL_HINT_JOYSTICK_HIDAPI_PS5 specifically controls DualSense.
+    // Without HIDAPI PS5 active, SDL_GameControllerRumble returns -1
+    // ("That operation is not supported") for the DualSense.
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE, "1");
+
     if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) {
         qWarning() << "[SDL] Failed to init GameController:" << SDL_GetError();
         return;
