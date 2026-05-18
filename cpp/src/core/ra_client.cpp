@@ -23,8 +23,11 @@ void RAClient::setCredentials(const QString& username, const QString& apiKey) {
 // ── HTTP Helpers ──
 
 QByteArray RAClient::httpGet(const QString& url, QAtomicInt* cancelFlag) {
-    // Guard against calls during shutdown (no event loop available)
-    if (!QCoreApplication::instance()) return {};
+    // Guard against calls during shutdown. !instance() means QApplication
+    // is already gone; closingDown() means aboutToQuit has already fired,
+    // so wiring our aboutToQuit hook below would race the emission and
+    // could leave us blocking in loop.exec() until HTTP_TIMEOUT_MS.
+    if (!QCoreApplication::instance() || QCoreApplication::closingDown()) return {};
 
     QNetworkRequest req{QUrl(url)};
     req.setHeader(QNetworkRequest::UserAgentHeader, "RetroNest/1.0");
@@ -40,7 +43,31 @@ QByteArray RAClient::httpGet(const QString& url, QAtomicInt* cancelFlag) {
     QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
     timer.start(HTTP_TIMEOUT_MS);
 
+    // Without this hook, Cmd+Q hangs the main thread in ~QApplication →
+    // QThreadPool::waitForDone for up to HTTP_TIMEOUT_MS (30s) — or
+    // forever if the server stalls — while this synchronous worker
+    // waits on a network reply that may never arrive. aboutToQuit fires
+    // on the main thread; Qt::DirectConnection runs the lambda there,
+    // and QEventLoop::quit is documented thread-safe (it just flips an
+    // exit flag). storeRelease + loadAcquire give us a happens-before
+    // pair so the post-exec check sees the flag.
+    QAtomicInt shutdownFlag{0};
+    QMetaObject::Connection shutdownConn = QObject::connect(
+        qApp, &QCoreApplication::aboutToQuit,
+        &loop, [&shutdownFlag, &loop]() {
+            shutdownFlag.storeRelease(1);
+            loop.quit();
+        }, Qt::DirectConnection);
+
     loop.exec();
+
+    QObject::disconnect(shutdownConn);
+
+    if (shutdownFlag.loadAcquire()) {
+        reply->abort();
+        reply->deleteLater();
+        return {};
+    }
 
     if (cancelFlag && cancelFlag->loadRelaxed()) {
         reply->abort();
