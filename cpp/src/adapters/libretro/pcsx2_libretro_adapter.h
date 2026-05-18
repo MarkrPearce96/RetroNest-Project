@@ -24,6 +24,17 @@ public:
         return (systemId == "ps2") ? 21 : 0;
     }
 
+    // SP8: PS2 DualShock 2 is the only controller type RetroNest exposes for
+    // PCSX2 — matches the deleted standalone adapter's surface. Without
+    // this override the base returns {}, the controller-mapping page is
+    // empty, and ControllerBindingsView crashes when rendering cards.
+    QVector<ControllerTypeDef> controllerTypes() const override {
+        return {
+            {"DualShock2", "DualShock 2",
+             ":/AppUI/qml/AppUI/images/controllers/DualShock_2.svg"},
+        };
+    }
+
     // SP5: PS2 DualShock 2 binding defs. Action keys match
     // retroPadSlotFromKey() so the InputRouter resolves bindings on launch.
     // Analog sticks / L2/R2 analog triggers route as digital here (RetroNest's

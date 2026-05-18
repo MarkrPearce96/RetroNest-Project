@@ -27,9 +27,12 @@ private slots:
     }
 
     // ----------------------------------------------------------------
-    // Construction: PCSX2 adapter has one controller type (DualShock 2)
-    // with 28 bindings. All 28 have non-empty `key` fields, so all 28
-    // BindingCards should be rendered.
+    // Construction: PCSX2 (libretro) adapter has one controller type
+    // (DualShock 2) with 16 digital bindings — the libretro RetroPad
+    // bitmask is 16-bit, so analog sticks route as digital today.
+    // All 16 have non-empty `key` fields, so all 16 BindingCards should
+    // render. (Pre-SP8 the standalone adapter exposed 28 bindings with
+    // separate analog axes; libretro's reduced surface is intentional.)
     // ----------------------------------------------------------------
     void constructsForPcsx2() {
         // Pass nullptr for SdlInputManager and AppController — the view
@@ -44,10 +47,9 @@ private slots:
         view.show();
         QVERIFY(QTest::qWaitForWindowExposed(&view));
 
-        // All 28 PCSX2 DS2 bindings have non-empty INI keys.
         const auto cards = view.findChildren<SettingsCard*>();
-        QVERIFY2(cards.size() >= 28,
-            qPrintable(QString("expected ≥28 cards, got %1").arg(cards.size())));
+        QVERIFY2(cards.size() >= 16,
+            qPrintable(QString("expected ≥16 cards, got %1").arg(cards.size())));
     }
 
     // ----------------------------------------------------------------
