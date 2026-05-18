@@ -32,10 +32,9 @@ public:
     ResolutionOptions resolutionOptions() const override;
     AspectRatioOptions aspectRatioOptions() const override;
     QVector<HotkeyDef> hotkeyBindingDefs() const override;
-    // See PCSX2Adapter for rationale. SaveSelectedSaveState,
-    // LoadSelectedSaveState and ToggleFastForward are force-bound to
-    // F5/F7/F8 and removed from hotkeyBindingDefs() so the user can't
-    // rebind them and break in-game menu synthesis.
+    // SaveSelectedSaveState, LoadSelectedSaveState and ToggleFastForward
+    // are force-bound to F5/F7/F8 and removed from hotkeyBindingDefs() so
+    // the user can't rebind them and break in-game menu synthesis.
     int hotkeyVirtualKeyCode(HotkeyAction action) const override {
         switch (action) {
         case HotkeyAction::TogglePause:       return 0x31; // kVK_Space

@@ -490,12 +490,10 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
 
     // Audio card.
     //
-    // Standalone Pcsx2Adapter (pcsx2_adapter.cpp Audio > Configuration)
-    // exposes 8 rows under Audio > Configuration; the libretro variant
-    // deliberately surfaces only the 2 that are user-tweakable in this
-    // architecture, because audio routes through LibretroAudioStream
-    // (libretro audio_batch_cb is the only audio path; Cubeb/SDL/etc. are
-    // bypassed):
+    // Only 2 of upstream PCSX2's 8 Audio > Configuration rows are
+    // user-tweakable in this architecture, because audio routes through
+    // LibretroAudioStream (libretro audio_batch_cb is the only audio path;
+    // Cubeb/SDL/etc. are bypassed):
     //   • Backend — FORCED to "Libretro" in pcsx2-libretro/Settings.cpp
     //     (LibretroAudioStream is the only audio path). Skipped.
     //   • DriverName / DeviceName / OutputLatencyMS / OutputLatencyMinimal
@@ -1400,28 +1398,20 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
         "Shows a startup warning if any unsafe settings are enabled.",
         "pcsx2_osd_messages_pos!=0"));
 
-    // SP7c Phase 5 — Media Capture sub-tab parity note.
-    // Standalone Pcsx2Adapter (pcsx2_adapter.cpp Graphics > Media Capture)
-    // exposes 18 rows across "Screenshot Capture Setup" (3) and
-    // "Video Recording Setup" (15) — codec selection, container, bitrate,
-    // resolution-mode, etc.
-    //
-    // The libretro variant deliberately skips Media Capture entirely:
-    // RetroNest's host application owns the screenshot + video-recording
-    // pipeline (libretro frontends are responsible for capture; PCSX2's
-    // own capture code path is inert when running inside a libretro
-    // shell). Duplicating a feature RetroNest already provides would be
-    // confusing — same architectural reasoning as the silently-omitted
-    // Achievements card (RetroNest owns rcheevos host-side).
+    // Media Capture sub-tab is deliberately skipped: RetroNest's host
+    // application owns the screenshot + video-recording pipeline (libretro
+    // frontends are responsible for capture; PCSX2's own capture code path
+    // is inert when running inside a libretro shell). Same architectural
+    // reasoning as the silently-omitted Achievements card (RetroNest owns
+    // rcheevos host-side).
 
     return s;
 }
 
-// SP7c Phase 5 — Preview wiring.
-// Mirrors PCSX2Adapter::previewSpec (adapters/pcsx2_adapter.cpp ~1767). The
-// preview widgets (cpp/src/ui/settings/widgets/preview/{aspect_ratio_preview,
-// osd_preview}.{h,cpp}) are adapter-agnostic; they expose Qt properties
-// named exactly as the values in keyToProperty below, and
+// Preview wiring. The preview widgets
+// (cpp/src/ui/settings/widgets/preview/{aspect_ratio_preview,osd_preview}.{h,cpp})
+// are adapter-agnostic; they expose Qt properties named exactly as the
+// values in keyToProperty below, and
 // GenericSettingsPage::wirePreviewBinding routes schema-row changes into
 // those properties via Qt's meta-object system.
 //

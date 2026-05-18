@@ -18,13 +18,13 @@ class OsdPreview : public QWidget {
     Q_OBJECT
     // Q_PROPERTYs let GenericSettingsPage live-bind via setProperty() without
     // depending on this concrete class. Names match PreviewSpec.keyToProperty
-    // values declared by adapters (see Pcsx2Adapter::previewSpec()).
+    // values declared by adapters (see Pcsx2LibretroAdapter::previewSpec()).
     Q_PROPERTY(QString performancePos READ performancePosString WRITE setPerformancePosString)
     Q_PROPERTY(QString messagesPos READ messagesPosString WRITE setMessagesPosString)
     Q_PROPERTY(int osdScale READ osdScale WRITE setOsdScale)
 
     // Show* toggles — name matches PreviewSpec.keyToProperty values
-    // declared by adapters (see Pcsx2Adapter::previewSpec()).
+    // declared by adapters (see Pcsx2LibretroAdapter::previewSpec()).
     Q_PROPERTY(bool showFps READ showFps WRITE setShowFps)
     Q_PROPERTY(bool showVps READ showVps WRITE setShowVps)
     Q_PROPERTY(bool showSpeed READ showSpeed WRITE setShowSpeed)
