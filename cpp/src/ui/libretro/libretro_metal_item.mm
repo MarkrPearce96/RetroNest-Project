@@ -69,7 +69,11 @@ void LibretroMetalItem::setAspectMode(const QString& mode)
 
 void LibretroMetalItem::setNativeAspect(qreal a)
 {
-    if (qFuzzyCompare(m_nativeAspect, a) || a <= 0.0) return;
+    // Reject negatives (libretro spec doesn't define them; treat as garbage).
+    // Allow 0.0 through — it's the libretro "no aspect specified" sentinel,
+    // which updateInnerGeometry consumes as fill-the-bounds in native mode.
+    if (a < 0.0) return;
+    if (qFuzzyCompare(m_nativeAspect, a)) return;
     m_nativeAspect = a;
     emit nativeAspectChanged();
     updateInnerGeometry();
@@ -122,6 +126,16 @@ void LibretroMetalItem::updateInnerGeometry()
 
     // Stretch mode = fill the whole item rect, no letterbox.
     if (m_aspectMode == QStringLiteral("stretch")) {
+        m_window->setGeometry(bounds.toRect());
+        return;
+    }
+
+    // Sentinel: core signaled "no aspect specified" (e.g. PCSX2 with
+    // pcsx2_aspect_ratio = Stretch — emits 0.0 per libretro.h convention).
+    // In "native" aspect mode the core's signal is what we follow, so fill
+    // the bounds the same way explicit stretch does. Explicit aspect-mode
+    // overrides ("4_3", "16_9") below are unaffected — they win regardless.
+    if (m_aspectMode == QStringLiteral("native") && m_nativeAspect <= 0.0) {
         m_window->setGeometry(bounds.toRect());
         return;
     }

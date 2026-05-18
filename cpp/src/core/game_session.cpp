@@ -501,11 +501,17 @@ bool GameSession::libretroIntegerScale() const {
 }
 
 void GameSession::setLibretroAspectRatio(qreal ratio) {
-    // CoreRuntime calls this once per session after retro_get_system_av_info.
-    // Sentinels: 0 means "core didn't fill the field" — fall back to the
-    // sensible PS2 default (4/3). qFuzzyCompare avoids a useless emit when
-    // the core re-reports the same value.
-    if (ratio <= 0.0) ratio = 4.0 / 3.0;
+    // CoreRuntime calls this once per session after retro_get_system_av_info,
+    // and again whenever the core re-emits SET_SYSTEM_AV_INFO.
+    //
+    // ratio > 0  → explicit aspect (e.g. 4/3, 16/9, custom-from-patch).
+    // ratio == 0 → libretro convention: "no aspect specified."
+    //              LibretroMetalItem treats this as fill-the-bounds
+    //              (Stretch semantics). The pcsx2-libretro core emits 0.0
+    //              when its pcsx2_aspect_ratio option is set to Stretch.
+    //
+    // qFuzzyCompare avoids a useless emit when the core re-reports the
+    // same value (e.g. SP7a's region-refinement re-emit pass).
     if (qFuzzyCompare(m_libretroAspectRatio, ratio)) return;
     m_libretroAspectRatio = ratio;
     emit libretroAspectRatioChanged();
