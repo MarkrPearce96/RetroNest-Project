@@ -58,6 +58,7 @@ set(SOURCES
     src/core/paths.cpp
     src/services/emulator_installer.cpp
     src/services/installer_utils.cpp
+    src/services/patches_sidecar.cpp
     src/services/config_service.cpp
     src/core/game_session.cpp
     src/adapters/emulator_adapter.cpp
@@ -140,6 +141,7 @@ set(HEADERS
     src/core/paths.h
     src/services/emulator_installer.h
     src/services/installer_utils.h
+    src/services/patches_sidecar.h
     src/core/game_session.h
     src/adapters/emulator_adapter.h
     src/adapters/adapter_registry.h
@@ -934,6 +936,14 @@ set_target_properties(test_migration_pcsx2 PROPERTIES AUTOMOC ON)
 target_include_directories(test_migration_pcsx2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_migration_pcsx2 PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME MigrationPcsx2 COMMAND test_migration_pcsx2)
+
+add_executable(test_patches_sidecar
+    tests/test_patches_sidecar.cpp
+    src/services/patches_sidecar.cpp
+)
+target_include_directories(test_patches_sidecar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_patches_sidecar PRIVATE Qt6::Core)
+add_test(NAME PatchesSidecar COMMAND test_patches_sidecar)
 
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)
 set_target_properties(fake_libretro_core PROPERTIES
