@@ -15,6 +15,7 @@
 
 class SdlInputManager;
 class InGameMenuPanel;
+class PatchesInstaller;
 
 class AppController : public QObject {
     Q_OBJECT
@@ -31,6 +32,7 @@ class AppController : public QObject {
 public:
     AppController(ManifestLoader* loader, Database* db, QObject* parent = nullptr);
     void setSdlInputManager(SdlInputManager* mgr);
+    void attachPatchesInstaller(PatchesInstaller* installer);
     SdlInputManager* sdlInputManager() const { return m_inputManager; }
 
     // Game session (for QML binding to frameReady signal)
@@ -290,6 +292,7 @@ private:
     ManifestLoader* m_loader;
     Database* m_db;
     SdlInputManager* m_inputManager = nullptr;
+    PatchesInstaller* m_patchesInstaller = nullptr;
     GameService m_gameService;
     ScraperService m_scraperService;
     EmulatorService m_emuService;

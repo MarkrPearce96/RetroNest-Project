@@ -1,4 +1,5 @@
 #include "app_controller.h"
+#include "services/patches_installer.h"
 #include "adapters/adapter_registry.h"
 #include "adapters/libretro/libretro_adapter.h"
 #include "core/macos_fullscreen.h"
@@ -156,6 +157,12 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
             this, &AppController::raInfoToast);
     connect(&m_raService, &RAService::indicator,
             this, &AppController::raIndicator);
+}
+
+// ── Installer plumbing ─────────────────────────────────────
+
+void AppController::attachPatchesInstaller(PatchesInstaller* installer) {
+    m_patchesInstaller = installer;
 }
 
 // ── Game Session ───────────────────────────────────────────

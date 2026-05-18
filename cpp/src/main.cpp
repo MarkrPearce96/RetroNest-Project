@@ -14,6 +14,7 @@
 #include "core/migration_pcsx2.h"
 #include "core/paths.h"
 #include "services/emulator_service.h"
+#include "services/patches_installer.h"
 #include "core/database.h"
 #include "adapters/adapter_registry.h"
 #include "ui/wizard_state.h"
@@ -153,6 +154,31 @@ int main(int argc, char* argv[]) {
         // Continue running — partial migrations are recoverable.
     }
 
+    // Auto-fetch PCSX2 patches.zip on launch — staleness-gated, non-blocking.
+    // Owned by an automatic-storage object so dtor runs at app exit (any
+    // in-flight fetch is aborted via aboutToQuit, which is wired in
+    // PatchesInstaller::downloadTo).
+    PatchesInstaller patchesInstaller;
+    {
+        const QString libretroCoresDir =
+            Paths::emulatorsDir("libretro") + "/cores";
+        const QString resourcesDir =
+            libretroCoresDir + "/pcsx2_libretro_resources";
+        QDir().mkpath(resourcesDir);
+
+        // Connect logging before kicking off the fetch.
+        QObject::connect(&patchesInstaller, &PatchesInstaller::finished, qApp,
+            [](bool success, const QString& message, const QString& tag) {
+                if (success) {
+                    qInfo().noquote() << "[Patches]" << message
+                                      << (tag.isEmpty() ? "" : "(" + tag + ")");
+                } else {
+                    qWarning().noquote() << "[Patches]" << message;
+                }
+            });
+        patchesInstaller.fetchAsync(resourcesDir);
+    }
+
     // Open database
     Database db;
     const QString dbPath = Paths::configDir() + "/retronest.db";
@@ -176,6 +202,8 @@ int main(int argc, char* argv[]) {
         AppController appController(&loader, &db);
         GameListModel gameModel(&db);
         gameModel.setMediaDir(Paths::mediaDir());
+
+        appController.attachPatchesInstaller(&patchesInstaller);
 
         SdlInputManager inputManager;
         appController.setSdlInputManager(&inputManager);
