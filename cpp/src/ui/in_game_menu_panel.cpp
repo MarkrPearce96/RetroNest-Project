@@ -34,7 +34,37 @@ InGameMenuPanel::InGameMenuPanel(QQmlEngine* engine, QObject* parent)
     Q_ASSERT(engine);
 }
 
-InGameMenuPanel::~InGameMenuPanel() = default;
+InGameMenuPanel::~InGameMenuPanel() {
+    // Bug C variant fix (the LibretroOverlayPanel side was patched at
+    // commit b468676; this one was missed and surfaced during SP3.5 smoke
+    // 2026-05-18 when DuckStation was launched -> InGameMenuPanel opened ->
+    // Cmd+Q -> identical NSException to Bug C, same _windowLayerContext
+    // keypath, same QNSPanel_RNKeyEnabled class, just from this dtor
+    // instead of LibretroOverlayPanel's).
+    //
+    // applyPanelChrome() calls MacFullscreen::configurePanelWindow() ->
+    // promoteToKeyEnabled(), which per-instance isa-swaps the NSWindow
+    // class to QNSPanel_RNKeyEnabled. AppKit registers _windowLayerContext
+    // forwarded KVO observers against the *original* class's per-class
+    // observer table when the NSWindow is realized at winId()/show() time
+    // (before our swizzle). At -[NSWindow dealloc] AppKit looks up the
+    // per-class table by the window's *current* class (the swizzled
+    // subclass), finds nothing, throws NSException ("not registered as an
+    // observer") -> SIGABRT.
+    //
+    // Restoring the original class here -- before Qt's deleteChildren
+    // chain destroys m_window -- lets dealloc walk the same per-class
+    // table that registration used. Pairs with the
+    // objc_setAssociatedObject stash inside promoteToKeyEnabled.
+    //
+    // No-op if applyPanelChrome was never called (m_chromeApplied gates
+    // the swizzle; restoreOriginalClass is itself a no-op when the
+    // associated-object stash is absent).
+    if (m_window) {
+        void* nsView = reinterpret_cast<void*>(m_window->winId());
+        MacFullscreen::restoreOriginalClass(nsView);
+    }
+}
 
 void InGameMenuPanel::ensureCreated() {
     if (m_window) return;
