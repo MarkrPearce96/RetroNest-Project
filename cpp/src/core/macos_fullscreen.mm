@@ -165,6 +165,12 @@ int screenIndexForProcess(int64_t pid) {
 // NSRangeException + SIGABRT in -[NSWindow dealloc] when AppKit tries
 // to remove a KVO observer from a class chain whose registration count
 // doesn't match the removal count.
+// Associated-object key used to stash the pre-swizzle Class on the
+// NSWindow so restoreOriginalClass can put it back before destruction.
+// The address is the key — value is unused. Static storage gives a
+// stable unique key per process.
+static const void* const kOriginalClassKey = &kOriginalClassKey;
+
 static void promoteToKeyEnabled(NSWindow* window) {
     Class originalClass = [window class];
     NSString* currentName = NSStringFromClass(originalClass);
@@ -185,6 +191,11 @@ static void promoteToKeyEnabled(NSWindow* window) {
         class_addMethod(subclass, @selector(canBecomeKeyWindow), yesImp, typeEnc);
         objc_registerClassPair(subclass);
     }
+    // Stash the pre-swizzle class on the window so restoreOriginalClass
+    // can put it back at destruction time. OBJC_ASSOCIATION_ASSIGN is
+    // safe: Class objects are runtime-owned and outlive any window.
+    objc_setAssociatedObject(window, kOriginalClassKey,
+                             (id)originalClass, OBJC_ASSOCIATION_ASSIGN);
     object_setClass(window, subclass);
 }
 
@@ -254,6 +265,24 @@ void attachChildWindow(void* parentNSView, void* childNSView) {
     }
 }
 
+void restoreOriginalClass(void* nsViewPtr) {
+    @autoreleasepool {
+        if (!nsViewPtr) return;
+        NSView* view = (__bridge NSView*)nsViewPtr;
+        NSWindow* window = [view window];
+        if (!window) return;
+        Class original = (Class)objc_getAssociatedObject(window, kOriginalClassKey);
+        if (!original) return;  // never swizzled
+        if ([window class] != original) {
+            object_setClass(window, original);
+        }
+        // Clear the association so a re-show won't re-trigger restore on
+        // a window whose class is already original.
+        objc_setAssociatedObject(window, kOriginalClassKey, nil,
+                                 OBJC_ASSOCIATION_ASSIGN);
+    }
+}
+
 void setIgnoresMouseEvents(void* nsViewPtr, bool ignore) {
     @autoreleasepool {
         if (!nsViewPtr) return;
@@ -308,6 +337,7 @@ int screenIndexForProcess(int64_t) { return -1; }
 void configurePanelWindow(void*) {}
 void makePanelKey(void*) {}
 void attachChildWindow(void*, void*) {}
+void restoreOriginalClass(void*) {}
 void setIgnoresMouseEvents(void*, bool) {}
 }
 #endif

@@ -14,7 +14,31 @@ LibretroOverlayPanel::LibretroOverlayPanel(QQmlEngine* engine, QObject* parent)
     Q_ASSERT(engine);
 }
 
-LibretroOverlayPanel::~LibretroOverlayPanel() = default;
+LibretroOverlayPanel::~LibretroOverlayPanel() {
+    // Bug C fix: configurePanelWindow's promoteToKeyEnabled does a per-
+    // instance isa-swap on the panel's NSWindow (QNSPanel → QNSPanel_RN-
+    // KeyEnabled, so canBecomeKeyWindow returns YES). The swap happens
+    // AFTER AppKit has already registered internal forwarded KVO
+    // observers against the original class's per-class observer table
+    // (notably for `_windowLayerContext`, registered when the NSWindow
+    // is realized at winId()/show() time). At -[NSWindow dealloc],
+    // AppKit's observer-removal walk looks up the per-class table by
+    // the window's *current* class (the swizzled subclass), finds no
+    // record of the registration, and throws NSException("not
+    // registered as an observer") → SIGABRT at app shutdown.
+    //
+    // Restoring the original class here — before Qt's deleteChildren
+    // chain destroys m_window — lets dealloc walk the same per-class
+    // table that registration used. Pairs with the objc_setAssociated-
+    // Object stash inside promoteToKeyEnabled.
+    //
+    // No-op if the panel was never shown (no swizzle ever happened) or
+    // if m_window has been nulled.
+    if (m_window) {
+        void* nsView = reinterpret_cast<void*>(m_window->winId());
+        MacFullscreen::restoreOriginalClass(nsView);
+    }
+}
 
 void LibretroOverlayPanel::ensureCreated() {
     if (m_window) return;

@@ -46,6 +46,22 @@ int screenIndexForProcess(int64_t pid);
 // without activating our app.
 void configurePanelWindow(void* nsViewPtr);
 
+// Restore the NSWindow's class to the pre-swizzle value saved by
+// configurePanelWindow's promoteToKeyEnabled step. MUST be called
+// before the NSWindow is deallocated. AppKit registers per-class
+// KVO forwarded-observer tables (notably for `_windowLayerContext`)
+// against the window's class chain AT registration time, which
+// happens when winId()/show() realize the NSWindow. The subsequent
+// isa-swap to <orig>_RNKeyEnabled leaves the per-class table for
+// the original class holding the registration, while -[NSWindow
+// dealloc] looks up the table by the *current* class (the swizzled
+// subclass) and finds no record — NSException("not registered as
+// an observer") → SIGABRT at app shutdown. Restoring the class to
+// the pre-swizzle value just before destruction lets dealloc walk
+// the same per-class table that registration used. No-op if the
+// window was never swizzled (pre-swizzle class never saved).
+void restoreOriginalClass(void* nsViewPtr);
+
 // Make the NSWindow backing a Qt top-level QWindow the system key
 // window. Required after every show() of a non-activating panel —
 // macOS does not promote it to key just because it was ordered front.
