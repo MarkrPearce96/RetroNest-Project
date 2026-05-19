@@ -476,6 +476,14 @@ void GameSession::loadStateLibretro(int slot) {
     m_libretroAdapter->runtime()->requestLoadState(path);
 }
 
+void GameSession::setCurrentSaveSlot(int slot) {
+    if (slot < 1) slot = 1;
+    if (slot > 5) slot = 5;
+    if (slot == m_currentSaveSlot) return;
+    m_currentSaveSlot = slot;
+    emit currentSaveSlotChanged();
+}
+
 bool GameSession::toggleFastForwardLibretro() {
     if (m_backend != Backend::Libretro) return false;
     if (!m_libretroAdapter || !m_libretroAdapter->runtime()) return false;

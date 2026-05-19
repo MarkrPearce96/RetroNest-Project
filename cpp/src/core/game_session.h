@@ -43,6 +43,7 @@ class GameSession : public QObject {
     // Defaults to 4/3 before any core has been loaded.
     Q_PROPERTY(qreal libretroAspectRatio READ libretroAspectRatio NOTIFY libretroAspectRatioChanged)
     Q_PROPERTY(QString libretroBackend READ libretroBackend NOTIFY libretroBackendChanged)
+    Q_PROPERTY(int currentSaveSlot READ currentSaveSlot WRITE setCurrentSaveSlot NOTIFY currentSaveSlotChanged)
 
 public:
     explicit GameSession(QObject* parent = nullptr);
@@ -105,6 +106,14 @@ public:
      *  no save exists for that slot. Libretro path only. */
     Q_INVOKABLE void loadStateLibretro(int slot = 1);
 
+    /** Get the currently active save slot (1-5). Used by the hotkey dispatcher
+     *  to remember state across SaveState/LoadState/NextSlot/PrevSlot actions. */
+    int currentSaveSlot() const { return m_currentSaveSlot; }
+
+    /** Set the currently active save slot, clamping to [1, 5]. Emits
+     *  currentSaveSlotChanged only if the value actually changes. */
+    Q_INVOKABLE void setCurrentSaveSlot(int slot);
+
     /** Toggle 4× fast-forward on the libretro worker. Returns the new state
      *  (true = FF on). No-op for process emulators. */
     Q_INVOKABLE bool toggleFastForwardLibretro();
@@ -138,6 +147,8 @@ signals:
     /** Emitted when a libretro frontend setting (aspect mode, integer scale) changes. */
     void libretroFrontendChanged();
     void libretroAspectRatioChanged();
+    /** Emitted when currentSaveSlot is changed via setCurrentSaveSlot. */
+    void currentSaveSlotChanged();
     /** Forwarded from the in-process rcheevos runtime (libretro path only).
      *  GameService re-emits this onto RAService::notifyAchievementUnlocked
      *  via a queued connection set up in service-layer wiring — keeps
@@ -195,4 +206,5 @@ private:
 
     SdlInputManager* m_sdlInputManager = nullptr;
     LibretroRaConfig m_raConfig;
+    int m_currentSaveSlot = 1;
 };
