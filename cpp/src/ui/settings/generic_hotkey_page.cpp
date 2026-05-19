@@ -171,12 +171,20 @@ void GenericHotkeyPage::buildLayout() {
     QString currentGroup;
     QFrame* currentCard = nullptr;
     QVBoxLayout* currentCardLayout = nullptr;
+    bool firstGroup = true;
 
     for (const auto& def : m_entries) {
         if (def.group != currentGroup) {
             currentGroup = def.group;
-            contentLayout->addSpacing(4);
-            contentLayout->addWidget(new SettingsSectionHeader(currentGroup, content));
+            // In dual-column mode the KEYBOARD / CONTROLLER labels already
+            // anchor the top of the page, so suppress the first group's
+            // section header (which would otherwise read "General" and
+            // visibly double up).
+            if (!(m_dualColumn && firstGroup)) {
+                contentLayout->addSpacing(4);
+                contentLayout->addWidget(new SettingsSectionHeader(currentGroup, content));
+            }
+            firstGroup = false;
             currentCard = new QFrame(content);
             currentCard->setObjectName(QStringLiteral("SettingsCard"));
             currentCard->setStyleSheet(SettingsDialogTheme::cardQss());
