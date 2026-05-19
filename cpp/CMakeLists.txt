@@ -456,7 +456,7 @@ add_executable(test_path_overrides_store
     tests/test_path_overrides_store.cpp
     src/core/path_overrides_store.cpp
 )
-target_include_directories(test_path_overrides_store PRIVATE src)
+target_include_directories(test_path_overrides_store PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_path_overrides_store PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME PathOverridesStore COMMAND test_path_overrides_store)
 

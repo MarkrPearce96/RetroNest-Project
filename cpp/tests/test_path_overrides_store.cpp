@@ -33,9 +33,13 @@ private slots:
     }
     void testEmptyStringTreatedAsUnset() {
         QTemporaryDir dir;
-        PathOverridesStore store(dir.filePath("overrides.json"));
-        store.write("pcsx2", "MemoryCards", "");
-        QCOMPARE(store.read("pcsx2", "MemoryCards"), QString());
+        const QString p = dir.filePath("overrides.json");
+        // First write a real value, then overwrite with empty string —
+        // empty must clear the key from disk, not store a "" placeholder.
+        { PathOverridesStore a(p); a.write("pcsx2", "MemoryCards", "/val"); }
+        { PathOverridesStore b(p); b.write("pcsx2", "MemoryCards", ""); }
+        PathOverridesStore c(p);
+        QCOMPARE(c.read("pcsx2", "MemoryCards"), QString());
     }
     void testMultipleEmulatorsCoexist() {
         QTemporaryDir dir;

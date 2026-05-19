@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include <QHash>
 #include <QJsonObject>
 #include <QMutex>
 #include <QString>
@@ -40,6 +39,9 @@ public:
 
 private:
     void load();
+    // `save()` is `const` because it only reads m_root under the mutex;
+    // m_root is `mutable` so it can also be written from non-const
+    // member functions (read/write helpers).
     bool save() const;
 
     QString          m_filePath;

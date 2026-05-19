@@ -3,9 +3,9 @@
 
 #include "path_overrides_store.h"
 
+#include <QDebug>
 #include <QDir>
 #include <QFile>
-#include <QFileInfo>
 #include <QJsonDocument>
 #include <QMutexLocker>
 #include <QStandardPaths>
@@ -42,8 +42,8 @@ void PathOverridesStore::load() {
 bool PathOverridesStore::save() const {
     QFile f(m_filePath);
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
-    f.write(QJsonDocument(m_root).toJson(QJsonDocument::Indented));
-    return true;
+    const QByteArray data = QJsonDocument(m_root).toJson(QJsonDocument::Indented);
+    return f.write(data) == static_cast<qint64>(data.size());
 }
 
 QString PathOverridesStore::read(const QString& emuId, const QString& key) const {
@@ -65,7 +65,8 @@ void PathOverridesStore::write(const QString& emuId, const QString& key,
         m_root.remove(emuId);
     else
         m_root.insert(emuId, emu);
-    save();
+    if (!save())
+        qWarning() << "[PathOverridesStore] Failed to write" << m_filePath;
 }
 
 void PathOverridesStore::clear(const QString& emuId, const QString& key) {
