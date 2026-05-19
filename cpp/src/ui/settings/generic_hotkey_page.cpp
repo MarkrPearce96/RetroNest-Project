@@ -142,6 +142,33 @@ void GenericHotkeyPage::buildLayout() {
     contentLayout->setContentsMargins(24, 20, 24, 20);
     contentLayout->setSpacing(8);
 
+    // Column headers — only in dual-column mode. Aligned to match the
+    // row layout: label (220px) + spacing + Keyboard cell + Controller cell.
+    if (m_dualColumn) {
+        auto* headerRow = new QWidget(content);
+        auto* headerLayout = new QHBoxLayout(headerRow);
+        headerLayout->setContentsMargins(8, 0, 8, 4);
+        headerLayout->setSpacing(12);
+        // Spacer matching the label column width (220px) + the button column's
+        // internal padding so the headings line up over their cells.
+        auto* spacer = new QLabel(QString(), headerRow);
+        spacer->setFixedWidth(220);
+        headerLayout->addWidget(spacer);
+        const QString headerStyle = QStringLiteral(
+            "color:%1; font-size:11px; font-weight:600; letter-spacing:2px;"
+            "background:transparent;")
+            .arg(SettingsDialogTheme::accent().name());
+        auto* kbdHeader = new QLabel(QStringLiteral("KEYBOARD"), headerRow);
+        kbdHeader->setAlignment(Qt::AlignCenter);
+        kbdHeader->setStyleSheet(headerStyle);
+        headerLayout->addWidget(kbdHeader, 1);
+        auto* padHeader = new QLabel(QStringLiteral("CONTROLLER"), headerRow);
+        padHeader->setAlignment(Qt::AlignCenter);
+        padHeader->setStyleSheet(headerStyle);
+        headerLayout->addWidget(padHeader, 1);
+        contentLayout->addWidget(headerRow);
+    }
+
     QString currentGroup;
     QFrame* currentCard = nullptr;
     QVBoxLayout* currentCardLayout = nullptr;
