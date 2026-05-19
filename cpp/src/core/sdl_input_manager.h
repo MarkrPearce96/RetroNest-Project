@@ -126,6 +126,15 @@ signals:
     void navigateShift();       // R2 trigger — shift/caps toggle
     void inGameMenuRequested(); // Select+Start combo or Touchpad — in-game menu
 
+    /**
+     * Fired on every controller button edge while emulation mode is active.
+     * `port` is the libretro device index (matches InputRouter ports), and
+     * `button` is the libretro RETRO_DEVICE_ID_JOYPAD_* index (matches
+     * static_cast<int>(RetroPadSlot)). Wired in AppController to feed
+     * HotkeyMatcher::onGamepadButton for the libretro global hotkey path.
+     */
+    void gamepadButtonChanged(int port, int button, bool pressed);
+
 
 private:
     void pollEvents();

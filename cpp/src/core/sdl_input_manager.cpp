@@ -525,8 +525,14 @@ void SdlInputManager::pollEvents() {
                     const char* btnName = SDL_GameControllerGetStringForButton(btn);
                     const QString canonical = canonicalName(btnName);
                     const RetroPadSlot slot = m_emulationTarget->lookup(devIdx, canonical);
-                    if (slot != RetroPadSlot::None)
+                    if (slot != RetroPadSlot::None) {
                         m_emulationTarget->setButtonPressed(devIdx, slot, true);
+                        // Surface the libretro-index edge to the hotkey matcher
+                        // (AppController). Single emission per real SDL edge —
+                        // m_emulationTarget gating + the m_capturing branch
+                        // above keep this from firing during rebinding UI.
+                        emit gamepadButtonChanged(devIdx, static_cast<int>(slot), true);
+                    }
                 }
             } else {
                 auto type = m_controllerTypes.value(event.cbutton.which, Xbox);
@@ -600,8 +606,10 @@ void SdlInputManager::pollEvents() {
                     const char* btnName = SDL_GameControllerGetStringForButton(btn);
                     const QString canonical = canonicalName(btnName);
                     const RetroPadSlot slot = m_emulationTarget->lookup(devIdx, canonical);
-                    if (slot != RetroPadSlot::None)
+                    if (slot != RetroPadSlot::None) {
                         m_emulationTarget->setButtonPressed(devIdx, slot, false);
+                        emit gamepadButtonChanged(devIdx, static_cast<int>(slot), false);
+                    }
                 }
             } else if (!m_capturing) {
                 auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);

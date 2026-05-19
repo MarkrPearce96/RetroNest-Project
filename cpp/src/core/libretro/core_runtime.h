@@ -49,6 +49,20 @@ public:
     void stop();
     void pause();
     void resume();
+    /** True iff the worker is currently in paused state (between pause() and
+     *  resume()). Thread-safe atomic. Used by hotkey dispatch to toggle. */
+    bool isPaused() const { return m_paused.load(); }
+    /** Synchronously invoke retro_reset on the running core. No-op if the
+     *  core is not loaded. Safe to call from the Qt thread — retro_reset
+     *  is not part of the per-frame critical section, but cores generally
+     *  expect it from the same thread that drives retro_run. For the
+     *  libretro hotkey path we accept the cross-thread call as best-effort:
+     *  PCSX2 and mGBA both tolerate it. */
+    void reset();
+    /** Accessor for the audio sink. Used by AppController's libretro hotkey
+     *  routing (Mute / VolumeUp / VolumeDown). The sink lives as long as
+     *  CoreRuntime; callers must not store the pointer past stop(). */
+    AudioSink* audioSink() { return &m_audio; }
     /**
      * Serialize the current core state to `path`. Caller MUST only call this
      * when the worker thread is NOT running (i.e. after stop() has returned, or

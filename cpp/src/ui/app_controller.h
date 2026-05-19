@@ -13,10 +13,14 @@
 #include <QPointer>
 #include <QVariantList>
 #include <QStringList>
+#include <memory>
 
 class SdlInputManager;
 class InGameMenuPanel;
 class PatchesInstaller;
+class HotkeyMatcher;
+class HotkeyDispatcher;
+class QEvent;
 
 class AppController : public QObject {
     Q_OBJECT
@@ -32,6 +36,11 @@ class AppController : public QObject {
 
 public:
     AppController(ManifestLoader* loader, Database* db, QObject* parent = nullptr);
+    // Out-of-line destructor: required so std::unique_ptr<HotkeyMatcher /
+    // HotkeyDispatcher> can be instantiated against the forward declarations
+    // in this header — the deleter needs the full type, but only the .cpp
+    // (where the headers are fully included) needs to see it.
+    ~AppController() override;
     void setSdlInputManager(SdlInputManager* mgr);
     void attachPatchesInstaller(PatchesInstaller* installer);
     SdlInputManager* sdlInputManager() const { return m_inputManager; }
@@ -172,6 +181,13 @@ public slots:
     Q_INVOKABLE void clearHotkey(const QString& emuId, const QString& section, const QString& key);
     Q_INVOKABLE void resetHotkeys(const QString& emuId);
 
+    /** Reload all bindings from ConfigService into the libretro HotkeyMatcher
+     *  using the libretro_hotkeys::kSentinelEmuId. Called from the AppController
+     *  constructor and automatically from saveHotkey/clearHotkey/resetHotkeys
+     *  when the emuId matches the sentinel, so live edits in the settings
+     *  dialog take effect immediately without a relaunch. */
+    Q_INVOKABLE void syncLibretroHotkeyBindings();
+
     // Scraper
     Q_INVOKABLE void validateScraperCredentials(const QString& user, const QString& pass);
     Q_INVOKABLE void scraperSignOut();
@@ -293,6 +309,14 @@ signals:
      *  payload. QML drives RAIndicatorBar from this. */
     void raIndicator(int kind, const QVariantMap& data);
 
+protected:
+    /** App-wide Qt key-event tap. Forwards QKeyEvent press/release edges
+     *  into the libretro HotkeyMatcher. Never consumes events (returns
+     *  false) so normal Qt focus routing continues unchanged — the matcher
+     *  itself drops events for unbound actions. AutoRepeat events are
+     *  filtered out so a held key emits a single actionPressed. */
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 private:
     void setStatus(const QString& msg);
     bool m_patchesManualRefresh = false;  // true while a user-triggered refresh is in flight
@@ -348,4 +372,12 @@ private:
     // trigger button can never leak as in-game input.
     QTimer* m_resumeWhenButtonsReleasedTimer = nullptr;
 
+    // App-global libretro hotkey routing. AppController owns the matcher
+    // (not CoreRuntime) because libretro hotkeys are app-global — the same
+    // bindings apply across game launches and the matcher must persist
+    // longer than any single CoreRuntime instance. The dispatcher routes
+    // action signals through m_gameService.session() to the currently-
+    // active GameSession / LibretroAdapter / CoreRuntime / AudioSink.
+    std::unique_ptr<HotkeyMatcher>    m_hotkeyMatcher;
+    std::unique_ptr<HotkeyDispatcher> m_hotkeyDispatcher;
 };

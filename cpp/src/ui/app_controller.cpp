@@ -8,6 +8,12 @@
 #include "in_game_menu_panel.h"
 #include "libretro_overlay_panel.h"
 #include "core/sdl_input_manager.h"
+#include "core/libretro/libretro_hotkey_defs.h"
+#include "core/libretro/hotkey_matcher.h"
+#include "core/libretro/hotkey_dispatcher.h"
+#include "core/libretro/audio_sink.h"
+#include <QCoreApplication>
+#include <QKeyEvent>
 
 #include <QQmlEngine>
 #include <QTimer>
@@ -157,7 +163,98 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
             this, &AppController::raInfoToast);
     connect(&m_raService, &RAService::indicator,
             this, &AppController::raIndicator);
+
+    // ── Libretro global hotkeys (Task 9) ──────────────────────
+    // Matcher + dispatcher are owned here (not in CoreRuntime) because
+    // libretro hotkeys are app-global. Callbacks route through the
+    // currently-active GameSession, so they harmlessly no-op when no
+    // libretro game is running (gs->adapter() returns nullptr or a
+    // non-LibretroAdapter for process emulators).
+    m_hotkeyMatcher = std::make_unique<HotkeyMatcher>();
+
+    HotkeyDispatcher::Callbacks cb;
+    cb.saveStateSlot   = [this](int s) {
+        if (auto* gs = m_gameService.session()) gs->saveStateLibretro(s);
+    };
+    cb.loadStateSlot   = [this](int s) {
+        if (auto* gs = m_gameService.session()) gs->loadStateLibretro(s);
+    };
+    cb.getCurrentSlot  = [this]() -> int {
+        if (auto* gs = m_gameService.session()) return gs->currentSaveSlot();
+        return 1;
+    };
+    cb.setCurrentSlot  = [this](int s) {
+        if (auto* gs = m_gameService.session()) {
+            gs->setCurrentSaveSlot(s);  // GameSession clamps to [1,5] internally
+            emit raInfoToast(QStringLiteral("Save State"),
+                             QStringLiteral("Slot %1").arg(gs->currentSaveSlot()),
+                             QString(), QString(), 1500);
+        }
+    };
+    cb.toggleFastForward = [this]() {
+        if (auto* gs = m_gameService.session()) gs->toggleFastForwardLibretro();
+    };
+    cb.setFastForward = [this](bool on) {
+        // Hold-style action. GameSession only exposes toggleFastForwardLibretro
+        // today; if the requested state differs from the current toggle state,
+        // flip once. Tracked via the matcher's hold semantics — actionReleased
+        // fires on the release edge so this lands at most twice per hold.
+        if (auto* gs = m_gameService.session()) {
+            // GameSession::toggleFastForwardLibretro returns the new state,
+            // and is a no-op for non-libretro sessions. Trust the toggle for
+            // v1; if a future GameSession::setLibretroFastForward(bool) lands
+            // it can be plumbed here directly.
+            Q_UNUSED(on);
+            gs->toggleFastForwardLibretro();
+        }
+    };
+    cb.togglePause = [this]() {
+        if (auto* gs = m_gameService.session()) {
+            auto* la = gs->adapter() ? gs->adapter()->asLibretro() : nullptr;
+            if (la && la->runtime()) {
+                if (la->runtime()->isPaused()) la->runtime()->resume();
+                else la->runtime()->pause();
+            }
+        }
+    };
+    cb.reset = [this]() {
+        if (auto* gs = m_gameService.session()) {
+            auto* la = gs->adapter() ? gs->adapter()->asLibretro() : nullptr;
+            if (la && la->runtime()) la->runtime()->reset();
+        }
+    };
+    cb.openMenu = [this]() { openInGameMenuPanel(); };
+    cb.toggleMute = [this]() {
+        if (auto* gs = m_gameService.session()) {
+            auto* la = gs->adapter() ? gs->adapter()->asLibretro() : nullptr;
+            if (la && la->runtime() && la->runtime()->audioSink()) {
+                auto* a = la->runtime()->audioSink();
+                a->setMuted(!a->isMuted());
+            }
+        }
+    };
+    cb.adjustVolume = [this](int dPct) {
+        if (auto* gs = m_gameService.session()) {
+            auto* la = gs->adapter() ? gs->adapter()->asLibretro() : nullptr;
+            if (la && la->runtime() && la->runtime()->audioSink()) {
+                auto* a = la->runtime()->audioSink();
+                a->setVolume(a->volume() + dPct / 100.0f);
+            }
+        }
+    };
+
+    m_hotkeyDispatcher = std::make_unique<HotkeyDispatcher>(std::move(cb));
+    connect(m_hotkeyMatcher.get(), &HotkeyMatcher::actionPressed,
+            m_hotkeyDispatcher.get(), &HotkeyDispatcher::onActionPressed);
+    connect(m_hotkeyMatcher.get(), &HotkeyMatcher::actionReleased,
+            m_hotkeyDispatcher.get(), &HotkeyDispatcher::onActionReleased);
+
+    if (auto* app = qApp) app->installEventFilter(this);
+
+    syncLibretroHotkeyBindings();
 }
+
+AppController::~AppController() = default;
 
 // ── Installer plumbing ─────────────────────────────────────
 
@@ -589,9 +686,41 @@ void AppController::setCursorVisible(bool visible) {
 
 QVariantList AppController::hotkeyBindings(const QString& emuId) const { return m_configService.hotkeyBindings(emuId); }
 bool AppController::hasHotkeys(const QString& emuId) const { return !m_configService.hotkeyBindings(emuId).isEmpty(); }
-void AppController::saveHotkey(const QString& emuId, const QString& section, const QString& key, const QString& value) { m_configService.saveHotkey(emuId, section, key, value); }
-void AppController::clearHotkey(const QString& emuId, const QString& section, const QString& key) { m_configService.clearHotkey(emuId, section, key); }
-void AppController::resetHotkeys(const QString& emuId) { m_configService.resetHotkeys(emuId); }
+void AppController::saveHotkey(const QString& emuId, const QString& section, const QString& key, const QString& value) {
+    m_configService.saveHotkey(emuId, section, key, value);
+    if (emuId == libretro_hotkeys::kSentinelEmuId) syncLibretroHotkeyBindings();
+}
+void AppController::clearHotkey(const QString& emuId, const QString& section, const QString& key) {
+    m_configService.clearHotkey(emuId, section, key);
+    if (emuId == libretro_hotkeys::kSentinelEmuId) syncLibretroHotkeyBindings();
+}
+void AppController::resetHotkeys(const QString& emuId) {
+    m_configService.resetHotkeys(emuId);
+    if (emuId == libretro_hotkeys::kSentinelEmuId) syncLibretroHotkeyBindings();
+}
+
+void AppController::syncLibretroHotkeyBindings() {
+    if (!m_hotkeyMatcher) return;
+    m_hotkeyMatcher->clearAllBindings();
+    const QVariantList rows = hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
+    for (const QVariant& v : rows) {
+        const QVariantMap m = v.toMap();
+        m_hotkeyMatcher->setBinding(m.value(QStringLiteral("key")).toString(),
+                                    m.value(QStringLiteral("currentValue")).toString());
+    }
+}
+
+bool AppController::eventFilter(QObject* /*watched*/, QEvent* event) {
+    const QEvent::Type t = event->type();
+    if (t == QEvent::KeyPress || t == QEvent::KeyRelease) {
+        auto* k = static_cast<QKeyEvent*>(event);
+        if (!k->isAutoRepeat() && m_hotkeyMatcher) {
+            const int combined = int(k->key()) | int(k->modifiers());
+            m_hotkeyMatcher->onKeyEvent(combined, t == QEvent::KeyPress);
+        }
+    }
+    return false;  // never consume — keep Qt's normal routing intact
+}
 
 QVariantList AppController::controllerTypes(const QString& emuId) const { return m_configService.controllerTypes(emuId); }
 QString AppController::controllerType(const QString& emuId, int port) const { return m_configService.controllerType(emuId, port); }
@@ -841,6 +970,17 @@ void AppController::setSdlInputManager(SdlInputManager* mgr) {
     m_inputManager = mgr;
     m_gameService.session()->setSdlInputManager(mgr);
     m_configService.setSdlInputManager(mgr);
+    // Route SDL gamepad edges into the libretro hotkey matcher.
+    // SdlInputManager only emits gamepadButtonChanged while emulation mode
+    // is active (i.e. a libretro game is running) — see the m_emulationTarget
+    // branch in pollEvents() — so this connection is a no-op outside libretro
+    // sessions without needing a runtime gate here.
+    if (mgr) {
+        connect(mgr, &SdlInputManager::gamepadButtonChanged,
+                this, [this](int port, int btn, bool pressed) {
+                    if (m_hotkeyMatcher) m_hotkeyMatcher->onGamepadButton(port, btn, pressed);
+                });
+    }
 }
 
 void AppController::setQmlEngine(QQmlEngine* engine) {

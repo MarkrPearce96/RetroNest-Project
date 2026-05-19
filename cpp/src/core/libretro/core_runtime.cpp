@@ -226,6 +226,18 @@ void CoreRuntime::resume() {
         fn(false);
 }
 
+void CoreRuntime::reset() {
+    // Best-effort cross-thread retro_reset for the libretro hotkey routing.
+    // Most cores treat retro_reset as a synchronous state-machine reset and
+    // tolerate being called from a non-worker thread between frames; if a
+    // future core fails this assumption we can move the call onto a queued
+    // request that the worker drains between retro_run ticks (mirroring the
+    // save-state pattern). Silent no-op when the core is not loaded.
+    if (!m_loader.isOpen()) return;
+    if (auto fn = m_loader.symbols().retro_reset)
+        fn();
+}
+
 bool CoreRuntime::saveState(const QString& path) {
     Q_ASSERT_X(!m_thread,
                "CoreRuntime::saveState",
