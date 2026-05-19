@@ -1,7 +1,6 @@
 #pragma once
 #include <atomic>
 #include <cstdint>
-#include <algorithm>
 
 struct _SDL_AudioStream;
 typedef struct _SDL_AudioStream SDL_AudioStream;
