@@ -139,34 +139,8 @@ void GenericHotkeyPage::buildLayout() {
 
     auto* content = new QWidget(scroll);
     auto* contentLayout = new QVBoxLayout(content);
-    contentLayout->setContentsMargins(24, m_dualColumn ? 8 : 20, 24, 20);
+    contentLayout->setContentsMargins(24, 20, 24, 20);
     contentLayout->setSpacing(4);
-
-    // Column headers — only in dual-column mode. Aligned to match the
-    // row layout: label (220px) + spacing + Keyboard cell + Controller cell.
-    if (m_dualColumn) {
-        auto* headerRow = new QWidget(content);
-        headerRow->setFixedHeight(18);
-        auto* headerLayout = new QHBoxLayout(headerRow);
-        headerLayout->setContentsMargins(8, 0, 8, 0);
-        headerLayout->setSpacing(12);
-        auto* spacer = new QLabel(QString(), headerRow);
-        spacer->setFixedWidth(220);
-        headerLayout->addWidget(spacer);
-        const QString headerStyle = QStringLiteral(
-            "color:%1; font-size:11px; font-weight:600; letter-spacing:2px;"
-            "background:transparent;")
-            .arg(SettingsDialogTheme::accent().name());
-        auto* kbdHeader = new QLabel(QStringLiteral("KEYBOARD"), headerRow);
-        kbdHeader->setAlignment(Qt::AlignCenter);
-        kbdHeader->setStyleSheet(headerStyle);
-        headerLayout->addWidget(kbdHeader, 1);
-        auto* padHeader = new QLabel(QStringLiteral("CONTROLLER"), headerRow);
-        padHeader->setAlignment(Qt::AlignCenter);
-        padHeader->setStyleSheet(headerStyle);
-        headerLayout->addWidget(padHeader, 1);
-        contentLayout->addWidget(headerRow);
-    }
 
     QString currentGroup;
     QFrame* currentCard = nullptr;
@@ -176,11 +150,36 @@ void GenericHotkeyPage::buildLayout() {
     for (const auto& def : m_entries) {
         if (def.group != currentGroup) {
             currentGroup = def.group;
-            // In dual-column mode the KEYBOARD / CONTROLLER labels already
-            // anchor the top of the page, so suppress the first group's
-            // section header (which would otherwise read "General" and
-            // visibly double up).
-            if (!(m_dualColumn && firstGroup)) {
+            // For the first group in dual-column mode, render the section
+            // title on the SAME horizontal row as the KEYBOARD / CONTROLLER
+            // column labels — so the user sees one header bar instead of
+            // a section title stacked above the column labels.
+            if (m_dualColumn && firstGroup) {
+                auto* headerRow = new QWidget(content);
+                auto* headerLayout = new QHBoxLayout(headerRow);
+                headerLayout->setContentsMargins(0, 8, 0, 4);
+                headerLayout->setSpacing(12);
+
+                auto* sectionLbl = new QLabel(currentGroup.toUpper(), headerRow);
+                sectionLbl->setStyleSheet(SettingsDialogTheme::sectionHeaderQss());
+                sectionLbl->setFixedWidth(220);
+                headerLayout->addWidget(sectionLbl);
+
+                const QString columnStyle = QStringLiteral(
+                    "color:%1; font-size:11px; font-weight:600; letter-spacing:2px;"
+                    "background:transparent;")
+                    .arg(SettingsDialogTheme::accent().name());
+                auto* kbdHeader = new QLabel(QStringLiteral("KEYBOARD"), headerRow);
+                kbdHeader->setAlignment(Qt::AlignCenter);
+                kbdHeader->setStyleSheet(columnStyle);
+                headerLayout->addWidget(kbdHeader, 1);
+                auto* padHeader = new QLabel(QStringLiteral("CONTROLLER"), headerRow);
+                padHeader->setAlignment(Qt::AlignCenter);
+                padHeader->setStyleSheet(columnStyle);
+                headerLayout->addWidget(padHeader, 1);
+
+                contentLayout->addWidget(headerRow);
+            } else {
                 contentLayout->addSpacing(4);
                 contentLayout->addWidget(new SettingsSectionHeader(currentGroup, content));
             }
