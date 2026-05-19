@@ -80,6 +80,81 @@ private slots:
         m.onKeyEvent(Qt::Key_F2, true);
         QCOMPARE(spy.count(), 0);
     }
+
+    void firesOnGamepadButtonPressEdge() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(spy.takeFirst().at(0).toString(), QStringLiteral("Foo"));
+
+        m.onGamepadButton(0, 8, true);    // held, no refire
+        QCOMPARE(spy.count(), 0);
+
+        m.onGamepadButton(0, 8, false);   // release; non-hold, no emit
+        QCOMPARE(spy.count(), 0);
+
+        m.onGamepadButton(0, 8, true);    // re-press, fires
+        QCOMPARE(spy.count(), 1);
+    }
+
+    void gamepadPortIsolated() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad1/8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+        m.onGamepadButton(0, 8, true);    // wrong port
+        QCOMPARE(spy.count(), 0);
+        m.onGamepadButton(1, 8, true);    // right port
+        QCOMPARE(spy.count(), 1);
+    }
+
+    void holdActionEmitsReleasedFromGamepad() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("FastForwardHold"), QStringLiteral("Gamepad0/3"));
+        QSignalSpy pressedSpy(&m, &HotkeyMatcher::actionPressed);
+        QSignalSpy releasedSpy(&m, &HotkeyMatcher::actionReleased);
+        m.onGamepadButton(0, 3, true);
+        QCOMPARE(pressedSpy.count(), 1);
+        QCOMPARE(releasedSpy.count(), 0);
+        m.onGamepadButton(0, 3, false);
+        QCOMPARE(pressedSpy.count(), 1);
+        QCOMPARE(releasedSpy.count(), 1);
+    }
+
+    void rebindKeyboardToGamepadDropsOldKey() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Keyboard/F1"));
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+        // The old keyboard binding should no longer fire.
+        m.onKeyEvent(Qt::Key_F1, true);
+        QCOMPARE(spy.count(), 0);
+        // The new gamepad binding should fire.
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 1);
+    }
+
+    void rebindGamepadToKeyboardDropsOldButton() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/8"));
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Keyboard/F1"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 0);
+        m.onKeyEvent(Qt::Key_F1, true);
+        QCOMPARE(spy.count(), 1);
+    }
+
+    void clearAllRemovesGamepadAlso() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/8"));
+        m.clearAllBindings();
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 0);
+    }
 };
 
 QTEST_APPLESS_MAIN(TestHotkeyMatcher)
