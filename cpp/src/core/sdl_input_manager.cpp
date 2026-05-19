@@ -264,11 +264,10 @@ bool SdlInputManager::eventFilter(QObject* obj, QEvent* event) {
                 key == Qt::Key_Alt   || key == Qt::Key_Meta) {
                 return false;
             }
-            // Escape cancels capture instead of binding.
-            if (key == Qt::Key_Escape) {
-                cancelCapture();
-                return true;
-            }
+            // Escape is bindable like any other key — page-level eventFilter
+            // tracks press/release so capture commits when the user lets go.
+            // To cancel capture, right-click the row or wait for timer expiry.
+
             // Build a "Keyboard/<name>" string matching the format
             // emitted by the SDL_KEYDOWN path.
             const QString keyStr = qtKeyToCanonicalName(key);

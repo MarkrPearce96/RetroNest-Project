@@ -420,12 +420,9 @@ bool GenericHotkeyPage::eventFilter(QObject* obj, QEvent* event) {
 
         const int key = keyEvent->key();
 
-        // Escape cancels capture
-        if (key == Qt::Key_Escape) {
-            stopCapture(false);
-            return true;
-        }
-
+        // Escape is bindable — hold/release semantics apply to it like any
+        // other key. To cancel an accidental rebind, right-click the row
+        // (handled below) or wait for the countdown timer to expire.
         if (isModifierKey(key)) return true;
 
         // Adapter-formatted keyboard binding (e.g. PCSX2 "Keyboard/D",
