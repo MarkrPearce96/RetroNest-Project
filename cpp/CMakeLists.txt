@@ -69,6 +69,7 @@ set(SOURCES
     src/adapters/dolphin_adapter.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
+    src/core/path_overrides_store.cpp
     src/core/scraper.cpp
     src/core/database.cpp
     src/services/rom_scanner.cpp
@@ -450,6 +451,14 @@ add_executable(test_ini_file
 target_include_directories(test_ini_file PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_ini_file PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME IniFile COMMAND test_ini_file)
+
+add_executable(test_path_overrides_store
+    tests/test_path_overrides_store.cpp
+    src/core/path_overrides_store.cpp
+)
+target_include_directories(test_path_overrides_store PRIVATE src)
+target_link_libraries(test_path_overrides_store PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME PathOverridesStore COMMAND test_path_overrides_store)
 
 add_executable(test_patch_ini_keys
     tests/test_patch_ini_keys.cpp
