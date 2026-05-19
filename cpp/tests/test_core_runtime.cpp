@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QTemporaryFile>
 #include <QTemporaryDir>
+#include <dlfcn.h>
 #include "core/libretro/core_runtime.h"
 
 class TestCoreRuntime : public QObject {
@@ -51,6 +52,35 @@ private slots:
         QTest::qWait(500);
         rt.stop();
         QVERIFY(frames.count() > 0);
+    }
+    void testPauseCallsRetronestSetPaused() {
+        CoreRuntime rt;
+        QString err;
+        QVERIFY2(rt.loader().open(fakeCorePath(), &err), qPrintable(err));
+
+        // Resolve test accessor symbols from the loaded dylib handle.
+        void* h = rt.loader().handle();
+        auto reset  = reinterpret_cast<void(*)(void)>(dlsym(h, "retronest_test_reset_pause_counter"));
+        auto count  = reinterpret_cast<int(*)(void)>(dlsym(h, "retronest_test_pause_call_count"));
+        auto last   = reinterpret_cast<int(*)(void)>(dlsym(h, "retronest_test_last_pause_value"));
+        QVERIFY(reset && count && last);
+        reset();
+
+        rt.pause();
+        QCOMPARE(count(), 1);
+        QCOMPARE(last(), 1);
+
+        rt.resume();
+        QCOMPARE(count(), 2);
+        QCOMPARE(last(), 0);
+    }
+    void testPauseSkipsCallWhenSymbolAbsent() {
+        // CoreRuntime with no core opened — symbol pointer is null.
+        // pause()/resume() must not crash.
+        CoreRuntime rt;
+        rt.pause();   // should not crash
+        rt.resume();  // should not crash
+        // No assertions beyond "still alive" — symbol is null so no counter to check.
     }
 };
 QTEST_MAIN(TestCoreRuntime)

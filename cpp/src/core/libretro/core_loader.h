@@ -55,6 +55,9 @@ public:
     void close();
     bool isOpen() const { return m_handle != nullptr; }
     const CoreSymbols& symbols() const { return m_syms; }
+    // Exposed for unit tests that need to dlsym test-only accessors from the
+    // loaded dylib (e.g. retronest_test_pause_call_count in fake_libretro_core).
+    void* handle() const { return m_handle; }
 
 private:
     void* m_handle = nullptr;

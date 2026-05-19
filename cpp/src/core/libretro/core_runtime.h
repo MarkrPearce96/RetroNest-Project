@@ -101,6 +101,9 @@ public:
     InputRouter& input() { return m_input; }
     OptionsStore& options() { return m_options; }
     RcheevosRuntime& rcheevos() { return m_rcheevos; }
+    // Exposed for unit tests (test_core_runtime) so tests can open the loader
+    // directly without spawning a worker thread.
+    CoreLoader& loader() { return m_loader; }
 
     /**
      * Register the SdlInputManager that backs this runtime's input. The

@@ -185,6 +185,14 @@ void CoreRuntime::stop() {
 }
 
 void CoreRuntime::pause() {
+    // NEW: ask the core to halt its internal threads. PCSX2 exports
+    // retronest_set_paused which calls VMManager::SetPaused(true) and
+    // waits for VMState::Paused via WaitForVmPaused. mGBA / other cores
+    // don't export this symbol — the pointer stays null and the existing
+    // stop-retro_run + mute-audio behavior is enough.
+    if (auto fn = m_loader.symbols().retronest_set_paused)
+        fn(true);
+
     m_paused = true;
     // Silence the SDL audio device too — without this the pre-pause
     // tail of samples queued for playback bleeds through while the
@@ -206,6 +214,11 @@ void CoreRuntime::resume() {
     }
     m_audio.setPaused(false);
     m_pauseCv.notify_all();
+
+    // NEW: unblock the core's internal threads. Comes AFTER our worker
+    // wakes up so retro_run resumes immediately on the next tick.
+    if (auto fn = m_loader.symbols().retronest_set_paused)
+        fn(false);
 }
 
 bool CoreRuntime::saveState(const QString& path) {
