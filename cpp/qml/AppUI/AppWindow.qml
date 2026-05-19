@@ -479,7 +479,19 @@ ApplicationWindow {
     // Global Cmd+Shift+Escape hotkey — works even when an external emulator has focus
     Connections {
         target: app
+        // Cmd+Shift+Esc — only acts when a STANDALONE emulator is running.
+        // Libretro games drive their menu from their own bindings via
+        // onLibretroMenuToggleRequested below.
         function onGlobalHotkeyPressed() {
+            if (!app.gameRunning) return;
+            if (isLibretroGame() || app.gameUsesHardwareRender()) return;
+            window.toggleInGameMenu();
+        }
+        // Libretro matcher fires this whenever the user's ToggleMenu
+        // binding is pressed in-game. Always forwards to toggleInGameMenu
+        // — works for both software-render (in-scene) and HW-render
+        // (overlay) libretro games.
+        function onLibretroMenuToggleRequested() {
             if (app.gameRunning) window.toggleInGameMenu();
         }
     }

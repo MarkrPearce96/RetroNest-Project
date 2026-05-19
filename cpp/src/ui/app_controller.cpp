@@ -226,13 +226,12 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
         }
     };
     cb.openMenu = [this]() {
-    // Mirror the Cmd+Shift+Esc global-hotkey path so QML's
-    // toggleInGameMenu() chooses the right menu (libretro overlay /
-    // in-scene HUD / external-emulator panel) based on what's running.
-    // Going straight to openInGameMenuPanel() would land on the
-    // external-emulator panel, whose Save/Load injects Carbon
-    // keystrokes into a separate process — useless for libretro.
-    emit globalHotkeyPressed();
+    // Dedicated signal (NOT globalHotkeyPressed, which QML reserves for
+    // Cmd+Shift+Esc on standalone emulators). The libretro matcher fires
+    // this when the user's ToggleMenu binding is pressed; QML handles it
+    // by calling toggleInGameMenu, which selects the libretro-aware
+    // menu (overlay / in-scene HUD) and propagates currentSaveSlot.
+    emit libretroMenuToggleRequested();
 };
     cb.toggleMute = [this]() {
         if (auto* gs = m_gameService.session()) {

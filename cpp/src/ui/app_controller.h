@@ -276,6 +276,11 @@ signals:
     void gameStartingLibretro();
     void gameFinished(int exitCode, bool crashed);
     void globalHotkeyPressed();
+    // Fired by the libretro hotkey matcher when the user's ToggleMenu
+    // binding is pressed. Distinguished from globalHotkeyPressed so QML
+    // can keep the macOS Cmd+Shift+Esc hotkey scoped to standalone
+    // emulators while libretro games drive their menu via this signal.
+    void libretroMenuToggleRequested();
     void emulatorInstalled(const QString& emuId);
     void installProgress(const QString& emuId, double progress,
                          const QString& phase, const QString& detail);
