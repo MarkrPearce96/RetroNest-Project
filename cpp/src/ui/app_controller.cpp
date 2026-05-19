@@ -260,6 +260,20 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
 
     if (auto* app = qApp) app->installEventFilter(this);
 
+    // SDL stops emitting gamepadButtonChanged into the matcher while an
+    // in-game menu / overlay is open (m_emulationTarget is cleared). The
+    // matcher's cached held-button set would otherwise go stale and the
+    // next press-edge wouldn't fire. Reset the gamepad state whenever the
+    // overlay menu closes so the next press starts fresh.
+    connect(this, &AppController::libretroOverlayMenuVisibleChanged, this, [this]{
+        if (m_hotkeyMatcher && !libretroOverlayMenuVisible())
+            m_hotkeyMatcher->resetGamepadState();
+    });
+    connect(this, &AppController::inGameMenuPanelVisibleChanged, this, [this]{
+        if (m_hotkeyMatcher && !inGameMenuPanelVisible())
+            m_hotkeyMatcher->resetGamepadState();
+    });
+
     syncLibretroHotkeyBindings();
 }
 

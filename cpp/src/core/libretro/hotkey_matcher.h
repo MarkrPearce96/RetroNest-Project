@@ -49,6 +49,12 @@ public:
     // Drop every binding and any held state.
     void clearAllBindings();
 
+    // Clear gamepad held / pressed / suppressed state without dropping
+    // bindings. Called when the in-game menu opens or closes — SDL stops
+    // delivering button events to us while a menu owns input, so our
+    // cached state goes stale and would block the next press-edge.
+    void resetGamepadState();
+
     // Qt keyboard event entry point. qtKey is the combined value
     // QKeyEvent::key() | int(QKeyEvent::modifiers()).
     void onKeyEvent(int qtKey, bool pressed);

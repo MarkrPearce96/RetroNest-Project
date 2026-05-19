@@ -95,6 +95,13 @@ void HotkeyMatcher::clearAllBindings() {
     }
 }
 
+void HotkeyMatcher::resetGamepadState() {
+    m_padHeld.clear();
+    m_actionPressed.clear();
+    QMutexLocker locker(&m_suppressedMutex);
+    m_suppressed.clear();
+}
+
 void HotkeyMatcher::firePressEdge(const QString& action, bool pressed) {
     const bool wasPressed = m_actionPressed.value(action, false);
     if (pressed && !wasPressed) {
