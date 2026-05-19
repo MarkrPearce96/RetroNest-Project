@@ -43,7 +43,7 @@ Item {
                     clip: true
                     spacing: 2
 
-                    model: ["Emulator Manage", "Paths", "Scraper", "Libretro Hotkeys"]
+                    model: ["Emulator Manage", "Paths", "Scraper"]
 
                     delegate: Rectangle {
                         width: settingsList.width
@@ -67,13 +67,7 @@ Item {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             hoverEnabled: true
-                            onClicked: {
-                                if (modelData === "Libretro Hotkeys") {
-                                    app.showLibretroHotkeySettings();
-                                } else {
-                                    app.settingsCategory = index;
-                                }
-                            }
+                            onClicked: app.settingsCategory = index
                             onEntered: if (app.settingsCategory !== index) parent.color = Theme.surface
                             onExited: parent.color = app.settingsCategory === index ? Theme.surfaceHover : "transparent"
                         }

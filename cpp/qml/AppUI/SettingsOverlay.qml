@@ -10,13 +10,13 @@ FocusScope {
 
     property int selectedCategory: -1   // -1 = category list, 0+ = category page
     property int _savedFocusIndex: 0
-    readonly property int categoryCount: 8
+    readonly property int categoryCount: 9
     property bool exitDialogVisible: false
 
     // Category titles shown in the sub-page header (index matches selectedCategory)
     readonly property var _categoryTitles: [
         "Emulators", "Paths", "Scraper", "Themes",
-        "Resolution", "Aspect Ratio", "Achievements", "Settings"
+        "Resolution", "Aspect Ratio", "Achievements", "Libretro Hotkeys", "Settings"
     ]
 
     onExitDialogVisibleChanged: {
@@ -342,8 +342,13 @@ FocusScope {
             function selectCategory(idx) {
                 overlay._savedFocusIndex = focusIndex
                 overlay.selectedCategory = idx
-                // Index 7 is the Exit entry; everything else pushes a page
+                // Index 7 opens the global Libretro Hotkeys dialog directly
+                // (not a pushed sub-page). Index 8 is the Exit entry.
                 if (idx === 7) {
+                    app.showLibretroHotkeySettings()
+                    return
+                }
+                if (idx === 8) {
                     overlay.exitDialogVisible = true
                     return
                 }
@@ -378,7 +383,8 @@ FocusScope {
                         ListElement { name: "Resolution";    icon: "\uD83D\uDDA5"; subtitle: "Quick resolution settings";    catIndex: 4 }
                         ListElement { name: "Aspect Ratio";  icon: "\u2B1C";       subtitle: "Quick aspect ratio settings";  catIndex: 5 }
                         ListElement { name: "Achievements";  icon: "\uD83C\uDFC6"; subtitle: "RetroAchievements login & progress"; catIndex: 6 }
-                        ListElement { name: "Exit";          icon: "\u23FB";        subtitle: "Close the application";        catIndex: 7 }
+                        ListElement { name: "Libretro Hotkeys"; icon: "\u2328";    subtitle: "Keyboard & gamepad shortcuts for libretro cores"; catIndex: 7 }
+                        ListElement { name: "Exit";          icon: "\u23FB";        subtitle: "Close the application";        catIndex: 8 }
                     }
 
                     FocusableItem {
@@ -420,7 +426,7 @@ FocusScope {
                                 text: "\u203A"
                                 color: SettingsTheme.textDim
                                 font.pixelSize: 22
-                                visible: model.catIndex !== 7
+                                visible: model.catIndex !== 8
                             }
                         }
 
