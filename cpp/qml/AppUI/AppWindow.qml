@@ -750,6 +750,10 @@ ApplicationWindow {
         }
         function onInGameMenuRequested() {
             if (app.gameRunning) {
+                // Select+Start / Touchpad combo: reserved for STANDALONE
+                // emulators. Libretro games drive their menu from the
+                // user's own binding in the Libretro Hotkeys page.
+                if (isLibretroGame() || app.gameUsesHardwareRender()) return;
                 window.toggleInGameMenu();
                 return;
             }
