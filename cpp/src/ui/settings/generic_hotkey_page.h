@@ -35,6 +35,7 @@ public:
     void rebindFocused();
     void appendRebindFocused();
     void clearFocused();
+    void restoreFocusedToDefault();
     void restoreDefaults();
 
     // Focus the first hotkey row (called by the hosting dialog on showEvent

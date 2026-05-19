@@ -216,6 +216,15 @@ void GenericHotkeyPage::clearFocused() {
     emit bindingFocused(d, QString());
 }
 
+void GenericHotkeyPage::restoreFocusedToDefault() {
+    if (!m_focusedRow || !m_appController) return;
+    const HotkeyDef d = m_focusedRow->def();
+    m_appController->saveHotkey(m_emuId, d.section, d.key, d.defaultValue);
+    m_currentValues[d.key] = d.defaultValue;
+    m_focusedRow->setBindingDisplay(currentDisplayFor(d.key));
+    emit bindingFocused(d, currentDisplayFor(d.key));
+}
+
 void GenericHotkeyPage::focusFirstRow() {
     if (m_entries.isEmpty()) return;
     if (auto it = m_rowByKey.constFind(m_entries.first().key);
