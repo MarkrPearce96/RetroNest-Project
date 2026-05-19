@@ -144,22 +144,31 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             qInfo("[libretro/env] GET_BOOT_STATE_PATH: handed off path to core");
             return true;
         }
-        case RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR:
-        case RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR: {
-            // PCSX2 path overrides. Looks up PathOverridesStore directly
-            // (not ctx, so this also works for any future per-session
-            // override propagation). Lifetime: thread_local cache keeps
-            // the QByteArray storage alive for the duration of the env
-            // call AND past it — matches the GET_BOOT_STATE_PATH pattern.
+        case RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR: {
+            // PCSX2 memory-cards path override. PathOverridesStore is the
+            // source of truth; cached buffer lives thread_local so the
+            // returned pointer remains valid past this env call. Separate
+            // cache from GET_TEXTURES_DIR so back-to-back calls don't
+            // alias (Settings::InitializeDefaults queries both).
             if (!data) return false;
-            const QString key =
-                (cmd == RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR) ? QStringLiteral("MemoryCards")
-                                                                : QStringLiteral("Textures");
-            const QString path = PathOverridesStore::instance().read("pcsx2", key);
+            const QString path = PathOverridesStore::instance().read("pcsx2", "MemoryCards");
             if (path.isEmpty()) return false;
-            thread_local QByteArray cached;
-            cached = path.toUtf8();
-            *static_cast<const char**>(data) = cached.constData();
+            thread_local QByteArray cachedMemcards;
+            cachedMemcards = path.toUtf8();
+            *static_cast<const char**>(data) = cachedMemcards.constData();
+            qInfo("[libretro/env] GET_MEMCARDS_DIR: override -> %s", cachedMemcards.constData());
+            return true;
+        }
+        case RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR: {
+            // PCSX2 replacement-textures path override. Separate
+            // thread_local from GET_MEMCARDS_DIR — see note above.
+            if (!data) return false;
+            const QString path = PathOverridesStore::instance().read("pcsx2", "Textures");
+            if (path.isEmpty()) return false;
+            thread_local QByteArray cachedTextures;
+            cachedTextures = path.toUtf8();
+            *static_cast<const char**>(data) = cachedTextures.constData();
+            qInfo("[libretro/env] GET_TEXTURES_DIR: override -> %s", cachedTextures.constData());
             return true;
         }
         case RETRO_ENVIRONMENT_GET_VARIABLE:

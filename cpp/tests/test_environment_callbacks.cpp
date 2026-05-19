@@ -1,4 +1,5 @@
 #include <QtTest>
+#include <QStandardPaths>
 #include "core/libretro/environment_callbacks.h"
 #include "core/libretro/options_store.h"
 #include "core/path_overrides_store.h"
@@ -6,6 +7,13 @@
 class TestEnvironmentCallbacks : public QObject {
     Q_OBJECT
 private slots:
+    void initTestCase() {
+        QStandardPaths::setTestModeEnabled(true);
+    }
+    void cleanupTestCase() {
+        QStandardPaths::setTestModeEnabled(false);
+    }
+
     void testSetPixelFormatRgb565() {
         EnvironmentContext ctx;
         ctx.systemDirectory = "/bios";

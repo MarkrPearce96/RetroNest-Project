@@ -33,7 +33,11 @@
 // false otherwise. The libretro core falls back to its save_dir-based
 // default when false comes back, so non-RetroNest hosts and mGBA
 // (which doesn't query these) keep working unchanged.
+
+// 0x20003 — RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR
 #define RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR (3 | RETRO_ENVIRONMENT_PRIVATE)
+
+// 0x20004 — RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR
 #define RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR (4 | RETRO_ENVIRONMENT_PRIVATE)
 
 #include <QByteArray>
