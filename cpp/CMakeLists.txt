@@ -112,6 +112,7 @@ set(SOURCES
     src/ui/settings/emulator_category_hub_base.cpp
     src/ui/settings/generic_hotkey_page.cpp
     src/ui/settings/hotkey_settings_dialog.cpp
+    src/ui/settings/libretro_hotkey_settings_dialog.cpp
     src/ui/settings/generic_settings_page.cpp
     src/ui/settings/settings_page_builder.cpp
     src/core/sdl_input_manager.cpp
@@ -195,6 +196,7 @@ set(HEADERS
     src/ui/settings/emulator_category_hub_base.h
     src/ui/settings/generic_hotkey_page.h
     src/ui/settings/hotkey_settings_dialog.h
+    src/ui/settings/libretro_hotkey_settings_dialog.h
     src/ui/settings/generic_settings_page.h
     src/ui/settings/settings_page_builder.h
     src/core/sdl_input_manager.h

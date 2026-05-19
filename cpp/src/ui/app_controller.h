@@ -151,6 +151,7 @@ public slots:
     Q_INVOKABLE void showEmulatorSettings(const QString& emuId);
     Q_INVOKABLE void openNativeEmulatorSettings(const QString& emuId);
     Q_INVOKABLE void showHotkeySettings(const QString& emuId);
+    Q_INVOKABLE void showLibretroHotkeySettings();
 
     // Controller types (per-emulator)
     Q_INVOKABLE QVariantList controllerTypes(const QString& emuId) const;

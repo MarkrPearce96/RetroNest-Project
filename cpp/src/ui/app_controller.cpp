@@ -27,6 +27,7 @@
 #include "settings/dolphin/dolphin_settings_dialog.h"
 #include "settings/mgba/mgba_settings_dialog.h"
 #include "settings/hotkey_settings_dialog.h"
+#include "settings/libretro_hotkey_settings_dialog.h"
 
 #include <QFileDialog>
 #include <QFileInfo>
@@ -666,6 +667,13 @@ void AppController::showHotkeySettings(const QString& emuId) {
         return;
     }
     auto* dialog = new HotkeySettingsDialog(m_inputManager, this, emuId);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
+}
+
+void AppController::showLibretroHotkeySettings() {
+    if (!m_inputManager) { qWarning() << "[AppController] No SdlInputManager set"; return; }
+    auto* dialog = new LibretroHotkeySettingsDialog(m_inputManager, this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }
