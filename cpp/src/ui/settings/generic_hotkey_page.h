@@ -2,6 +2,7 @@
 
 #include <QWidget>
 #include <QHash>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QTimer>
@@ -80,4 +81,13 @@ private:
     QTimer* m_captureTimer = nullptr;
     int m_captureCountdown = 0;
     QStringList m_capturedBindings;
+    // "Quick tap = single bind, hold = multi-bind" semantics: capture
+    // commits when every input that was pressed during the session is
+    // released. Tracks held keyboard keys (Qt key codes) and whether SDL
+    // reports any controller buttons currently held.
+    QSet<int> m_heldKeyboardKeys;
+    bool      m_controllerHeld = false;
+
+    // Commit the capture if no inputs are still held.
+    void maybeCommitOnRelease();
 };
