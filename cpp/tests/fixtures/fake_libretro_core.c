@@ -12,6 +12,8 @@ static retro_input_state_t input_state_cb;
 #define HEIGHT 4
 static uint16_t fb[WIDTH * HEIGHT];   // RGB565 checkerboard
 static int run_calls = 0;
+static int s_pause_call_count = 0;
+static int s_last_pause_value = -1;
 
 void retro_set_environment(retro_environment_t cb) { env_cb = cb; }
 void retro_set_video_refresh(retro_video_refresh_t cb) { video_cb = cb; }
@@ -52,7 +54,11 @@ void retro_init(void) {
 
 void retro_deinit(void) {}
 void retro_set_controller_port_device(unsigned p, unsigned d) { (void)p; (void)d; }
-void retro_reset(void) { run_calls = 0; }
+void retro_reset(void) {
+    run_calls = 0;
+    s_pause_call_count = 0;
+    s_last_pause_value = -1;
+}
 
 bool retro_load_game(const struct retro_game_info* g) { (void)g; return true; }
 bool retro_load_game_special(unsigned t, const struct retro_game_info* g, size_t n) { (void)t; (void)g; (void)n; return false; }
@@ -86,12 +92,12 @@ void* retro_get_memory_data(unsigned id) { (void)id; return NULL; }
 size_t retro_get_memory_size(unsigned id) { (void)id; return 0; }
 
 // Pause symbol — counter for tests. retronest_set_paused increments
-// the counter on every call; tests verify the pointer resolves AND
-// is the right function. retronest_test_pause_call_count +
-// retronest_test_last_pause_value + retronest_test_reset_pause_counter
-// give tests read/reset access between cases.
-static int s_pause_call_count = 0;
-static int s_last_pause_value = -1;
+// the counter on every call; tests verify CoreRuntime resolved the
+// symbol and calls it on pause/resume. retronest_test_pause_call_count
+// + retronest_test_last_pause_value + retronest_test_reset_pause_counter
+// give tests read/reset access between cases. retro_reset also clears
+// these alongside run_calls so test_core_runtime's cases stay order-
+// independent without needing to dlsym the reset accessor.
 
 void retronest_set_paused(bool paused) {
     s_pause_call_count++;
