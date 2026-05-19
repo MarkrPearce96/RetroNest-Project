@@ -498,6 +498,46 @@ target_include_directories(test_libretro_hotkey_defs PRIVATE ${CMAKE_CURRENT_SOU
 target_link_libraries(test_libretro_hotkey_defs PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME LibretroHotkeyDefs COMMAND test_libretro_hotkey_defs)
 
+add_executable(test_config_service_libretro_hotkeys
+    tests/test_config_service_libretro_hotkeys.cpp
+    src/services/config_service.cpp
+    src/core/libretro/libretro_hotkey_defs.cpp
+    src/adapters/emulator_adapter.cpp
+    src/adapters/adapter_registry.cpp
+    src/adapters/duckstation_adapter.cpp
+    src/adapters/ppsspp_adapter.cpp
+    src/adapters/dolphin_adapter.cpp
+    src/adapters/libretro/libretro_adapter.cpp
+    src/adapters/libretro/mgba_libretro_adapter.cpp
+    src/adapters/libretro/pcsx2_libretro_adapter.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/frontend_settings_store.cpp
+    src/core/libretro/rcheevos_runtime.cpp
+    src/core/libretro/retro_log.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+    src/core/path_overrides_store.cpp
+    src/core/database.cpp
+    src/core/manifest_loader.cpp
+    src/core/sdl_input_manager.cpp
+)
+set_target_properties(test_config_service_libretro_hotkeys PROPERTIES AUTOMOC ON)
+target_include_directories(test_config_service_libretro_hotkeys PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS}
+)
+target_link_libraries(test_config_service_libretro_hotkeys PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
+add_test(NAME ConfigServiceLibretroHotkeys COMMAND test_config_service_libretro_hotkeys)
+
 add_executable(test_rom_scanner
     tests/test_rom_scanner.cpp
     src/services/rom_scanner.cpp
