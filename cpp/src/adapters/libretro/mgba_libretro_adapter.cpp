@@ -16,7 +16,7 @@ QVector<PathDef> MgbaLibretroAdapter::pathsDefs() const {
     // exist. Re-add when/if screenshot capture lands.
     return {
         { "Saves",       "libretro", "Saves",      "saves",      PathBase::EmulatorData },
-        { "Save states", "libretro", "SaveStates", "savestates", PathBase::EmulatorData },
+        { "Save States", "libretro", "SaveStates", "savestates", PathBase::EmulatorData },
     };
 }
 

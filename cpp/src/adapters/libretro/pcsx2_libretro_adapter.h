@@ -42,6 +42,12 @@ public:
     // RetroNest work to extend the router.
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
 
+    // Path overrides: three user-overridable folders (Memory Cards, Save
+    // States, Textures). Listed here rather than next to biosFiles() because
+    // PCSX2's BIOS is shared globally — see Pcsx2LibretroAdapter::pathsDefs()
+    // comment in .cpp.
+    QVector<PathDef> pathsDefs() const override;
+
     // SP6.5: resolve the per-game resume save state written by
     // GameSession::terminate (cpp/src/core/game_session.cpp:392) on its way
     // into retro_unload_game. Without this override the base class returns
@@ -49,11 +55,6 @@ public:
     // launching the game cold-boots through BIOS even when a resume file
     // exists on disk. Mirrors MgbaLibretroAdapter::findResumeFile.
     QString findResumeFile(const QString& serial) const override;
-
-    // Path overrides: three user-overridable folders (Memory Cards, Save
-    // States, Textures). BIOS is intentionally excluded — it is global and
-    // lives under the shared BIOS directory, not the per-emulator data dir.
-    QVector<PathDef> pathsDefs() const override;
 
     // SP7b: declare libretro core options as user-tweakable rows in the
     // per-emulator settings dialog. Three knobs (renderer / MTVU / FastBoot)
