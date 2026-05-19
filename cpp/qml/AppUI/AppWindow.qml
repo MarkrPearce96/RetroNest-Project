@@ -146,6 +146,10 @@ ApplicationWindow {
     // Settings overlay (Escape key)
     SettingsOverlay {
         id: settingsOverlay
+        // While the settings overlay is visible, suppress libretro hotkey
+        // dispatch so Esc/arrows/etc reach the overlay instead of
+        // triggering ToggleMenu, save state, etc.
+        onVisibleChanged: app.libretroHotkeysSuppressed = visible
     }
 
     // Game action popup (M key / Triangle button)

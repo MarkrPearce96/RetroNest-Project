@@ -32,6 +32,10 @@ class AppController : public QObject {
     Q_PROPERTY(bool gameRunning READ isGameRunning NOTIFY gameRunningChanged)
     Q_PROPERTY(bool inGameMenuPanelVisible READ inGameMenuPanelVisible NOTIFY inGameMenuPanelVisibleChanged)
     Q_PROPERTY(bool libretroOverlayMenuVisible READ libretroOverlayMenuVisible NOTIFY libretroOverlayMenuVisibleChanged)
+    // Set by QML overlays (e.g. SettingsOverlay) when they're visible. While true,
+    // the libretro hotkey matcher ignores keyboard events so Esc / arrows / etc
+    // reach the overlay's own focus routing instead of triggering ToggleMenu.
+    Q_PROPERTY(bool libretroHotkeysSuppressed READ libretroHotkeysSuppressed WRITE setLibretroHotkeysSuppressed NOTIFY libretroHotkeysSuppressedChanged)
     Q_PROPERTY(GameSession* gameSession READ gameSession CONSTANT)
 
 public:
@@ -90,6 +94,8 @@ public slots:
     Q_INVOKABLE void openInGameMenuPanel();
     Q_INVOKABLE void closeInGameMenuPanel();
     bool inGameMenuPanelVisible() const;
+    bool libretroHotkeysSuppressed() const { return m_libretroHotkeysSuppressed; }
+    Q_INVOKABLE void setLibretroHotkeysSuppressed(bool suppressed);
 
     // SP3.5: floating overlay panel for Pattern B HW-render libretro
     // cores. Lazy-instantiated on first showLibretroOverlayPanel()
@@ -258,6 +264,7 @@ signals:
     void gamesChanged();
     void gameRunningChanged();
     void inGameMenuPanelVisibleChanged();
+    void libretroHotkeysSuppressedChanged();
     void libretroOverlayMenuVisibleChanged();
     void gameStarted();
     /** Emitted instead of gameStarted() when the backend is libretro (in-process). */
@@ -352,6 +359,7 @@ private:
     // stack, and naive paired push/pop is imbalanced by rapid
     // open/close cycles during the settings overlay slide-out animation.
     bool m_cursorVisible = false;
+    bool m_libretroHotkeysSuppressed = false;
 
     QQmlEngine* m_qmlEngine = nullptr;
     InGameMenuPanel* m_inGameMenuPanel = nullptr;

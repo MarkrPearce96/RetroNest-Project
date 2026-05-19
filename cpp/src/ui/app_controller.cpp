@@ -716,6 +716,12 @@ void AppController::resetHotkeys(const QString& emuId) {
     if (emuId == libretro_hotkeys::kSentinelEmuId) syncLibretroHotkeyBindings();
 }
 
+void AppController::setLibretroHotkeysSuppressed(bool suppressed) {
+    if (suppressed == m_libretroHotkeysSuppressed) return;
+    m_libretroHotkeysSuppressed = suppressed;
+    emit libretroHotkeysSuppressedChanged();
+}
+
 void AppController::syncLibretroHotkeyBindings() {
     if (!m_hotkeyMatcher) return;
     m_hotkeyMatcher->clearAllBindings();
@@ -731,7 +737,14 @@ bool AppController::eventFilter(QObject* /*watched*/, QEvent* event) {
     const QEvent::Type t = event->type();
     if (t == QEvent::KeyPress || t == QEvent::KeyRelease) {
         auto* k = static_cast<QKeyEvent*>(event);
-        if (!k->isAutoRepeat() && m_hotkeyMatcher) {
+        // Suppress hotkey dispatch when a host UI surface owns the key event:
+        //   - Qt modal dialog (e.g. Libretro Hotkey settings dialog itself)
+        //   - QML settings overlay (QML sets m_libretroHotkeysSuppressed)
+        //   - In-game menu panel (Esc/etc should close it via normal routing)
+        const bool suppressed = m_libretroHotkeysSuppressed
+                                || QApplication::activeModalWidget() != nullptr
+                                || (m_inGameMenuPanel && m_inGameMenuPanel->isVisible());
+        if (!k->isAutoRepeat() && m_hotkeyMatcher && !suppressed) {
             const int combined = int(k->key()) | int(k->modifiers());
             m_hotkeyMatcher->onKeyEvent(combined, t == QEvent::KeyPress);
         }
