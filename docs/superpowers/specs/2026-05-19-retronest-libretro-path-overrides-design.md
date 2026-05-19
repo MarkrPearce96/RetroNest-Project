@@ -10,7 +10,7 @@ Make the existing per-emulator Paths UI actually persist and propagate path over
 
 In scope:
 - **PCSX2**: 3 overridable paths — Memory Cards, Save States, Textures.
-- **mGBA**: 3 overridable paths — Saves, Save States, Screenshots (the existing 3 rows, now made functional).
+- **mGBA**: 2 overridable paths — Saves, Save States. (Screenshots row dropped — see scope decision below.)
 
 Out of scope:
 - Native-adapter persistence (Dolphin, DuckStation, PPSSPP) — unchanged, still uses each adapter's INI.
@@ -32,8 +32,10 @@ Native adapters (Dolphin/DuckStation/PPSSPP) work today because each writes over
 - ✅ Textures — `<save_dir>/textures/<serial>/`, owned by `pcsx2-libretro/Settings.cpp:InitializeDefaults`.
 - ❌ BIOS — stays at `Paths::biosDir()`, shared across all PS2 emulators. Splitting per-emulator complicates future PS2 emulator additions; no real user demand.
 
-### mGBA overridable paths: keep existing 3
-- ✅ Saves (battery), Save states, Screenshots — already in `MgbaLibretroAdapter::pathsDefs()`, just need real persistence and propagation.
+### mGBA overridable paths: 2 (drop Screenshots)
+- ✅ Saves (battery) — mGBA libretro core writes `.srm` to `save_dir`. Override propagates via the libretro `save_dir` env.
+- ✅ Save states — RetroNest writes the serialized buffer to `<emulator_data>/savestates/`. Override wraps the existing path computation.
+- ❌ Screenshots — discovery during plan stage: RetroNest has no gameplay-screenshot capture (the existing `screenshots/` mkpath has no writer). Dropped from `pathsDefs()` to avoid promising UI for a feature that doesn't exist. Re-add when/if a screenshot-capture sub-project lands.
 
 ### Migration semantics: going-forward only
 - Files already at the old default location stay there. New writes land at the override.
@@ -65,7 +67,7 @@ Runtime consumption (RetroNest):
   GameSession::libretroSlotPath  → consults PathOverridesStore for SaveStates
   GameSession::terminate         → consults PathOverridesStore for SaveStates
   CoreRuntime::start (saveDir)   → consults PathOverridesStore for mGBA Saves
-  Screenshot writer (TBD path)   → consults PathOverridesStore for Screenshots
+  (Screenshots row dropped from scope — no consumer in RetroNest)
 
 Runtime consumption (pcsx2-libretro core):
   Settings::InitializeDefaults   → queries 2 new private env enums for Memcards/Textures
@@ -113,11 +115,10 @@ QVector<PathDef> Pcsx2LibretroAdapter::pathsDefs() const {
 }
 ```
 
-**`MgbaLibretroAdapter::pathsDefs()`** (modified) — keep 3 rows, but populate section/key (currently empty):
+**`MgbaLibretroAdapter::pathsDefs()`** (modified) — 2 rows (Screenshots dropped), section/key populated:
 ```cpp
-{ "Saves",       "libretro", "Saves",       "saves",       PathBase::EmulatorData },
-{ "Save states", "libretro", "SaveStates",  "savestates",  PathBase::EmulatorData },
-{ "Screenshots", "libretro", "Screenshots", "screenshots", PathBase::EmulatorData },
+{ "Saves",       "libretro", "Saves",      "saves",      PathBase::EmulatorData },
+{ "Save states", "libretro", "SaveStates", "savestates", PathBase::EmulatorData },
 ```
 
 **`ConfigService::pathValue` / `ConfigService::savePaths`** — branch on `adapter->configFilePath().isEmpty()`:
@@ -181,7 +182,7 @@ case RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR: {
   - `PathOverridesStore`: ~80 LOC
   - `ConfigService` routing: ~25 LOC
   - Adapter `pathsDefs()` overrides: ~20 LOC (PCSX2 new, mGBA edited)
-  - Runtime consumption sites (libretroSlotPath / terminate / CoreRuntime::start / screenshot writer): ~40 LOC
+  - Runtime consumption sites (libretroSlotPath / terminate / CoreRuntime::start saveDirectory): ~30 LOC
   - `environmentDispatch` cases: ~30 LOC
   - Header / forward declarations: ~10 LOC
   - Wiring through `ConfigService::pathDefs` for value display (no change expected)
@@ -193,8 +194,8 @@ case RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR: {
 
 ## Open questions for the plan stage
 
-- **Screenshot path resolution site** — where exactly is the screenshot file path constructed today? Need to locate during the plan stage so the runtime-consumption wiring covers it.
-- **mGBA Saves persistence model** — verify in the plan stage whether mGBA libretro writes `.srm` directly to `save_dir` or exposes the buffer via `retro_get_memory_data(RETRO_MEMORY_SAVE_RAM)` and RetroNest persists. If the former, override propagates via `save_dir`; if the latter, RetroNest's persistence-write path takes the override directly. User-facing behavior identical either way.
+- **Screenshot path resolution site** — RESOLVED at plan stage: no consumer exists in RetroNest. Screenshots row removed from scope.
+- **mGBA Saves persistence model** — RESOLVED at plan stage: mGBA libretro writes `.srm` to `save_dir` directly (no `retro_get_memory_data`-based persistence in RetroNest). Override propagates by overriding the `save_dir` passed to the core via `RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY`.
 - **`PathOverridesStore` reload semantics** — if a user edits `path_overrides.json` by hand while RetroNest is running, do reads pick up the change? Default: cache the parsed JSON in memory, reload only on `write`. Note in implementation plan; revisit if user reports a need.
 - **Empty-string override vs unset** — treat empty string in JSON as equivalent to "no override" (fall back to default) rather than "use empty path". Document explicitly in `PathOverridesStore::read`.
 
