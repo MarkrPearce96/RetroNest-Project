@@ -113,11 +113,12 @@ void HotkeyMatcher::firePressEdge(const QString& action, bool pressed) {
     }
 }
 
-void HotkeyMatcher::onKeyEvent(int qtKey, bool pressed) {
+bool HotkeyMatcher::onKeyEvent(int qtKey, bool pressed) {
     // QMultiHash returns ALL actions bound to this key (rare today but
     // cheap, and lets two actions share a binding if a user really wants).
     const auto actions = m_keyToActions.values(qtKey);
     for (const QString& action : actions) firePressEdge(action, pressed);
+    return !actions.isEmpty();
 }
 
 void HotkeyMatcher::onGamepadButton(int port, int button, bool pressed) {

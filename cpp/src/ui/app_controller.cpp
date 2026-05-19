@@ -774,10 +774,16 @@ bool AppController::eventFilter(QObject* /*watched*/, QEvent* event) {
                                 || (m_inGameMenuPanel && m_inGameMenuPanel->isVisible());
         if (!k->isAutoRepeat() && m_hotkeyMatcher && !suppressed) {
             const int combined = int(k->key()) | int(k->modifiers());
-            m_hotkeyMatcher->onKeyEvent(combined, t == QEvent::KeyPress);
+            if (m_hotkeyMatcher->onKeyEvent(combined, t == QEvent::KeyPress)) {
+                // A bound action fired. Consume the event so it doesn't
+                // also reach the just-opened menu's own Esc-to-close
+                // handler (or any other downstream widget shortcut).
+                event->accept();
+                return true;
+            }
         }
     }
-    return false;  // never consume — keep Qt's normal routing intact
+    return false;  // unbound key — keep Qt's normal routing intact
 }
 
 QVariantList AppController::controllerTypes(const QString& emuId) const { return m_configService.controllerTypes(emuId); }

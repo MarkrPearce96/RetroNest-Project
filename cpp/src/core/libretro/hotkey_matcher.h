@@ -56,8 +56,10 @@ public:
     void resetGamepadState();
 
     // Qt keyboard event entry point. qtKey is the combined value
-    // QKeyEvent::key() | int(QKeyEvent::modifiers()).
-    void onKeyEvent(int qtKey, bool pressed);
+    // QKeyEvent::key() | int(QKeyEvent::modifiers()). Returns true when
+    // the event matched a bound action and fired (caller should consume
+    // the event so widgets / shortcuts don't see it).
+    bool onKeyEvent(int qtKey, bool pressed);
 
     // Gamepad input entry point. port is the libretro port (0..3 typically),
     // button is the raw libretro RetroPad button index.
