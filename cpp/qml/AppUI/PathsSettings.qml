@@ -380,16 +380,39 @@ Item {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
+                            // Clear overrides (libretro) or write defaults to
+                            // INI (native) — backend picks the right one based
+                            // on adapter->configFilePath().isEmpty().
+                            app.resetPaths(root.currentEmuId)
+
+                            // After resetPaths, pathValue() returns the cleared
+                            // state for libretro / the default for native. But
+                            // the visible TextInput.text was imperatively set
+                            // by the Browse callback, which broke the original
+                            // binding. The currentEmu = -1 / = tmp trick that
+                            // used to live here gets coalesced by Qt when both
+                            // assignments happen in one tick, so the Repeater
+                            // delegates aren't always recreated. Walk the
+                            // delegates and reset each field.text to its
+                            // current default path — guaranteed visible refresh.
                             var defs = app.pathDefs(root.currentEmuId)
-                            var values = {}
-                            for (var i = 0; i < defs.length; i++) {
-                                values[defs[i].section + "/" + defs[i].key] = defs[i].defaultPath
+                            for (var i = 0; i < pathRepeater.count; i++) {
+                                var item = pathRepeater.itemAt(i)
+                                if (!item || i >= defs.length) continue
+                                var field = findField(item)
+                                if (field) field.text = defs[i].defaultPath
                             }
-                            app.savePaths(root.currentEmuId, values)
-                            // Force model reload
-                            var tmp = root.currentEmu
-                            root.currentEmu = -1
-                            root.currentEmu = tmp
+                        }
+
+                        function findField(parent) {
+                            for (var i = 0; i < parent.children.length; i++) {
+                                var c = parent.children[i]
+                                if (c.section !== undefined && c.key !== undefined)
+                                    return c
+                                var f = findField(c)
+                                if (f) return f
+                            }
+                            return null
                         }
                     }
                 }

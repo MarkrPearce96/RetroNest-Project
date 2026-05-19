@@ -461,6 +461,50 @@ void ConfigService::savePaths(const QString& emuId, const QVariantMap& values) {
         emit statusMessage("Failed to save paths.");
 }
 
+void ConfigService::resetPaths(const QString& emuId) {
+    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
+    if (!adapter) return;
+
+    const QString configPath = adapter->configFilePath();
+    if (configPath.isEmpty()) {
+        // Libretro adapter — clear every overridable key from
+        // PathOverridesStore. The Paths UI text field is bound to
+        // `pathValue() || defaultPath`, so a cleared override makes
+        // the field display the default path. Also future-proof:
+        // if the user later relocates ~/Documents/RetroNest the
+        // resolved default updates automatically (no stale absolute
+        // path frozen in the store).
+        auto& store = PathOverridesStore::instance();
+        for (const auto& pd : adapter->pathsDefs())
+            store.clear(emuId, pd.key);
+        emit statusMessage("Paths reset to defaults.");
+        return;
+    }
+
+    // Native adapter — INI is the source of truth for path values
+    // the external emulator process reads on launch. Clearing keys
+    // would let the emulator fall back to its own built-in defaults
+    // (which often differ from RetroNest's `defaultSuffix`-derived
+    // paths). Write the RetroNest-managed defaults explicitly so
+    // the post-reset state matches what `pathDefs()` advertises.
+    const auto* manifest = m_loader->emulatorById(emuId);
+    const QString systemId = manifest ? Paths::systemIdFor(emuId, manifest->systems) : emuId;
+    QVariantMap values;
+    for (const auto& pd : adapter->pathsDefs()) {
+        QString defPath;
+        switch (pd.base) {
+            case PathBase::Bios:
+                defPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
+                break;
+            case PathBase::EmulatorData:
+                defPath = QFileInfo(Paths::emulatorDataDir(emuId, systemId) + "/" + pd.defaultSuffix).absoluteFilePath();
+                break;
+        }
+        values[pd.section + "/" + pd.key] = defPath;
+    }
+    savePaths(emuId, values);
+}
+
 // ── Capture-formatting helpers ──────────────────────────────
 
 QString ConfigService::formatCapturedBinding(const QString& emuId, int deviceIndex,

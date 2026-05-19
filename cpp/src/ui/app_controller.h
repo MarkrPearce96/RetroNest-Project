@@ -128,6 +128,7 @@ public slots:
     Q_INVOKABLE QString pathValue(const QString& emuId, const QString& section, const QString& key) const;
     Q_INVOKABLE QString pathDefault(const QString& emuId, const QString& section, const QString& key) const;
     Q_INVOKABLE void savePaths(const QString& emuId, const QVariantMap& values);
+    Q_INVOKABLE void resetPaths(const QString& emuId);
     Q_INVOKABLE QString browsePath(const QString& title);
 
     Q_INVOKABLE QString formatCapturedBinding(const QString& emuId, int deviceIndex,

@@ -48,6 +48,7 @@ public:
     QString pathValue(const QString& emuId, const QString& section, const QString& key) const;
     QString pathDefault(const QString& emuId, const QString& section, const QString& key) const;
     void savePaths(const QString& emuId, const QVariantMap& values);
+    void resetPaths(const QString& emuId);
 
     // Hotkeys
     QVariantList hotkeyBindings(const QString& emuId) const;

@@ -455,6 +455,7 @@ QVariantList AppController::pathDefs(const QString& emuId) const { return m_conf
 QString AppController::pathValue(const QString& emuId, const QString& section, const QString& key) const { return m_configService.pathValue(emuId, section, key); }
 QString AppController::pathDefault(const QString& emuId, const QString& section, const QString& key) const { return m_configService.pathDefault(emuId, section, key); }
 void AppController::savePaths(const QString& emuId, const QVariantMap& values) { m_configService.savePaths(emuId, values); }
+void AppController::resetPaths(const QString& emuId) { m_configService.resetPaths(emuId); }
 
 QString AppController::browsePath(const QString& title) {
     return QFileDialog::getExistingDirectory(nullptr, title, QDir::homePath(), QFileDialog::ShowDirsOnly);
