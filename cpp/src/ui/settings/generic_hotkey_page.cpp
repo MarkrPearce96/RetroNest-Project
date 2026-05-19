@@ -1,5 +1,6 @@
 #include "generic_hotkey_page.h"
 
+#include "core/libretro/libretro_hotkey_defs.h"
 #include "core/sdl_input_manager.h"
 #include "ui/app_controller.h"
 #include "ui/settings/binding_display.h"
@@ -47,11 +48,13 @@ bool isModifierKey(int key) {
 GenericHotkeyPage::GenericHotkeyPage(SdlInputManager* inputManager,
                                      AppController* appController,
                                      const QString& emuId,
-                                     QWidget* parent)
+                                     QWidget* parent,
+                                     bool dualColumn)
     : QWidget(parent),
       m_inputManager(inputManager),
       m_appController(appController),
-      m_emuId(emuId) {
+      m_emuId(emuId),
+      m_dualColumn(dualColumn) {
     setStyleSheet(QStringLiteral("background:%1;")
                       .arg(SettingsDialogTheme::windowBg().name()));
 
@@ -157,7 +160,7 @@ void GenericHotkeyPage::buildLayout() {
             contentLayout->addWidget(currentCard);
         }
 
-        auto* row = new HotkeyBindingRow(def, currentCard);
+        auto* row = new HotkeyBindingRow(def, m_dualColumn, currentCard);
         connect(row, &HotkeyBindingRow::focused,
                 this, &GenericHotkeyPage::onRowFocused);
         connect(row, &HotkeyBindingRow::rebindRequested,
@@ -166,10 +169,33 @@ void GenericHotkeyPage::buildLayout() {
                 this, [this](const HotkeyDef& d){ startCapture(d, true); });
         connect(row, &HotkeyBindingRow::clearRequested,
                 this, [this](const HotkeyDef& d){
-                    m_appController->clearHotkey(m_emuId, d.section, d.key);
-                    m_currentValues[d.key].clear();
-                    if (auto it = m_rowByKey.constFind(d.key); it != m_rowByKey.constEnd())
-                        (*it)->setBindingDisplay(QString());
+                    if (m_dualColumn) {
+                        // Clear only the currently-active column's portion.
+                        QString kbd, pad;
+                        libretro_hotkeys::splitBindingByType(
+                            m_currentValues.value(d.key), &kbd, &pad);
+                        if (m_focusedRow && m_focusedRow->currentColumn()
+                                == HotkeyBindingRow::ColController) {
+                            pad.clear();
+                        } else {
+                            kbd.clear();
+                        }
+                        const QString merged =
+                            libretro_hotkeys::mergeBindingsByType(kbd, pad);
+                        m_appController->saveHotkey(m_emuId, d.section, d.key,
+                                                    merged);
+                        m_currentValues[d.key] = merged;
+                    } else {
+                        m_appController->clearHotkey(m_emuId, d.section, d.key);
+                        m_currentValues[d.key].clear();
+                    }
+                    refreshRowDisplay(d.key);
+                });
+        connect(row, &HotkeyBindingRow::columnChanged, this,
+                [this](const HotkeyDef& d, HotkeyBindingRow::Column col){
+                    Q_UNUSED(col);
+                    // Update the description bar to show the focused column.
+                    emit bindingFocused(d, currentDisplayFor(d.key));
                 });
         connect(row, &HotkeyBindingRow::navigateRequested,
                 this, &GenericHotkeyPage::navigateFromRow);
@@ -189,8 +215,22 @@ void GenericHotkeyPage::loadBindings() {
         const auto map = v.toMap();
         const QString key = map.value(QStringLiteral("key")).toString();
         m_currentValues[key] = map.value(QStringLiteral("currentValue")).toString();
-        if (auto it = m_rowByKey.constFind(key); it != m_rowByKey.constEnd())
-            (*it)->setBindingDisplay(currentDisplayFor(key));
+        refreshRowDisplay(key);
+    }
+}
+
+void GenericHotkeyPage::refreshRowDisplay(const QString& iniKey) {
+    auto it = m_rowByKey.constFind(iniKey);
+    if (it == m_rowByKey.constEnd()) return;
+    if (m_dualColumn) {
+        QString kbdRaw, padRaw;
+        libretro_hotkeys::splitBindingByType(m_currentValues.value(iniKey),
+                                              &kbdRaw, &padRaw);
+        const QString kbdDisplay = displayMultiBinding(kbdRaw, m_inputManager);
+        const QString padDisplay = displayMultiBinding(padRaw, m_inputManager);
+        (*it)->setDualBindingDisplay(kbdDisplay, padDisplay);
+    } else {
+        (*it)->setBindingDisplay(currentDisplayFor(iniKey));
     }
 }
 
@@ -210,18 +250,48 @@ void GenericHotkeyPage::appendRebindFocused() {
 void GenericHotkeyPage::clearFocused() {
     if (!m_focusedRow || !m_appController) return;
     const HotkeyDef d = m_focusedRow->def();
-    m_appController->clearHotkey(m_emuId, d.section, d.key);
-    m_currentValues[d.key].clear();
-    m_focusedRow->setBindingDisplay(QString());
-    emit bindingFocused(d, QString());
+    if (m_dualColumn) {
+        QString kbd, pad;
+        libretro_hotkeys::splitBindingByType(m_currentValues.value(d.key),
+                                              &kbd, &pad);
+        if (m_focusedRow->currentColumn() == HotkeyBindingRow::ColController)
+            pad.clear();
+        else
+            kbd.clear();
+        const QString merged = libretro_hotkeys::mergeBindingsByType(kbd, pad);
+        m_appController->saveHotkey(m_emuId, d.section, d.key, merged);
+        m_currentValues[d.key] = merged;
+    } else {
+        m_appController->clearHotkey(m_emuId, d.section, d.key);
+        m_currentValues[d.key].clear();
+    }
+    refreshRowDisplay(d.key);
+    emit bindingFocused(d, currentDisplayFor(d.key));
 }
 
 void GenericHotkeyPage::restoreFocusedToDefault() {
     if (!m_focusedRow || !m_appController) return;
     const HotkeyDef d = m_focusedRow->def();
-    m_appController->saveHotkey(m_emuId, d.section, d.key, d.defaultValue);
-    m_currentValues[d.key] = d.defaultValue;
-    m_focusedRow->setBindingDisplay(currentDisplayFor(d.key));
+    if (m_dualColumn) {
+        // Restore only the focused column's portion to the default's portion
+        // of the same type, leaving the opposite column intact.
+        QString defKbd, defPad;
+        libretro_hotkeys::splitBindingByType(d.defaultValue, &defKbd, &defPad);
+        QString curKbd, curPad;
+        libretro_hotkeys::splitBindingByType(m_currentValues.value(d.key),
+                                              &curKbd, &curPad);
+        if (m_focusedRow->currentColumn() == HotkeyBindingRow::ColController)
+            curPad = defPad;
+        else
+            curKbd = defKbd;
+        const QString merged = libretro_hotkeys::mergeBindingsByType(curKbd, curPad);
+        m_appController->saveHotkey(m_emuId, d.section, d.key, merged);
+        m_currentValues[d.key] = merged;
+    } else {
+        m_appController->saveHotkey(m_emuId, d.section, d.key, d.defaultValue);
+        m_currentValues[d.key] = d.defaultValue;
+    }
+    refreshRowDisplay(d.key);
     emit bindingFocused(d, currentDisplayFor(d.key));
 }
 
@@ -296,6 +366,11 @@ void GenericHotkeyPage::startCapture(const HotkeyDef& def, bool append) {
     m_captureCountdown = 5;
     m_heldKeyboardKeys.clear();
     m_controllerHeld = false;
+    // Record which column is being captured so we can filter inputs by type
+    // and merge the result back into the opposite column's portion.
+    m_capturingColumn = (m_dualColumn && m_focusedRow)
+                            ? int(m_focusedRow->currentColumn())
+                            : int(HotkeyBindingRow::ColKeyboard);
 
     if (auto it = m_rowByKey.constFind(def.key); it != m_rowByKey.constEnd())
         (*it)->setCapturing(true);
@@ -354,6 +429,10 @@ void GenericHotkeyPage::stopCapture(bool save) {
 void GenericHotkeyPage::onBindingCaptured(int deviceIndex, const QString& element,
                                           bool isAxis, bool positive) {
     if (m_capturingKey.isEmpty()) return;
+    // Dual-column mode: ignore controller events when the keyboard column
+    // is being captured (each column accepts only its own input type).
+    if (m_dualColumn && m_capturingColumn != int(HotkeyBindingRow::ColController))
+        return;
 
     // Route through the adapter so PCSX2 / DuckStation / PPSSPP each produce
     // their native binding format (PPSSPP uses numeric "10-19", not "SDL-x/y").
@@ -397,16 +476,34 @@ void GenericHotkeyPage::finishCapture(const QString& formatted) {
     if (it == m_rowByKey.constEnd()) return;
     HotkeyBindingRow* row = *it;
     const HotkeyDef d = row->def();
-
-    // Append with " & " separator (PCSX2 chord format) when shift-clicking.
     const QString existing = m_currentValues.value(key);
-    const bool doAppend = m_appendMode && !existing.isEmpty();
-    const QString value = doAppend ? existing + QStringLiteral(" & ") + formatted
-                                   : formatted;
+
+    QString value;
+    if (m_dualColumn) {
+        // Merge captured (typed) tokens into the existing string, replacing
+        // only the active column's portion. Opposite column is preserved.
+        QString existingKbd, existingPad;
+        libretro_hotkeys::splitBindingByType(existing, &existingKbd, &existingPad);
+        if (m_capturingColumn == int(HotkeyBindingRow::ColController)) {
+            const QString newPad = m_appendMode && !existingPad.isEmpty()
+                ? existingPad + QStringLiteral(" & ") + formatted
+                : formatted;
+            value = libretro_hotkeys::mergeBindingsByType(existingKbd, newPad);
+        } else {
+            const QString newKbd = m_appendMode && !existingKbd.isEmpty()
+                ? existingKbd + QStringLiteral(" & ") + formatted
+                : formatted;
+            value = libretro_hotkeys::mergeBindingsByType(newKbd, existingPad);
+        }
+    } else {
+        const bool doAppend = m_appendMode && !existing.isEmpty();
+        value = doAppend ? existing + QStringLiteral(" & ") + formatted
+                          : formatted;
+    }
 
     m_appController->saveHotkey(m_emuId, d.section, key, value);
     m_currentValues[key] = value;
-    row->setBindingDisplay(currentDisplayFor(key));
+    refreshRowDisplay(key);
     emit bindingFocused(d, currentDisplayFor(key));
 }
 
@@ -428,6 +525,11 @@ bool GenericHotkeyPage::eventFilter(QObject* obj, QEvent* event) {
         if (keyEvent->isAutoRepeat()) return true;
 
         const int key = keyEvent->key();
+
+        // Dual-column mode: drop keyboard events when the controller column
+        // is being captured (each column accepts only its own input type).
+        if (m_dualColumn && m_capturingColumn == int(HotkeyBindingRow::ColController))
+            return true;
 
         // Escape is bindable — hold/release semantics apply to it like any
         // other key. To cancel an accidental rebind, right-click the row

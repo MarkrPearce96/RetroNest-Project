@@ -1,4 +1,5 @@
 #include "hotkey_settings_dialog.h"
+#include "core/libretro/libretro_hotkey_defs.h"
 #include "ui/settings/generic_hotkey_page.h"
 #include "ui/settings/settings_dialog_theme.h"
 #include "ui/settings/widgets/settings_description_bar.h"
@@ -18,7 +19,12 @@ HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
                 QSize(900, 720),
                 SettingsDialogTheme::windowBg());
 
-    m_page = new GenericHotkeyPage(inputManager, appController, emuId, this);
+    // Two-column layout (Keyboard | Controller) for the libretro hotkeys
+    // sentinel emuId — per-emulator standalone dialogs keep the single
+    // combined column they've always used.
+    const bool dualColumn = (emuId == libretro_hotkeys::kSentinelEmuId);
+    m_page = new GenericHotkeyPage(inputManager, appController, emuId,
+                                    this, dualColumn);
     connect(m_page, &GenericHotkeyPage::bindingFocused,
             this, &HotkeySettingsDialog::onBindingFocused);
     setHub(m_page);  // single-page dialog — page IS the hub

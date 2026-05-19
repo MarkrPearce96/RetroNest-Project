@@ -25,7 +25,8 @@ public:
     GenericHotkeyPage(SdlInputManager* inputManager,
                       AppController* appController,
                       const QString& emuId,
-                      QWidget* parent = nullptr);
+                      QWidget* parent = nullptr,
+                      bool dualColumn = false);
 
     bool isEmpty() const { return m_entries.isEmpty(); }
 
@@ -91,4 +92,11 @@ private:
 
     // Commit the capture if no inputs are still held.
     void maybeCommitOnRelease();
+
+    // Dual-column mode: each action has independent keyboard and controller
+    // bindings. Set at construction. m_capturingColumn tracks which column's
+    // turn it is during capture (drives input-type filtering).
+    bool m_dualColumn = false;
+    int  m_capturingColumn = 0;  // matches HotkeyBindingRow::Column
+    void refreshRowDisplay(const QString& iniKey);
 };

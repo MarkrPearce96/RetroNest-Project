@@ -6,24 +6,39 @@
 class QLabel;
 class BindBtn;
 
-// Single hotkey binding row: fixed-width label on the left, BindBtn on
-// the right. Emits `focused` on focus-in, plus three input signals that
-// the parent page wires to the capture / clear flows.
+// Single hotkey binding row.
+//
+// Two layout modes:
+//   - Single-column (default): label + one binding button. Used by the
+//     per-emulator standalone hotkey dialogs (DuckStation / PPSSPP /
+//     Dolphin).
+//   - Dual-column: label + keyboard button + controller button. Used by
+//     the global Libretro Hotkeys page so each action can be bound
+//     independently for keyboard and gamepad. Left/Right arrows toggle
+//     which column is "active"; the active column is the target of
+//     subsequent Rebind / Restore-Default actions.
 class HotkeyBindingRow : public QWidget {
     Q_OBJECT
 public:
-    explicit HotkeyBindingRow(const HotkeyDef& def, QWidget* parent = nullptr);
+    enum Column { ColKeyboard = 0, ColController = 1 };
+
+    explicit HotkeyBindingRow(const HotkeyDef& def,
+                              bool dualColumn = false,
+                              QWidget* parent = nullptr);
 
     const HotkeyDef& def() const { return m_def; }
+    bool isDualColumn() const { return m_dualColumn; }
+    Column currentColumn() const { return m_currentColumn; }
 
-    // Update the button text. Empty value renders as "Not bound".
+    // Single-column display (legacy single-column rows).
     void setBindingDisplay(const QString& displayText);
 
-    // Toggle the "currently capturing" visual style.
-    void setCapturing(bool capturing);
+    // Dual-column display: separate text for keyboard column and
+    // controller column. No-op when the row isn't dual-column.
+    void setDualBindingDisplay(const QString& keyboardText,
+                               const QString& controllerText);
 
-    // Replace just the button text while capturing (without recomputing the
-    // tooltip). Used by the page to render "<captured> [N]" countdown updates.
+    void setCapturing(bool capturing);
     void setCapturingText(const QString& text);
 
 signals:
@@ -31,11 +46,10 @@ signals:
     void rebindRequested(HotkeyDef def);
     void appendRebindRequested(HotkeyDef def);
     void clearRequested(HotkeyDef def);
-    // Emitted on Up/Down while the row has focus. `direction` is +1 for
-    // Down, -1 for Up. Page consumes this to move focus to the prev/next
-    // row in adapter declaration order — fires before the parent QScrollArea
-    // can intercept the arrow key for scrolling.
     void navigateRequested(int direction);
+    // Dual-column rows emit this when Left/Right arrows toggle the
+    // active column. Single-column rows never emit it.
+    void columnChanged(HotkeyDef def, Column column);
 
 protected:
     void focusInEvent(QFocusEvent* e) override;
@@ -44,7 +58,12 @@ protected:
     void keyPressEvent(QKeyEvent* e) override;
 
 private:
+    void applyColumnHighlight();
+
     HotkeyDef m_def;
-    QLabel* m_label = nullptr;
-    BindBtn* m_button = nullptr;
+    bool      m_dualColumn = false;
+    Column    m_currentColumn = ColKeyboard;
+    QLabel*   m_label = nullptr;
+    BindBtn*  m_button = nullptr;         // single-column / keyboard column
+    BindBtn*  m_controllerButton = nullptr;  // controller column (dualColumn only)
 };
