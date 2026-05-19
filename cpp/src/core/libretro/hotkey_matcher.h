@@ -12,8 +12,9 @@
  * incoming Qt key events and gamepad button events, and emits actionPressed /
  * actionReleased signals.
  *
- * Gamepad support covers single-button bindings (Task 4). Combo detection
- * is added in subsequent tasks.
+ * Gamepad support covers single-button bindings and combo (modifier+button)
+ * chords. Matched combos populate a suppression set so the input router can
+ * mask the modifier button from the libretro core.
  *
  * Threading: setBinding/onKeyEvent/onGamepadButton must be called from the
  * same thread (typically the Qt main thread). No internal locks.
