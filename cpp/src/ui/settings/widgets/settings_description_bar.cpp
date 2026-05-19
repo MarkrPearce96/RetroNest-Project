@@ -98,6 +98,9 @@ SettingsDescriptionBar::GlyphStyle SettingsDescriptionBar::glyphFor(const QStrin
         // PlayStation
         if (action == "confirm")     return { QStringLiteral("\u2715"), QColor("#2a3a6a"), QColor("#6d9ddc"), QColor("#3a5a8a"), 18 };
         if (action == "back")        return { QStringLiteral("\u25CB"), QColor("#5c2a3a"), QColor("#dc6d8d"), QColor("#7a3a5a"), 18 };
+        if (action == "clear")       return { QStringLiteral("\u25CB"), QColor("#5c2a3a"), QColor("#dc6d8d"), QColor("#7a3a5a"), 18 };  // Circle (same as back)
+        if (action == "close")       return { QStringLiteral("\u25A1"), QColor("#5c2a5c"), QColor("#dc6ddc"), QColor("#7a3a7a"), 18 };  // Square
+        if (action == "auto_map")    return { QStringLiteral("\u25B3"), QColor("#2a5c2a"), QColor("#6ddc6d"), QColor("#3a7a3a"), 18 };  // Triangle
         if (action == "navigate_ud") return { QStringLiteral("D-Pad \u25B4\u25BE"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };
         if (action == "navigate")    return { QStringLiteral("D-Pad \u25B4\u25BE\u25C2\u25B8"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };
         if (action == "switch_tab")  return { QStringLiteral("L1 / R1"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
@@ -105,13 +108,20 @@ SettingsDescriptionBar::GlyphStyle SettingsDescriptionBar::glyphFor(const QStrin
         // Xbox
         if (action == "confirm")     return { QStringLiteral("A"), QColor("#2a5c2a"), QColor("#6ddc6d"), QColor("#3a7a3a") };
         if (action == "back")        return { QStringLiteral("B"), QColor("#5c2a2a"), QColor("#dc6d6d"), QColor("#7a3a3a") };
+        if (action == "clear")       return { QStringLiteral("B"), QColor("#5c2a2a"), QColor("#dc6d6d"), QColor("#7a3a3a") };  // same as back
+        if (action == "close")       return { QStringLiteral("X"), QColor("#2a3a6a"), QColor("#6d9ddc"), QColor("#3a5a8a") };
+        if (action == "auto_map")    return { QStringLiteral("Y"), QColor("#5c5a2a"), QColor("#dcd66d"), QColor("#7a7a3a") };
         if (action == "navigate_ud") return { QStringLiteral("D-Pad \u25B4\u25BE"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };
         if (action == "navigate")    return { QStringLiteral("D-Pad \u25B4\u25BE\u25C2\u25B8"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };
         if (action == "switch_tab")  return { QStringLiteral("LB / RB"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
     } else {
-        // Keyboard
-        if (action == "confirm")     return { QStringLiteral("Enter"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
+        // Keyboard \u2014 use the icon glyphs matching the controller mapping
+        // page's footer pills (\u21B5 / \u232B / Esc / M).
+        if (action == "confirm")     return { QStringLiteral("\u21B5"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };  // \u21B5
         if (action == "back")        return { QStringLiteral("Esc"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
+        if (action == "clear")       return { QStringLiteral("\u232B"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };  // \u232B
+        if (action == "close")       return { QStringLiteral("Esc"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
+        if (action == "auto_map")    return { QStringLiteral("M"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
         if (action == "navigate_ud") return { QStringLiteral("\u2191\u2193"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 18 };
         if (action == "navigate")    return { QStringLiteral("\u2191\u2193\u2190\u2192"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 18 };
         if (action == "switch_tab")  return { QStringLiteral("Tab"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };

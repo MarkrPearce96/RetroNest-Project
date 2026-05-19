@@ -23,18 +23,16 @@ HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
             this, &HotkeySettingsDialog::onBindingFocused);
     setHub(m_page);  // single-page dialog — page IS the hub
 
-    // Three-row footer hint set, matching the controller mapping page:
-    //   confirm  → Rebind
-    //   back     → Restore Default (the focused row reverts to its default)
-    //   navigate → ↑↓
-    // No explicit "Add" hint — hold-to-multi-bind handles multi-input within
-    // one rebind session. Close is the dialog's window close button / Esc.
+    // Footer hints match the controller mapping page's pill row:
+    //   confirm → ↵ Rebind            (Enter / A button)
+    //   clear   → ⌫ Restore Default   (Backspace / B button)
+    //   close   → Esc Close            (Esc / X button)
     if (m_descBar) {
         m_descBar->setInputManager(inputManager);
         m_descBar->setHints({
-            { QStringLiteral("confirm"),     QStringLiteral("Rebind") },
-            { QStringLiteral("back"),        QStringLiteral("Restore Default") },
-            { QStringLiteral("navigate_ud"), QStringLiteral("Navigate") },
+            { QStringLiteral("confirm"), QStringLiteral("Rebind") },
+            { QStringLiteral("clear"),   QStringLiteral("Restore Default") },
+            { QStringLiteral("close"),   QStringLiteral("Close") },
         });
     }
 }
@@ -52,16 +50,19 @@ void HotkeySettingsDialog::keyPressEvent(QKeyEvent* e) {
         EmulatorSettingsDialogBase::keyPressEvent(e);
         return;
     }
-    // Face-button shortcuts. SdlInputManager translates A/B/X/Y to these
-    // Qt keys via the unified-input pipeline (see CLAUDE.md "Input System").
+    // Footer-action shortcuts. SdlInputManager translates A/B/X face buttons
+    // to these Qt keys via the unified-input pipeline (see CLAUDE.md
+    // "Input System"). Keyboard analogues mirror the controller mapping
+    // page's footer pills.
     switch (e->key()) {
-        case Qt::Key_Return:                            // A — Rebind
+        case Qt::Key_Return:                            // ↵ / A — Rebind
             m_page->rebindFocused();
             return;
-        case Qt::Key_Back:                              // B — Restore this row to its default
+        case Qt::Key_Backspace:                         // ⌫ / B — Restore Default
+        case Qt::Key_Back:
             m_page->restoreFocusedToDefault();
             return;
-        case Qt::Key_Backspace:                         // X — Close
+        case Qt::Key_Escape:                            // Esc / X — Close
             accept();
             return;
         default:
