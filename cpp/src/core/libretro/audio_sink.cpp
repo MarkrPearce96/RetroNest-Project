@@ -62,6 +62,37 @@ void AudioSink::setPaused(bool paused) {
     SDL_PauseAudioDevice(m_dev, paused ? 1 : 0);
 }
 
+void AudioSink::setMuted(bool m) { m_muted.store(m); }
+
+void AudioSink::setVolume(float v) {
+    // Clamp to [0.0, 1.0]
+    if (v < 0.0f) v = 0.0f;
+    if (v > 1.0f) v = 1.0f;
+    m_volume.store(v);
+}
+
+int AudioSink::applyGainAndMute(const int16_t* in, int16_t* out, int frames) {
+    const int samples = frames * 2;
+    if (m_muted.load()) {
+        for (int i = 0; i < samples; ++i) out[i] = 0;
+        return frames;
+    }
+    const float g = m_volume.load();
+    if (g >= 0.9999f) {
+        // No gain adjustment needed; copy data if not in-place.
+        if (in != out) {
+            for (int i = 0; i < samples; ++i) out[i] = in[i];
+        }
+        return frames;
+    }
+    // Apply gain with clamping.
+    for (int i = 0; i < samples; ++i) {
+        const int s = int(in[i] * g);
+        out[i] = int16_t(s < -32768 ? -32768 : (s > 32767 ? 32767 : s));
+    }
+    return frames;
+}
+
 int AudioSink::writeSamples(const int16_t* data, int frames) {
     if (!m_dev || !m_stream || !data || frames <= 0) return 0;
 
@@ -91,7 +122,17 @@ int AudioSink::writeSamples(const int16_t* data, int frames) {
         }
     }
 
-    SDL_AudioStreamPut(m_stream, data, frames * 2 * sizeof(int16_t));
+    // Apply mute/volume if non-default. Fast path: pass through unchanged.
+    const bool needsGain = m_muted.load() || m_volume.load() < 0.9999f;
+    const int16_t* putData = data;
+    std::vector<int16_t> scratch;
+    if (needsGain) {
+        scratch.resize(size_t(frames) * 2);
+        applyGainAndMute(data, scratch.data(), frames);
+        putData = scratch.data();
+    }
+
+    SDL_AudioStreamPut(m_stream, putData, frames * 2 * sizeof(int16_t));
     m_totalFrames.fetch_add(frames);
 
     // Drain stream into device queue

@@ -944,6 +944,17 @@ target_include_directories(test_audio_sink PRIVATE
 target_link_libraries(test_audio_sink PRIVATE Qt6::Core Qt6::Test ${SDL2_LIBRARIES})
 add_test(NAME AudioSink COMMAND test_audio_sink)
 
+add_executable(test_audio_sink_mute_volume
+    tests/test_audio_sink_mute_volume.cpp
+    src/core/libretro/audio_sink.cpp)
+set_target_properties(test_audio_sink_mute_volume PROPERTIES AUTOMOC ON)
+target_include_directories(test_audio_sink_mute_volume PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS})
+target_link_libraries(test_audio_sink_mute_volume PRIVATE Qt6::Core Qt6::Test ${SDL2_LIBRARIES})
+add_test(NAME AudioSinkMuteVolume COMMAND test_audio_sink_mute_volume)
+
 add_executable(test_input_router
     tests/test_input_router.cpp
     src/core/libretro/input_router.cpp)
