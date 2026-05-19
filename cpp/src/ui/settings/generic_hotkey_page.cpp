@@ -99,11 +99,9 @@ GenericHotkeyPage::GenericHotkeyPage(SdlInputManager* inputManager,
                 this, &GenericHotkeyPage::onBindingCaptured);
         connect(m_inputManager, &SdlInputManager::keyboardCaptured,
                 this, &GenericHotkeyPage::onKeyboardCaptured);
-        connect(m_inputManager, &SdlInputManager::captureButtonReleased,
-                this, [this]{
-                    if (!m_capturingKey.isEmpty() && !m_capturedBindings.isEmpty())
-                        stopCapture(true);
-                });
+        // captureButtonReleased no longer auto-commits — the inactivity
+        // countdown is the single source of truth, so users can mix
+        // keyboard + gamepad inputs in one rebind session.
     }
 
     buildLayout();
@@ -342,6 +340,10 @@ void GenericHotkeyPage::onBindingCaptured(int deviceIndex, const QString& elemen
     if (!m_capturedBindings.contains(formatted))
         m_capturedBindings.append(formatted);
 
+    // Reset the countdown so the user has time to add another input
+    // (gamepad chord OR a keyboard binding) in the same session.
+    m_captureCountdown = 3;
+
     // Refresh the capturing button with "<captured> [N]" — legacy parity.
     if (auto it = m_rowByKey.constFind(m_capturingKey);
         it != m_rowByKey.constEnd()) {
@@ -349,9 +351,6 @@ void GenericHotkeyPage::onBindingCaptured(int deviceIndex, const QString& elemen
         (*it)->setCapturingText(
             display + QStringLiteral(" [%1]").arg(m_captureCountdown));
     }
-
-    // Don't auto-stop on first controller binding — let the timer or the
-    // SDL captureButtonReleased signal end the capture so chords work.
 }
 
 void GenericHotkeyPage::onKeyboardCaptured(const QString& keyString) {
@@ -422,16 +421,21 @@ bool GenericHotkeyPage::eventFilter(QObject* obj, QEvent* event) {
         if (!m_capturedBindings.contains(binding))
             m_capturedBindings.append(binding);
 
+        // Reset the countdown so the user has time to add another input
+        // (e.g. press F2 then a gamepad button in the same session).
+        m_captureCountdown = 3;
         refreshCaptureDisplay();
-        return true;  // wait for release before committing
+        return true;
     }
 
     if (event->type() == QEvent::KeyRelease) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->isAutoRepeat()) return true;
         if (isModifierKey(keyEvent->key())) return true;
-
-        if (!m_capturedBindings.isEmpty()) stopCapture(true);
+        // Keyboard releases no longer auto-commit — that prevented users
+        // from adding a second input (keyboard OR gamepad) to the same
+        // hotkey row in one rebind session. Capture now accumulates until
+        // the countdown timer expires (or the user presses Esc to cancel).
         return true;
     }
 
