@@ -696,7 +696,13 @@ void AppController::setCursorVisible(bool visible) {
 }
 
 QVariantList AppController::hotkeyBindings(const QString& emuId) const { return m_configService.hotkeyBindings(emuId); }
-bool AppController::hasHotkeys(const QString& emuId) const { return !m_configService.hotkeyBindings(emuId).isEmpty(); }
+bool AppController::hasHotkeys(const QString& emuId) const {
+    // Libretro adapters use the app-wide Libretro Hotkeys settings page;
+    // the per-emulator hotkey button is hidden for them.
+    if (auto* a = AdapterRegistry::instance().adapterFor(emuId); a && a->asLibretro())
+        return false;
+    return !m_configService.hotkeyBindings(emuId).isEmpty();
+}
 void AppController::saveHotkey(const QString& emuId, const QString& section, const QString& key, const QString& value) {
     m_configService.saveHotkey(emuId, section, key, value);
     if (emuId == libretro_hotkeys::kSentinelEmuId) syncLibretroHotkeyBindings();
