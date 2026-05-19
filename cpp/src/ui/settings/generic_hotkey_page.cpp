@@ -193,8 +193,11 @@ void GenericHotkeyPage::buildLayout() {
                 });
         connect(row, &HotkeyBindingRow::columnChanged, this,
                 [this](const HotkeyDef& d, HotkeyBindingRow::Column col){
-                    Q_UNUSED(col);
-                    // Update the description bar to show the focused column.
+                    // Broadcast: column is a page-level state. When the
+                    // user presses Left/Right on the focused row, mirror
+                    // the same column highlight across every other row.
+                    for (HotkeyBindingRow* other : m_rowByKey)
+                        if (other) other->setColumn(col);
                     emit bindingFocused(d, currentDisplayFor(d.key));
                 });
         connect(row, &HotkeyBindingRow::navigateRequested,

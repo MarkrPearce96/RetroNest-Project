@@ -30,6 +30,11 @@ public:
     bool isDualColumn() const { return m_dualColumn; }
     Column currentColumn() const { return m_currentColumn; }
 
+    // Page-level column state: the parent page calls setColumn on every
+    // row when Left/Right navigation flips columns, so the highlight
+    // appears across the full column rather than just the focused row.
+    void setColumn(Column col);
+
     // Single-column display (legacy single-column rows).
     void setBindingDisplay(const QString& displayText);
 

@@ -142,6 +142,12 @@ void HotkeyBindingRow::setCapturingText(const QString& text) {
     target->setText(text);
 }
 
+void HotkeyBindingRow::setColumn(Column col) {
+    if (!m_dualColumn || col == m_currentColumn) return;
+    m_currentColumn = col;
+    applyColumnHighlight();
+}
+
 void HotkeyBindingRow::applyColumnHighlight() {
     if (!m_dualColumn) return;
     m_button->setStyleSheet(m_currentColumn == ColKeyboard
