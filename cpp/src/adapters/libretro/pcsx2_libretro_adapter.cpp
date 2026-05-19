@@ -62,6 +62,23 @@ QString Pcsx2LibretroAdapter::findResumeFile(const QString& serial) const {
     return {};
 }
 
+// Path overrides: three user-overridable folders exposed in the Paths UI.
+// "libretro" section is informational — ConfigService routes libretro adapters
+// to PathOverridesStore, so only the key identifies the override within the
+// "pcsx2" namespace. defaultSuffix values match what the runtime consumers
+// expect:
+//   memcards   — pcsx2-libretro/Settings.cpp uses save_dir + "/memcards"
+//   savestates — per-emulator data dir + "/savestates"
+//   textures   — pcsx2-libretro/Settings.cpp uses save_dir + "/textures"
+// BIOS is intentionally not overridable per-emulator — see spec.
+QVector<PathDef> Pcsx2LibretroAdapter::pathsDefs() const {
+    return {
+        { "Memory Cards", "libretro", "MemoryCards", "memcards",   PathBase::EmulatorData },
+        { "Save States",  "libretro", "SaveStates",  "savestates", PathBase::EmulatorData },
+        { "Textures",     "libretro", "Textures",    "textures",   PathBase::EmulatorData },
+    };
+}
+
 // SP7b: libretro-option-backed rows for the per-emulator settings dialog.
 // Pattern mirrors MgbaLibretroAdapter::settingsSchema (sibling adapter
 // in the same directory). The three keys and their values exactly match

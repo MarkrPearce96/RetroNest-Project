@@ -11,10 +11,12 @@ QVector<BiosDef> MgbaLibretroAdapter::biosFiles() const {
 }
 
 QVector<PathDef> MgbaLibretroAdapter::pathsDefs() const {
+    // Screenshots row dropped — RetroNest has no gameplay-screenshot
+    // capture, so an override would be UI for a feature that doesn't
+    // exist. Re-add when/if screenshot capture lands.
     return {
-        { "Saves",       "", "", "saves",       PathBase::EmulatorData },
-        { "Save states", "", "", "savestates",  PathBase::EmulatorData },
-        { "Screenshots", "", "", "screenshots", PathBase::EmulatorData },
+        { "Saves",       "libretro", "Saves",      "saves",      PathBase::EmulatorData },
+        { "Save states", "libretro", "SaveStates", "savestates", PathBase::EmulatorData },
     };
 }
 

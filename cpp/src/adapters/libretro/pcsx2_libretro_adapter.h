@@ -50,6 +50,11 @@ public:
     // exists on disk. Mirrors MgbaLibretroAdapter::findResumeFile.
     QString findResumeFile(const QString& serial) const override;
 
+    // Path overrides: three user-overridable folders (Memory Cards, Save
+    // States, Textures). BIOS is intentionally excluded — it is global and
+    // lives under the shared BIOS directory, not the per-emulator data dir.
+    QVector<PathDef> pathsDefs() const override;
+
     // SP7b: declare libretro core options as user-tweakable rows in the
     // per-emulator settings dialog. Three knobs (renderer / MTVU / FastBoot)
     // are exposed; values mirror pcsx2-libretro/CoreOptions.cpp's
