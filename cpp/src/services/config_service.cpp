@@ -10,6 +10,7 @@
 
 #include <QDebug>
 #include <QDir>
+#include <QKeySequence>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -519,12 +520,47 @@ void ConfigService::resetPaths(const QString& emuId) {
 
 QString ConfigService::formatCapturedBinding(const QString& emuId, int deviceIndex,
                                               const QString& element, bool isAxis, bool positive) const {
+    if (emuId == libretro_hotkeys::kSentinelEmuId) {
+        // Map canonical SDL element name → libretro RetroPad button index
+        // (matches RetroPadSlot ordering, which mirrors RETRO_DEVICE_ID_JOYPAD_*).
+        // Returns "Gamepad<port>/<retroIdx>" — the format HotkeyMatcher's
+        // parseGamepadSpec expects. Axes (triggers/sticks) deferred.
+        if (isAxis) return {};
+        static const QHash<QString, int> kElementToRetroIdx = {
+            {QStringLiteral("FaceSouth"),     0},   // B (bottom)
+            {QStringLiteral("FaceWest"),      1},   // Y (left)
+            {QStringLiteral("Back"),          2},   // Select
+            {QStringLiteral("Start"),         3},
+            {QStringLiteral("DPadUp"),        4},
+            {QStringLiteral("DPadDown"),      5},
+            {QStringLiteral("DPadLeft"),      6},
+            {QStringLiteral("DPadRight"),     7},
+            {QStringLiteral("FaceEast"),      8},   // A (right)
+            {QStringLiteral("FaceNorth"),     9},   // X (top)
+            {QStringLiteral("LeftShoulder"),  10},  // L
+            {QStringLiteral("RightShoulder"), 11},  // R
+            {QStringLiteral("LeftStick"),     14},  // L3
+            {QStringLiteral("RightStick"),    15},  // R3
+        };
+        const auto it = kElementToRetroIdx.constFind(element);
+        if (it == kElementToRetroIdx.constEnd()) return {};
+        return QStringLiteral("Gamepad%1/%2").arg(deviceIndex).arg(it.value());
+    }
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return {};
     return adapter->formatBinding(deviceIndex, element, isAxis, positive);
 }
 
 QString ConfigService::formatCapturedKeyboard(const QString& emuId, int qtKey, int modifiers) const {
+    if (emuId == libretro_hotkeys::kSentinelEmuId) {
+        // Build a "Keyboard/<KeySequenceText>" string compatible with
+        // HotkeyMatcher::parseKeyboardSpec (e.g. "Keyboard/F1",
+        // "Keyboard/Shift+F2").
+        const QKeySequence seq(qtKey | modifiers);
+        const QString text = seq.toString(QKeySequence::PortableText);
+        if (text.isEmpty()) return {};
+        return QStringLiteral("Keyboard/") + text;
+    }
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return {};
     return adapter->formatKeyboardBinding(qtKey, modifiers);

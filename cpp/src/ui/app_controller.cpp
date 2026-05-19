@@ -677,6 +677,12 @@ void AppController::showLibretroHotkeySettings() {
     auto* dialog = new LibretroHotkeySettingsDialog(m_inputManager, this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
+    // Force window focus so the page's grabKeyboard() in capture mode
+    // actually receives key events instead of them being routed to the
+    // QML scene window underneath.
+    dialog->raise();
+    dialog->activateWindow();
+    dialog->setFocus(Qt::ActiveWindowFocusReason);
 }
 
 void AppController::setCursorVisible(bool visible) {

@@ -146,10 +146,12 @@ ApplicationWindow {
     // Settings overlay (Escape key)
     SettingsOverlay {
         id: settingsOverlay
-        // While the settings overlay is visible, suppress libretro hotkey
+        // While the settings overlay is shown, suppress libretro hotkey
         // dispatch so Esc/arrows/etc reach the overlay instead of
-        // triggering ToggleMenu, save state, etc.
-        onVisibleChanged: app.libretroHotkeysSuppressed = visible
+        // triggering ToggleMenu, save state, etc. Tied to panelOpen (the
+        // user-intent flag) rather than `visible`, because `visible` only
+        // clears after the slide-out animation completes and can race.
+        onPanelOpenChanged: app.libretroHotkeysSuppressed = panelOpen
     }
 
     // Game action popup (M key / Triangle button)

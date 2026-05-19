@@ -345,6 +345,9 @@ FocusScope {
                 // Index 7 opens the global Libretro Hotkeys dialog directly
                 // (not a pushed sub-page). Index 8 is the Exit entry.
                 if (idx === 7) {
+                    // Close the overlay first so its QML focus chain doesn't
+                    // compete with the dialog's grabKeyboard() during capture.
+                    overlay.close()
                     app.showLibretroHotkeySettings()
                     return
                 }

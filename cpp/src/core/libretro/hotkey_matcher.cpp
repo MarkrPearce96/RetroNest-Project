@@ -1,13 +1,14 @@
 #include "core/libretro/hotkey_matcher.h"
 #include <QKeySequence>
 #include <QMutexLocker>
+#include <QStringList>
 
 std::atomic<HotkeyMatcher*> HotkeyMatcher::s_active{nullptr};
 
 namespace {
 
 // Parse "Keyboard/<KeySequenceText>" → combined Qt key+modifier int.
-// Returns 0 on parse failure (unbound).
+// Returns 0 on parse failure (i.e. token isn't a keyboard binding).
 int parseKeyboardSpec(const QString& spec) {
     static const QString prefix = QStringLiteral("Keyboard/");
     if (!spec.startsWith(prefix)) return 0;
@@ -23,7 +24,7 @@ bool parseGamepadSpec(const QString& spec, int* port, int* mod, int* btn) {
     static const QString prefix = QStringLiteral("Gamepad");
     if (!spec.startsWith(prefix)) return false;
     const int slash = spec.indexOf(QLatin1Char('/'));
-    if (slash <= int(prefix.size())) return false;  // need at least one digit before slash
+    if (slash <= int(prefix.size())) return false;
     bool okP = false;
     *port = spec.mid(prefix.size(), slash - prefix.size()).toInt(&okP);
     if (!okP || *port < 0) return false;
@@ -49,34 +50,43 @@ bool HotkeyMatcher::isHoldAction(const QString& actionKey) {
 }
 
 void HotkeyMatcher::setBinding(const QString& actionKey, const QString& bindingString) {
-    // Drop any previous keyboard binding for this action.
-    if (auto it = m_keyBindings.find(actionKey); it != m_keyBindings.end()) {
-        m_keyToAction.remove(it->qtKey);
-        m_keyBindings.erase(it);
-    }
-    // Drop any previous gamepad binding for this action.
-    if (auto it = m_padBindings.find(actionKey); it != m_padBindings.end()) {
-        m_padBindings.erase(it);
+    // Drop the action's existing bindings from the forward and reverse maps.
+    if (auto it = m_bindings.find(actionKey); it != m_bindings.end()) {
+        for (const KeyBinding& kb : it->keys)
+            m_keyToActions.remove(kb.qtKey, actionKey);
+        m_bindings.erase(it);
     }
     m_actionPressed.remove(actionKey);
 
     if (bindingString.isEmpty()) return;
 
-    int port, mod, btn;
-    if (parseGamepadSpec(bindingString, &port, &mod, &btn)) {
-        m_padBindings.insert(actionKey, GamepadBinding{port, mod, btn});
-        return;
+    // Split on " & " so a single row can bind both keyboard and gamepad.
+    const QStringList tokens = bindingString.split(QStringLiteral(" & "),
+                                                   Qt::SkipEmptyParts);
+    ActionBindings ab;
+    for (const QString& tokenRaw : tokens) {
+        const QString token = tokenRaw.trimmed();
+        if (token.isEmpty()) continue;
+
+        int port, mod, btn;
+        if (parseGamepadSpec(token, &port, &mod, &btn)) {
+            ab.pads.append(GamepadBinding{port, mod, btn});
+            continue;
+        }
+        const int key = parseKeyboardSpec(token);
+        if (key != 0) {
+            ab.keys.append(KeyBinding{key});
+            m_keyToActions.insert(key, actionKey);
+        }
     }
-    const int key = parseKeyboardSpec(bindingString);
-    if (key == 0) return;
-    m_keyBindings.insert(actionKey, KeyBinding{key});
-    m_keyToAction.insert(key, actionKey);
+
+    if (!ab.keys.isEmpty() || !ab.pads.isEmpty())
+        m_bindings.insert(actionKey, ab);
 }
 
 void HotkeyMatcher::clearAllBindings() {
-    m_keyBindings.clear();
-    m_keyToAction.clear();
-    m_padBindings.clear();
+    m_bindings.clear();
+    m_keyToActions.clear();
     m_actionPressed.clear();
     m_padHeld.clear();
     {
@@ -85,10 +95,7 @@ void HotkeyMatcher::clearAllBindings() {
     }
 }
 
-void HotkeyMatcher::onKeyEvent(int qtKey, bool pressed) {
-    auto it = m_keyToAction.constFind(qtKey);
-    if (it == m_keyToAction.constEnd()) return;
-    const QString action = it.value();
+void HotkeyMatcher::firePressEdge(const QString& action, bool pressed) {
     const bool wasPressed = m_actionPressed.value(action, false);
     if (pressed && !wasPressed) {
         m_actionPressed[action] = true;
@@ -99,51 +106,60 @@ void HotkeyMatcher::onKeyEvent(int qtKey, bool pressed) {
     }
 }
 
+void HotkeyMatcher::onKeyEvent(int qtKey, bool pressed) {
+    // QMultiHash returns ALL actions bound to this key (rare today but
+    // cheap, and lets two actions share a binding if a user really wants).
+    const auto actions = m_keyToActions.values(qtKey);
+    for (const QString& action : actions) firePressEdge(action, pressed);
+}
+
 void HotkeyMatcher::onGamepadButton(int port, int button, bool pressed) {
-    // Maintain per-port held-button set.
+    // Update the per-port held-button set first so combo detection has
+    // the up-to-date state.
     QSet<int>& held = m_padHeld[port];
     if (pressed) held.insert(button); else held.remove(button);
 
-    // Process bindings whose ACTION-button matches this event.
-    // Linear scan over all bindings (max ~22 entries).
-    for (auto it = m_padBindings.constBegin(); it != m_padBindings.constEnd(); ++it) {
-        const GamepadBinding& gb = it.value();
-        if (gb.port != port || gb.button != button) continue;
-
-        // Single-button binding always matches; combo requires modifier held.
-        const bool comboMatches =
-            gb.modifier < 0          // single-button binding
-            || held.contains(gb.modifier);  // combo with modifier currently held
-
-        if (!comboMatches) continue;
-
+    // For each action's pad bindings, check if this event matches the
+    // ACTION-button half. Combos fire only when their modifier is held.
+    for (auto it = m_bindings.constBegin(); it != m_bindings.constEnd(); ++it) {
         const QString& action = it.key();
-        const bool wasPressed = m_actionPressed.value(action, false);
-        if (pressed && !wasPressed) {
-            m_actionPressed[action] = true;
-            if (gb.modifier >= 0) {
-                QMutexLocker locker(&m_suppressedMutex);
-                m_suppressed.insert(padKey(port, gb.modifier));
+        const ActionBindings& ab = it.value();
+        for (const GamepadBinding& gb : ab.pads) {
+            if (gb.port != port || gb.button != button) continue;
+            const bool comboMatches = gb.modifier < 0
+                                       || held.contains(gb.modifier);
+            if (!comboMatches) continue;
+
+            const bool wasPressed = m_actionPressed.value(action, false);
+            if (pressed && !wasPressed) {
+                m_actionPressed[action] = true;
+                emit actionPressed(action);
+                if (gb.modifier >= 0) {
+                    QMutexLocker locker(&m_suppressedMutex);
+                    m_suppressed.insert(padKey(port, gb.modifier));
+                }
+            } else if (!pressed && wasPressed) {
+                m_actionPressed[action] = false;
+                if (isHoldAction(action)) emit actionReleased(action);
             }
-            emit actionPressed(action);
-        } else if (!pressed && wasPressed) {
-            m_actionPressed[action] = false;
-            if (isHoldAction(action)) emit actionReleased(action);
         }
     }
 
-    // On modifier release: clear suppression for any combo that uses this
-    // button as the modifier on this port, and reset the action's held state
-    // (the chord is broken).
+    // If THIS event released a button that's the modifier of any combo,
+    // clear its suppression entry and drop any leftover held state for
+    // the action (chord broken).
     if (!pressed) {
-        for (auto it = m_padBindings.constBegin(); it != m_padBindings.constEnd(); ++it) {
-            const GamepadBinding& gb = it.value();
-            if (gb.port == port && gb.modifier == button) {
-                {
-                    QMutexLocker locker(&m_suppressedMutex);
-                    m_suppressed.remove(padKey(port, button));
+        for (auto it = m_bindings.constBegin(); it != m_bindings.constEnd(); ++it) {
+            const QString& action = it.key();
+            const ActionBindings& ab = it.value();
+            for (const GamepadBinding& gb : ab.pads) {
+                if (gb.port == port && gb.modifier == button) {
+                    {
+                        QMutexLocker locker(&m_suppressedMutex);
+                        m_suppressed.remove(padKey(port, button));
+                    }
+                    m_actionPressed.remove(action);
                 }
-                m_actionPressed.remove(it.key());
             }
         }
     }

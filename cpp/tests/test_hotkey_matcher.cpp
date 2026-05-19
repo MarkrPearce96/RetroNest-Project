@@ -242,6 +242,56 @@ private slots:
         QVERIFY(!m.isSuppressed(0, 4));
     }
 
+    void multiBindingKeyboardAndGamepadBothFire() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"),
+                     QStringLiteral("Keyboard/F1 & Gamepad0/8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+
+        // Keyboard side fires
+        m.onKeyEvent(Qt::Key_F1, true);
+        QCOMPARE(spy.count(), 1);
+        m.onKeyEvent(Qt::Key_F1, false);
+
+        // Gamepad side fires too (independent press-edge)
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 2);
+    }
+    void multiBindingRebindClearsAllInputs() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"),
+                     QStringLiteral("Keyboard/F1 & Gamepad0/8"));
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Keyboard/F2"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+
+        // Old inputs no longer fire
+        m.onKeyEvent(Qt::Key_F1, true);
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 0);
+
+        // New input fires
+        m.onKeyEvent(Qt::Key_F2, true);
+        QCOMPARE(spy.count(), 1);
+    }
+    void multiBindingComboWithKeyboard() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"),
+                     QStringLiteral("Keyboard/F1 & Gamepad0/4+8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+
+        // Keyboard fires immediately
+        m.onKeyEvent(Qt::Key_F1, true);
+        QCOMPARE(spy.count(), 1);
+
+        // Combo also fires when chord matches; modifier gets suppressed
+        m.onKeyEvent(Qt::Key_F1, false);
+        m.onGamepadButton(0, 4, true);
+        QCOMPARE(spy.count(), 1);  // modifier alone doesn't fire
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 2);
+        QVERIFY(m.isSuppressed(0, 4));
+    }
+
     void staticActiveSlotReflectsInstance() {
         HotkeyMatcher m;
         // Don't actually register globally — just sanity-check the field exists
