@@ -241,6 +241,17 @@ private slots:
         m.clearAllBindings();
         QVERIFY(!m.isSuppressed(0, 4));
     }
+
+    void staticActiveSlotReflectsInstance() {
+        HotkeyMatcher m;
+        // Don't actually register globally — just sanity-check the field exists
+        // and accepts assignment. (Real wiring is in AppController, not testable
+        // here.)
+        HotkeyMatcher::s_active.store(&m);
+        QCOMPARE(HotkeyMatcher::s_active.load(), &m);
+        HotkeyMatcher::s_active.store(nullptr);
+        QVERIFY(HotkeyMatcher::s_active.load() == nullptr);
+    }
 };
 
 QTEST_APPLESS_MAIN(TestHotkeyMatcher)

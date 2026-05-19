@@ -1,5 +1,8 @@
 #include "core/libretro/hotkey_matcher.h"
 #include <QKeySequence>
+#include <QMutexLocker>
+
+std::atomic<HotkeyMatcher*> HotkeyMatcher::s_active{nullptr};
 
 namespace {
 
@@ -76,7 +79,10 @@ void HotkeyMatcher::clearAllBindings() {
     m_padBindings.clear();
     m_actionPressed.clear();
     m_padHeld.clear();
-    m_suppressed.clear();
+    {
+        QMutexLocker locker(&m_suppressedMutex);
+        m_suppressed.clear();
+    }
 }
 
 void HotkeyMatcher::onKeyEvent(int qtKey, bool pressed) {
@@ -115,9 +121,11 @@ void HotkeyMatcher::onGamepadButton(int port, int button, bool pressed) {
         const bool wasPressed = m_actionPressed.value(action, false);
         if (pressed && !wasPressed) {
             m_actionPressed[action] = true;
-            emit actionPressed(action);
-            if (gb.modifier >= 0)
+            if (gb.modifier >= 0) {
+                QMutexLocker locker(&m_suppressedMutex);
                 m_suppressed.insert(padKey(port, gb.modifier));
+            }
+            emit actionPressed(action);
         } else if (!pressed && wasPressed) {
             m_actionPressed[action] = false;
             if (isHoldAction(action)) emit actionReleased(action);
@@ -131,7 +139,10 @@ void HotkeyMatcher::onGamepadButton(int port, int button, bool pressed) {
         for (auto it = m_padBindings.constBegin(); it != m_padBindings.constEnd(); ++it) {
             const GamepadBinding& gb = it.value();
             if (gb.port == port && gb.modifier == button) {
-                m_suppressed.remove(padKey(port, button));
+                {
+                    QMutexLocker locker(&m_suppressedMutex);
+                    m_suppressed.remove(padKey(port, button));
+                }
                 m_actionPressed.remove(it.key());
             }
         }
@@ -139,5 +150,6 @@ void HotkeyMatcher::onGamepadButton(int port, int button, bool pressed) {
 }
 
 bool HotkeyMatcher::isSuppressed(int port, int button) const {
+    QMutexLocker locker(&m_suppressedMutex);
     return m_suppressed.contains(padKey(port, button));
 }

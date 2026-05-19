@@ -1,4 +1,5 @@
 #include "core_runtime.h"
+#include "core/libretro/hotkey_matcher.h"
 #include "core/path_overrides_store.h"
 #include "core/sdl_input_manager.h"
 #include <QCoreApplication>
@@ -115,6 +116,12 @@ int16_t CoreRuntime::inputStateTrampoline(unsigned port, unsigned device,
 
     if (device == RETRO_DEVICE_JOYPAD) {
         auto slot = static_cast<RetroPadSlot>(id);
+        // Combo-modifier suppression: mask buttons currently acting as the
+        // modifier of a matched libretro hotkey combo from the core's view.
+        if (auto* hk = HotkeyMatcher::s_active.load(std::memory_order_relaxed)) {
+            if (hk->isSuppressed(static_cast<int>(port), static_cast<int>(slot)))
+                return 0;
+        }
         return g_current->m_input.buttonPressed(static_cast<int>(port), slot) ? 1 : 0;
     }
 

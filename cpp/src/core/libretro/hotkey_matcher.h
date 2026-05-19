@@ -1,9 +1,11 @@
 #pragma once
 #include <QObject>
 #include <QHash>
+#include <QMutex>
 #include <QSet>
 #include <QString>
 #include <Qt>
+#include <atomic>
 
 /**
  * Host-side hotkey matcher.
@@ -23,6 +25,11 @@ class HotkeyMatcher : public QObject {
     Q_OBJECT
 public:
     explicit HotkeyMatcher(QObject* parent = nullptr) : QObject(parent) {}
+
+    // Static accessor used by CoreRuntime's input trampoline (worker thread)
+    // to consult the currently-active matcher's suppression set. AppController
+    // sets this in its constructor and clears it in its destructor.
+    static std::atomic<HotkeyMatcher*> s_active;
 
     // Replace the binding for one action. Empty bindingString clears it.
     // Currently parses only "Keyboard/<KeySequenceText>" (e.g. "Keyboard/F1",
@@ -67,6 +74,7 @@ private:
     QHash<QString, bool>           m_actionPressed; // current "is held" state per action
     QHash<int, QSet<int>>          m_padHeld;       // port → currently-held buttons
     QSet<qint64>                   m_suppressed;    // padKey(port, modifier) currently suppressed
+    mutable QMutex                 m_suppressedMutex; // guards m_suppressed (worker-thread reads)
 
     static bool isHoldAction(const QString& actionKey);
     static qint64 padKey(int port, int button) {

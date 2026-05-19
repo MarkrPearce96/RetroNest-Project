@@ -171,6 +171,7 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     // libretro game is running (gs->adapter() returns nullptr or a
     // non-LibretroAdapter for process emulators).
     m_hotkeyMatcher = std::make_unique<HotkeyMatcher>();
+    HotkeyMatcher::s_active.store(m_hotkeyMatcher.get());
 
     HotkeyDispatcher::Callbacks cb;
     cb.saveStateSlot   = [this](int s) {
@@ -254,7 +255,9 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     syncLibretroHotkeyBindings();
 }
 
-AppController::~AppController() = default;
+AppController::~AppController() {
+    HotkeyMatcher::s_active.store(nullptr);
+}
 
 // ── Installer plumbing ─────────────────────────────────────
 
