@@ -488,11 +488,24 @@ ApplicationWindow {
             window.toggleInGameMenu();
         }
         // Libretro matcher fires this whenever the user's ToggleMenu
-        // binding is pressed in-game. Always forwards to toggleInGameMenu
-        // — works for both software-render (in-scene) and HW-render
-        // (overlay) libretro games.
+        // binding is pressed in-game. Open-only semantics: pressing the
+        // hotkey while the menu is closed opens it; pressing while it's
+        // open is a no-op. Close the menu via its own gesture
+        // (B / Backspace / Esc inside the menu) instead.
         function onLibretroMenuToggleRequested() {
-            if (app.gameRunning) window.toggleInGameMenu();
+            if (!app.gameRunning) return;
+            if (app.gameUsesHardwareRender()) {
+                if (!app.libretroOverlayMenuVisible)
+                    app.openLibretroOverlayMenu();
+                return;
+            }
+            if (isLibretroGame()) {
+                if (!inGameMenu.visible) {
+                    if (app.gameSession) app.gameSession.pauseEmulation();
+                    app.activateApp();
+                    inGameMenu.open();
+                }
+            }
         }
     }
 
