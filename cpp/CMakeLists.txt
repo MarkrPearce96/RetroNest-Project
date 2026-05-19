@@ -90,6 +90,7 @@ set(SOURCES
     src/core/libretro/audio_sink.cpp
     src/core/libretro/input_router.cpp
     src/core/libretro/libretro_hotkey_defs.cpp
+    src/core/libretro/hotkey_matcher.cpp
     src/services/game_service.cpp
     src/services/scraper_service.cpp
     src/services/emulator_service.cpp
@@ -537,6 +538,14 @@ target_include_directories(test_config_service_libretro_hotkeys PRIVATE
 )
 target_link_libraries(test_config_service_libretro_hotkeys PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
 add_test(NAME ConfigServiceLibretroHotkeys COMMAND test_config_service_libretro_hotkeys)
+
+add_executable(test_hotkey_matcher
+    tests/test_hotkey_matcher.cpp
+    src/core/libretro/hotkey_matcher.cpp)
+set_target_properties(test_hotkey_matcher PROPERTIES AUTOMOC ON)
+target_include_directories(test_hotkey_matcher PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_hotkey_matcher PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+add_test(NAME HotkeyMatcher COMMAND test_hotkey_matcher)
 
 add_executable(test_rom_scanner
     tests/test_rom_scanner.cpp
