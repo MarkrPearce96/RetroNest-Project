@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QHash>
+#include <QSet>
 #include <QString>
 #include <Qt>
 
@@ -38,6 +39,11 @@ public:
     // button is the raw libretro RetroPad button index.
     void onGamepadButton(int port, int button, bool pressed);
 
+    // Returns true if (port, button) is currently acting as a combo modifier
+    // in a matched combo. Used by the input router (Task 10) to mask the
+    // modifier button from the libretro core's view of the gamepad state.
+    bool isSuppressed(int port, int button) const;
+
 signals:
     // Emitted on the press-edge (false→true) for every bound action.
     void actionPressed(const QString& actionKey);
@@ -48,13 +54,18 @@ signals:
 
 private:
     struct KeyBinding { int qtKey; };
-    struct GamepadBinding { int port; int button; };
+    // modifier == -1 for single-button bindings; >= 0 for combo bindings.
+    struct GamepadBinding { int port; int modifier; int button; };
 
-    QHash<QString, KeyBinding>  m_keyBindings;     // action → key
-    QHash<int, QString>         m_keyToAction;     // key → action (reverse lookup)
-    QHash<QString, GamepadBinding> m_padBindings;  // action → (port, btn)
-    QHash<qint64, QString>      m_padToAction;     // (port<<32 | btn) → action
-    QHash<QString, bool>        m_actionPressed;   // current "is held" state per action
+    QHash<QString, KeyBinding>     m_keyBindings;   // action → key
+    QHash<int, QString>            m_keyToAction;   // key → action (reverse lookup)
+    QHash<QString, GamepadBinding> m_padBindings;   // action → (port, mod, btn)
+    // m_padToAction is intentionally removed: onGamepadButton now does a linear
+    // scan over m_padBindings (max ~22 entries) to handle both single-button and
+    // combo bindings uniformly.
+    QHash<QString, bool>           m_actionPressed; // current "is held" state per action
+    QHash<int, QSet<int>>          m_padHeld;       // port → currently-held buttons
+    QSet<qint64>                   m_suppressed;    // padKey(port, modifier) currently suppressed
 
     static bool isHoldAction(const QString& actionKey);
     static qint64 padKey(int port, int button) {

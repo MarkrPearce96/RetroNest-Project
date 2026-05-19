@@ -14,16 +14,29 @@ int parseKeyboardSpec(const QString& spec) {
     return seq[0];  // includes modifier bits
 }
 
-// Parse "Gamepad<P>/<B>" → (port, button). Returns false on failure.
-bool parseGamepadSpec(const QString& spec, int* port, int* btn) {
+// Parse "Gamepad<P>/<B>" or "Gamepad<P>/<M>+<B>" → (port, modifier, button).
+// Sets *mod to -1 for the single-button form. Returns false on parse failure.
+bool parseGamepadSpec(const QString& spec, int* port, int* mod, int* btn) {
     static const QString prefix = QStringLiteral("Gamepad");
     if (!spec.startsWith(prefix)) return false;
     const int slash = spec.indexOf(QLatin1Char('/'));
     if (slash <= int(prefix.size())) return false;  // need at least one digit before slash
-    bool okP = false, okB = false;
+    bool okP = false;
     *port = spec.mid(prefix.size(), slash - prefix.size()).toInt(&okP);
-    *btn  = spec.mid(slash + 1).toInt(&okB);
-    return okP && okB && *port >= 0 && *btn >= 0;
+    if (!okP || *port < 0) return false;
+
+    const QString rest = spec.mid(slash + 1);
+    const int plus = rest.indexOf(QLatin1Char('+'));
+    if (plus < 0) {
+        *mod = -1;
+        bool okB = false;
+        *btn = rest.toInt(&okB);
+        return okB && *btn >= 0;
+    }
+    bool okM = false, okB = false;
+    *mod = rest.left(plus).toInt(&okM);
+    *btn = rest.mid(plus + 1).toInt(&okB);
+    return okM && okB && *mod >= 0 && *btn >= 0;
 }
 
 }  // namespace
@@ -40,17 +53,15 @@ void HotkeyMatcher::setBinding(const QString& actionKey, const QString& bindingS
     }
     // Drop any previous gamepad binding for this action.
     if (auto it = m_padBindings.find(actionKey); it != m_padBindings.end()) {
-        m_padToAction.remove(padKey(it->port, it->button));
         m_padBindings.erase(it);
     }
     m_actionPressed.remove(actionKey);
 
     if (bindingString.isEmpty()) return;
 
-    int port, btn;
-    if (parseGamepadSpec(bindingString, &port, &btn)) {
-        m_padBindings.insert(actionKey, GamepadBinding{port, btn});
-        m_padToAction.insert(padKey(port, btn), actionKey);
+    int port, mod, btn;
+    if (parseGamepadSpec(bindingString, &port, &mod, &btn)) {
+        m_padBindings.insert(actionKey, GamepadBinding{port, mod, btn});
         return;
     }
     const int key = parseKeyboardSpec(bindingString);
@@ -63,8 +74,9 @@ void HotkeyMatcher::clearAllBindings() {
     m_keyBindings.clear();
     m_keyToAction.clear();
     m_padBindings.clear();
-    m_padToAction.clear();
     m_actionPressed.clear();
+    m_padHeld.clear();
+    m_suppressed.clear();
 }
 
 void HotkeyMatcher::onKeyEvent(int qtKey, bool pressed) {
@@ -82,15 +94,50 @@ void HotkeyMatcher::onKeyEvent(int qtKey, bool pressed) {
 }
 
 void HotkeyMatcher::onGamepadButton(int port, int button, bool pressed) {
-    auto it = m_padToAction.constFind(padKey(port, button));
-    if (it == m_padToAction.constEnd()) return;
-    const QString action = it.value();
-    const bool wasPressed = m_actionPressed.value(action, false);
-    if (pressed && !wasPressed) {
-        m_actionPressed[action] = true;
-        emit actionPressed(action);
-    } else if (!pressed && wasPressed) {
-        m_actionPressed[action] = false;
-        if (isHoldAction(action)) emit actionReleased(action);
+    // Maintain per-port held-button set.
+    QSet<int>& held = m_padHeld[port];
+    if (pressed) held.insert(button); else held.remove(button);
+
+    // Process bindings whose ACTION-button matches this event.
+    // Linear scan over all bindings (max ~22 entries).
+    for (auto it = m_padBindings.constBegin(); it != m_padBindings.constEnd(); ++it) {
+        const GamepadBinding& gb = it.value();
+        if (gb.port != port || gb.button != button) continue;
+
+        // Single-button binding always matches; combo requires modifier held.
+        const bool comboMatches =
+            gb.modifier < 0          // single-button binding
+            || held.contains(gb.modifier);  // combo with modifier currently held
+
+        if (!comboMatches) continue;
+
+        const QString& action = it.key();
+        const bool wasPressed = m_actionPressed.value(action, false);
+        if (pressed && !wasPressed) {
+            m_actionPressed[action] = true;
+            emit actionPressed(action);
+            if (gb.modifier >= 0)
+                m_suppressed.insert(padKey(port, gb.modifier));
+        } else if (!pressed && wasPressed) {
+            m_actionPressed[action] = false;
+            if (isHoldAction(action)) emit actionReleased(action);
+        }
     }
+
+    // On modifier release: clear suppression for any combo that uses this
+    // button as the modifier on this port, and reset the action's held state
+    // (the chord is broken).
+    if (!pressed) {
+        for (auto it = m_padBindings.constBegin(); it != m_padBindings.constEnd(); ++it) {
+            const GamepadBinding& gb = it.value();
+            if (gb.port == port && gb.modifier == button) {
+                m_suppressed.remove(padKey(port, button));
+                m_actionPressed.remove(it.key());
+            }
+        }
+    }
+}
+
+bool HotkeyMatcher::isSuppressed(int port, int button) const {
+    return m_suppressed.contains(padKey(port, button));
 }

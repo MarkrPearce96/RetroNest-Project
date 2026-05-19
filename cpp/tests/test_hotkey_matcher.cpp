@@ -155,6 +155,92 @@ private slots:
         m.onGamepadButton(0, 8, true);
         QCOMPARE(spy.count(), 0);
     }
+
+    void comboFiresAndSuppresses() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/4+8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+
+        // Modifier down alone: no fire, no suppression.
+        m.onGamepadButton(0, 4, true);
+        QCOMPARE(spy.count(), 0);
+        QVERIFY(!m.isSuppressed(0, 4));
+
+        // Action button down while modifier held: fires, suppresses modifier.
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 1);
+        QVERIFY(m.isSuppressed(0, 4));
+
+        // Action button release: suppression remains while modifier held.
+        m.onGamepadButton(0, 8, false);
+        QVERIFY(m.isSuppressed(0, 4));
+
+        // Modifier release: suppression cleared.
+        m.onGamepadButton(0, 4, false);
+        QVERIFY(!m.isSuppressed(0, 4));
+    }
+
+    void modifierAloneDoesNotSuppress() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/4+8"));
+        m.onGamepadButton(0, 4, true);
+        QVERIFY(!m.isSuppressed(0, 4));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+        m.onGamepadButton(0, 4, false);
+        QCOMPARE(spy.count(), 0);
+    }
+
+    void actionAloneDoesNotFireCombo() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/4+8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+        m.onGamepadButton(0, 8, true);   // no modifier held
+        QCOMPARE(spy.count(), 0);
+        QVERIFY(!m.isSuppressed(0, 4));
+    }
+
+    void singleButtonGamepadBindingDoesNotSuppress() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 1);
+        QVERIFY(!m.isSuppressed(0, 8));
+    }
+
+    void comboPortIsolated() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/4+8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+        // Modifier held on port 1; action on port 0 — must not match.
+        m.onGamepadButton(1, 4, true);
+        m.onGamepadButton(0, 8, true);
+        QCOMPARE(spy.count(), 0);
+        QVERIFY(!m.isSuppressed(1, 4));
+    }
+
+    void comboMultiplePresses() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/4+8"));
+        QSignalSpy spy(&m, &HotkeyMatcher::actionPressed);
+        m.onGamepadButton(0, 4, true);
+        m.onGamepadButton(0, 8, true);     // press 1
+        m.onGamepadButton(0, 8, false);
+        m.onGamepadButton(0, 8, true);     // press 2
+        m.onGamepadButton(0, 8, false);
+        QCOMPARE(spy.count(), 2);
+        QVERIFY(m.isSuppressed(0, 4));
+    }
+
+    void clearAllAlsoClearsSuppression() {
+        HotkeyMatcher m;
+        m.setBinding(QStringLiteral("Foo"), QStringLiteral("Gamepad0/4+8"));
+        m.onGamepadButton(0, 4, true);
+        m.onGamepadButton(0, 8, true);
+        QVERIFY(m.isSuppressed(0, 4));
+        m.clearAllBindings();
+        QVERIFY(!m.isSuppressed(0, 4));
+    }
 };
 
 QTEST_APPLESS_MAIN(TestHotkeyMatcher)
