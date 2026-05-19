@@ -190,6 +190,11 @@ void CoreRuntime::pause() {
     // waits for VMState::Paused via WaitForVmPaused. mGBA / other cores
     // don't export this symbol — the pointer stays null and the existing
     // stop-retro_run + mute-audio behavior is enough.
+    //
+    // Comes BEFORE m_paused so PCSX2's threads are halted before our
+    // worker stops calling retro_run. fn(true) blocks until the VM
+    // reaches VMState::Paused, so additional retro_run calls during
+    // the brief handshake window are harmless no-ops.
     if (auto fn = m_loader.symbols().retronest_set_paused)
         fn(true);
 
