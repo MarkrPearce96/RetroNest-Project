@@ -91,6 +91,7 @@ set(SOURCES
     src/core/libretro/input_router.cpp
     src/core/libretro/libretro_hotkey_defs.cpp
     src/core/libretro/hotkey_matcher.cpp
+    src/core/libretro/hotkey_dispatcher.cpp
     src/services/game_service.cpp
     src/services/scraper_service.cpp
     src/services/emulator_service.cpp
@@ -546,6 +547,15 @@ set_target_properties(test_hotkey_matcher PROPERTIES AUTOMOC ON)
 target_include_directories(test_hotkey_matcher PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_hotkey_matcher PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME HotkeyMatcher COMMAND test_hotkey_matcher)
+
+add_executable(test_hotkey_dispatcher
+    tests/test_hotkey_dispatcher.cpp
+    src/core/libretro/hotkey_dispatcher.cpp
+    src/core/libretro/libretro_hotkey_defs.cpp)
+set_target_properties(test_hotkey_dispatcher PROPERTIES AUTOMOC ON)
+target_include_directories(test_hotkey_dispatcher PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_hotkey_dispatcher PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME HotkeyDispatcher COMMAND test_hotkey_dispatcher)
 
 add_executable(test_rom_scanner
     tests/test_rom_scanner.cpp
