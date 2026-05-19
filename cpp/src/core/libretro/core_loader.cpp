@@ -49,6 +49,8 @@ bool CoreLoader::open(const QString& path, QString* err) {
     if (!resolveRequired(m_handle, "retro_get_memory_size", m_syms.retro_get_memory_size, err)) { close(); return false; }
     resolveOptional(m_handle, "retro_cheat_reset", m_syms.retro_cheat_reset);
     resolveOptional(m_handle, "retro_cheat_set", m_syms.retro_cheat_set);
+    // Optional libretro extensions — silent if the core doesn't export them.
+    resolveOptional(m_handle, "retronest_set_paused", m_syms.retronest_set_paused);
     return true;
 }
 

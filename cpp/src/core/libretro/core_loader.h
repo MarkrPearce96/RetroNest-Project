@@ -34,6 +34,12 @@ struct CoreSymbols {
     // Optional — may stay nullptr after open():
     void (*retro_cheat_reset)() = nullptr;
     void (*retro_cheat_set)(unsigned, bool, const char*) = nullptr;
+    // Optional. PCSX2 libretro exports this; mGBA and other cores do
+    // not. CoreLoader resolves via resolveOptional, so this stays
+    // nullptr when not exported. CoreRuntime checks for null before
+    // calling.
+    using retronest_set_paused_t = void (*)(bool);
+    retronest_set_paused_t retronest_set_paused = nullptr;
 };
 
 class CoreLoader {
