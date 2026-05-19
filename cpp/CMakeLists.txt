@@ -514,6 +514,7 @@ add_executable(test_config_service_libretro_hotkeys
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
     src/core/libretro/audio_sink.cpp
@@ -574,6 +575,7 @@ add_executable(test_rom_scanner
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
     src/core/libretro/audio_sink.cpp
@@ -756,6 +758,7 @@ add_executable(test_controller_bindings_view
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
     src/core/libretro/audio_sink.cpp
@@ -847,6 +850,7 @@ add_executable(test_quick_settings_file_field
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
     src/core/libretro/audio_sink.cpp
@@ -1043,6 +1047,7 @@ add_test(NAME EnvironmentCallbacks COMMAND test_environment_callbacks)
 add_executable(test_core_runtime
     tests/test_core_runtime.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/rcheevos_runtime.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/environment_callbacks.cpp
