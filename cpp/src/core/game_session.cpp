@@ -186,6 +186,7 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
 
     CoreRuntime::StartConfig cfg;
+    cfg.emuId    = manifest.id;
     cfg.corePath = lr->resolveExecutable(manifest, Paths::emulatorsDir(manifest.install_folder));
     cfg.romPath = romPath;
     cfg.systemDir = Paths::biosDir();

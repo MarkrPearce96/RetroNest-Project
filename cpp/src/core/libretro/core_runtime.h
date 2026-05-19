@@ -21,6 +21,7 @@ class CoreRuntime : public QObject {
     Q_OBJECT
 public:
     struct StartConfig {
+        QString emuId;
         QString corePath;
         QString romPath;
         QString systemDir;

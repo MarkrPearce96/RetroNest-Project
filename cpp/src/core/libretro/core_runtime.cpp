@@ -1,7 +1,9 @@
 #include "core_runtime.h"
+#include "core/path_overrides_store.h"
 #include "core/sdl_input_manager.h"
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
@@ -272,7 +274,23 @@ void CoreRuntime::runLoop() {
     }
 
     m_envCtx.systemDirectory = m_cfg.systemDir.toUtf8();
-    m_envCtx.saveDirectory   = m_cfg.saveDir.toUtf8();
+    // Path overrides for libretro Saves (mGBA writes .srm directly to
+    // the libretro save_dir; redirecting save_dir is the propagation
+    // path). Only honored when the user has set the "Saves" override
+    // for this emulator. PCSX2 doesn't route memcards through save_dir
+    // (those go via the dedicated GET_MEMCARDS_DIR env enum), so a
+    // save_dir override here is mGBA-only in practice — but the lookup
+    // is generic per emuId so any future libretro adapter with a Saves
+    // PathDef gets the same propagation for free.
+    QString saveDir = m_cfg.saveDir;
+    {
+        const QString override = PathOverridesStore::instance().read(m_cfg.emuId, "Saves");
+        if (!override.isEmpty()) {
+            QDir().mkpath(override);
+            saveDir = override;
+        }
+    }
+    m_envCtx.saveDirectory   = saveDir.toUtf8();
     m_envCtx.options         = &m_options;
     m_envCtx.runtime         = static_cast<void*>(this);
     // SP6.5 Task 4.5: one-shot delivery to the libretro core via
