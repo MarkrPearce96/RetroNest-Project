@@ -24,15 +24,17 @@ HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
     setHub(m_page);  // single-page dialog — page IS the hub
 
     // Footer hints match the controller mapping page's pill row:
-    //   confirm → ↵ Rebind            (Enter / A button)
-    //   clear   → ⌫ Restore Default   (Backspace / B button)
-    //   close   → Esc Close            (Esc / X button)
+    //   confirm  → ↵   Rebind          (Enter / A button)
+    //   clear    → ⌫   Restore Default (Backspace / B button) — focused row
+    //   auto_map → M   Reset All        (M / Y button) — every row to defaults
+    //   close    → Esc Close            (Esc / X button)
     if (m_descBar) {
         m_descBar->setInputManager(inputManager);
         m_descBar->setHints({
-            { QStringLiteral("confirm"), QStringLiteral("Rebind") },
-            { QStringLiteral("clear"),   QStringLiteral("Restore Default") },
-            { QStringLiteral("close"),   QStringLiteral("Close") },
+            { QStringLiteral("confirm"),  QStringLiteral("Rebind") },
+            { QStringLiteral("clear"),    QStringLiteral("Restore Default") },
+            { QStringLiteral("auto_map"), QStringLiteral("Reset All") },
+            { QStringLiteral("close"),    QStringLiteral("Close") },
         });
     }
 }
@@ -58,9 +60,12 @@ void HotkeySettingsDialog::keyPressEvent(QKeyEvent* e) {
         case Qt::Key_Return:                            // ↵ / A — Rebind
             m_page->rebindFocused();
             return;
-        case Qt::Key_Backspace:                         // ⌫ / B — Restore Default
+        case Qt::Key_Backspace:                         // ⌫ / B — Restore Default (focused row)
         case Qt::Key_Back:
             m_page->restoreFocusedToDefault();
+            return;
+        case Qt::Key_M:                                 // M / Y — Reset All (every row)
+            m_page->restoreDefaults();
             return;
         case Qt::Key_Escape:                            // Esc / X — Close
             accept();
