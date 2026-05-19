@@ -139,18 +139,17 @@ void GenericHotkeyPage::buildLayout() {
 
     auto* content = new QWidget(scroll);
     auto* contentLayout = new QVBoxLayout(content);
-    contentLayout->setContentsMargins(24, 20, 24, 20);
-    contentLayout->setSpacing(8);
+    contentLayout->setContentsMargins(24, m_dualColumn ? 8 : 20, 24, 20);
+    contentLayout->setSpacing(4);
 
     // Column headers — only in dual-column mode. Aligned to match the
     // row layout: label (220px) + spacing + Keyboard cell + Controller cell.
     if (m_dualColumn) {
         auto* headerRow = new QWidget(content);
+        headerRow->setFixedHeight(18);
         auto* headerLayout = new QHBoxLayout(headerRow);
-        headerLayout->setContentsMargins(8, 0, 8, 4);
+        headerLayout->setContentsMargins(8, 0, 8, 0);
         headerLayout->setSpacing(12);
-        // Spacer matching the label column width (220px) + the button column's
-        // internal padding so the headings line up over their cells.
         auto* spacer = new QLabel(QString(), headerRow);
         spacer->setFixedWidth(220);
         headerLayout->addWidget(spacer);
