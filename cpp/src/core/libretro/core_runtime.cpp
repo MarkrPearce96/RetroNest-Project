@@ -482,3 +482,15 @@ extern "C" bool coreRuntimeSetRumbleMotor(void* runtime_opaque,
     if (!sdl) return false;
     return sdl->setRumbleMotor(static_cast<int>(port), effect, strength);
 }
+
+// Strong implementation of weak stub from environment_callbacks.cpp.
+// Called from the libretro worker thread; emits coreMessage which crosses
+// to the GUI thread via Qt::AutoConnection (queued, since CoreRuntime lives
+// on a different thread than its env handler).
+extern "C" void coreRuntimeEmitMessage(void* runtime_opaque,
+                                       const char* text,
+                                       int durationMs) {
+    if (!runtime_opaque || !text) return;
+    auto* rt = static_cast<CoreRuntime*>(runtime_opaque);
+    emit rt->coreMessage(QString::fromUtf8(text), durationMs);
+}

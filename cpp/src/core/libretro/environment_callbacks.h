@@ -98,3 +98,19 @@ extern "C" bool coreRuntimeSetRumbleMotor(void* runtime_opaque,
                                           unsigned port,
                                           unsigned effect,
                                           uint16_t strength);
+
+/**
+ * Bridge function used by RETRO_ENVIRONMENT_SET_MESSAGE / SET_MESSAGE_EXT to
+ * surface a core-generated OSD message via CoreRuntime::coreMessage. The env
+ * thunk is invoked on the libretro worker thread; the runtime emits the
+ * Qt signal across the thread boundary (auto-routes to queued connection).
+ *
+ * `text` is UTF-8, owned by the caller for the duration of this call.
+ * `durationMs` is the requested display duration (0 = frontend default).
+ *
+ * Implemented in core_runtime.cpp; weak stub in environment_callbacks.cpp
+ * keeps test_environment_callbacks linkable without core_runtime.
+ */
+extern "C" void coreRuntimeEmitMessage(void* runtime_opaque,
+                                       const char* text,
+                                       int durationMs);

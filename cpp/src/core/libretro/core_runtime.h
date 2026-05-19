@@ -124,6 +124,14 @@ signals:
     // correctly without hardcoding per-core constants.
     void aspectRatioReported(qreal aspectRatio);
 
+    // Emitted when the core surfaces an OSD message via
+    // RETRO_ENVIRONMENT_SET_MESSAGE or SET_MESSAGE_EXT. GameSession forwards
+    // this onto raInfoToast so the message lands in the standard user-facing
+    // toast queue. `durationMs == 0` means "frontend default duration".
+    // The bridge runs on the libretro worker thread; the signal crosses
+    // into the GUI thread via Qt::AutoConnection (queued).
+    void coreMessage(const QString& text, int durationMs);
+
 private:
     SdlInputManager* m_sdlInput = nullptr;
 

@@ -65,6 +65,16 @@ bool coreRuntimeSetRumbleMotor(void* runtime_opaque,
     return false;
 }
 
+// Weak stub for the core-message bridge — strong override in core_runtime.cpp.
+extern "C" void coreRuntimeEmitMessage(void* runtime_opaque,
+                                       const char* text,
+                                       int durationMs) __attribute__((weak));
+void coreRuntimeEmitMessage(void* runtime_opaque,
+                            const char* text,
+                            int durationMs) {
+    (void)runtime_opaque; (void)text; (void)durationMs;
+}
+
 // Static thunk the core stores via retro_rumble_interface.set_rumble_state.
 // libretro doesn't pass our context pointer to the thunk, so we route
 // through a file-scope pointer stashed at GET_RUMBLE_INTERFACE time.
@@ -154,6 +164,29 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
         }
         case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS:
             return true;  // accept and ignore
+        case RETRO_ENVIRONMENT_SET_MESSAGE: {
+            // Legacy single-string OSD notification. duration is in frames;
+            // convert assuming ~60 fps so the toast layer gets milliseconds.
+            const auto* m = static_cast<const retro_message*>(data);
+            if (!m || !m->msg || m->msg[0] == '\0') return false;
+            const int durationMs =
+                m->frames > 0 ? static_cast<int>(m->frames) * 1000 / 60 : 0;
+            coreRuntimeEmitMessage(ctx->runtime, m->msg, durationMs);
+            return true;
+        }
+        case RETRO_ENVIRONMENT_SET_MESSAGE_EXT: {
+            // Modern OSD notification. duration is already in milliseconds.
+            // RETRO_MESSAGE_TARGET_LOG asks for log-only delivery — the core
+            // already routes through GET_LOG_INTERFACE, so we just acknowledge
+            // without re-emitting to the OSD bridge.
+            const auto* m = static_cast<const retro_message_ext*>(data);
+            if (!m || !m->msg || m->msg[0] == '\0') return false;
+            if (m->target != RETRO_MESSAGE_TARGET_LOG) {
+                coreRuntimeEmitMessage(ctx->runtime, m->msg,
+                                       static_cast<int>(m->duration));
+            }
+            return true;
+        }
         case RETRO_ENVIRONMENT_GET_CAN_DUPE:
             *static_cast<bool*>(data) = true;
             return true;

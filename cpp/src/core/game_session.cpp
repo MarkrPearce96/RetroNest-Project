@@ -255,6 +255,19 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
             this, &GameSession::raIndicator,
             Qt::QueuedConnection);
 
+    // Surface core-emitted OSD messages (RETRO_ENVIRONMENT_SET_MESSAGE /
+    // SET_MESSAGE_EXT) through the existing toast pipeline. Header is the
+    // emulator's display name so the user can tell which core is talking;
+    // title carries the core's text. Duration falls back to a 4 s default
+    // when the core asks for "frontend default" (durationMs == 0).
+    const QString toastHeader = manifest.name;
+    connect(rt, &CoreRuntime::coreMessage, this,
+            [this, toastHeader](const QString& text, int durationMs) {
+                emit raInfoToast(toastHeader, text, QString(), QString(),
+                                 durationMs > 0 ? durationMs : 4000);
+            },
+            Qt::QueuedConnection);
+
     // Wire frontend settings changes → libretroFrontendChanged so QML
     // bindings on libretroAspectMode / libretroIntegerScale update live.
     if (auto* fs = lr->frontendSettingsStore()) {
