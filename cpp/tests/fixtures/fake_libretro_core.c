@@ -84,3 +84,29 @@ void retro_cheat_set(unsigned i, bool e, const char* c) { (void)i; (void)e; (voi
 
 void* retro_get_memory_data(unsigned id) { (void)id; return NULL; }
 size_t retro_get_memory_size(unsigned id) { (void)id; return 0; }
+
+// Pause symbol — counter for tests. retronest_set_paused increments
+// the counter on every call; tests verify the pointer resolves AND
+// is the right function. retronest_test_pause_call_count +
+// retronest_test_last_pause_value + retronest_test_reset_pause_counter
+// give tests read/reset access between cases.
+static int s_pause_call_count = 0;
+static int s_last_pause_value = -1;
+
+void retronest_set_paused(bool paused) {
+    s_pause_call_count++;
+    s_last_pause_value = paused ? 1 : 0;
+}
+
+int retronest_test_pause_call_count(void) {
+    return s_pause_call_count;
+}
+
+int retronest_test_last_pause_value(void) {
+    return s_last_pause_value;
+}
+
+void retronest_test_reset_pause_counter(void) {
+    s_pause_call_count = 0;
+    s_last_pause_value = -1;
+}
