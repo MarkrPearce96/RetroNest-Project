@@ -37,13 +37,15 @@ HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
         });
     }
 
-    // Restore Defaults button — left-aligned in the description bar
-    // footer, opposite the painted face hints.
+    // Restore Defaults button — top-left of the description bar, above
+    // the painted face-button hints row.
     auto* restore = new QPushButton(QStringLiteral("Restore Defaults"), this);
     restore->setCursor(Qt::PointingHandCursor);
+    restore->setFocusPolicy(Qt::NoFocus);  // don't steal focus from hotkey rows
     restore->setStyleSheet(QStringLiteral(
         "QPushButton { background:%1; color:%2; border:1px solid %3;"
-        "  border-radius:4px; padding:6px 14px; }"
+        "  border-radius:4px; padding:6px 14px; font-weight:600; }"
+        "QPushButton:hover { background:%4; }"
         "QPushButton:focus { border-color:%4; }")
         .arg(SettingsDialogTheme::titleBarBg().name(),
              SettingsDialogTheme::textPrimary().name(),
@@ -54,7 +56,7 @@ HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
 
     if (m_descBar) {
         if (auto* descLayout = qobject_cast<QHBoxLayout*>(m_descBar->layout())) {
-            descLayout->insertWidget(0, restore, 0, Qt::AlignBottom);
+            descLayout->insertWidget(0, restore, 0, Qt::AlignTop | Qt::AlignLeft);
         }
     }
 }
