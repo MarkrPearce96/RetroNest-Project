@@ -427,14 +427,17 @@ void ConfigService::savePaths(const QString& emuId, const QVariantMap& values) {
         // Libretro adapter — route to PathOverridesStore.
         auto& store = PathOverridesStore::instance();
         for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
-            int lastSlash = it.key().lastIndexOf('/');
-            if (lastSlash > 0) {
-                QString key = it.key().mid(lastSlash + 1);
-                store.write(emuId, key, it.value().toString());
-            } else {
+            const int lastSlash = it.key().lastIndexOf('/');
+            if (lastSlash <= 0) {
                 qWarning() << "[Paths] Skipping malformed key (no section separator):" << it.key();
+                continue;
             }
+            const QString key = it.key().mid(lastSlash + 1);
+            store.write(emuId, key, it.value().toString());
         }
+        // PathOverridesStore::write logs qWarning on disk failure but returns void;
+        // we optimistically report success here. A future improvement could surface
+        // write errors via a return value.
         emit statusMessage("Paths saved.");
         return;
     }
@@ -442,14 +445,14 @@ void ConfigService::savePaths(const QString& emuId, const QVariantMap& values) {
     IniFile ini;
     ini.load(configPath);
     for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
-        int lastSlash = it.key().lastIndexOf('/');
-        if (lastSlash > 0) {
-            QString section = it.key().left(lastSlash);
-            QString key = it.key().mid(lastSlash + 1);
-            ini.setValue(section, key, it.value().toString());
-        } else {
+        const int lastSlash = it.key().lastIndexOf('/');
+        if (lastSlash <= 0) {
             qWarning() << "[Paths] Skipping malformed key (no section separator):" << it.key();
+            continue;
         }
+        const QString section = it.key().left(lastSlash);
+        const QString key     = it.key().mid(lastSlash + 1);
+        ini.setValue(section, key, it.value().toString());
     }
 
     if (ini.save(configPath))
