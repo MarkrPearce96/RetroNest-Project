@@ -908,7 +908,8 @@ add_executable(test_environment_callbacks
     tests/test_environment_callbacks.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/options_store.cpp
-    src/core/libretro/retro_log.cpp)
+    src/core/libretro/retro_log.cpp
+    src/core/path_overrides_store.cpp)
 set_target_properties(test_environment_callbacks PROPERTIES AUTOMOC ON)
 target_include_directories(test_environment_callbacks PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src

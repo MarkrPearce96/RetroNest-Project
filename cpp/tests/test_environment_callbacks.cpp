@@ -1,6 +1,7 @@
 #include <QtTest>
 #include "core/libretro/environment_callbacks.h"
 #include "core/libretro/options_store.h"
+#include "core/path_overrides_store.h"
 
 class TestEnvironmentCallbacks : public QObject {
     Q_OBJECT
@@ -156,6 +157,40 @@ private slots:
         retro_message_ext mx{};
         mx.msg = nullptr;
         QVERIFY(!environmentDispatch(&ctx, RETRO_ENVIRONMENT_SET_MESSAGE_EXT, &mx));
+    }
+
+    // PathOverridesStore-backed env enums (path-overrides feature).
+    // The handlers consult PathOverridesStore directly, so tests need
+    // to seed the store via its singleton. Test order assumes no
+    // bleed-through across cases (each writes then clears).
+
+    void testGetMemcardsDirReturnsOverrideWhenSet() {
+        PathOverridesStore::instance().write("pcsx2", "MemoryCards", "/tmp/mc");
+        EnvironmentContext ctx;
+        const char* out = nullptr;
+        QVERIFY(environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR, &out));
+        QCOMPARE(QString(out), QString("/tmp/mc"));
+        PathOverridesStore::instance().clear("pcsx2", "MemoryCards");
+    }
+    void testGetMemcardsDirReturnsFalseWhenUnset() {
+        PathOverridesStore::instance().clear("pcsx2", "MemoryCards");
+        EnvironmentContext ctx;
+        const char* out = nullptr;
+        QVERIFY(!environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR, &out));
+    }
+    void testGetTexturesDirReturnsOverrideWhenSet() {
+        PathOverridesStore::instance().write("pcsx2", "Textures", "/tmp/tex");
+        EnvironmentContext ctx;
+        const char* out = nullptr;
+        QVERIFY(environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR, &out));
+        QCOMPARE(QString(out), QString("/tmp/tex"));
+        PathOverridesStore::instance().clear("pcsx2", "Textures");
+    }
+    void testGetTexturesDirReturnsFalseWhenUnset() {
+        PathOverridesStore::instance().clear("pcsx2", "Textures");
+        EnvironmentContext ctx;
+        const char* out = nullptr;
+        QVERIFY(!environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR, &out));
     }
 };
 QTEST_MAIN(TestEnvironmentCallbacks)

@@ -26,6 +26,16 @@
 //           Returns false if no path is set (mGBA / fresh-boot cases).
 #define RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH (2 | RETRO_ENVIRONMENT_PRIVATE)
 
+// Path-override env queries. Each returns the user's override (set via
+// the Paths settings UI; stored in PathOverridesStore) for one PCSX2-
+// owned folder. Same shape as GET_BOOT_STATE_PATH (0x20002): data is
+// const char**, returns true with *data set when override exists,
+// false otherwise. The libretro core falls back to its save_dir-based
+// default when false comes back, so non-RetroNest hosts and mGBA
+// (which doesn't query these) keep working unchanged.
+#define RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR (3 | RETRO_ENVIRONMENT_PRIVATE)
+#define RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR (4 | RETRO_ENVIRONMENT_PRIVATE)
+
 #include <QByteArray>
 #include <QString>
 #include <QVector>

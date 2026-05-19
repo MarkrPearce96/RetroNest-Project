@@ -1,6 +1,7 @@
 #include "environment_callbacks.h"
 #include "options_store.h"
 #include "retro_log.h"
+#include "core/path_overrides_store.h"
 #include <QDebug>
 #include <QSet>
 
@@ -141,6 +142,24 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             *out = ctx->bootStatePath.constData();
             ctx->bootStatePathConsumed = true;
             qInfo("[libretro/env] GET_BOOT_STATE_PATH: handed off path to core");
+            return true;
+        }
+        case RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR:
+        case RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR: {
+            // PCSX2 path overrides. Looks up PathOverridesStore directly
+            // (not ctx, so this also works for any future per-session
+            // override propagation). Lifetime: thread_local cache keeps
+            // the QByteArray storage alive for the duration of the env
+            // call AND past it — matches the GET_BOOT_STATE_PATH pattern.
+            if (!data) return false;
+            const QString key =
+                (cmd == RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR) ? QStringLiteral("MemoryCards")
+                                                                : QStringLiteral("Textures");
+            const QString path = PathOverridesStore::instance().read("pcsx2", key);
+            if (path.isEmpty()) return false;
+            thread_local QByteArray cached;
+            cached = path.toUtf8();
+            *static_cast<const char**>(data) = cached.constData();
             return true;
         }
         case RETRO_ENVIRONMENT_GET_VARIABLE:
