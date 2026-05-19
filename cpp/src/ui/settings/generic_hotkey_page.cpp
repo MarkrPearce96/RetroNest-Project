@@ -445,7 +445,28 @@ void GenericHotkeyPage::onBindingCaptured(int deviceIndex, const QString& elemen
         : QString();
     if (formatted.isEmpty()) return;
 
-    if (!m_capturedBindings.contains(formatted))
+    // Combo detection: if a previous gamepad button is still held when a
+    // NEW button is pressed (m_controllerHeld true, set on first press,
+    // cleared only on SDL's all-released), fuse them into a single combo
+    // binding ("Gamepad<P>/<mod>+<btn>") rather than recording two
+    // independent bindings. Without this, pressing the modifier alone
+    // later would fire the hotkey on its own.
+    bool fused = false;
+    if (m_controllerHeld && !isAxis && formatted.startsWith(QStringLiteral("Gamepad"))) {
+        for (int i = m_capturedBindings.size() - 1; i >= 0; --i) {
+            const QString& prev = m_capturedBindings[i];
+            if (!prev.startsWith(QStringLiteral("Gamepad"))) continue;
+            if (prev.contains(QLatin1Char('+'))) continue;  // already a combo
+            // prev = "Gamepad<P>/<mod>"  →  combo = "Gamepad<P>/<mod>+<btn>"
+            const int slash = formatted.indexOf(QLatin1Char('/'));
+            if (slash < 0) break;
+            const QString actionPart = formatted.mid(slash + 1);
+            m_capturedBindings[i] = prev + QStringLiteral("+") + actionPart;
+            fused = true;
+            break;
+        }
+    }
+    if (!fused && !m_capturedBindings.contains(formatted))
         m_capturedBindings.append(formatted);
     m_controllerHeld = true;
 
