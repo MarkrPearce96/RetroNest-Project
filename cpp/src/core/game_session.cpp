@@ -5,6 +5,7 @@
 #include "core/ini_file.h"
 #include "core/libretro/frontend_settings_store.h"
 #include "core/libretro/input_router.h"
+#include "core/path_overrides_store.h"
 #include "core/libretro/rcheevos_runtime.h"
 #include "core/platform/host_arch.h"
 #include "core/sdl_input_manager.h"
@@ -404,9 +405,11 @@ void GameSession::terminate() {
             const QString resumeName = serial.isEmpty()
                 ? QFileInfo(m_currentRomPath).completeBaseName()
                 : serial;
-            const QString resumePath = Paths::emulatorDataDir(mf->id, systemId)
-                + "/savestates/" + resumeName + ".resume";
-            QDir().mkpath(QFileInfo(resumePath).absolutePath());
+            QString dir = PathOverridesStore::instance().read(mf->id, "SaveStates");
+            if (dir.isEmpty())
+                dir = Paths::emulatorDataDir(mf->id, systemId) + "/savestates";
+            const QString resumePath = dir + "/" + resumeName + ".resume";
+            QDir().mkpath(dir);
             // Schedule the save onto the worker thread (race-free: the worker
             // will flush the pending path in its post-loop teardown, before
             // retro_unload_game, after stop() unblocks the pause condvar).
@@ -446,10 +449,14 @@ QString GameSession::libretroSlotPath(int slot) const {
     const QString baseName = serial.isEmpty()
         ? QFileInfo(m_currentRomPath).completeBaseName()
         : serial;
-    const QString path = Paths::emulatorDataDir(m_manifest->id, systemId)
-        + "/savestates/" + baseName + "_slot" + QString::number(slot) + ".state";
-    QDir().mkpath(QFileInfo(path).absolutePath());
-    return path;
+    // Path overrides: user-chosen dir trumps the default. The override
+    // is stored per-emulator ("pcsx2" / "mgba") under the "SaveStates"
+    // key; default is <emulator_data>/savestates.
+    QString dir = PathOverridesStore::instance().read(m_manifest->id, "SaveStates");
+    if (dir.isEmpty())
+        dir = Paths::emulatorDataDir(m_manifest->id, systemId) + "/savestates";
+    QDir().mkpath(dir);
+    return dir + "/" + baseName + "_slot" + QString::number(slot) + ".state";
 }
 
 void GameSession::saveStateLibretro(int slot) {
