@@ -96,13 +96,12 @@ Item {
         }
     }
 
-    // Keyboard: Escape or B-button (Key_Back) opens the in-game menu
-    Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
-            root.inGameMenuRequested()
-            event.accepted = true
-        }
-    }
+    // Esc / Key_Back are no longer caught here — the libretro hotkey
+    // matcher in AppController owns all libretro in-game shortcuts now.
+    // Users bind their own ToggleMenu key in the Libretro Hotkeys page
+    // (default: Esc). Leaving both paths active caused the event to be
+    // handled twice (once via matcher = open, once here via the legacy
+    // toggle connection = close).
 
     Component.onCompleted: forceActiveFocus()
 }
