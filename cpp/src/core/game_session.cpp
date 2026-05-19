@@ -5,8 +5,8 @@
 #include "core/ini_file.h"
 #include "core/libretro/frontend_settings_store.h"
 #include "core/libretro/input_router.h"
-#include "core/path_overrides_store.h"
 #include "core/libretro/rcheevos_runtime.h"
+#include "core/path_overrides_store.h"
 #include "core/platform/host_arch.h"
 #include "core/sdl_input_manager.h"
 

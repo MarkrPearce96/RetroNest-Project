@@ -1,6 +1,7 @@
 #include "pcsx2_libretro_adapter.h"
 
 #include "core/binding_def.h"
+#include "core/path_overrides_store.h"
 #include "core/paths.h"
 
 #include <QDir>
@@ -54,7 +55,13 @@ QVector<BindingDef> Pcsx2LibretroAdapter::controllerBindingDefsForType(const QSt
 QString Pcsx2LibretroAdapter::findResumeFile(const QString& serial) const {
     if (serial.isEmpty())
         return {};
-    const QString dir = Paths::emulatorDataDir("pcsx2", "ps2") + "/savestates";
+    // Path overrides: search the override dir first if set, else fall
+    // back to the default <emulator_data>/savestates. Must mirror the
+    // write side in GameSession::terminate / libretroSlotPath, otherwise
+    // a user with a SaveStates override would silently lose cold-resume.
+    QString dir = PathOverridesStore::instance().read("pcsx2", "SaveStates");
+    if (dir.isEmpty())
+        dir = Paths::emulatorDataDir("pcsx2", "ps2") + "/savestates";
     QDir d(dir);
     const auto entries = d.entryList({ serial + ".resume" }, QDir::Files);
     if (!entries.isEmpty())

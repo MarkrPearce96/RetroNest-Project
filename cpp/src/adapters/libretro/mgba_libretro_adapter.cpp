@@ -1,4 +1,5 @@
 #include "mgba_libretro_adapter.h"
+#include "core/path_overrides_store.h"
 #include "core/paths.h"
 #include <QFile>
 #include <QFileInfo>
@@ -359,6 +360,17 @@ int MgbaLibretroAdapter::raConsoleId(const QString& systemId) const {
 QString MgbaLibretroAdapter::findResumeFile(const QString& serial) const {
     if (serial.isEmpty())
         return {};
+    // Override applies to all mGBA system variants (gba/gb/gbc) — search
+    // the override first if set; else fall back to per-system defaults.
+    // Mirror of the write side in GameSession::terminate / libretroSlotPath.
+    const QString override = PathOverridesStore::instance().read("mgba", "SaveStates");
+    if (!override.isEmpty()) {
+        QDir d(override);
+        const auto entries = d.entryList({ serial + ".resume" }, QDir::Files);
+        if (!entries.isEmpty())
+            return d.absoluteFilePath(entries.first());
+        return {};   // Override set but no resume file found — don't fall back.
+    }
     for (const QString& sys : { "gba", "gb", "gbc" }) {
         const QString dir = Paths::emulatorDataDir("mgba", sys) + "/savestates";
         QDir d(dir);
