@@ -225,7 +225,15 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
             if (la && la->runtime()) la->runtime()->reset();
         }
     };
-    cb.openMenu = [this]() { openInGameMenuPanel(); };
+    cb.openMenu = [this]() {
+    // Mirror the Cmd+Shift+Esc global-hotkey path so QML's
+    // toggleInGameMenu() chooses the right menu (libretro overlay /
+    // in-scene HUD / external-emulator panel) based on what's running.
+    // Going straight to openInGameMenuPanel() would land on the
+    // external-emulator panel, whose Save/Load injects Carbon
+    // keystrokes into a separate process — useless for libretro.
+    emit globalHotkeyPressed();
+};
     cb.toggleMute = [this]() {
         if (auto* gs = m_gameService.session()) {
             auto* la = gs->adapter() ? gs->adapter()->asLibretro() : nullptr;
