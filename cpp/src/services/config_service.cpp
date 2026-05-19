@@ -2,6 +2,7 @@
 
 #include "adapters/adapter_registry.h"
 #include "core/ini_file.h"
+#include "core/path_overrides_store.h"
 #include "core/paths.h"
 #include "core/setting_def.h"
 #include "core/sdl_input_manager.h"
@@ -395,7 +396,12 @@ QString ConfigService::pathValue(const QString& emuId, const QString& section, c
     if (!adapter) return {};
 
     QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return {};
+    if (configPath.isEmpty()) {
+        // Libretro adapter — no INI. Read from PathOverridesStore.
+        // `section` is informational ("libretro") and ignored; the key
+        // alone scopes the override within the emulator namespace.
+        return PathOverridesStore::instance().read(emuId, key);
+    }
 
     IniFile ini;
     ini.load(configPath);
@@ -417,11 +423,24 @@ void ConfigService::savePaths(const QString& emuId, const QVariantMap& values) {
     if (!adapter) return;
 
     QString configPath = adapter->configFilePath();
-    if (configPath.isEmpty()) return;
+    if (configPath.isEmpty()) {
+        // Libretro adapter — route to PathOverridesStore.
+        auto& store = PathOverridesStore::instance();
+        for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
+            int lastSlash = it.key().lastIndexOf('/');
+            if (lastSlash > 0) {
+                QString key = it.key().mid(lastSlash + 1);
+                store.write(emuId, key, it.value().toString());
+            } else {
+                qWarning() << "[Paths] Skipping malformed key (no section separator):" << it.key();
+            }
+        }
+        emit statusMessage("Paths saved.");
+        return;
+    }
 
     IniFile ini;
     ini.load(configPath);
-
     for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
         int lastSlash = it.key().lastIndexOf('/');
         if (lastSlash > 0) {
