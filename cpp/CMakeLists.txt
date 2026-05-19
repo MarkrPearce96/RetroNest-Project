@@ -89,6 +89,7 @@ set(SOURCES
     src/core/libretro/video_software.cpp
     src/core/libretro/audio_sink.cpp
     src/core/libretro/input_router.cpp
+    src/core/libretro/libretro_hotkey_defs.cpp
     src/services/game_service.cpp
     src/services/scraper_service.cpp
     src/services/emulator_service.cpp
@@ -488,6 +489,14 @@ set_target_properties(test_format_binding PROPERTIES AUTOMOC ON)
 target_include_directories(test_format_binding PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(test_format_binding PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static)
 add_test(NAME FormatBinding COMMAND test_format_binding)
+
+add_executable(test_libretro_hotkey_defs
+    tests/test_libretro_hotkey_defs.cpp
+    src/core/libretro/libretro_hotkey_defs.cpp)
+set_target_properties(test_libretro_hotkey_defs PROPERTIES AUTOMOC ON)
+target_include_directories(test_libretro_hotkey_defs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_libretro_hotkey_defs PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME LibretroHotkeyDefs COMMAND test_libretro_hotkey_defs)
 
 add_executable(test_rom_scanner
     tests/test_rom_scanner.cpp
