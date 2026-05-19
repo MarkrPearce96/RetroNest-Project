@@ -20,6 +20,7 @@ private slots:
         QSignalSpy started(&rt, &CoreRuntime::started);
         QSignalSpy finished(&rt, &CoreRuntime::finished);
         CoreRuntime::StartConfig cfg;
+        cfg.emuId = "fake_core";
         cfg.corePath = fakeCorePath();
         cfg.romPath = rom.fileName();
         cfg.systemDir = d.path() + "/sys";
@@ -40,6 +41,7 @@ private slots:
         CoreRuntime rt;
         QSignalSpy frames(&rt, &CoreRuntime::frameReady);
         CoreRuntime::StartConfig cfg;
+        cfg.emuId = "fake_core";
         cfg.corePath = fakeCorePath();
         cfg.romPath = rom.fileName();
         cfg.systemDir = d.path() + "/sys";

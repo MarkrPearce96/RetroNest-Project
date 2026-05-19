@@ -928,7 +928,8 @@ add_executable(test_core_runtime
     src/core/libretro/audio_sink.cpp
     src/core/libretro/input_router.cpp
     src/core/libretro/retro_log.cpp
-    src/core/sdl_input_manager.cpp)
+    src/core/sdl_input_manager.cpp
+    src/core/path_overrides_store.cpp)
 set_target_properties(test_core_runtime PROPERTIES AUTOMOC ON)
 target_include_directories(test_core_runtime PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src

@@ -284,10 +284,14 @@ void CoreRuntime::runLoop() {
     // PathDef gets the same propagation for free.
     QString saveDir = m_cfg.saveDir;
     {
-        const QString override = PathOverridesStore::instance().read(m_cfg.emuId, "Saves");
-        if (!override.isEmpty()) {
-            QDir().mkpath(override);
-            saveDir = override;
+        const QString savesOverride = PathOverridesStore::instance().read(m_cfg.emuId, "Saves");
+        if (!savesOverride.isEmpty()) {
+            if (QDir().mkpath(savesOverride)) {
+                saveDir = savesOverride;
+            } else {
+                qWarning() << "[CoreRuntime] Cannot create Saves override dir; "
+                              "falling back to default:" << savesOverride;
+            }
         }
     }
     m_envCtx.saveDirectory   = saveDir.toUtf8();
