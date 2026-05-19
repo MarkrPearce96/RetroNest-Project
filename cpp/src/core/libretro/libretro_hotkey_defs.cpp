@@ -40,29 +40,29 @@ const QVector<HotkeyDef> kLibretroHotkeys = {
     make(QStringLiteral("Previous Save Slot"), QStringLiteral("Save States"),
          ids::PrevSlot, QStringLiteral("Keyboard/[")),
 
-    // SaveStateSlot1..5 — number row, Shift adds explicit slot.
+    // SaveStateSlot1..5 — plain number-row keys, no modifiers.
     make(QStringLiteral("Save State to Slot 1"), QStringLiteral("Save States"),
-         ids::SaveStateSlot(1), QStringLiteral("Keyboard/Shift+1")),
+         ids::SaveStateSlot(1), QStringLiteral("Keyboard/1")),
     make(QStringLiteral("Save State to Slot 2"), QStringLiteral("Save States"),
-         ids::SaveStateSlot(2), QStringLiteral("Keyboard/Shift+2")),
+         ids::SaveStateSlot(2), QStringLiteral("Keyboard/2")),
     make(QStringLiteral("Save State to Slot 3"), QStringLiteral("Save States"),
-         ids::SaveStateSlot(3), QStringLiteral("Keyboard/Shift+3")),
+         ids::SaveStateSlot(3), QStringLiteral("Keyboard/3")),
     make(QStringLiteral("Save State to Slot 4"), QStringLiteral("Save States"),
-         ids::SaveStateSlot(4), QStringLiteral("Keyboard/Shift+4")),
+         ids::SaveStateSlot(4), QStringLiteral("Keyboard/4")),
     make(QStringLiteral("Save State to Slot 5"), QStringLiteral("Save States"),
-         ids::SaveStateSlot(5), QStringLiteral("Keyboard/Shift+5")),
+         ids::SaveStateSlot(5), QStringLiteral("Keyboard/5")),
 
-    // LoadStateSlot1..5
+    // LoadStateSlot1..5 — number-row 6..0, no modifiers.
     make(QStringLiteral("Load State from Slot 1"), QStringLiteral("Save States"),
-         ids::LoadStateSlot(1), QStringLiteral("Keyboard/Ctrl+1")),
+         ids::LoadStateSlot(1), QStringLiteral("Keyboard/6")),
     make(QStringLiteral("Load State from Slot 2"), QStringLiteral("Save States"),
-         ids::LoadStateSlot(2), QStringLiteral("Keyboard/Ctrl+2")),
+         ids::LoadStateSlot(2), QStringLiteral("Keyboard/7")),
     make(QStringLiteral("Load State from Slot 3"), QStringLiteral("Save States"),
-         ids::LoadStateSlot(3), QStringLiteral("Keyboard/Ctrl+3")),
+         ids::LoadStateSlot(3), QStringLiteral("Keyboard/8")),
     make(QStringLiteral("Load State from Slot 4"), QStringLiteral("Save States"),
-         ids::LoadStateSlot(4), QStringLiteral("Keyboard/Ctrl+4")),
+         ids::LoadStateSlot(4), QStringLiteral("Keyboard/9")),
     make(QStringLiteral("Load State from Slot 5"), QStringLiteral("Save States"),
-         ids::LoadStateSlot(5), QStringLiteral("Keyboard/Ctrl+5")),
+         ids::LoadStateSlot(5), QStringLiteral("Keyboard/0")),
 
     // Audio
     make(QStringLiteral("Toggle Mute"), QStringLiteral("Audio"),
