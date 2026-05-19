@@ -196,7 +196,7 @@ ApplicationWindow {
         // requested action between frames.
         onSaveStateRequested: {
             if (app.gameSession) {
-                app.gameSession.saveStateLibretro(1);
+                app.gameSession.saveStateLibretro(app.gameSession.currentSaveSlot);
                 app.gameSession.resumeEmulation();
             }
             inGameMenu.close();
@@ -205,7 +205,7 @@ ApplicationWindow {
 
         onLoadStateRequested: {
             if (app.gameSession) {
-                app.gameSession.loadStateLibretro(1);
+                app.gameSession.loadStateLibretro(app.gameSession.currentSaveSlot);
                 app.gameSession.resumeEmulation();
             }
             inGameMenu.close();

@@ -1215,7 +1215,7 @@ void AppController::showLibretroOverlayPanelForCurrentGame() {
         connect(m_libretroOverlayPanel, &LibretroOverlayPanel::saveStateRequested,
                 this, [this] {
                     if (auto* s = gameSession()) {
-                        s->saveStateLibretro(1);
+                        s->saveStateLibretro(s->currentSaveSlot());
                         s->resumeEmulation();
                     }
                     m_libretroOverlayPanel->closeMenu();
@@ -1223,7 +1223,7 @@ void AppController::showLibretroOverlayPanelForCurrentGame() {
         connect(m_libretroOverlayPanel, &LibretroOverlayPanel::loadStateRequested,
                 this, [this] {
                     if (auto* s = gameSession()) {
-                        s->loadStateLibretro(1);
+                        s->loadStateLibretro(s->currentSaveSlot());
                         s->resumeEmulation();
                     }
                     m_libretroOverlayPanel->closeMenu();
