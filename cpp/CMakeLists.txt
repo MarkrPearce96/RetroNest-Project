@@ -375,7 +375,6 @@ qt_add_qml_module(appui_backing
         qml/AppUI/GameGridView.qml
         qml/AppUI/GameCard.qml
         qml/AppUI/ToolBtn.qml
-        qml/AppUI/SettingsPage.qml
 
         qml/AppUI/EmulatorManagePage.qml
         qml/AppUI/EmulatorManageGrid.qml
