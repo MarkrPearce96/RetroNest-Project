@@ -58,22 +58,25 @@ void HotkeySettingsDialog::keyPressEvent(QKeyEvent* e) {
         EmulatorSettingsDialogBase::keyPressEvent(e);
         return;
     }
-    // Footer-action shortcuts. SdlInputManager translates A/B/X face buttons
-    // to these Qt keys via the unified-input pipeline (see CLAUDE.md
-    // "Input System"). Keyboard analogues mirror the controller mapping
-    // page's footer pills.
+    // Footer-action shortcuts. SDL translates face buttons to Qt keys:
+    //   A → Return, B → Back, X → Backspace, Y → M
+    //
+    //   Enter / A           → Rebind focused row
+    //   B / ⌫               → Restore Default (focused row)
+    //   M / Y               → Reset All
+    //   Esc / X (Backspace) → Close
     switch (e->key()) {
-        case Qt::Key_Return:                            // ↵ / A — Rebind
+        case Qt::Key_Return:
             m_page->rebindFocused();
             return;
-        case Qt::Key_Backspace:                         // ⌫ / B — Restore Default (focused row)
-        case Qt::Key_Back:
+        case Qt::Key_Back:                              // B button only
             m_page->restoreFocusedToDefault();
             return;
-        case Qt::Key_M:                                 // M / Y — Reset All (every row)
+        case Qt::Key_M:
             m_page->restoreDefaults();
             return;
-        case Qt::Key_Escape:                            // Esc / X — Close
+        case Qt::Key_Escape:                            // keyboard Esc
+        case Qt::Key_Backspace:                         // X button
             accept();
             return;
         default:
