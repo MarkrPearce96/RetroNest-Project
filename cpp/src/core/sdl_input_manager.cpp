@@ -279,10 +279,15 @@ bool SdlInputManager::eventFilter(QObject* obj, QEvent* event) {
             else if (mods & Qt::ControlModifier) full = "Keyboard/Control & Keyboard/" + keyStr;
             else                                 full = "Keyboard/" + keyStr;
 
-            m_capturing = false;
-            emit capturingChanged();
             emit keyboardCaptured(full);
-            return true;   // consume — don't propagate to widgets / shortcuts.
+            // Do NOT set m_capturing=false or return true: the libretro
+            // GenericHotkeyPage tracks every press via its OWN eventFilter
+            // (hold-to-multi-bind / tap-to-single-bind), and that filter
+            // never fires if we consume the event here. Pages that want
+            // single-shot keyboard capture (controller_mapping_page) act
+            // on the keyboardCaptured signal — they don't depend on the
+            // event being consumed at qApp level.
+            return false;
         }
 
         // Outside capture: detect a real keyboard press to switch back
