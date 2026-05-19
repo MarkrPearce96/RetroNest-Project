@@ -13,6 +13,7 @@
 #include "core/libretro/hotkey_dispatcher.h"
 #include "core/libretro/audio_sink.h"
 #include <QCoreApplication>
+#include <QApplication>
 #include <QKeyEvent>
 
 #include <QQmlEngine>
