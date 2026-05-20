@@ -733,11 +733,9 @@ ApplicationWindow {
         visible: !settingsOverlay.visible && !gameActionPopup.visible
                  && !(mainStack.currentItem && mainStack.currentItem.isEmulationView)
         hints: {
-            if (window.showingEmptyState)
-                return [{action: "start", label: "Settings"}]
-            if (mainStack.depth > 1)
-                return [{action: "navigate_ud", label: "Browse"}, {action: "confirm", label: "Launch"}, {action: "action", label: "Actions"}, {action: "back", label: "Back", keyboardKey: "Backspace"}, {action: "start", label: "Settings"}]
-            return [{action: "navigate_lr", label: "Browse"}, {action: "confirm", label: "Select"}, {action: "start", label: "Settings"}]
+            var page = mainStack.currentItem;
+            if (page && page.hints !== undefined) return page.hints;
+            return [];
         }
     }
 
@@ -835,7 +833,7 @@ ApplicationWindow {
 
     // Escape key toggles settings overlay or in-game menu depending on game state
     Shortcut {
-        sequence: "Escape"
+        sequences: ["Escape", "Backspace"]
         enabled: !gameActionPopup.visible && !resumeStateDialog.visible
                  && !app.inGameMenuOpen
         onActivated: {
@@ -866,6 +864,25 @@ ApplicationWindow {
             } else {
                 settingsOverlay.open()
             }
+        }
+    }
+
+    // M key — universal Action. Opens GameActionPopup for the currently
+    // focused game, when a theme page publishes one. Gated against modals
+    // and against running games (libretro path already consumes M? No —
+    // M isn't an emulator hotkey; we still gate on !app.gameRunning so
+    // it can't fire while a game is the foreground).
+    Shortcut {
+        sequence: "M"
+        enabled: !app.gameRunning
+                 && !gameActionPopup.visible
+                 && !resumeStateDialog.visible
+                 && !settingsOverlay.visible
+                 && !app.inGameMenuOpen
+                 && !inputManager.virtualKeyboardOpen
+        onActivated: {
+            var id = themeContext.currentFocusedGameId
+            if (id >= 0) themeContext.openGameActions(id)
         }
     }
 }
