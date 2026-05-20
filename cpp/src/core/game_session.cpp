@@ -488,7 +488,7 @@ bool GameSession::toggleFastForwardLibretro() {
     if (m_backend != Backend::Libretro) return false;
     if (!m_libretroAdapter || !m_libretroAdapter->runtime()) return false;
     m_libretroFastForward = !m_libretroFastForward;
-    m_libretroAdapter->runtime()->setSpeedMultiplier(m_libretroFastForward ? 4.0 : 1.0);
+    m_libretroAdapter->runtime()->setSpeedMultiplier(m_libretroFastForward ? 2.0 : 1.0);
     return m_libretroFastForward;
 }
 

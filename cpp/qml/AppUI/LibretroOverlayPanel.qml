@@ -62,7 +62,7 @@ Window {
         ActionToast {
             id: ffToast
             iconSource: "images/hud/fast_forward.svg"
-            label: "4×"
+            label: "2×"
             sticky: true
         }
         ActionToast {
