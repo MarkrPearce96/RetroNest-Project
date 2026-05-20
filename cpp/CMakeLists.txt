@@ -342,6 +342,8 @@ qt_add_qml_module(appui_backing
     VERSION 1.0
     OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/AppUI"
     QML_FILES
+        qml/AppUI/BaseModalCard.qml
+        qml/AppUI/BaseToast.qml
         qml/AppUI/ButtonHints.qml
         qml/AppUI/GenericListPage.qml
         qml/AppUI/GenericMultiCardPicker.qml
