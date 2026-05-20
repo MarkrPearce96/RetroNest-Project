@@ -73,23 +73,19 @@ public:
                                   int deviceIndex, QObject* input) const override;
 
     QVector<HotkeyDef> hotkeyBindingDefs() const override { return {}; }
-    // Save/Load/FF are intentionally NOT exposed on Dolphin: Dolphin's
-    // HotkeyScheduler polls CGEventSourceKeyState on a background-app
-    // thread macOS aggressively throttles, so none of CGEventPostToPid
-    // / CGEventPost(kCGHIDEventTap) / AppleScript reach it reliably.
-    // Returning 0 hides the icons from the in-game menu via
-    // currentGameInfo's supportsSaveState/supportsLoadState flags.
-    // Pause still works because PauseOnFocusLost handles it on focus
-    // change — the synthesized Space is a no-op for Dolphin but
-    // harmless.
+    // Dolphin save/load state are disabled (returning 0 hides the
+    // icons from the in-game menu via currentGameInfo's
+    // supportsSaveState/supportsLoadState flags). Fast-forward isn't
+    // wired. Pause uses the base default (Space) — works because
+    // PauseOnFocusLost handles focus changes too; the synthesized
+    // Space is a no-op for Dolphin but harmless.
     int hotkeyVirtualKeyCode(HotkeyAction action) const override {
         switch (action) {
-        case HotkeyAction::TogglePause:       return 0x31; // kVK_Space
         case HotkeyAction::SaveState:         return 0;
         case HotkeyAction::LoadState:         return 0;
         case HotkeyAction::ToggleFastForward: return 0;
+        default:                              return EmulatorAdapter::hotkeyVirtualKeyCode(action);
         }
-        return 0;
     }
 
     bool supportsRetroAchievements() const override { return true; }
