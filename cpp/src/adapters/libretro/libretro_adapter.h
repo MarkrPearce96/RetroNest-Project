@@ -35,6 +35,9 @@ public:
     /** Typed downcast — overrides EmulatorAdapter's nullptr default. */
     LibretroAdapter* asLibretro() override { return this; }
 
+    /** No native UI to open — hides the hub's "Open Native Settings" button. */
+    bool hasNativeSettingsUI() const override { return false; }
+
     // Returns the live runtime's OptionsStore when a game is running; otherwise
     // a persistent fallback store owned by this adapter, lazily loaded from
     // optionsJsonPath() and seeded with declared options synthesized from

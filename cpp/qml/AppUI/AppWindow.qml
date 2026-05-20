@@ -29,39 +29,28 @@ ApplicationWindow {
     }
 
     function toggleInGameMenu() {
-        // SP3.5: Pattern B HW-render libretro cores route through the
-        // floating LibretroOverlayPanel so the menu renders above the
-        // game's Metal NSView. mGBA / software libretro stay on the
-        // in-scene branch below.
-        if (app.gameUsesHardwareRender()) {
-            if (app.libretroOverlayMenuVisible)
-                app.closeLibretroOverlayMenu();
+        // HW-render libretro + external emulators both flow through
+        // InGameMenuController on the C++ side — one open/close pair
+        // picks the right backing window (transparent QQuickWindow vs
+        // floating NSPanel). SW-render libretro (mGBA) stays on the
+        // in-scene branch below since it shares this window's scene.
+        if (app.gameUsesHardwareRender() || !isLibretroGame()) {
+            if (app.inGameMenuOpen)
+                app.closeInGameMenu();
             else
-                app.openLibretroOverlayMenu();
+                app.openInGameMenu();
             return;
         }
 
-        if (isLibretroGame()) {
-            // Libretro path: in-window HUD. Pause/resume the core
-            // explicitly because we don't get PauseOnFocusLoss.
-            if (inGameMenu.visible) {
-                inGameMenu.close();
-                if (app.gameSession) app.gameSession.resumeEmulation();
-            } else {
-                if (app.gameSession) app.gameSession.pauseEmulation();
-                app.activateApp();
-                inGameMenu.open();
-            }
-            return;
-        }
-
-        // External-emulator path: floating panel. Pause is triggered
-        // by the panel becoming the system key window (each emulator's
-        // PauseOnFocusLoss config handles it).
-        if (app.inGameMenuPanelVisible) {
-            app.closeInGameMenuPanel();
+        // SW-render libretro path: in-window HUD. Pause/resume the core
+        // explicitly because we don't get PauseOnFocusLoss.
+        if (inGameMenu.visible) {
+            inGameMenu.close();
+            if (app.gameSession) app.gameSession.resumeEmulation();
         } else {
-            app.openInGameMenuPanel();
+            if (app.gameSession) app.gameSession.pauseEmulation();
+            app.activateApp();
+            inGameMenu.open();
         }
     }
 
@@ -497,10 +486,10 @@ ApplicationWindow {
         function onLibretroMenuToggleRequested() {
             if (!app.gameRunning) return;
             if (app.gameUsesHardwareRender()) {
-                if (app.libretroOverlayMenuVisible)
-                    app.closeLibretroOverlayMenu();
+                if (app.inGameMenuOpen)
+                    app.closeInGameMenu();
                 else
-                    app.openLibretroOverlayMenu();
+                    app.openInGameMenu();
                 return;
             }
             if (isLibretroGame()) {
@@ -756,7 +745,7 @@ ApplicationWindow {
     Connections {
         target: inputManager
         enabled: !inputManager.virtualKeyboardOpen && !gameActionPopup.visible
-                 && !app.inGameMenuPanelVisible
+                 && !app.inGameMenuOpen
         function onNavigateStart() {
             if (settingsOverlay.visible) {
                 if (settingsOverlay.isBusy()) {
@@ -848,7 +837,7 @@ ApplicationWindow {
     Shortcut {
         sequence: "Escape"
         enabled: !gameActionPopup.visible && !resumeStateDialog.visible
-                 && !app.inGameMenuPanelVisible
+                 && !app.inGameMenuOpen
         onActivated: {
             if (app.gameRunning) {
                 // Shortcut fires when this app has focus — i.e. the

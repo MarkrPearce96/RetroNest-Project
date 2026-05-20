@@ -2326,3 +2326,41 @@ void DolphinAdapter::writeBindingDeviceHeader(IniFile& ini, const QString& secti
     }
     ini.setValue(section, "Device", QString("SDL/%1/%2").arg(deviceIndex).arg(deviceName));
 }
+
+QVector<SettingsHubCard> DolphinAdapter::settingsHubCards() const {
+    return {
+        // Row 0: Recommended — full-width stretch card. Highlighted at the
+        // top of the hub because it's the curated short list of settings
+        // users most commonly tweak (sourced from Dolphin's official
+        // performance guide + community consensus). Same INI keys as the
+        // full panes below, just collected for fast access.
+        {QStringLiteral("\U0001F4A1"), "Recommended",
+         "Most-tweaked settings — performance, visuals, audio",
+         "Recommended", 0, 0, 1, 3},
+        // Row 1: General · Audio · Graphics
+        // Interface is omitted — Dolphin's Interface settings only affect
+        // Dolphin's own UI (window chrome, language, library covers), which
+        // RetroNest hides entirely. The two embedding-critical Interface
+        // keys (PauseOnFocusLost, ConfirmStop) are force-patched by the
+        // adapter at config time.
+        {QStringLiteral("\U0001F3AE"), "General",
+         "Boot, cheats, speed, region, Discord",
+         "General", 1, 0},
+        {QStringLiteral("\U0001F50A"), "Audio",
+         "DSP, backend, latency, volume",
+         "Audio", 1, 1},
+        {QStringLiteral("\U0001F5BC"), "Graphics",
+         "Renderer, enhancements, hacks, OSD",
+         "Graphics", 1, 2},
+        // Row 2: GameCube · Wii · Advanced
+        {QStringLiteral("\U0001F4BE"), "GameCube",
+         "Memcards, slot devices, system",
+         "GameCube", 2, 0},
+        {QStringLiteral("\U0001F3AE"), "Wii",
+         "Wiimote source, BT, NAND, SD",
+         "Wii", 2, 1},
+        {QStringLiteral("\U0001F527"), "Advanced",
+         "CPU, timing, overclock, memory, RTC",
+         "Advanced", 2, 2},
+    };
+}

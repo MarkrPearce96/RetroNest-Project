@@ -14,6 +14,7 @@ public:
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
     QVector<HotkeyDef> hotkeyBindingDefs() const override;
     QVector<SettingDef> settingsSchema() const override;
+    QVector<SettingsHubCard> settingsHubCards() const override;
     PreviewSpec previewSpec(const QString& category, const QString& subcategory) const override;
     QString configFilePath() const override;
 

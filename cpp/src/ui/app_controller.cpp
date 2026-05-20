@@ -5,8 +5,7 @@
 #include "core/macos_fullscreen.h"
 #include "core/paths.h"
 #include "core/scraper.h"
-#include "in_game_menu_panel.h"
-#include "libretro_overlay_panel.h"
+#include "in_game_menu_controller.h"
 #include "core/sdl_input_manager.h"
 #include "core/libretro/libretro_hotkey_defs.h"
 #include "core/libretro/hotkey_matcher.h"
@@ -22,11 +21,7 @@
 
 #include <QCursor>
 #include "settings/controller_mapping_page.h"
-#include "settings/pcsx2/pcsx2_settings_dialog.h"
-#include "settings/duckstation/duckstation_settings_dialog.h"
-#include "settings/ppsspp/ppsspp_settings_dialog.h"
-#include "settings/dolphin/dolphin_settings_dialog.h"
-#include "settings/mgba/mgba_settings_dialog.h"
+#include "settings/generic_emulator_settings_dialog.h"
 #include "settings/hotkey_settings_dialog.h"
 
 #include <QFileDialog>
@@ -85,17 +80,18 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     // retro_load_game runs inside startLibretro().
     connect(m_gameService.session(), &GameSession::aboutToStartLibretro,
             this, &AppController::gameStartingLibretro);
-    // SP3.5: lazy-create and show the LibretroOverlayPanel for Pattern B
-    // HW-render libretro cores so the in-game menu, RA toasts, RA badge,
-    // and indicator bar can render above the Metal NSView. The panel's
-    // QWindow is destroyed on game end so each session gets a fresh
-    // scene; the C++ instance is reused.
+    // Pattern B HW-render libretro cores need a transparent QQuickWindow
+    // floating above the Metal NSView to host the in-game menu, RA toasts,
+    // RA badge, and indicator bar — without it the game NSView composites
+    // on top of any in-scene QML overlay. InGameMenuController owns that
+    // overlay; show it pre-launch so the scene is realised before the
+    // first frame, hide it on game end.
     connect(this, &AppController::gameStartingLibretro, this, [this] {
-        if (gameUsesHardwareRender())
-            showLibretroOverlayPanelForCurrentGame();
+        if (gameUsesHardwareRender() && m_inGameMenu)
+            m_inGameMenu->showLibretroOverlayForCurrentGame();
     });
     connect(&m_gameService, &GameService::gameFinished, this, [this](int, bool) {
-        if (m_libretroOverlayPanel) m_libretroOverlayPanel->hide();
+        if (m_inGameMenu) m_inGameMenu->hideLibretroOverlay();
     });
     connect(&m_gameService, &GameService::gameFinished, this, &AppController::gameFinished);
     // Register global Cmd+Escape hotkey and wire to signal.
@@ -264,13 +260,10 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     // in-game menu / overlay is open (m_emulationTarget is cleared). The
     // matcher's cached held-button set would otherwise go stale and the
     // next press-edge wouldn't fire. Reset the gamepad state whenever the
-    // overlay menu closes so the next press starts fresh.
-    connect(this, &AppController::libretroOverlayMenuVisibleChanged, this, [this]{
-        if (m_hotkeyMatcher && !libretroOverlayMenuVisible())
-            m_hotkeyMatcher->resetGamepadState();
-    });
-    connect(this, &AppController::inGameMenuPanelVisibleChanged, this, [this]{
-        if (m_hotkeyMatcher && !inGameMenuPanelVisible())
+    // menu closes so the next press starts fresh. Single edge now —
+    // InGameMenuController routes both backends through one signal.
+    connect(this, &AppController::inGameMenuOpenChanged, this, [this]{
+        if (m_hotkeyMatcher && !inGameMenuOpen())
             m_hotkeyMatcher->resetGamepadState();
     });
 
@@ -611,37 +604,27 @@ void AppController::showControllerMapping(const QString& emuId,
 }
 
 void AppController::showEmulatorSettings(const QString& emuId) {
-    if (emuId == QLatin1String("pcsx2")) {
-        auto* dialog = new Pcsx2SettingsDialog(this, emuId);
-        dialog->setAttribute(Qt::WA_DeleteOnClose);
-        dialog->show();
+    // Single factory path — the dialog reads its hub layout and category
+    // schema from the registered adapter, so every emulator with a
+    // settingsHubCards() override gets a settings UI for free. Replaces
+    // the previous per-emulator if-chain + 5 dialog subclasses.
+    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
+    if (!adapter) {
+        qWarning() << "[AppController] showEmulatorSettings: no adapter for" << emuId;
         return;
     }
-    if (emuId == QLatin1String("duckstation")) {
-        auto* dialog = new DuckStationSettingsDialog(this, emuId);
-        dialog->setAttribute(Qt::WA_DeleteOnClose);
-        dialog->show();
+    if (adapter->settingsHubCards().isEmpty()) {
+        qWarning() << "[AppController] showEmulatorSettings: adapter for" << emuId
+                   << "exposes no settings hub cards — skipping";
         return;
     }
-    if (emuId == QLatin1String("ppsspp")) {
-        auto* dialog = new PpssppSettingsDialog(this, emuId);
-        dialog->setAttribute(Qt::WA_DeleteOnClose);
-        dialog->show();
-        return;
-    }
-    if (emuId == QLatin1String("dolphin")) {
-        auto* dialog = new DolphinSettingsDialog(this, emuId);
-        dialog->setAttribute(Qt::WA_DeleteOnClose);
-        dialog->show();
-        return;
-    }
-    if (emuId == QLatin1String("mgba")) {
-        auto* dialog = new MgbaSettingsDialog(this, emuId);
-        dialog->setAttribute(Qt::WA_DeleteOnClose);
-        dialog->show();
-        return;
-    }
-    qWarning() << "showEmulatorSettings: no settings dialog registered for emulator" << emuId;
+    const auto* manifest = m_loader ? m_loader->emulatorById(emuId) : nullptr;
+    const QString displayName = manifest ? manifest->name : emuId;
+
+    auto* dialog = new GenericEmulatorSettingsDialog(this, emuId, displayName,
+                                                     adapter);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
 }
 
 void AppController::openNativeEmulatorSettings(const QString& emuId) {
@@ -771,7 +754,8 @@ bool AppController::eventFilter(QObject* /*watched*/, QEvent* event) {
         //   - In-game menu panel (Esc/etc should close it via normal routing)
         const bool suppressed = m_libretroHotkeysSuppressed
                                 || QApplication::activeModalWidget() != nullptr
-                                || (m_inGameMenuPanel && m_inGameMenuPanel->isVisible());
+                                || (m_inGameMenu && m_inGameMenu->isMenuOpen()
+                                    && !m_inGameMenu->currentBackendIsLibretro());
         if (!k->isAutoRepeat() && m_hotkeyMatcher && !suppressed) {
             const int combined = int(k->key()) | int(k->modifiers());
             if (m_hotkeyMatcher->onKeyEvent(combined, t == QEvent::KeyPress)) {
@@ -1047,19 +1031,9 @@ void AppController::setSdlInputManager(SdlInputManager* mgr) {
     }
 }
 
-void AppController::setQmlEngine(QQmlEngine* engine) {
-    m_qmlEngine = engine;
-}
-
 namespace {
 using HotkeyAction = EmulatorAdapter::HotkeyAction;
 
-// Ask the running adapter for the kVK_* it has bound to the given
-// action and synthesize it to the emulator process. Returns true if
-// a key was sent. The caller decides what to do when no key is
-// available — pause/resume falls back to SIGSTOP/SIGCONT, the
-// in-game menu actions just no-op.
-//
 // Ask the running adapter for the kVK_* it has bound to the given
 // action and synthesize it to the emulator process. Returns true if
 // a key was sent. Pause/resume falls back to SIGSTOP/SIGCONT when no
@@ -1084,77 +1058,137 @@ void emulatorResume(GameSession* sess, int64_t pid) {
 }
 } // namespace
 
-void AppController::openInGameMenuPanel() {
-    qDebug() << "[InGameMenuPanel] open requested";
-    if (!m_qmlEngine) {
-        qWarning() << "[AppController] openInGameMenuPanel before QML engine set";
+void AppController::setQmlEngine(QQmlEngine* engine) {
+    m_qmlEngine = engine;
+
+    // Create the in-game menu controller now that we have the engine.
+    // Action signals fire from whichever inner panel is presenting the
+    // menu; the policy of what each action does (synth a keystroke for
+    // external emulators, call GameSession directly for libretro) lives
+    // here. currentBackendIsLibretro() is the dispatch hinge.
+    m_inGameMenu = new InGameMenuController(
+        m_qmlEngine,
+        [this]{ return gameUsesHardwareRender(); },
+        this);
+
+    connect(m_inGameMenu, &InGameMenuController::menuOpenChanged,
+            this, &AppController::inGameMenuOpenChanged);
+
+    connect(m_inGameMenu, &InGameMenuController::resumeRequested,
+            this, [this] {
+                if (m_inGameMenu->currentBackendIsLibretro()) {
+                    if (auto* s = gameSession()) s->resumeEmulation();
+                }
+                closeInGameMenu();
+            });
+    connect(m_inGameMenu, &InGameMenuController::exitWithSaveRequested,
+            this, [this] {
+                if (m_inGameMenu->currentBackendIsLibretro()) {
+                    if (auto* s = gameSession()) s->resumeEmulation();
+                    m_inGameMenu->closeMenu();
+                    saveAndStopGame(1);
+                    return;
+                }
+                // External path: unpause first so the SIGTERM save thread
+                // can run, drop input suppression, then save+stop.
+                m_inGameMenu->closeMenu();
+                if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
+                if (auto* sess = gameSession()) {
+                    const int64_t pid = sess->pid();
+                    if (pid > 0 && m_emulatorSuspended) {
+                        emulatorResume(sess, pid);
+                        m_emulatorSuspended = false;
+                    }
+                }
+                saveAndStopGame(1);
+            });
+    connect(m_inGameMenu, &InGameMenuController::exitWithoutSaveRequested,
+            this, [this] {
+                if (m_inGameMenu->currentBackendIsLibretro()) {
+                    if (auto* s = gameSession()) s->resumeEmulation();
+                    m_inGameMenu->closeMenu();
+                    stopGame();
+                    return;
+                }
+                m_inGameMenu->closeMenu();
+                if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
+                if (auto* sess = gameSession()) {
+                    const int64_t pid = sess->pid();
+                    if (pid > 0 && m_emulatorSuspended) {
+                        emulatorResume(sess, pid);
+                        m_emulatorSuspended = false;
+                    }
+                }
+                stopGame();
+            });
+    connect(m_inGameMenu, &InGameMenuController::saveStateRequested,
+            this, [this] {
+                if (m_inGameMenu->currentBackendIsLibretro()) {
+                    if (auto* s = gameSession()) {
+                        s->saveStateLibretro(s->currentSaveSlot());
+                        s->resumeEmulation();
+                    }
+                    m_inGameMenu->closeMenu();
+                    return;
+                }
+                if (auto* sess = gameSession()) {
+                    const int64_t pid = sess->pid();
+                    if (pid > 0) synthesizeHotkey(sess, pid, EmulatorAdapter::HotkeyAction::SaveState);
+                }
+                closeInGameMenu();
+            });
+    connect(m_inGameMenu, &InGameMenuController::loadStateRequested,
+            this, [this] {
+                if (m_inGameMenu->currentBackendIsLibretro()) {
+                    if (auto* s = gameSession()) {
+                        s->loadStateLibretro(s->currentSaveSlot());
+                        s->resumeEmulation();
+                    }
+                    m_inGameMenu->closeMenu();
+                    return;
+                }
+                if (auto* sess = gameSession()) {
+                    const int64_t pid = sess->pid();
+                    if (pid > 0) synthesizeHotkey(sess, pid, EmulatorAdapter::HotkeyAction::LoadState);
+                }
+                closeInGameMenu();
+            });
+    connect(m_inGameMenu, &InGameMenuController::toggleFastForwardRequested,
+            this, [this] {
+                if (m_inGameMenu->currentBackendIsLibretro()) {
+                    if (auto* s = gameSession()) s->toggleFastForwardLibretro();
+                    // Leave the menu open — FF is a state toggle.
+                    return;
+                }
+                if (auto* sess = gameSession()) {
+                    const int64_t pid = sess->pid();
+                    if (pid > 0) synthesizeHotkey(sess, pid, EmulatorAdapter::HotkeyAction::ToggleFastForward);
+                }
+                closeInGameMenu();
+            });
+}
+
+void AppController::openInGameMenu() {
+    qDebug() << "[InGameMenu] open requested";
+    if (!m_inGameMenu) {
+        qWarning() << "[AppController] openInGameMenu before QML engine set";
         return;
     }
-    if (!m_inGameMenuPanel) {
-        m_inGameMenuPanel = new InGameMenuPanel(m_qmlEngine, this);
-        connect(m_inGameMenuPanel, &InGameMenuPanel::resumeRequested,
-                this, [this]() {
-                    closeInGameMenuPanel();
-                });
-        connect(m_inGameMenuPanel, &InGameMenuPanel::exitWithSaveRequested,
-                this, [this]() {
-                    // Unpause the emulator first so its save thread
-                    // can run on the SIGTERM that saveAndStopGame
-                    // will send.
-                    m_inGameMenuPanel->hide();
-                    if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
-                    if (auto* sess = gameSession()) {
-                        const int64_t pid = sess->pid();
-                        if (pid > 0 && m_emulatorSuspended) {
-                            emulatorResume(sess, pid);
-                            m_emulatorSuspended = false;
-                        }
-                    }
-                    saveAndStopGame(1);
-                });
-        connect(m_inGameMenuPanel, &InGameMenuPanel::exitWithoutSaveRequested,
-                this, [this]() {
-                    m_inGameMenuPanel->hide();
-                    if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
-                    if (auto* sess = gameSession()) {
-                        const int64_t pid = sess->pid();
-                        if (pid > 0 && m_emulatorSuspended) {
-                            emulatorResume(sess, pid);
-                            m_emulatorSuspended = false;
-                        }
-                    }
-                    stopGame();
-                });
-        // Save / Load / Fast-forward: synth the action key, then close
-        // the menu (which handles activate + button-release poll +
-        // unpause). The synth path is per-adapter — see
-        // synthesizeHotkey: PidEvents goes via CGEventPostToPid (lands
-        // in the emulator's NSEvent queue immediately), HidTap goes
-        // via AppleScript / System Events (activates the process and
-        // dispatches the keystroke through Apple Events).
-        auto synthThenClose = [this](EmulatorAdapter::HotkeyAction action) {
-            if (auto* sess = gameSession()) {
-                const int64_t pid = sess->pid();
-                if (pid > 0) synthesizeHotkey(sess, pid, action);
-            }
-            closeInGameMenuPanel();
-        };
-        connect(m_inGameMenuPanel, &InGameMenuPanel::saveStateRequested,
-                this, [synthThenClose]() {
-                    synthThenClose(EmulatorAdapter::HotkeyAction::SaveState);
-                });
-        connect(m_inGameMenuPanel, &InGameMenuPanel::loadStateRequested,
-                this, [synthThenClose]() {
-                    synthThenClose(EmulatorAdapter::HotkeyAction::LoadState);
-                });
-        connect(m_inGameMenuPanel, &InGameMenuPanel::toggleFastForwardRequested,
-                this, [synthThenClose]() {
-                    synthThenClose(EmulatorAdapter::HotkeyAction::ToggleFastForward);
-                });
-        connect(m_inGameMenuPanel, &InGameMenuPanel::visibilityChanged,
-                this, &AppController::inGameMenuPanelVisibleChanged);
+
+    // HW-render libretro path: pause the in-process core directly and let
+    // the controller open the overlay menu. No emulator-process state to
+    // manage (no pid, no input-suppression — both are inside this app).
+    if (gameUsesHardwareRender()) {
+        if (auto* s = gameSession()) s->pauseEmulation();
+        m_inGameMenu->openMenu();
+        return;
     }
 
+    // External-emulator path: pause via the adapter's TogglePause hotkey
+    // (kVK_*) synthesized to the emulator pid, then suppress SDL's main-
+    // window signals (Start in the menu must not open the main settings
+    // overlay), then position the floating NSPanel over the emulator's
+    // screen.
     int64_t pid = 0;
     GameSession* sess = gameSession();
     if (sess) pid = sess->pid();
@@ -1162,17 +1196,17 @@ void AppController::openInGameMenuPanel() {
         emulatorPause(sess, pid);
         m_emulatorSuspended = true;
     }
-    // Tell SDL to suppress main-window signal emits (e.g. Start
-    // pressing in the menu shouldn't open the main app's settings
-    // overlay). Key injection still flows to the focused window
-    // (the panel), so HUD navigation continues to work.
     if (m_inputManager) m_inputManager->setSuppressMainInputs(true);
-    m_inGameMenuPanel->showOverEmulator(pid);
+    m_inGameMenu->openMenu(pid);
 }
 
-void AppController::closeInGameMenuPanel() {
-    if (!m_inGameMenuPanel) return;
-    m_inGameMenuPanel->hide();
+void AppController::closeInGameMenu() {
+    if (!m_inGameMenu) return;
+    const bool wasLibretro = m_inGameMenu->currentBackendIsLibretro();
+    m_inGameMenu->closeMenu();
+    if (wasLibretro) return;  // libretro: nothing else to clean up
+
+    // External path cleanup follows.
     if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
 
     // If a previous close is still polling, tear it down. Captures
@@ -1217,82 +1251,6 @@ void AppController::closeInGameMenuPanel() {
     m_resumeWhenButtonsReleasedTimer->start();
 }
 
-bool AppController::inGameMenuPanelVisible() const {
-    return m_inGameMenuPanel && m_inGameMenuPanel->isVisible();
-}
-
-// ── SP3.5: LibretroOverlayPanel (Pattern B HW-render libretro cores) ──
-
-void AppController::showLibretroOverlayPanelForCurrentGame() {
-    if (!m_qmlEngine) {
-        qWarning() << "[AppController] showLibretroOverlayPanel before QML engine set";
-        return;
-    }
-    if (!m_libretroOverlayPanel) {
-        m_libretroOverlayPanel = new LibretroOverlayPanel(m_qmlEngine, this);
-
-        // Forward the panel's six overlay-action signals to GameSession.
-        // The panel itself manages menu open/close + setIgnoresMouseEvents;
-        // we only need to wire what happens once the user picks an action.
-        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::resumeRequested,
-                this, [this] {
-                    if (auto* s = gameSession()) s->resumeEmulation();
-                    m_libretroOverlayPanel->closeMenu();
-                });
-        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::saveStateRequested,
-                this, [this] {
-                    if (auto* s = gameSession()) {
-                        s->saveStateLibretro(s->currentSaveSlot());
-                        s->resumeEmulation();
-                    }
-                    m_libretroOverlayPanel->closeMenu();
-                });
-        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::loadStateRequested,
-                this, [this] {
-                    if (auto* s = gameSession()) {
-                        s->loadStateLibretro(s->currentSaveSlot());
-                        s->resumeEmulation();
-                    }
-                    m_libretroOverlayPanel->closeMenu();
-                });
-        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::toggleFastForwardRequested,
-                this, [this] {
-                    if (auto* s = gameSession()) s->toggleFastForwardLibretro();
-                    // Leave the menu open — FF is a state toggle and the
-                    // user should confirm and resume manually. Mirrors
-                    // AppWindow.qml's libretro path.
-                });
-        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::exitWithSaveRequested,
-                this, [this] {
-                    if (auto* s = gameSession()) s->resumeEmulation();
-                    m_libretroOverlayPanel->closeMenu();
-                    saveAndStopGame(1);
-                });
-        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::exitWithoutSaveRequested,
-                this, [this] {
-                    if (auto* s = gameSession()) s->resumeEmulation();
-                    m_libretroOverlayPanel->closeMenu();
-                    stopGame();
-                });
-        connect(m_libretroOverlayPanel, &LibretroOverlayPanel::menuVisibleChanged,
-                this, &AppController::libretroOverlayMenuVisibleChanged);
-    }
-
-    m_libretroOverlayPanel->showForCurrentGame();
-}
-
-void AppController::openLibretroOverlayMenu() {
-    if (!m_libretroOverlayPanel) return;
-    if (auto* s = gameSession()) s->pauseEmulation();
-    m_libretroOverlayPanel->openMenu();
-}
-
-void AppController::closeLibretroOverlayMenu() {
-    if (!m_libretroOverlayPanel) return;
-    m_libretroOverlayPanel->closeMenu();
-    if (auto* s = gameSession()) s->resumeEmulation();
-}
-
-bool AppController::libretroOverlayMenuVisible() const {
-    return m_libretroOverlayPanel && m_libretroOverlayPanel->isMenuOpen();
+bool AppController::inGameMenuOpen() const {
+    return m_inGameMenu && m_inGameMenu->isMenuOpen();
 }

@@ -108,6 +108,23 @@ struct PathDef {
 };
 
 /**
+ * SettingsHubCard — one card on the per-emulator settings dialog hub.
+ * The generic settings dialog builds a QGridLayout from a vector of
+ * these; each card routes a click to the GenericSettingsPage for the
+ * matching SettingDef::category.
+ */
+struct SettingsHubCard {
+    QString icon;         // emoji glyph (e.g. U+1F4A1 for Recommended)
+    QString title;        // card title, e.g. "Recommended"
+    QString descriptor;   // 1-line subtitle shown under the title
+    QString categoryKey;  // matches SettingDef::category for routing
+    int row = 0;          // QGridLayout row
+    int col = 0;          // QGridLayout column
+    int rowSpan = 1;
+    int colSpan = 1;
+};
+
+/**
  * EmulatorAdapter — abstract base for emulator-specific behavior.
  *
  * Each emulator gets an adapter that handles:
@@ -152,6 +169,29 @@ public:
      * Each entry describes one setting with its INI location, type, and UI metadata.
      */
     virtual QVector<SettingDef> settingsSchema() const { return {}; }
+
+    /**
+     * Return the card grid for the per-emulator settings hub. Empty
+     * means "no settings UI" — AppController::showEmulatorSettings
+     * warns and skips. Each card's `categoryKey` must match a
+     * SettingDef::category in `settingsSchema()`.
+     */
+    virtual QVector<SettingsHubCard> settingsHubCards() const { return {}; }
+
+    /**
+     * Category keys whose pages render with sub-tabs (drives the L1/R1
+     * "switch tab" hint chrome on the dialog). Default empty — adapters
+     * with a Graphics pane that bundles OSD/Capture/etc. override.
+     */
+    virtual QStringList settingsCategoriesWithSubTabs() const { return {}; }
+
+    /**
+     * Whether the hub's "Open Native Settings" button should be shown.
+     * Default: native-process adapters return true (they have a native
+     * UI to open). LibretroAdapter overrides to return false — no
+     * native UI exists, the button would be inert.
+     */
+    virtual bool hasNativeSettingsUI() const { return true; }
 
     /**
      * Return the preview-widget spec for one (category, subcategory) pair.

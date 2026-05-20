@@ -62,6 +62,8 @@ public:
     // kDefinitions[] table exactly so OptionsStore::load's whitelist check
     // accepts persisted values.
     QVector<SettingDef> settingsSchema() const override;
+    QVector<SettingsHubCard> settingsHubCards() const override;
+    QStringList settingsCategoriesWithSubTabs() const override { return {"Graphics"}; }
 
     // SP7c Phase 5 — preview widgets for Recommended (aspect) + Graphics
     // On-Screen Display (osd). Returns empty PreviewSpec for every other

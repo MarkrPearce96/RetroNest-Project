@@ -1475,3 +1475,29 @@ PreviewSpec Pcsx2LibretroAdapter::previewSpec(const QString& category,
     }
     return {};
 }
+
+QVector<SettingsHubCard> Pcsx2LibretroAdapter::settingsHubCards() const {
+    return {
+        // Row 0: Recommended — full-width across 3 columns.
+        {QStringLiteral("\U0001F4A1"), "Recommended",
+         "GS renderer, multi-threaded VU1, fast boot",
+         "Recommended", 0, 0, 1, 3},
+        // Row 1: Emulation · Graphics · Audio
+        // 🎨 palette glyph chosen because the Graphics card covers all five
+        // sub-tabs (Display / Rendering / Texture Replacement / Post-Processing
+        // / On-Screen Display), not just Display — clearer than 🖥️ at card level.
+        {QStringLiteral("\U0001F3AE"), "Emulation",
+         "Speed control, system, frame pacing",
+         "Emulation", 1, 0},
+        {QStringLiteral("\U0001F3A8"), "Graphics",
+         "Aspect ratio, upscaling, post-FX, OSD, textures",
+         "Graphics", 1, 1},
+        {QStringLiteral("\U0001F50A"), "Audio",
+         "Volume, mute, buffer, sync mode",
+         "Audio", 1, 2},
+        // Row 2: Memory Cards
+        {QStringLiteral("\U0001F4BE"), "Memory Cards",
+         "Slot 1/2 enables, Multitap slots",
+         "Memory Cards", 2, 0},
+    };
+}

@@ -381,3 +381,32 @@ QString MgbaLibretroAdapter::findResumeFile(const QString& serial) const {
     }
     return {};
 }
+
+QVector<SettingsHubCard> MgbaLibretroAdapter::settingsHubCards() const {
+    return {
+        // Row 0: Recommended — full-width curated card, mirrors the
+        // Dolphin / PCSX2 / DuckStation / PPSSPP layout convention.
+        {QStringLiteral("\U0001F4A1"), "Recommended",
+         "Most-tweaked settings — performance, visuals, BIOS",
+         "Recommended", 0, 0, 1, 3},
+        // Row 1: System · Video · Audio
+        {QStringLiteral("\U0001F4BE"), "System",
+         "BIOS, Game Boy model",
+         "System", 1, 0},
+        {QStringLiteral("\U0001F5BC"), "Video",
+         "Color correction, blending, palettes",
+         "Video", 1, 1},
+        {QStringLiteral("\U0001F50A"), "Audio",
+         "Low-pass filter",
+         "Audio", 1, 2},
+        // Row 2: Input · Emulation
+        // Controller mapping lives on the dedicated "Controller Mapping" entry
+        // surfaced from EmulatorDetailPage — not duplicated here.
+        {QStringLiteral("\U0001F3AE"), "Input",
+         "Solar sensor, GBP rumble, opposing input",
+         "Input", 2, 0},
+        {QStringLiteral("\U000026A1"), "Emulation",
+         "Idle-loop removal, frameskip",
+         "Emulation", 2, 1},
+    };
+}

@@ -34,6 +34,8 @@ public:
                               const QString& installPath) override;
 
     QVector<SettingDef> settingsSchema() const override;
+    QVector<SettingsHubCard> settingsHubCards() const override;
+    QStringList settingsCategoriesWithSubTabs() const override { return {"Graphics"}; }
     PreviewSpec previewSpec(const QString& category,
                             const QString& subcategory) const override;
     QString subcategoryIcon(const QString& category,

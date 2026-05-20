@@ -1299,3 +1299,32 @@ QVector<EmulatorAdapter::AssetMatchRule> PPSSPPAdapter::assetMatchRules() const 
     };
 #endif
 }
+
+QVector<SettingsHubCard> PPSSPPAdapter::settingsHubCards() const {
+    return {
+        // Row 0: Recommended — full-width stretch (across both columns).
+        // Same pattern as the Dolphin hub: a curated VIEW of the most-tweaked
+        // settings sitting at the top so a user looking for "the dozen
+        // settings that actually matter" can find them without hunting
+        // through every tab. Same INI keys as the full panes below.
+        {QStringLiteral("\U0001F4A1"), "Recommended",
+         "Most-tweaked settings — performance, visuals, audio",
+         "Recommended", 0, 0, 1, 2},
+        // Mirrors PPSSPP's standalone GameSettingsScreen tabs (minus Controls,
+        // Tools, VR — see settingsSchema() for rationale).
+        // Row 1: Graphics · Audio
+        {QStringLiteral("\U0001F5BC"), "Graphics",
+         "Backend, resolution, frame pacing, textures, overlays",
+         "Graphics", 1, 0},
+        {QStringLiteral("\U0001F50A"), "Audio",
+         "Backend, latency, volume mix, UI sounds",
+         "Audio", 1, 1},
+        // Row 2: Networking · System
+        {QStringLiteral("\U0001F4F6"), "Networking",
+         "Wlan, ad hoc, infrastructure, UPnP, chat",
+         "Networking", 2, 0},
+        {QStringLiteral("\U0001F527"), "System",
+         "Memory stick, save states, cheats, PSP settings",
+         "System", 2, 1},
+    };
+}

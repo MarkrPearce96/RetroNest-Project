@@ -16,7 +16,7 @@
 #include <memory>
 
 class SdlInputManager;
-class InGameMenuPanel;
+class InGameMenuController;
 class PatchesInstaller;
 class HotkeyMatcher;
 class HotkeyDispatcher;
@@ -30,8 +30,10 @@ class AppController : public QObject {
     Q_PROPERTY(int currentTab READ currentTab WRITE setCurrentTab NOTIFY currentTabChanged)
     Q_PROPERTY(int settingsCategory READ settingsCategory WRITE setSettingsCategory NOTIFY settingsCategoryChanged)
     Q_PROPERTY(bool gameRunning READ isGameRunning NOTIFY gameRunningChanged)
-    Q_PROPERTY(bool inGameMenuPanelVisible READ inGameMenuPanelVisible NOTIFY inGameMenuPanelVisibleChanged)
-    Q_PROPERTY(bool libretroOverlayMenuVisible READ libretroOverlayMenuVisible NOTIFY libretroOverlayMenuVisibleChanged)
+    // Single in-game menu visibility — routed by InGameMenuController to
+    // whichever backend (floating NSPanel for external emulators, transparent
+    // QQuickWindow for HW-render libretro) is presenting the menu.
+    Q_PROPERTY(bool inGameMenuOpen READ inGameMenuOpen NOTIFY inGameMenuOpenChanged)
     // Set by QML overlays (e.g. SettingsOverlay) when they're visible. While true,
     // the libretro hotkey matcher ignores keyboard events so Esc / arrows / etc
     // reach the overlay's own focus routing instead of triggering ToggleMenu.
@@ -90,19 +92,14 @@ public slots:
     // macOS Space switching (show our app over fullscreen emulator)
     Q_INVOKABLE void activateApp();
 
-    // In-game menu panel (external emulators)
-    Q_INVOKABLE void openInGameMenuPanel();
-    Q_INVOKABLE void closeInGameMenuPanel();
-    bool inGameMenuPanelVisible() const;
+    // In-game menu — open/close routes to whichever backend matches the
+    // currently-running game (external NSPanel vs HW-render libretro
+    // overlay). Single API, picks backend internally.
+    Q_INVOKABLE void openInGameMenu();
+    Q_INVOKABLE void closeInGameMenu();
+    bool inGameMenuOpen() const;
     bool libretroHotkeysSuppressed() const { return m_libretroHotkeysSuppressed; }
     Q_INVOKABLE void setLibretroHotkeysSuppressed(bool suppressed);
-
-    // SP3.5: floating overlay panel for Pattern B HW-render libretro
-    // cores. Lazy-instantiated on first showLibretroOverlayPanel()
-    // call (triggered by gameStartingLibretro when hw-render is true).
-    Q_INVOKABLE void openLibretroOverlayMenu();
-    Q_INVOKABLE void closeLibretroOverlayMenu();
-    bool libretroOverlayMenuVisible() const;
 
     // Inject the QML engine after construction so the panel can be
     // built lazily on first open. Called from main.cpp after the
@@ -263,9 +260,8 @@ signals:
     void settingsCategoryChanged();
     void gamesChanged();
     void gameRunningChanged();
-    void inGameMenuPanelVisibleChanged();
+    void inGameMenuOpenChanged();
     void libretroHotkeysSuppressedChanged();
-    void libretroOverlayMenuVisibleChanged();
     void gameStarted();
     /** Emitted instead of gameStarted() when the backend is libretro (in-process). */
     void gameStartedLibretro();
@@ -367,20 +363,18 @@ private:
     bool m_libretroHotkeysSuppressed = false;
 
     QQmlEngine* m_qmlEngine = nullptr;
-    InGameMenuPanel* m_inGameMenuPanel = nullptr;
-    class LibretroOverlayPanel* m_libretroOverlayPanel = nullptr;
 
-    // SP3.5: lazy-create m_libretroOverlayPanel (wiring its action
-    // signals to GameSession exactly once) and call showForCurrentGame.
-    // Idempotent on repeated calls within one session.
-    void showLibretroOverlayPanelForCurrentGame();
+    // Single owner for both in-game menu surfaces (external NSPanel +
+    // HW-render libretro overlay). Lazy-created on setQmlEngine(); routes
+    // openInGameMenu() to whichever backend matches the running game.
+    InGameMenuController* m_inGameMenu = nullptr;
 
     // True between paired Space-keystroke sends to the emulator
     // (the TogglePause hotkey is a toggle, so we must track which
     // half of the toggle we're in to avoid double-pause/double-resume).
     bool m_emulatorSuspended = false;
 
-    // Polls SDL state at 16ms intervals after closeInGameMenuPanel()
+    // Polls SDL state at 16ms intervals after closeInGameMenu()
     // until all action buttons (A/B/X/Y) are released, then sends
     // the Space keystroke to unpause. Variable delay so the close-
     // trigger button can never leak as in-game input.

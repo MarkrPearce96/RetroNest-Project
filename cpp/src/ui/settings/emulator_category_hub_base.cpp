@@ -11,7 +11,7 @@
 
 EmulatorCategoryHubBase::EmulatorCategoryHubBase(QWidget* parent) : QWidget(parent) {}
 
-void EmulatorCategoryHubBase::setupChrome(const QString& title) {
+void EmulatorCategoryHubBase::setupChrome(const QString& title, bool showNativeButton) {
     auto* root = new QVBoxLayout(this);
     root->setContentsMargins(24, 24, 24, 24);
     root->setSpacing(14);
@@ -49,20 +49,22 @@ void EmulatorCategoryHubBase::setupChrome(const QString& title) {
     scroll->setWidget(scrollContent);
     root->addWidget(scroll, 1);
 
-    m_nativeBtn = new QPushButton("Open Native Settings", this);
-    m_nativeBtn->setCursor(Qt::PointingHandCursor);
-    m_nativeBtn->setStyleSheet(
-        "QPushButton { background:#4a4642; color:#f2efe8; border:1px solid #706c66;"
-        " border-radius:4px; padding:6px 14px; }"
-        "QPushButton:focus { border-color:#f59e0b; }");
-    auto* bottom = new QHBoxLayout();
-    bottom->addStretch();
-    bottom->addWidget(m_nativeBtn);
-    root->addLayout(bottom);
+    if (showNativeButton) {
+        m_nativeBtn = new QPushButton("Open Native Settings", this);
+        m_nativeBtn->setCursor(Qt::PointingHandCursor);
+        m_nativeBtn->setStyleSheet(
+            "QPushButton { background:#4a4642; color:#f2efe8; border:1px solid #706c66;"
+            " border-radius:4px; padding:6px 14px; }"
+            "QPushButton:focus { border-color:#f59e0b; }");
+        auto* bottom = new QHBoxLayout();
+        bottom->addStretch();
+        bottom->addWidget(m_nativeBtn);
+        root->addLayout(bottom);
 
-    connect(m_nativeBtn, &QPushButton::clicked, this,
-            &EmulatorCategoryHubBase::openNativeRequested);
-    m_nativeBtn->installEventFilter(this);
+        connect(m_nativeBtn, &QPushButton::clicked, this,
+                &EmulatorCategoryHubBase::openNativeRequested);
+        m_nativeBtn->installEventFilter(this);
+    }
 }
 
 SettingsCard* EmulatorCategoryHubBase::makeCard(const QString& icon, const QString& title,
@@ -119,7 +121,7 @@ bool EmulatorCategoryHubBase::eventFilter(QObject* obj, QEvent* e) {
 
     auto* ke = static_cast<QKeyEvent*>(e);
 
-    if (obj == m_nativeBtn) {
+    if (m_nativeBtn && obj == m_nativeBtn) {
         if (ke->key() == Qt::Key_Up) {
             const auto cards = findChildren<SettingsCard*>(QString(), Qt::FindDirectChildrenOnly);
             if (!cards.isEmpty()) {
@@ -133,7 +135,7 @@ bool EmulatorCategoryHubBase::eventFilter(QObject* obj, QEvent* e) {
         }
     }
 
-    if (qobject_cast<SettingsCard*>(obj)) {
+    if (m_nativeBtn && qobject_cast<SettingsCard*>(obj)) {
         if (ke->key() == Qt::Key_Down) {
             m_nativeBtn->setFocus(Qt::TabFocusReason);
             return true;

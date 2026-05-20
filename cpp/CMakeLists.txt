@@ -104,6 +104,7 @@ set(SOURCES
     src/ui/app_controller.cpp
     src/ui/in_game_menu_panel.cpp
     src/ui/libretro_overlay_panel.cpp
+    src/ui/in_game_menu_controller.cpp
     src/ui/theme_manager.cpp
     src/ui/theme_context.cpp
     src/ui/settings/controller_mapping_page.cpp
@@ -127,17 +128,9 @@ set(SOURCES
     src/ui/settings/widgets/hotkey_binding_row.cpp
     src/ui/settings/widgets/preview/aspect_ratio_preview.cpp
     src/ui/settings/widgets/preview/osd_preview.cpp
-    src/ui/settings/dolphin/dolphin_settings_dialog.cpp
-    src/ui/settings/dolphin/dolphin_category_hub.cpp
-    src/ui/settings/mgba/mgba_settings_dialog.cpp
-    src/ui/settings/mgba/mgba_category_hub.cpp
-    src/ui/settings/pcsx2/pcsx2_settings_dialog.cpp
-    src/ui/settings/pcsx2/pcsx2_category_hub.cpp
-    src/ui/settings/duckstation/duckstation_settings_dialog.cpp
-    src/ui/settings/duckstation/duckstation_category_hub.cpp
-    # PPSSPP settings — schema-driven via GenericSettingsPage; no bespoke pages.
-    src/ui/settings/ppsspp/ppsspp_category_hub.cpp
-    src/ui/settings/ppsspp/ppsspp_settings_dialog.cpp
+    # Per-emulator settings dialogs collapsed into one schema-driven dialog
+    # whose hub layout lives as data on each adapter (settingsHubCards()).
+    src/ui/settings/generic_emulator_settings_dialog.cpp
 )
 
 set(HEADERS
@@ -188,6 +181,7 @@ set(HEADERS
     src/ui/game_list_model.h
     src/ui/app_controller.h
     src/ui/libretro_overlay_panel.h
+    src/ui/in_game_menu_controller.h
     src/ui/theme_manager.h
     src/ui/theme_context.h
     src/ui/settings/controller_mapping_page.h
@@ -204,18 +198,7 @@ set(HEADERS
     src/core/controller_type_def.h
     src/core/macos_fullscreen.h
     src/ui/settings/settings_dialog_theme.h
-    # Dolphin settings
-    src/ui/settings/dolphin/dolphin_settings_dialog.h
-    src/ui/settings/dolphin/dolphin_category_hub.h
-    # mGBA settings
-    src/ui/settings/mgba/mgba_settings_dialog.h
-    src/ui/settings/mgba/mgba_category_hub.h
-    # PCSX2 settings
-    src/ui/settings/pcsx2/pcsx2_settings_dialog.h
-    src/ui/settings/pcsx2/pcsx2_category_hub.h
-    # DuckStation settings
-    src/ui/settings/duckstation/duckstation_settings_dialog.h
-    src/ui/settings/duckstation/duckstation_category_hub.h
+    src/ui/settings/generic_emulator_settings_dialog.h
     src/ui/settings/widgets/settings_card.h
     src/ui/settings/widgets/settings_section_header.h
     src/ui/settings/widgets/settings_toggle.h
@@ -227,11 +210,6 @@ set(HEADERS
     src/ui/settings/widgets/hotkey_binding_row.h
     src/ui/settings/widgets/preview/aspect_ratio_preview.h
     src/ui/settings/widgets/preview/osd_preview.h
-    src/ui/settings/pcsx2/pcsx2_settings_dialog.h
-    src/ui/settings/pcsx2/pcsx2_category_hub.h
-    # PPSSPP settings — schema-driven via GenericSettingsPage; no bespoke pages.
-    src/ui/settings/ppsspp/ppsspp_category_hub.h
-    src/ui/settings/ppsspp/ppsspp_settings_dialog.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
@@ -586,6 +564,7 @@ add_executable(test_rom_scanner
     src/core/libretro/retro_log.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
+    src/core/path_overrides_store.cpp
 )
 set_target_properties(test_rom_scanner PROPERTIES AUTOMOC ON)
 target_include_directories(test_rom_scanner PRIVATE
@@ -773,6 +752,7 @@ add_executable(test_controller_bindings_view
     src/core/manifest_loader.cpp
     src/core/database.cpp
     src/core/sdl_input_manager.cpp
+    src/core/path_overrides_store.cpp
 )
 set_target_properties(test_controller_bindings_view PROPERTIES AUTOMOC ON)
 target_include_directories(test_controller_bindings_view PRIVATE
@@ -1002,6 +982,7 @@ add_executable(test_game_session_save_slot
     src/core/database.cpp
     src/core/manifest_loader.cpp
     src/core/sdl_input_manager.cpp
+    src/core/path_overrides_store.cpp
 )
 set_target_properties(test_game_session_save_slot PROPERTIES AUTOMOC ON)
 target_include_directories(test_game_session_save_slot PRIVATE
