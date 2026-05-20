@@ -957,6 +957,7 @@ add_executable(test_game_session_save_slot
     tests/test_game_session_save_slot.cpp
     src/core/game_session.cpp
     src/services/config_service.cpp
+    src/services/hotkey_service.cpp
     src/core/libretro/libretro_hotkey_defs.cpp
     src/core/path_overrides_store.cpp
     src/adapters/emulator_adapter.cpp
