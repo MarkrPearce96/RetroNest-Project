@@ -281,3 +281,13 @@ QString ThemeContext::systemDisplayName(const QString& systemId) {
     };
     return names.value(systemId.toLower(), systemId);
 }
+
+int ThemeContext::currentFocusedGameId() const {
+    return m_currentFocusedGameId;
+}
+
+void ThemeContext::setCurrentFocusedGameId(int id) {
+    if (m_currentFocusedGameId == id) return;
+    m_currentFocusedGameId = id;
+    emit currentFocusedGameIdChanged();
+}

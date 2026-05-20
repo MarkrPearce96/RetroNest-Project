@@ -18,6 +18,9 @@ class ThemeContext : public QObject {
     Q_PROPERTY(QString currentSystem READ currentSystem WRITE setCurrentSystem NOTIFY currentSystemChanged)
     Q_PROPERTY(QObject* gameModel READ gameModel CONSTANT)
     Q_PROPERTY(bool gameRunning READ isGameRunning NOTIFY gameRunningChanged)
+    Q_PROPERTY(int currentFocusedGameId READ currentFocusedGameId
+               WRITE setCurrentFocusedGameId
+               NOTIFY currentFocusedGameIdChanged)
 
 public:
     ThemeContext(AppController* app, GameListModel* model, Database* db, QObject* parent = nullptr);
@@ -29,6 +32,8 @@ public:
     QString currentSystem() const;
     void setCurrentSystem(const QString& system);
     QObject* gameModel() const;
+    int  currentFocusedGameId() const;
+    void setCurrentFocusedGameId(int id);
 
     // Navigation
     Q_INVOKABLE void navigateToSystem(const QString& systemId);
@@ -75,6 +80,7 @@ signals:
     void gameActionsRequested(int gameId);
     void scrapeGameRequested(int gameId);
     void gameRunningChanged();
+    void currentFocusedGameIdChanged();
     void gameStarted();
     void gameFinished(int exitCode, bool crashed);
     void resumeStateFound(int gameId, const QString& romPath, const QString& emuId);
@@ -87,4 +93,5 @@ private:
     GameListModel* m_gameModel;
     Database* m_db;
     QString m_currentSystem;
+    int m_currentFocusedGameId = -1;
 };
