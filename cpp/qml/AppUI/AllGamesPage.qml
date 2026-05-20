@@ -2,128 +2,121 @@ import QtQuick
 import QtQuick.Layouts
 import AppUI
 
-Item {
-    id: root
-    anchors.fill: parent
-    focus: true
+GenericListPage {
+    id: listPage
 
     property var allGames: []
 
-    Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
-            if (typeof panelStack !== 'undefined') panelStack.pop()
-            event.accepted = true
+    model: allGames
+    headerText: "All Games (" + allGames.length + ")"
+    emptyText: "No games"
+    itemSpacing: 6
+
+    onActivated: (index) => {
+        var g = allGames[index]
+        if (g && typeof panelStack !== 'undefined')
+            panelStack.push(achievementsPageComponent, { raGameId: g.raGameId, gameTitle: g.title })
+    }
+
+    delegate: Rectangle {
+        id: rowRect
+        required property var modelData
+        required property int index
+
+        width: ListView.view.width
+        height: 56
+        radius: 8
+        color: gameMa.containsMouse ? Qt.lighter(SettingsTheme.card, 1.15) : SettingsTheme.card
+        border.width: ListView.isCurrentItem ? 2 : 1
+        border.color: ListView.isCurrentItem ? SettingsTheme.focusBorder : SettingsTheme.border
+
+        Behavior on border.color { ColorAnimation { duration: SettingsTheme.animFast } }
+        Behavior on border.width { NumberAnimation { duration: SettingsTheme.animFast } }
+
+        // Focus glow
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -4
+            radius: parent.radius + 4
+            color: "transparent"
+            border.width: 2
+            border.color: SettingsTheme.focusBorder
+            opacity: rowRect.ListView.isCurrentItem ? 0.3 : 0
+            z: -1
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: SettingsTheme.animFast } }
         }
-    }
 
-    // Title
-    Text {
-        id: titleText
-        anchors.top: parent.top
-        anchors.topMargin: 20
-        anchors.left: parent.left
-        anchors.leftMargin: 20
-        text: "All Games (" + allGames.length + ")"
-        color: SettingsTheme.text
-        font.pixelSize: 18
-        font.weight: Font.Bold
-    }
+        MouseArea {
+            id: gameMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: listPage.activate(rowRect.index)
+        }
 
-    ListView {
-        id: gamesList
-        anchors.top: titleText.bottom
-        anchors.topMargin: 16
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.margins: 20
-        clip: true
-        spacing: 6
-        model: allGames
-        boundsBehavior: Flickable.StopAtBounds
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            spacing: 12
 
-        delegate: Rectangle {
-            width: gamesList.width
-            height: 56
-            radius: 8
-            color: gameMa.containsMouse ? Qt.lighter(SettingsTheme.card, 1.15) : SettingsTheme.card
-            border.width: 1
-            border.color: SettingsTheme.border
+            // Game icon
+            Rectangle {
+                width: 40
+                height: 40
+                radius: 6
+                color: SettingsTheme.surface
 
-            MouseArea {
-                id: gameMa
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (typeof panelStack !== 'undefined')
-                        panelStack.push(achievementsPageComponent, { raGameId: modelData.raGameId, gameTitle: modelData.title })
+                Image {
+                    anchors.fill: parent
+                    anchors.margins: 2
+                    source: modelData.imageIcon ? "https://retroachievements.org" + modelData.imageIcon : ""
+                    fillMode: Image.PreserveAspectFit
+                    visible: status === Image.Ready
                 }
             }
 
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.rightMargin: 10
-                spacing: 12
+            // Title + console
+            Column {
+                Layout.fillWidth: true
+                spacing: 2
 
-                // Game icon
-                Rectangle {
-                    width: 40
-                    height: 40
-                    radius: 6
-                    color: SettingsTheme.surface
-
-                    Image {
-                        anchors.fill: parent
-                        anchors.margins: 2
-                        source: modelData.imageIcon ? "https://retroachievements.org" + modelData.imageIcon : ""
-                        fillMode: Image.PreserveAspectFit
-                        visible: status === Image.Ready
-                    }
-                }
-
-                // Title + console
-                Column {
-                    Layout.fillWidth: true
-                    spacing: 2
-
-                    Text {
-                        text: modelData.title || ""
-                        color: SettingsTheme.text
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                        elide: Text.ElideRight
-                        width: parent.width
-                    }
-
-                    Text {
-                        text: modelData.consoleName || ""
-                        color: SettingsTheme.textDim
-                        font.pixelSize: 11
-                    }
-                }
-
-                // Achievement count
                 Text {
-                    text: (modelData.numAwarded || 0) + " / " + (modelData.numAchievements || 0)
-                    color: SettingsTheme.textMuted
-                    font.pixelSize: 12
+                    text: modelData.title || ""
+                    color: SettingsTheme.text
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                    width: parent.width
                 }
 
-                // Progress bar
-                Rectangle {
-                    width: 60
-                    height: 4
-                    radius: 2
-                    color: SettingsTheme.border
+                Text {
+                    text: modelData.consoleName || ""
+                    color: SettingsTheme.textDim
+                    font.pixelSize: 11
+                }
+            }
 
-                    Rectangle {
-                        width: parent.width * Math.min(1, (modelData.numAwarded || 0) / Math.max(1, modelData.numAchievements || 1))
-                        height: parent.height
-                        radius: 2
-                        color: modelData.mastered ? SettingsTheme.success : SettingsTheme.accent
-                    }
+            // Achievement count
+            Text {
+                text: (modelData.numAwarded || 0) + " / " + (modelData.numAchievements || 0)
+                color: SettingsTheme.textMuted
+                font.pixelSize: 12
+            }
+
+            // Progress bar
+            Rectangle {
+                width: 60
+                height: 4
+                radius: 2
+                color: SettingsTheme.border
+
+                Rectangle {
+                    width: parent.width * Math.min(1, (modelData.numAwarded || 0) / Math.max(1, modelData.numAchievements || 1))
+                    height: parent.height
+                    radius: 2
+                    color: modelData.mastered ? SettingsTheme.success : SettingsTheme.accent
                 }
             }
         }
