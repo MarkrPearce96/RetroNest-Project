@@ -347,9 +347,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/EmptyStatePage.qml
         qml/AppUI/TopBar.qml
         qml/AppUI/StatusBar.qml
-        qml/AppUI/GamesPage.qml
         qml/AppUI/SystemSidebar.qml
-        qml/AppUI/GameGridView.qml
         qml/AppUI/GameCard.qml
         qml/AppUI/ToolBtn.qml
 
