@@ -29,6 +29,13 @@ BaseModalCard {
         open()                              // BaseModalCard.open()
     }
 
+    // Public close() — callers (AppWindow.qml resumeChosen/startFreshChosen
+    // handlers) hide the dialog this way; routes through BaseModalCard's
+    // closeRequested signal so the focus-restoration handler below runs.
+    function close() {
+        closeRequested()
+    }
+
     onCloseRequested: {
         visible = false
         // Return focus to the theme page
