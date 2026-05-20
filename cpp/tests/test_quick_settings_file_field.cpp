@@ -4,6 +4,7 @@
 #include "adapters/emulator_adapter.h"
 #include "adapters/adapter_registry.h"
 #include "services/config_service.h"
+#include "services/hotkey_service.h"
 #include "core/manifest.h"
 
 namespace {
@@ -36,6 +37,7 @@ class TestQuickSettingsFileField : public QObject {
 private:
     QTemporaryDir tmp_;
     FileFieldTestAdapter* adapter_ = nullptr;
+    HotkeyService* hotkeys_ = nullptr;
     ConfigService* svc_ = nullptr;
 
 private slots:
@@ -48,7 +50,11 @@ private slots:
         adapter_ = adapter.get();
         AdapterRegistry::instance().registerAdapter("filefieldtest", std::move(adapter));
         // Quick-settings paths only consult AdapterRegistry; nullptr loader is safe.
-        svc_ = new ConfigService(/*loader=*/nullptr, /*parent=*/this);
+        // HotkeyService is needed by ConfigService's constructor; quick-settings
+        // tests don't call resetConfiguration so the pointer is never dereferenced,
+        // but pass a real instance to mirror the AppController production wiring.
+        hotkeys_ = new HotkeyService(this);
+        svc_ = new ConfigService(/*loader=*/nullptr, hotkeys_, /*parent=*/this);
     }
 
     // Each slot resets both files to a known empty state so test order doesn't

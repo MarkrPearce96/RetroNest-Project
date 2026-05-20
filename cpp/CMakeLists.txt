@@ -819,6 +819,7 @@ add_test(NAME GenericHotkeyPage COMMAND test_generic_hotkey_page)
 add_executable(test_quick_settings_file_field
     tests/test_quick_settings_file_field.cpp
     src/services/config_service.cpp
+    src/services/hotkey_service.cpp
     src/core/libretro/libretro_hotkey_defs.cpp
     src/core/path_overrides_store.cpp
     src/adapters/emulator_adapter.cpp
