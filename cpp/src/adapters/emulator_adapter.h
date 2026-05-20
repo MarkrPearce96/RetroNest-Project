@@ -384,14 +384,26 @@ public:
 
 
     /**
-     * Carbon kVK_* virtual keycode for the given action, or 0 if the
-     * adapter doesn't expose a synth target for it. The corresponding
-     * emulator hotkey must be bound to this key in createDefaultConfig
-     * / patchExistingConfig — otherwise the synthesized keystroke
-     * reaches the emulator but does nothing.
+     * Carbon kVK_* virtual keycode for the given action. Default
+     * returns the standard external-emulator mapping (Space / F5 /
+     * F7 / F8). The corresponding emulator hotkey must be bound to
+     * this key in createDefaultConfig / patchExistingConfig —
+     * otherwise the synthesized keystroke reaches the emulator but
+     * does nothing.
+     *
+     * Adapters override only to disable an action (return 0) or
+     * remap one. New external-process adapters get the standard
+     * synthesis behavior for free. Libretro adapters inherit these
+     * values but never reach synthesizeHotkey() — every call site
+     * is gated by an isLibretro() check in AppController.
      */
     virtual int hotkeyVirtualKeyCode(HotkeyAction action) const {
-        Q_UNUSED(action);
+        switch (action) {
+        case HotkeyAction::TogglePause:       return 0x31; // kVK_Space
+        case HotkeyAction::SaveState:         return 0x60; // kVK_F5
+        case HotkeyAction::LoadState:         return 0x62; // kVK_F7
+        case HotkeyAction::ToggleFastForward: return 0x64; // kVK_F8
+        }
         return 0;
     }
 
