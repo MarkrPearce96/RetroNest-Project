@@ -813,12 +813,26 @@ bool PPSSPPAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
         return false;
     }
 
-    // Our managed config (for UI system — controller type, binding storage)
-    const QString mainPath = iniPath();
-    const bool ok = QFileInfo::exists(mainPath)
-        ? patchExistingConfig(mainPath, biosPath, savesPath)
-        : createDefaultConfig(mainPath, biosPath, savesPath);
-    if (!ok)
+    // ppsspp.ini — PPSSPP hardcodes every PSP subdirectory (SAVEDATA,
+    // PPSSPP_STATE, SCREENSHOT, TEXTURES, Cheats, GAME, PLUGINS, SYSTEM)
+    // as literal children of {memstick}/PSP/ in Core/Util/PathUtil.cpp,
+    // so there are no path keys to patch — only embedding flags +
+    // controller type.
+    const QVector<IniKeyPatch> patches = {
+        {"General",  "FirstRun",          "False"},
+        {"General",  "AutoLoadSaveState", "0"},
+        {"General",  "EnableStateUndo",   "True"},
+        {"Graphics", "FullScreen",        "True"},
+        {"Sound",    "Enable",            "True"},
+        {"Pad1",     "Type",              "Standard"},
+    };
+    if (!patchOrCreateConfigFile(iniPath(), patches, "PPSSPP"))
+        return false;
+
+    // controls.ini: only seeded on first launch; subsequent runs keep
+    // user-customised bindings, with malformed entries scrubbed by
+    // scrubControlsIniHotkeys.
+    if (!writeControlsIniIfMissing())
         return false;
 
     // Remove any malformed hotkey entries in controls.ini so a previously
@@ -830,53 +844,21 @@ bool PPSSPPAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
 }
 
 // ============================================================================
-// resolveExecutable — platform-aware executable resolution
+// writeControlsIniIfMissing — seed default bindings on first launch only
 // ============================================================================
 
-QString PPSSPPAdapter::resolveExecutable(const EmulatorManifest& manifest,
-                                          const QString& installPath) {
-    return resolveExecutableInDir(manifest, installPath, "PPSSPPSDL");
-}
+bool PPSSPPAdapter::writeControlsIniIfMissing() {
+    const QString path = controlsIniPath();
+    if (QFileInfo::exists(path)) return true;
 
-// ============================================================================
-// createDefaultConfig — write only embedding-critical keys to ppsspp.ini
-// ============================================================================
-
-bool PPSSPPAdapter::createDefaultConfig(const QString& path,
-                                        const QString& /*biosPath*/,
-                                        const QString& /*savesPath*/) {
-    // PPSSPP hardcodes every PSP subdirectory (SAVEDATA, PPSSPP_STATE,
-    // SCREENSHOT, TEXTURES, Cheats, GAME, PLUGINS, SYSTEM) as literal
-    // children of {memstick}/PSP/ — see Core/Util/PathUtil.cpp upstream.
-    // There is no INI key to relocate any of them individually, so we only
-    // write wizard suppression, fullscreen, and controller type here.
-    QStringList lines = {
-        "[General]",
-        "FirstRun = False",
-        "AutoLoadSaveState = 0",
-        "EnableStateUndo = True",
-        "",
-        "[Graphics]",
-        "FullScreen = True",
-        "",
-        "[Sound]",
-        "Enable = True",
-        "",
-        "[Pad1]",
-        "Type = Standard",
-        "",
-    };
-
-    if (!writeConfigFile(path, lines.join("\n"), "PPSSPP"))
-        return false;
-
-    // Create default controls.ini with default bindings.
     // "Pause (no menu)" maps to PPSSPP's VIRTKEY_PAUSE_NO_MENU which
-    // pauses the game without showing PPSSPP's own UI overlay
-    // (perfect for our HUD to live above without conflict). 1-62 =
-    // DEVICE_ID_KEYBOARD-NKCODE_SPACE; AppController synthesizes
-    // kVK_Space via CGEventPostToPid.
-    QStringList ctrlLines = {
+    // pauses the game without showing PPSSPP's own UI overlay (perfect
+    // for our HUD to live above without conflict). 1-62 =
+    // DEVICE_ID_KEYBOARD-NKCODE_SPACE; AppController synthesizes kVK_Space
+    // via CGEventPostToPid. Save/Load State: 1-135 / 1-137 = keyboard
+    // F5/F7 (NKCODE_F5/F7) — hidden from hotkeyBindingDefs() so the user
+    // can't rebind the synth keys via our UI.
+    const QStringList ctrlLines = {
         "[ControlMapping]",
         "Up = 10-19",
         "Down = 10-20",
@@ -896,43 +878,20 @@ bool PPSSPPAdapter::createDefaultConfig(const QString& path,
         "An.Right = 10-4000",
         "Fast-forward = 10-4036",
         "Pause (no menu) = 1-62",
-        // In-game menu Save/Load State: 1-135 / 1-137 = keyboard F5/F7
-        // (DEVICE_ID_KEYBOARD-NKCODE_F5/F7). AppController synthesizes
-        // kVK_F5 / kVK_F7. Hidden from hotkeyBindingDefs() so the
-        // user can't rebind the synth keys.
         "Save State = 1-135",
         "Load State = 1-137",
         "",
     };
-
-    return writeConfigFile(controlsIniPath(), ctrlLines.join("\n"), "PPSSPP");
+    return writeConfigFile(path, ctrlLines.join("\n"), "PPSSPP");
 }
 
 // ============================================================================
-// patchExistingConfig — fix up an existing ppsspp.ini for headless operation
+// resolveExecutable — platform-aware executable resolution
 // ============================================================================
 
-bool PPSSPPAdapter::patchExistingConfig(const QString& path,
-                                        const QString& /*biosPath*/,
-                                        const QString& /*savesPath*/) {
-    QString content;
-    if (!readConfigFile(path, content, "PPSSPP"))
-        return false;
-
-    // See createDefaultConfig() — PPSSPP hardcodes all PSP subdirs under
-    // {memstick}/PSP/, so we only patch wizard suppression, fullscreen,
-    // and controller type.
-    QVector<IniKeyPatch> patches = {
-        {"General",  "FirstRun",          "False"},
-        {"General",  "AutoLoadSaveState", "0"},
-        {"General",  "EnableStateUndo",   "True"},
-        {"Graphics", "FullScreen",        "True"},
-        {"Pad1",     "Type",              "Standard"},
-    };
-
-    if (patchIniKeys(content, patches) && !writeConfigFile(path, content, "PPSSPP"))
-        return false;
-    return true;
+QString PPSSPPAdapter::resolveExecutable(const EmulatorManifest& manifest,
+                                          const QString& installPath) {
+    return resolveExecutableInDir(manifest, installPath, "PPSSPPSDL");
 }
 
 void PPSSPPAdapter::scrubControlsIniHotkeys() {

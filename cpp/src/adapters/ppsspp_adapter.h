@@ -70,12 +70,14 @@ private:
     static QString iniPath();
     static QString controlsIniPath();
 
-    bool createDefaultConfig(const QString& path,
-                             const QString& biosPath,
-                             const QString& savesPath);
-    bool patchExistingConfig(const QString& path,
-                             const QString& biosPath,
-                             const QString& savesPath);
+    /**
+     * Write controls.ini with default bindings on first launch only.
+     * Subsequent ensureConfig() runs leave it alone (so user edits via
+     * the controller mapping page persist); scrubControlsIniHotkeys
+     * handles the post-load patch.
+     */
+    bool writeControlsIniIfMissing();
+
     /**
      * Scrub any hotkey entries in controls.ini that aren't valid PPSSPP format
      * (deviceId-keyCode, optionally comma-separated alternates). Prevents the

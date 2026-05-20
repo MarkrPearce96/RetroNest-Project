@@ -61,14 +61,4 @@ public:
 private:
     /** On macOS: path inside .app bundle (Contents/MacOS/). Otherwise: emulators dir. */
     static QString portableDir();
-
-    /** Write a fresh config with our defaults. Returns true on success. */
-    bool createDefaultConfig(const QString& path,
-                             const QString& biosPath,
-                             const QString& savesPath);
-
-    /** Patch an existing config to ensure required settings. Returns true on success. */
-    bool patchExistingConfig(const QString& path,
-                             const QString& biosPath,
-                             const QString& savesPath);
 };

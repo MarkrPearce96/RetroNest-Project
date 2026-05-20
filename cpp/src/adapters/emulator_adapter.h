@@ -888,6 +888,35 @@ protected:
         QString value;
     };
 
+    /**
+     * One-shot: read an INI file (or start empty if missing), apply the
+     * given patch list, and write back when content changed or the file
+     * didn't exist. Returns true on success, false if read/write failed.
+     *
+     * Replaces the read → patchIniKeys → writeConfigFile dance that every
+     * adapter's createDefaultConfig + patchExistingConfig used to do
+     * twice. Adapters now express their managed keys as a single
+     * declarative QVector<IniKeyPatch> per file and call this once from
+     * ensureConfig.
+     *
+     * On first-launch the file doesn't exist; we still write so the
+     * emulator boots against our keys instead of its own defaults. On
+     * subsequent launches the file exists; we only re-write if a patch
+     * actually changed a value.
+     */
+    static bool patchOrCreateConfigFile(const QString& path,
+                                        const QVector<IniKeyPatch>& patches,
+                                        const QString& adapterName) {
+        QString content;
+        const bool exists = QFileInfo::exists(path);
+        if (exists && !readConfigFile(path, content, adapterName))
+            return false;
+        const bool changed = patchIniKeys(content, patches);
+        if (changed || !exists)
+            return writeConfigFile(path, content, adapterName);
+        return true;
+    }
+
     static bool patchIniKeys(QString& content, const QVector<IniKeyPatch>& patches) {
         bool changed = false;
         for (const auto& p : patches) {

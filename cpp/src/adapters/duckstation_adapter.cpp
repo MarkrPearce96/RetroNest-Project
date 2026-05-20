@@ -1202,11 +1202,49 @@ bool DuckStationAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
     QFile::remove(Paths::emulatorsDir(DUCKSTATION_INSTALL_FOLDER) + "/settings.ini");
 #endif
 
-    const QString path = pDir + "/settings.ini";
+    // savesPath is this emulator's unified data root — every managed
+    // subfolder lives directly under it (see EmulatorService::ensureConfig).
+    const QString& dataRoot = savesPath;
+    const QVector<IniKeyPatch> patches = {
+        // Wizard suppression + embedding-critical Main keys.
+        {"Main", "SetupWizardComplete",   "true"},
+        {"Main", "SetupWizardIncomplete", "false"},
+        {"Main", "ConfirmPowerOff",       "false"},
+        {"Main", "StartFullscreen",       "true"},
+        {"Main", "PauseOnFocusLoss",      "true"},
+        {"Main", "SaveStateOnExit",       "true"},
 
-    if (QFileInfo::exists(path))
-        return patchExistingConfig(path, biosPath, savesPath);
-    return createDefaultConfig(path, biosPath, savesPath);
+        {"BIOS",        "SearchDirectory", biosPath},
+        {"Display",     "Fullscreen",      "true"},
+
+        {"MemoryCards", "Directory",       dataRoot + "/memcards"},
+        {"MemoryCards", "Card1Path",       dataRoot + "/memcards/shared_card_1.mcd"},
+        {"MemoryCards", "Card2Path",       dataRoot + "/memcards/shared_card_2.mcd"},
+
+        {"Folders", "SaveStates",  dataRoot + "/savestates"},
+        {"Folders", "Screenshots", dataRoot + "/screenshots"},
+        {"Folders", "Cache",       dataRoot + "/cache"},
+        {"Folders", "Cheats",      dataRoot + "/cheats"},
+        {"Folders", "Textures",    dataRoot + "/textures"},
+
+        // Force-bound on every launch so a user-rebound key is corrected
+        // back to the synth target. Hidden from hotkeyBindingDefs() so the
+        // user can't rebind via our UI either. AppController synthesizes
+        // Space / F5 / F7 / F8 via kVK_* — see DuckStationAdapter::
+        // hotkeyVirtualKeyCode.
+        {"Hotkeys", "OpenPauseMenu",         ""},
+        {"Hotkeys", "TogglePause",           "Keyboard/Space"},
+        {"Hotkeys", "ToggleFullscreen",      ""},
+        {"Hotkeys", "SaveSelectedSaveState", "Keyboard/F5"},
+        {"Hotkeys", "LoadSelectedSaveState", "Keyboard/F7"},
+        {"Hotkeys", "ToggleFastForward",     "Keyboard/F8"},
+
+        // Without [Pad1].Type DuckStation registers zero bindings — see
+        // Controller::GetSettingsSection / Settings::Load in upstream.
+        {"Pad1", "Type", "AnalogController"},
+    };
+
+    return patchOrCreateConfigFile(pDir + "/settings.ini", patches, "DuckStation");
 }
 
 // ============================================================================
@@ -1216,135 +1254,6 @@ bool DuckStationAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
 QString DuckStationAdapter::resolveExecutable(const EmulatorManifest& manifest,
                                               const QString& installPath) {
     return resolveExecutableInDir(manifest, installPath, "DuckStation");
-}
-
-// ============================================================================
-// createDefaultConfig — write only embedding-critical keys
-// The emulator will fill in its own defaults for everything else on first
-// launch.  This prevents our config from going stale when the emulator
-// renames or removes INI keys in a future update.
-// ============================================================================
-
-bool DuckStationAdapter::createDefaultConfig(const QString& path,
-                                              const QString& biosPath,
-                                              const QString& savesPath) {
-
-    // savesPath is this emulator's unified data root for its system,
-    // i.e. {root}/emulators/duckstation/psx/. Every managed subfolder
-    // lives directly under it — see EmulatorService::ensureConfig().
-    const QString& dataRoot = savesPath;
-    const QString memcardsPath    = dataRoot + "/memcards";
-    const QString savestatesPath  = dataRoot + "/savestates";
-    const QString screenshotsPath = dataRoot + "/screenshots";
-    const QString cachePath       = dataRoot + "/cache";
-    const QString cheatsPath      = dataRoot + "/cheats";
-    const QString texturesPath    = dataRoot + "/textures";
-
-    // Only write keys required for embedding (wizard suppression, fullscreen,
-    // managed paths, controller type).  All other settings are left to the
-    // emulator's own defaults so they stay in sync across updates.
-    QStringList lines = {
-        "[Main]",
-        "SetupWizardComplete = true",
-        "SetupWizardIncomplete = false",
-        "ConfirmPowerOff = false",
-        "StartFullscreen = true",
-        "PauseOnFocusLoss = true",
-        "SaveStateOnExit = true",
-        "",
-        "[BIOS]",
-        "SearchDirectory = " + biosPath,
-        "",
-        "[Display]",
-        "Fullscreen = true",
-        "",
-        "[MemoryCards]",
-        "Directory = " + memcardsPath,
-        "Card1Path = " + memcardsPath + "/shared_card_1.mcd",
-        "Card2Path = " + memcardsPath + "/shared_card_2.mcd",
-        "",
-        "[Folders]",
-        "SaveStates = " + savestatesPath,
-        "Screenshots = " + screenshotsPath,
-        "Cache = " + cachePath,
-        "Cheats = " + cheatsPath,
-        "Textures = " + texturesPath,
-        "",
-        "[Hotkeys]",
-        "OpenPauseMenu =",
-        // Bound to Space (DuckStation's default) so RetroNest can
-        // synthesize Space to toggle pause when the in-game menu
-        // opens/closes. Native pause = clean audio (no SIGSTOP).
-        "TogglePause = Keyboard/Space",
-        "ToggleFullscreen =",
-        // In-game menu actions: F5 / F7 / F8 are synthesized by
-        // AppController (see DuckStationAdapter::hotkeyVirtualKeyCode).
-        // Hidden from hotkeyBindingDefs() so the user can't rebind them.
-        "SaveSelectedSaveState = Keyboard/F5",
-        "LoadSelectedSaveState = Keyboard/F7",
-        "ToggleFastForward = Keyboard/F8",
-        "",
-        "[Pad1]",
-        "Type = AnalogController",
-        "",
-    };
-
-    return writeConfigFile(path, lines.join("\n"), "DuckStation");
-}
-
-// ============================================================================
-// patchExistingConfig — ensure required settings in an existing config
-// ============================================================================
-
-bool DuckStationAdapter::patchExistingConfig(const QString& path,
-                                              const QString& biosPath,
-                                              const QString& savesPath) {
-    QString content;
-    if (!readConfigFile(path, content, "DuckStation"))
-        return false;
-
-    bool changed = suppressSetupWizard(content, "Main");
-
-    // Ensure folder paths, in-game menu behaviour, and neutered hotkeys
-    // in a single patch pass. patchIniKeys injects missing keys/sections.
-    //
-    // savesPath is this emulator's unified data root
-    // ({root}/emulators/duckstation/psx/) — every subfolder lives directly under it.
-    const QString& dataRoot = savesPath;
-    QVector<IniKeyPatch> patches = {
-        {"BIOS",        "SearchDirectory", biosPath},
-        {"MemoryCards", "Directory",       dataRoot + "/memcards"},
-        {"Folders",     "SaveStates",      dataRoot + "/savestates"},
-        {"Folders",     "Screenshots",     dataRoot + "/screenshots"},
-        {"Folders",     "Cache",           dataRoot + "/cache"},
-        {"Folders",     "Cheats",          dataRoot + "/cheats"},
-        {"Folders",     "Textures",        dataRoot + "/textures"},
-
-        {"Main", "PauseOnFocusLoss", "true"},
-        {"Main", "SaveStateOnExit",  "true"},
-
-        {"Hotkeys", "OpenPauseMenu",    ""},
-        // RetroNest synthesizes Space to toggle pause when the
-        // in-game menu opens/closes (DuckStation's default binding).
-        {"Hotkeys", "TogglePause",      "Keyboard/Space"},
-        {"Hotkeys", "ToggleFullscreen", ""},
-        // In-game menu actions — see createDefaultConfig comment.
-        // Force-bound on every patch so a user-rebound key is corrected
-        // back to the synth target.
-        {"Hotkeys", "SaveSelectedSaveState", "Keyboard/F5"},
-        {"Hotkeys", "LoadSelectedSaveState", "Keyboard/F7"},
-        {"Hotkeys", "ToggleFastForward",     "Keyboard/F8"},
-
-        // Without [Pad1].Type DuckStation registers zero bindings — see
-        // Controller::GetSettingsSection / Settings::Load in upstream.
-        {"Pad1", "Type", "AnalogController"},
-    };
-    if (patchIniKeys(content, patches))
-        changed = true;
-
-    if (changed && !writeConfigFile(path, content, "DuckStation"))
-        return false;
-    return true;
 }
 
 // ============================================================================

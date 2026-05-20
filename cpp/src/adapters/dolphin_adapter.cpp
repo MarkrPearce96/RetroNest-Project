@@ -1744,16 +1744,6 @@ bool DolphinAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
 }
 
 bool DolphinAdapter::patchDolphinIni(const QString& dataRootGc, const QString& dataRootWii) {
-    const QString path = dolphinIniPath();
-    QString content;
-
-    if (QFile::exists(path)) {
-        if (!readConfigFile(path, content, "Dolphin"))
-            return false;
-    } else {
-        content = "";  // patchIniKeys will append all sections + keys
-    }
-
     const QVector<IniKeyPatch> patches = {
         // Interface — pause-on-focus, no exit confirmation, no system-cursor flicker.
         {"Interface", "PauseOnFocusLost",  "True"},
@@ -1785,49 +1775,27 @@ bool DolphinAdapter::patchDolphinIni(const QString& dataRootGc, const QString& d
         {"General", "RecursiveISOPaths", "True"},
     };
 
-    if (patchIniKeys(content, patches))
-        return writeConfigFile(path, content, "Dolphin");
-    // Even if no patches changed, ensure the file exists on disk.
-    if (!QFile::exists(path))
-        return writeConfigFile(path, content, "Dolphin");
-    return true;
+    return patchOrCreateConfigFile(dolphinIniPath(), patches, "Dolphin");
 }
 bool DolphinAdapter::patchGfxIni() {
     const QString path = gfxIniPath();
     QString content;
+    const bool exists = QFile::exists(path);
+    if (exists && !readConfigFile(path, content, "Dolphin"))
+        return false;
 
-    if (QFile::exists(path)) {
-        if (!readConfigFile(path, content, "Dolphin"))
-            return false;
-    } else {
-        content = "";
-    }
-
-    const QVector<IniKeyPatch> patches = {
-        {"Hardware", "VSync", "True"},
-        // AspectRatio + InternalResolution are user-tunable through the wizard;
-        // we only seed them if the file is fresh.
-    };
-
-    bool wrote = false;
-    if (patchIniKeys(content, patches)) {
-        if (!writeConfigFile(path, content, "Dolphin"))
-            return false;
-        wrote = true;
-    }
-
-    // Seed defaults only if these keys are absent (avoid overwriting user choices).
-    // Use the trailing-space form ("AspectRatio ") consistently so a key like
-    // "AspectRatioGreaterThan" can't accidentally satisfy the check.
-    QVector<IniKeyPatch> seedPatches;
+    // Always-on key: VSync. AspectRatio + InternalResolution are user-
+    // tunable through the wizard, so they're only seeded on a fresh
+    // file. Trailing-space form ("AspectRatio ") avoids accidental match
+    // against keys like "AspectRatioGreaterThan".
+    QVector<IniKeyPatch> patches = {{"Hardware", "VSync", "True"}};
     if (!content.contains("AspectRatio "))
-        seedPatches.append({"Settings", "AspectRatio", "0"});
+        patches.append({"Settings", "AspectRatio", "0"});
     if (!content.contains("InternalResolution "))
-        seedPatches.append({"Settings", "InternalResolution", "1"});
-    if (!seedPatches.isEmpty() && patchIniKeys(content, seedPatches))
-        return writeConfigFile(path, content, "Dolphin");
+        patches.append({"Settings", "InternalResolution", "1"});
 
-    if (!wrote && !QFile::exists(path))
+    const bool changed = patchIniKeys(content, patches);
+    if (changed || !exists)
         return writeConfigFile(path, content, "Dolphin");
     return true;
 }
