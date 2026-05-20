@@ -32,7 +32,7 @@ public:
     QString currentSystem() const;
     void setCurrentSystem(const QString& system);
     QObject* gameModel() const;
-    int  currentFocusedGameId() const;
+    int currentFocusedGameId() const;
     void setCurrentFocusedGameId(int id);
 
     // Navigation
