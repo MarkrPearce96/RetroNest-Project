@@ -479,9 +479,9 @@ target_include_directories(test_libretro_hotkey_defs PRIVATE ${CMAKE_CURRENT_SOU
 target_link_libraries(test_libretro_hotkey_defs PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME LibretroHotkeyDefs COMMAND test_libretro_hotkey_defs)
 
-add_executable(test_config_service_libretro_hotkeys
-    tests/test_config_service_libretro_hotkeys.cpp
-    src/services/config_service.cpp
+add_executable(test_hotkey_service_libretro
+    tests/test_hotkey_service_libretro.cpp
+    src/services/hotkey_service.cpp
     src/core/libretro/libretro_hotkey_defs.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
@@ -511,14 +511,14 @@ add_executable(test_config_service_libretro_hotkeys
     src/core/manifest_loader.cpp
     src/core/sdl_input_manager.cpp
 )
-set_target_properties(test_config_service_libretro_hotkeys PROPERTIES AUTOMOC ON)
-target_include_directories(test_config_service_libretro_hotkeys PRIVATE
+set_target_properties(test_hotkey_service_libretro PROPERTIES AUTOMOC ON)
+target_include_directories(test_hotkey_service_libretro PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
     ${SDL2_INCLUDE_DIRS}
 )
-target_link_libraries(test_config_service_libretro_hotkeys PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
-add_test(NAME ConfigServiceLibretroHotkeys COMMAND test_config_service_libretro_hotkeys)
+target_link_libraries(test_hotkey_service_libretro PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
+add_test(NAME HotkeyServiceLibretro COMMAND test_hotkey_service_libretro)
 
 add_executable(test_hotkey_matcher
     tests/test_hotkey_matcher.cpp

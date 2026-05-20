@@ -2,10 +2,10 @@
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QDir>
-#include "services/config_service.h"
+#include "services/hotkey_service.h"
 #include "core/libretro/libretro_hotkey_defs.h"
 
-class TestConfigServiceLibretroHotkeys : public QObject {
+class TestHotkeyServiceLibretro : public QObject {
     Q_OBJECT
 private:
     QTemporaryDir m_tmp;
@@ -17,8 +17,8 @@ private slots:
     }
 
     void sentinelReturnsLibretroSchema() {
-        ConfigService cs(/*loader=*/nullptr);
-        QVariantList rows = cs.hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
+        HotkeyService hs;
+        QVariantList rows = hs.hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
         QCOMPARE(rows.size(), libretro_hotkeys::kLibretroHotkeys.size());
 
         // Every returned row exposes the expected fields.
@@ -35,13 +35,13 @@ private slots:
     }
 
     void saveThenReadBackRoundTrips() {
-        ConfigService cs(/*loader=*/nullptr);
-        cs.saveHotkey(libretro_hotkeys::kSentinelEmuId,
+        HotkeyService hs;
+        hs.saveHotkey(libretro_hotkeys::kSentinelEmuId,
                       QStringLiteral("Hotkeys"),
                       libretro_hotkeys::ids::Pause,
                       QStringLiteral("Keyboard/Z"));
 
-        QVariantList rows = cs.hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
+        QVariantList rows = hs.hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
         bool found = false;
         for (const QVariant& v : rows) {
             QVariantMap m = v.toMap();
@@ -56,15 +56,15 @@ private slots:
     }
 
     void clearReturnsToDefault() {
-        ConfigService cs(/*loader=*/nullptr);
-        cs.saveHotkey(libretro_hotkeys::kSentinelEmuId,
+        HotkeyService hs;
+        hs.saveHotkey(libretro_hotkeys::kSentinelEmuId,
                       QStringLiteral("Hotkeys"),
                       libretro_hotkeys::ids::Mute,
                       QStringLiteral("Keyboard/Y"));
-        cs.clearHotkey(libretro_hotkeys::kSentinelEmuId,
+        hs.clearHotkey(libretro_hotkeys::kSentinelEmuId,
                        QStringLiteral("Hotkeys"),
                        libretro_hotkeys::ids::Mute);
-        QVariantList rows = cs.hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
+        QVariantList rows = hs.hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
         for (const QVariant& v : rows) {
             QVariantMap m = v.toMap();
             if (m.value(QStringLiteral("key")).toString() == libretro_hotkeys::ids::Mute) {
@@ -78,13 +78,13 @@ private slots:
     }
 
     void resetReturnsAllToDefaults() {
-        ConfigService cs(/*loader=*/nullptr);
-        cs.saveHotkey(libretro_hotkeys::kSentinelEmuId,
+        HotkeyService hs;
+        hs.saveHotkey(libretro_hotkeys::kSentinelEmuId,
                       QStringLiteral("Hotkeys"),
                       libretro_hotkeys::ids::Pause,
                       QStringLiteral("Keyboard/Q"));
-        cs.resetHotkeys(libretro_hotkeys::kSentinelEmuId);
-        QVariantList rows = cs.hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
+        hs.resetHotkeys(libretro_hotkeys::kSentinelEmuId);
+        QVariantList rows = hs.hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
         for (const QVariant& v : rows) {
             QVariantMap m = v.toMap();
             QCOMPARE(m.value(QStringLiteral("currentValue")).toString(),
@@ -93,5 +93,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(TestConfigServiceLibretroHotkeys)
-#include "test_config_service_libretro_hotkeys.moc"
+QTEST_MAIN(TestHotkeyServiceLibretro)
+#include "test_hotkey_service_libretro.moc"
