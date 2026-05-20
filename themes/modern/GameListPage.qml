@@ -15,6 +15,7 @@ Item {
         }
     }
     StackView.onActivated: root.forceActiveFocus()
+    StackView.onDeactivated: themeContext.currentFocusedGameId = -1
 
     // ── State ──
     property int listIndex: 0
