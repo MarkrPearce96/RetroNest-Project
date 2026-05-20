@@ -9,6 +9,7 @@ Item {
     StackView.onActivated: root.forceActiveFocus()
 
     property int focusIndex: 0  // 0 = Open ROM Folder, 1 = Scan, 2 = Import
+    property var hints: [{action: "start", label: "Settings"}]
 
     // Keyboard/controller navigation
     Keys.onLeftPressed: {
