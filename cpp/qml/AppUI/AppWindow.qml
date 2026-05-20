@@ -867,11 +867,6 @@ ApplicationWindow {
         }
     }
 
-    // M key — universal Action. Opens GameActionPopup for the currently
-    // focused game, when a theme page publishes one. Gated against modals
-    // and against running games (libretro path already consumes M? No —
-    // M isn't an emulator hotkey; we still gate on !app.gameRunning so
-    // it can't fire while a game is the foreground).
     Shortcut {
         sequence: "M"
         enabled: !app.gameRunning
