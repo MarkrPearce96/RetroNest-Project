@@ -23,6 +23,16 @@ Item {
                            || (selectedDetails.developer   || "").length > 0
                            || (selectedDetails.rating      || 0) > 0
 
+    property var hints: [
+        {action: "navigate_ud", label: "Browse"},
+        {action: "confirm",     label: "Launch"},
+        {action: "action",      label: "Actions"},
+        {action: "back",        label: "Back", keyboardKey: "Backspace"},
+        {action: "start",       label: "Settings"}
+    ]
+
+    Component.onDestruction: themeContext.currentFocusedGameId = -1
+
     // Video delay timer — starts video after 5 seconds on same game
     property bool showVideo: false
     Timer {
@@ -65,6 +75,9 @@ Item {
             root.selectedDetails = d
             gameList.positionViewAtIndex(root.listIndex, ListView.Visible)
             videoDelayTimer.restart()
+            themeContext.currentFocusedGameId = d.id
+        } else {
+            themeContext.currentFocusedGameId = -1
         }
     }
 
@@ -90,19 +103,6 @@ Item {
     Keys.onEnterPressed: {
         if (root.selectedDetails && root.selectedDetails.id !== undefined)
             themeContext.launchGame(root.selectedDetails.id, root.selectedDetails.romPath, root.selectedDetails.emulatorId)
-    }
-    Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
-            themeContext.navigateBack()
-            event.accepted = true
-        } else if (event.key === Qt.Key_M) {
-            if (gameModel.count > 0) {
-                var details = themeContext.gameDetailsByIndex(root.listIndex)
-                if (details.id !== undefined)
-                    themeContext.openGameActions(details.id)
-            }
-            event.accepted = true
-        }
     }
 
     // ── Refresh on data change ──
