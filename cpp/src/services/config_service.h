@@ -13,9 +13,12 @@ class HotkeyService;
 
 class IniFile;
 
-// ConfigService — owns all per-emulator settings/path/hotkey/binding/profile
+// ConfigService — owns all per-emulator settings/path/binding/profile
 // orchestration that used to live inline in AppController. This includes
 // the per-dialog INI cache (held while a settings dialog is open).
+//
+// Hotkeys live in HotkeyService (sibling); ConfigService keeps a non-owning
+// pointer for the resetConfiguration cross-tie only.
 //
 // Methods are called from AppController's Q_INVOKABLE shims; signals are
 // forwarded through AppController out to QML.
