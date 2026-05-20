@@ -7,13 +7,22 @@ Item {
     focus: true
 
     Component.onCompleted: {
+        themeContext.currentFocusedGameId = -1
         root.forceActiveFocus()
         if (systemList.length > 0)
             root.currentArtwork = "assets/artwork/" + systemList[0] + ".webp"
         Qt.callLater(rebuildCarouselModel)
     }
-    StackView.onActivated: root.forceActiveFocus()
+    StackView.onActivated: {
+        themeContext.currentFocusedGameId = -1
+        root.forceActiveFocus()
+    }
 
+    property var hints: [
+        {action: "navigate_lr", label: "Browse"},
+        {action: "confirm",     label: "Select"},
+        {action: "start",       label: "Settings"}
+    ]
     property var systemList: themeContext.systems
     property var systemNames: themeContext.systemNames
     property var systemCounts: themeContext.systemGameCounts
