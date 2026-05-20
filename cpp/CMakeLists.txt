@@ -61,6 +61,8 @@ set(SOURCES
     src/services/patches_sidecar.cpp
     src/services/patches_installer.cpp
     src/services/config_service.cpp
+    src/services/hotkey_service.h
+    src/services/hotkey_service.cpp
     src/core/game_session.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
