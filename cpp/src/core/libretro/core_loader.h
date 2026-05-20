@@ -40,6 +40,14 @@ struct CoreSymbols {
     // calling.
     using retronest_set_paused_t = void (*)(bool);
     retronest_set_paused_t retronest_set_paused = nullptr;
+
+    // Optional. PCSX2 libretro exports this so the host can engage the
+    // in-VM Turbo limiter — calling retro_run faster doesn't speed up
+    // PCSX2 because the EmuThread paces itself internally. Cores
+    // without it use the standard speed-multiplier path (works for
+    // synchronous cores like mGBA).
+    using retronest_set_fast_forward_t = void (*)(bool);
+    retronest_set_fast_forward_t retronest_set_fast_forward = nullptr;
 };
 
 class CoreLoader {

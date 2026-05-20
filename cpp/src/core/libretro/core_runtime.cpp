@@ -298,6 +298,13 @@ void CoreRuntime::flushPendingLoadState(const CoreSymbols& s) {
 void CoreRuntime::setSpeedMultiplier(double multiplier) {
     if (multiplier <= 0.0) multiplier = 1.0;
     m_speedMultiplier.store(multiplier);
+    // Cores like PCSX2 pace emulation internally and don't speed up
+    // just because retro_run is called more often. If the core
+    // exports retronest_set_fast_forward, drive its in-VM Turbo
+    // limiter directly. Synchronous cores (mGBA etc.) don't export
+    // it and rely on the standard speed-multiplier path above.
+    if (auto fn = m_loader.symbols().retronest_set_fast_forward)
+        fn(multiplier > 1.0);
 }
 
 void CoreRuntime::runLoop() {
