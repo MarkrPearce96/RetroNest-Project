@@ -11,42 +11,14 @@ import QtQuick
  *     dismisses it. Used for the Fast Forward indicator while FF is
  *     on.
  *
- * Visual treatment matches the in-game HUD pill (same translucent
- * dark background, white text, 14 px corner radius). Slides down
- * from above the screen edge and fades in.
+ * Slide+fade animation and timer lifecycle come from BaseToast.
  */
-Item {
+BaseToast {
     id: root
-    // Caller decides positioning (anchors or layout container). The
-    // item sizes itself to the pill's intrinsic dimensions.
-    width: pill.width
-    height: pill.height
-    // Hidden items in a Column / Row should still consume zero space.
-    visible: visibleState || pill.opacity > 0.0
+    duration: 1500
 
     property string iconSource: ""
     property string label: ""
-    property int duration: 1500
-    property bool sticky: false
-    property bool visibleState: false
-
-    function show() {
-        hideTimer.stop();
-        visibleState = true;
-        if (!sticky) hideTimer.restart();
-    }
-
-    function hide() {
-        hideTimer.stop();
-        visibleState = false;
-    }
-
-    Timer {
-        id: hideTimer
-        interval: root.duration
-        repeat: false
-        onTriggered: root.visibleState = false
-    }
 
     Rectangle {
         id: pill
@@ -56,14 +28,6 @@ Item {
         color: Qt.rgba(0.08, 0.08, 0.10, 0.88)
         border.color: Qt.rgba(1, 1, 1, 0.10)
         border.width: 1
-        opacity: root.visibleState ? 1.0 : 0.0
-        // Slide down from -10 px when hidden so the appearance has
-        // direction; the easing settles it to its anchored position.
-        transform: Translate {
-            y: root.visibleState ? 0 : -10
-            Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-        }
-        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
         Row {
             id: row
