@@ -8,6 +8,7 @@
 #include "services/emulator_service.h"
 #include "services/ra_service.h"
 #include "services/config_service.h"
+#include "services/hotkey_service.h"
 #include <QObject>
 #include <QGuiApplication>
 #include <QPointer>
@@ -341,6 +342,7 @@ private:
     ScraperService m_scraperService;
     EmulatorService m_emuService;
     RAService m_raService;
+    HotkeyService m_hotkeyService;
     ConfigService m_configService;
 
     // Pending launch (deferred while RA login prompt is shown)

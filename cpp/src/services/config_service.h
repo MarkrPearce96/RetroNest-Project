@@ -9,6 +9,7 @@
 #include <memory>
 
 class SdlInputManager;
+class HotkeyService;
 
 class IniFile;
 
@@ -21,7 +22,9 @@ class IniFile;
 class ConfigService : public QObject {
     Q_OBJECT
 public:
-    explicit ConfigService(ManifestLoader* loader, QObject* parent = nullptr);
+    explicit ConfigService(ManifestLoader* loader,
+                           HotkeyService* hotkeyService,
+                           QObject* parent = nullptr);
     void setSdlInputManager(SdlInputManager* mgr) { m_inputManager = mgr; }
     ~ConfigService() override;
 
@@ -49,13 +52,6 @@ public:
     QString pathDefault(const QString& emuId, const QString& section, const QString& key) const;
     void savePaths(const QString& emuId, const QVariantMap& values);
     void resetPaths(const QString& emuId);
-
-    // Hotkeys
-    QVariantList hotkeyBindings(const QString& emuId) const;
-    void saveHotkey(const QString& emuId, const QString& section,
-                    const QString& key, const QString& value);
-    void clearHotkey(const QString& emuId, const QString& section, const QString& key);
-    void resetHotkeys(const QString& emuId);
 
     // Controller types
     QVariantList controllerTypes(const QString& emuId) const;
@@ -93,6 +89,7 @@ signals:
 private:
     ManifestLoader* m_loader;
     SdlInputManager* m_inputManager = nullptr;
+    HotkeyService* m_hotkeyService;   // non-owning; owned by AppController
 
     // Settings cache — single-entry, since only one settings dialog is open
     // at a time. Populated by beginSettingsSession, dropped by end.

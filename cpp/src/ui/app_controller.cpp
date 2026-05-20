@@ -41,11 +41,13 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     , m_scraperService(db)
     , m_emuService(loader)
     , m_raService(db)
-    , m_configService(loader)
+    , m_hotkeyService(this)
+    , m_configService(loader, &m_hotkeyService)
 {
     connect(&m_configService, &ConfigService::statusMessage, this, &AppController::setStatus);
     connect(&m_configService, &ConfigService::configurationReset,
             this, &AppController::configurationReset);
+    connect(&m_hotkeyService, &HotkeyService::statusMessage, this, &AppController::setStatus);
     m_scraperService.loadCredentials();
     m_raService.loadCredentials();
 
@@ -706,24 +708,24 @@ void AppController::setCursorVisible(bool visible) {
     }
 }
 
-QVariantList AppController::hotkeyBindings(const QString& emuId) const { return m_configService.hotkeyBindings(emuId); }
+QVariantList AppController::hotkeyBindings(const QString& emuId) const { return m_hotkeyService.hotkeyBindings(emuId); }
 bool AppController::hasHotkeys(const QString& emuId) const {
     // Libretro adapters use the app-wide Libretro Hotkeys settings page;
     // the per-emulator hotkey button is hidden for them.
     if (auto* a = AdapterRegistry::instance().adapterFor(emuId); a && a->asLibretro())
         return false;
-    return !m_configService.hotkeyBindings(emuId).isEmpty();
+    return !m_hotkeyService.hotkeyBindings(emuId).isEmpty();
 }
 void AppController::saveHotkey(const QString& emuId, const QString& section, const QString& key, const QString& value) {
-    m_configService.saveHotkey(emuId, section, key, value);
+    m_hotkeyService.saveHotkey(emuId, section, key, value);
     if (emuId == libretro_hotkeys::kSentinelEmuId) syncLibretroHotkeyBindings();
 }
 void AppController::clearHotkey(const QString& emuId, const QString& section, const QString& key) {
-    m_configService.clearHotkey(emuId, section, key);
+    m_hotkeyService.clearHotkey(emuId, section, key);
     if (emuId == libretro_hotkeys::kSentinelEmuId) syncLibretroHotkeyBindings();
 }
 void AppController::resetHotkeys(const QString& emuId) {
-    m_configService.resetHotkeys(emuId);
+    m_hotkeyService.resetHotkeys(emuId);
     if (emuId == libretro_hotkeys::kSentinelEmuId) syncLibretroHotkeyBindings();
 }
 
