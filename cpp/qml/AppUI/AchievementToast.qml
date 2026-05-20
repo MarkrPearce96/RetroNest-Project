@@ -10,67 +10,44 @@ import QtQuick
  * footprint than ActionToast (used for Save State / Load State / FF) so
  * the small action pills stay compact.
  *
- * Same slide-down + fade-in animation as ActionToast for visual
- * consistency.
+ * Slide+fade animation and timer lifecycle come from BaseToast.
  */
-Item {
+BaseToast {
     id: root
+    duration: 6000
 
-    width: card.width
-    height: card.height
-    visible: visibleState || card.opacity > 0.0
+    property string header: "ACHIEVEMENT UNLOCKED"
+    property string title: ""
+    property string description: ""
+    property string imageUrl: ""
 
     // Public API — call show(title, description, imageUrl) for the
     // achievement-unlock case (default header, default duration), or
     // showWithHeader(...) to drive the toast for game-start banners,
     // game-mastered celebrations, hardcore reset notices, and server
     // error notices.
-    property string header: "ACHIEVEMENT UNLOCKED"
-    property string title: ""
-    property string description: ""
-    property string imageUrl: ""
-    property int duration: 6000
-    property bool visibleState: false
-
     function show(t, d, url) {
-        showWithHeader("ACHIEVEMENT UNLOCKED", t, d, url, 6000);
+        showWithHeader("ACHIEVEMENT UNLOCKED", t, d, url, 6000)
     }
 
     function showWithHeader(h, t, d, url, durationMs) {
-        header = h || "ACHIEVEMENT UNLOCKED";
-        title = t || "";
-        description = d || "";
-        imageUrl = url || "";
-        duration = (durationMs && durationMs > 0) ? durationMs : 6000;
-        hideTimer.stop();
-        visibleState = true;
-        hideTimer.restart();
-    }
-
-    Timer {
-        id: hideTimer
-        interval: root.duration
-        repeat: false
-        onTriggered: root.visibleState = false
+        header = h || "ACHIEVEMENT UNLOCKED"
+        title = t || ""
+        description = d || ""
+        imageUrl = url || ""
+        duration = (durationMs && durationMs > 0) ? durationMs : 6000
+        visibleState = true
+        restartDismissTimer()
     }
 
     Rectangle {
         id: card
-        // Width = trophy + padding + text column with a sane max so
-        // long descriptions wrap rather than push the toast off-screen.
         width: 380
-        // Height grows with content (title is fixed, description wraps).
         height: contentRow.implicitHeight + 24
         radius: 14
         color: Qt.rgba(0.08, 0.08, 0.10, 0.92)
         border.color: Qt.rgba(1, 0.84, 0.30, 0.45)   // soft gold border
         border.width: 1
-        opacity: root.visibleState ? 1.0 : 0.0
-        transform: Translate {
-            y: root.visibleState ? 0 : -10
-            Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-        }
-        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
         Row {
             id: contentRow
@@ -83,7 +60,7 @@ Item {
 
             // Achievement badge from RetroAchievements when available;
             // falls back to the trophy glyph if URL is empty or the
-            // remote fetch fails (offline, RA CDN hiccup, etc).
+            // remote fetch fails.
             Item {
                 id: badgeBox
                 anchors.verticalCenter: parent.verticalCenter

@@ -23,6 +23,11 @@ Item {
         visibleState = false
     }
 
+    function restartDismissTimer() {
+        hideTimer.stop()
+        if (!sticky) hideTimer.restart()
+    }
+
     Timer {
         id: hideTimer
         interval: root.duration
