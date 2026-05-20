@@ -488,19 +488,26 @@ ApplicationWindow {
             window.toggleInGameMenu();
         }
         // Libretro matcher fires this whenever the user's ToggleMenu
-        // binding is pressed in-game. Open-only semantics: pressing the
-        // hotkey while the menu is closed opens it; pressing while it's
-        // open is a no-op. Close the menu via its own gesture
-        // (B / Backspace / Esc inside the menu) instead.
+        // binding is pressed in-game. Toggles open/closed — the in-scene
+        // mGBA menu can also self-close via its own Keys.onPressed Esc
+        // handler (focus tree path), but LibretroOverlayPanel runs in a
+        // separate QQuickWindow whose Esc key events flow through the
+        // app-level matcher, so without the close branch here PCSX2's
+        // overlay had no way to dismiss via Esc.
         function onLibretroMenuToggleRequested() {
             if (!app.gameRunning) return;
             if (app.gameUsesHardwareRender()) {
-                if (!app.libretroOverlayMenuVisible)
+                if (app.libretroOverlayMenuVisible)
+                    app.closeLibretroOverlayMenu();
+                else
                     app.openLibretroOverlayMenu();
                 return;
             }
             if (isLibretroGame()) {
-                if (!inGameMenu.visible) {
+                if (inGameMenu.visible) {
+                    inGameMenu.close();
+                    if (app.gameSession) app.gameSession.resumeEmulation();
+                } else {
                     if (app.gameSession) app.gameSession.pauseEmulation();
                     app.activateApp();
                     inGameMenu.open();
