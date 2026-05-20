@@ -1,6 +1,4 @@
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
 
 Item {
     id: root
@@ -47,16 +45,16 @@ Item {
     ListView {
         id: listView
         anchors.top: headerLabel.visible ? headerLabel.bottom : parent.top
-        anchors.topMargin: headerLabel.visible ? 16 : 0
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: root.listMargins
+        anchors.topMargin: headerLabel.visible ? 16 : root.listMargins
+        anchors.leftMargin: root.listMargins
+        anchors.rightMargin: root.listMargins
         anchors.bottomMargin: root.listMargins
         spacing: root.itemSpacing
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        focus: true
         currentIndex: 0
         delegate: root.delegate
         footer: root.listFooter
