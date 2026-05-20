@@ -320,7 +320,7 @@ ApplicationWindow {
     Connections {
         target: themeContext
         function onGameActionsRequested(gameId) {
-            gameActionPopup.open(gameId)
+            gameActionPopup.openForGame(gameId)
         }
         function onScrapeGameRequested(gameId) {
             settingsOverlay.navigateToScraper()
