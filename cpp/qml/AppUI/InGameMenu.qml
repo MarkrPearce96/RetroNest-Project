@@ -312,6 +312,7 @@ FocusScope {
             break;
         case "fastForward":
             toggleFastForwardRequested();
+            resumeRequested();
             break;
         case "exitSave":
             exitWithSaveRequested();
