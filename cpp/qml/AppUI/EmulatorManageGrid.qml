@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import "EmulatorLogos.js" as EmulatorLogos
 
-Item {
+FocusScope {
     id: root
 
     signal emulatorSelected(string emuId)

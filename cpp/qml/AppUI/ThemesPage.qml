@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-Item {
+FocusScope {
     id: root
 
     function applyTheme(idx) {
@@ -11,18 +11,13 @@ Item {
         }
     }
 
-    ColumnLayout {
+    GenericListPage {
+        id: listPage
         anchors.fill: parent
-        spacing: 0
-
-        GenericListPage {
-            id: listPage
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            listMargins: 16
-            itemSpacing: 8
-            model: themeManager.availableThemes
-            onActivated: (index) => root.applyTheme(index)
+        listMargins: 16
+        itemSpacing: 8
+        model: themeManager.availableThemes
+        onActivated: (index) => root.applyTheme(index)
 
             delegate: Item {
                 id: delegateRoot
@@ -183,14 +178,4 @@ Item {
                 }
             }
         }
-
-        ButtonHints {
-            Layout.fillWidth: true
-            hints: [
-                {action: "navigate_ud", label: "Navigate"},
-                {action: "confirm",     label: "Apply Theme"},
-                {action: "back",        label: "Back"}
-            ]
-        }
     }
-}
