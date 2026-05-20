@@ -831,40 +831,63 @@ ApplicationWindow {
         }
     }
 
-    // Escape key toggles settings overlay or in-game menu depending on game state
+    // Shared back-navigation handler used by both Shortcuts below.
+    // Preserves all pre-refactor Esc behaviours and adds the missing
+    // mainStack.depth > 1 → navigateBack() branch (regression fix).
+    function handleBack() {
+        if (app.gameRunning) {
+            // Shortcut fires when this app has focus — i.e. the
+            // libretro path. Resume the core when closing the menu;
+            // pause it when opening. (External-emulator path is
+            // handled via the panel + Cmd+Shift+Esc Carbon hotkey,
+            // not this Shortcut.)
+            if (inGameMenu.visible) {
+                if (app.gameSession) app.gameSession.resumeEmulation();
+                inGameMenu.close();
+            } else {
+                if (app.gameSession) app.gameSession.pauseEmulation();
+                inGameMenu.open();
+            }
+            return
+        }
+        if (settingsOverlay.visible) {
+            if (settingsOverlay.isBusy()) {
+                // Cancel the running operation
+                app.cancelScrape()
+            } else if (settingsOverlay.canGoBack()) {
+                settingsOverlay.goBack()
+            } else {
+                settingsOverlay.close()
+            }
+            return
+        }
+        if (mainStack.depth > 1) {
+            themeContext.navigateBack()
+            return
+        }
+        settingsOverlay.open()
+    }
+
+    // Esc: always enabled (except inside top-level modals and while a game is
+    // open via the Carbon hotkey path) so it can close Settings sub-pages.
     Shortcut {
-        sequences: ["Escape", "Backspace"]
+        sequence: "Escape"
         enabled: !gameActionPopup.visible && !resumeStateDialog.visible
                  && !app.inGameMenuOpen
-        onActivated: {
-            if (app.gameRunning) {
-                // Shortcut fires when this app has focus — i.e. the
-                // libretro path. Resume the core when closing the menu;
-                // pause it when opening. (External-emulator path is
-                // handled via the panel + Cmd+Shift+Esc Carbon hotkey,
-                // not this Shortcut.)
-                if (inGameMenu.visible) {
-                    if (app.gameSession) app.gameSession.resumeEmulation();
-                    inGameMenu.close();
-                } else {
-                    if (app.gameSession) app.gameSession.pauseEmulation();
-                    inGameMenu.open();
-                }
-                return
-            }
-            if (settingsOverlay.visible) {
-                if (settingsOverlay.isBusy()) {
-                    // Cancel the running operation
-                    app.cancelScrape()
-                } else if (settingsOverlay.canGoBack()) {
-                    settingsOverlay.goBack()
-                } else {
-                    settingsOverlay.close()
-                }
-            } else {
-                settingsOverlay.open()
-            }
-        }
+        onActivated: handleBack()
+    }
+
+    // Backspace + Key_Back (controller B/Circle): same handler but with a
+    // stricter gate so it can't clobber text-input contexts.
+    Shortcut {
+        sequences: ["Backspace", "Back"]
+        enabled: !gameActionPopup.visible && !resumeStateDialog.visible
+                 && !app.inGameMenuOpen
+                 && !settingsOverlay.visible
+                 && !inputManager.virtualKeyboardOpen
+                 && !raLoginPrompt.visible
+                 && !updateConfirm.visible
+        onActivated: handleBack()
     }
 
     Shortcut {

@@ -10,14 +10,19 @@ hints, modals, overlays) and dispatches universal input.
 The following keys are handled globally by AppWindow. Do not reimplement them
 in a theme page:
 
-| Key                  | Action  | Effect                                       |
-|----------------------|---------|----------------------------------------------|
-| `Esc` / `Backspace`  | Back    | `themeContext.navigateBack()` (pops the theme stack, or opens Settings if at root). Controller B/Circle synthesises Backspace. |
-| `M`                  | Action  | `themeContext.openGameActions(currentFocusedGameId)`. No-op when no game is focused. Controller Y/Triangle synthesises M. |
-| Controller `Start`   | Settings| Toggles the Settings overlay.                |
+| Key                                     | Action  | Effect |
+|-----------------------------------------|---------|--------|
+| `Esc`                                   | Back    | Closes the current modal / settings sub-page; if none open and the theme stack has depth > 1, pops it; else opens Settings. |
+| `Backspace` / controller B/Circle (`Back`) | Back    | Same as `Esc`, but disabled while a settings panel, virtual keyboard, or login/confirm modal is open so it doesn't clobber text-input or in-modal navigation. |
+| `M` / controller Y/Triangle            | Action  | `themeContext.openGameActions(currentFocusedGameId)`. No-op when no game is focused. |
+| Controller `Start`                      | Settings| Toggles the Settings overlay. |
 
-Modals (Settings overlay, GameActionPopup, ResumeStateDialog, etc.) catch their
-own keys first, so the global Shortcuts never fire underneath them.
+Controller B/Circle (`Key_Back`) and X/Square (`Backspace`) both fire the same
+Backspace/Back Shortcut.
+
+The Esc Shortcut is intentionally always enabled (except inside a couple of
+top-level modal popups) so it can close Settings sub-pages. The Backspace/Back
+Shortcut is more conservatively gated — see the text-input caveat below.
 
 ## What themes own
 
@@ -59,17 +64,22 @@ keeps things tidy if the page is popped.
 
 ## Text input caveat
 
-The global `Backspace` Shortcut means a top-level page **cannot** host a raw
-text input without consuming `Backspace` locally. The standard QML pattern:
+The Esc Shortcut fires before focused TextFields see the key. The Backspace
+Shortcut is therefore gated against `settingsOverlay.visible` and
+`inputManager.virtualKeyboardOpen` so it can't clobber text editing in those
+contexts. If a future top-level theme page (i.e. one rendered directly by the
+StackView, not inside Settings or the virtual keyboard) hosts a text input,
+the page must override the global Shortcut with `Keys.shortcutOverride`:
 
 ```qml
 TextField {
-    Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Backspace) event.accepted = true
+    Keys.shortcutOverride: function(event) {
+        if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Escape)
+            event.accepted = true
     }
 }
 ```
 
-All current text inputs (Scraper login, RA login, Virtual Keyboard, search)
-live inside modals whose focus contexts already swallow `Backspace`, so no
-existing page is affected.
+`Keys.onPressed` with `event.accepted = true` is **not** sufficient — Qt
+`Shortcut`s preempt the focus tree's key handling. Only `shortcutOverride`
+disables a Shortcut for a focused item.
