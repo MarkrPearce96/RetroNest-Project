@@ -4,12 +4,6 @@ import QtQuick.Layouts
 
 Item {
     id: root
-    property int focusIndex: 0
-
-    Keys.onUpPressed: root.focusIndex = root.focusIndex > 0 ? root.focusIndex - 1 : Math.max(0, themeList.count - 1)
-    Keys.onDownPressed: root.focusIndex = root.focusIndex < themeList.count - 1 ? root.focusIndex + 1 : 0
-    Keys.onReturnPressed: root.applyTheme(root.focusIndex)
-    Keys.onEnterPressed: root.applyTheme(root.focusIndex)
 
     function applyTheme(idx) {
         var theme = themeManager.availableThemes[idx]
@@ -22,27 +16,21 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // Theme list
-        ListView {
-            id: themeList
+        GenericListPage {
+            id: listPage
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.topMargin: 16
-            Layout.leftMargin: 16
-            Layout.rightMargin: 16
-            Layout.bottomMargin: 4
-            spacing: 8
-            clip: true
+            listMargins: 16
+            itemSpacing: 8
             model: themeManager.availableThemes
-            currentIndex: root.focusIndex
-            focus: true
+            onActivated: (index) => root.applyTheme(index)
 
             delegate: Item {
                 id: delegateRoot
-                width: themeList.width
+                width: ListView.view.width
                 height: 72
 
-                property bool isFocused: index === root.focusIndex
+                property bool isFocused: ListView.isCurrentItem
                 property bool isActive:  modelData.id === themeManager.currentThemeId
 
                 // Glow behind
@@ -89,18 +77,15 @@ Item {
                             border.color: SettingsTheme.border
                             clip: true
 
-                            // Preview gradient
                             Rectangle {
                                 anchors.fill: parent
                                 radius: parent.radius
-
                                 gradient: Gradient {
                                     GradientStop { position: 0.0; color: "#1a1917" }
                                     GradientStop { position: 1.0; color: "#0d0c0a" }
                                 }
                             }
 
-                            // Accent bar at bottom
                             Rectangle {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -154,15 +139,11 @@ Item {
                                 id: activeBadge
                                 Row {
                                     spacing: 6
-
                                     Rectangle {
-                                        width: 8
-                                        height: 8
-                                        radius: 4
+                                        width: 8; height: 8; radius: 4
                                         color: SettingsTheme.success
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
-
                                     Text {
                                         text: "Active"
                                         color: SettingsTheme.success
@@ -176,13 +157,11 @@ Item {
                             Component {
                                 id: applyButton
                                 Rectangle {
-                                    width: 70
-                                    height: 32
+                                    width: 70; height: 32
                                     radius: SettingsTheme.buttonRadius
                                     color: SettingsTheme.card
                                     border.width: 1
                                     border.color: SettingsTheme.border
-
                                     Text {
                                         anchors.centerIn: parent
                                         text: "Apply"
@@ -200,17 +179,9 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.focusIndex = index
-                            root.applyTheme(index)
-                        }
+                        onClicked: listPage.activate(index)
                     }
                 }
-            }
-
-            // Scroll focused item into view
-            onCurrentIndexChanged: {
-                positionViewAtIndex(currentIndex, ListView.Contain)
             }
         }
 
