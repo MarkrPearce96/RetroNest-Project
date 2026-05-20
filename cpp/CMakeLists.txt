@@ -341,6 +341,7 @@ qt_add_qml_module(appui_backing
     OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/AppUI"
     QML_FILES
         qml/AppUI/ButtonHints.qml
+        qml/AppUI/GenericListPage.qml
         qml/AppUI/FocusableItem.qml
         qml/AppUI/AppWindow.qml
         qml/AppUI/EmptyStatePage.qml
