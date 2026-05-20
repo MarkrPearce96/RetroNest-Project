@@ -34,18 +34,6 @@ public:
     ResolutionOptions resolutionOptions() const override;
     AspectRatioOptions aspectRatioOptions() const override;
     QVector<HotkeyDef> hotkeyBindingDefs() const override;
-    // SaveSelectedSaveState, LoadSelectedSaveState and ToggleFastForward
-    // are force-bound to F5/F7/F8 and removed from hotkeyBindingDefs() so
-    // the user can't rebind them and break in-game menu synthesis.
-    int hotkeyVirtualKeyCode(HotkeyAction action) const override {
-        switch (action) {
-        case HotkeyAction::TogglePause:       return 0x31; // kVK_Space
-        case HotkeyAction::SaveState:         return 0x60; // kVK_F5
-        case HotkeyAction::LoadState:         return 0x62; // kVK_F7
-        case HotkeyAction::ToggleFastForward: return 0x64; // kVK_F8
-        }
-        return 0;
-    }
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
     QVector<SettingDef> controllerSettingDefsForType(const QString& type) const override;
