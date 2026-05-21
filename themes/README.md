@@ -5,6 +5,9 @@ manifest plus the QML pages it owns (typically `systemBrowser` and `gameList`).
 Themes never own the entire app frame — AppWindow renders the chrome (button
 hints, modals, overlays) and dispatches universal input.
 
+> **Adding a new modal?** Skip past the theme contract to
+> [Adding a new modal / overlay](#adding-a-new-modal--overlay) at the bottom.
+
 ## Universal input contract
 
 The following keys are handled globally by AppWindow. Do not reimplement them
@@ -83,3 +86,59 @@ TextField {
 `Keys.onPressed` with `event.accepted = true` is **not** sufficient — Qt
 `Shortcut`s preempt the focus tree's key handling. Only `shortcutOverride`
 disables a Shortcut for a focused item.
+
+## Adding a new modal / overlay
+
+This section is for **app developers**, not theme authors. Themes don't
+add modals.
+
+Universal input gating goes through a single `modalRegistry` QtObject at the
+top of `cpp/qml/AppUI/AppWindow.qml`. It exposes three derived booleans:
+
+- `anyLibretroInhibited` — drives `app.libretroHotkeysSuppressed`. Suppresses
+  the application-level `HotkeyMatcher` event filter so its
+  `Esc = ToggleMenu` (and any other bound libretro hotkey) doesn't preempt
+  the focused modal's `Keys.onPressed`.
+- `anyShortcutInhibited` — disables AppWindow's universal `Esc` Shortcut.
+  Modals that own `Esc` internally must be in this set. `SettingsOverlay`
+  is intentionally NOT in this set so the Shortcut keeps driving
+  `goBack` / `close` through its sub-page history.
+- `anyVisible` — derived as `anyLibretroInhibited || anyShortcutInhibited`,
+  i.e. "any modal-class surface visible." Gates the universal `Backspace` /
+  `Back` Shortcut, the `M` Shortcut, and `mainHints.visible`.
+
+To add a new modal:
+
+1. Give your modal a stable `id:` and a `visible` (or `panelOpen`-style
+   user-intent) property.
+2. Open `cpp/qml/AppUI/AppWindow.qml`, find `QtObject { id: modalRegistry`,
+   and **append your modal to the relevant OR expression(s)** plus add
+   one row to the policy table in the comment above the registry.
+   Default for new modals: both flags `true` (it's a normal modal that
+   owns its own Esc/Back).
+3. Inside your modal, handle `Esc`, `Backspace`, and `Qt.Key_Back` in
+   `Keys.onPressed`. **Or** derive from `BaseModalCard.qml` and
+   **do not** override `Keys.onPressed` — the base handles all three
+   for you (QML attached-property semantics mean a derived
+   `Keys.onPressed` fully replaces the base's; re-add the three keys
+   yourself if you must override).
+4. If you want a button-hint pill strip rendered with your modal's card,
+   add a local `ButtonHints { hints: [...] }` inside the card. The main
+   `ButtonHints` strip in AppWindow auto-hides while any registry modal
+   is visible (`mainHints.visible` reads `!modalRegistry.anyVisible`).
+
+### Modals that need different roles
+
+The policy isn't always "both flags true." See the table in the
+`modalRegistry` comment for the current exceptions. The two recurring
+patterns:
+
+- **`SettingsOverlay` style** (`inhibitShortcuts: false`) — you want the
+  universal `Esc` to keep firing so it can walk back through the
+  overlay's own sub-page history. The overlay's outer keypress consumes
+  Backspace/M itself; the universal Esc Shortcut feeds the back action.
+- **Libretro in-game menu style** (`inhibitLibretro: false`) — the libretro
+  `HotkeyMatcher`'s `Esc = ToggleMenu` IS the close mechanism. If you
+  suppress libretro hotkeys, you lock yourself in.
+
+If neither pattern applies, take the default (both true).

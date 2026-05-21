@@ -139,22 +139,52 @@ ApplicationWindow {
         id: gameActionPopup
     }
 
-    // Suppress libretro hotkey dispatch whenever ANY app-level modal is
-    // showing — otherwise the HotkeyMatcher event filter consumes Esc (and
-    // other bound keys) before the focused modal's Keys.onPressed can run.
-    // SettingsOverlay is tied to panelOpen (user-intent flag) instead of
-    // visible because visible lags the slide-out animation and can race.
+    // Universal-input gating across every modal / overlay.
+    //
+    // Three gate kinds, all built from the same set of modal visibility
+    // flags, with two role exceptions:
+    //   - settingsOverlay omitted from the Esc-Shortcut gate so Esc keeps
+    //     driving goBack through SettingsOverlay sub-pages.
+    //   - inGameMenu (libretro) omitted from the libretro-matcher
+    //     suppression because the matcher's Esc=ToggleMenu IS the close.
+    //
+    // Policy table per modal — keep in sync with the OR expressions
+    // in the Binding + the three Shortcut.enabled gates below:
+    //
+    //   modal                  inhibitMatcher  inhibitEsc  notes
+    //   ─────                  ──────────────  ──────────  ─────
+    //   gameActionPopup        ✓               ✓           BaseModalCard; own Esc/Backspace/Back
+    //   resumeStateDialog      ✓               ✓           BaseModalCard; own Esc/Backspace/Back
+    //   settingsOverlay        ✓               ✗           Esc Shortcut MUST fire to drive goBack
+    //   raLoginPrompt          ✓               ✓           own Esc/Return/Back handler
+    //   updateConfirm          ✓               ✓           own Esc/Backspace/Return handler
+    //   updateProgressPopup    ✓               ✓           modal blocker
+    //   virtualKeyboard        ✓               ✓           own handlers; matcher would clobber text input
+    //   inGameMenu (libretro)  ✗               ✓           HotkeyMatcher's Esc=ToggleMenu IS the close
+    //
+    // Adding a new modal: append its visibility flag to the relevant OR
+    // expressions below and document its policy row.
+    //
+    // settingsOverlay uses .panelOpen (user-intent flag) instead of
+    // .visible because visible lags the slide-out animation and can race.
+    //
+    // `!app.gameRunning` is in this OR for a separate reason: libretro
+    // hotkeys (Esc=ToggleMenu, M=Mute, 1/2=SaveState/LoadState, …) only
+    // make sense while a game is playing. Without this gate the matcher
+    // consumes those keys app-wide — e.g. pressing Triangle (Y → Key_M)
+    // on the game list page would get swallowed by the Mute binding
+    // before the M Shortcut could fire openGameActions.
     Binding {
         target: app
         property: "libretroHotkeysSuppressed"
-        value: settingsOverlay.panelOpen
+        value: !app.gameRunning
+               || settingsOverlay.panelOpen
                || gameActionPopup.visible
                || resumeStateDialog.visible
-    }
-
-    Component {
-        id: achievementsPageComponent
-        AchievementsPage {}
+               || raLoginPrompt.visible
+               || updateConfirm.visible
+               || updateProgressPopup.visible
+               || inputManager.virtualKeyboardOpen
     }
 
     InGameMenu {
@@ -733,8 +763,15 @@ ApplicationWindow {
         // Hide while a libretro game is rendering in our window (EmulationView
         // is on top of the stack). Process-backed emulators show their own
         // window, so the app hints over our background window are harmless.
-        // The InGameMenu owns its own hints when open.
-        visible: !settingsOverlay.visible && !gameActionPopup.visible
+        // Modals all have their own hint strips, so the main strip yields
+        // to any visible modal.
+        visible: !settingsOverlay.panelOpen
+                 && !gameActionPopup.visible
+                 && !resumeStateDialog.visible
+                 && !raLoginPrompt.visible
+                 && !updateConfirm.visible
+                 && !updateProgressPopup.visible
+                 && !inputManager.virtualKeyboardOpen
                  && !(mainStack.currentItem && mainStack.currentItem.isEmulationView)
         hints: {
             var page = mainStack.currentItem;
@@ -872,36 +909,51 @@ ApplicationWindow {
         settingsOverlay.open()
     }
 
-    // Esc: always enabled (except inside top-level modals and while a game is
-    // open via the Carbon hotkey path) so it can close Settings sub-pages.
+    // Esc: enabled UNLESS a modal that owns Esc internally is visible.
+    // SettingsOverlay is deliberately NOT in this gate so Esc keeps driving
+    // goBack/close through its sub-page history.
     Shortcut {
         sequence: "Escape"
-        enabled: !gameActionPopup.visible && !resumeStateDialog.visible
-                 && !app.inGameMenuOpen
-        onActivated: handleBack()
-    }
-
-    // Backspace + Key_Back (controller B/Circle): same handler but with a
-    // stricter gate so it can't clobber text-input contexts.
-    Shortcut {
-        sequences: ["Backspace", "Back"]
-        enabled: !gameActionPopup.visible && !resumeStateDialog.visible
-                 && !app.inGameMenuOpen
-                 && !settingsOverlay.visible
-                 && !inputManager.virtualKeyboardOpen
+        enabled: !gameActionPopup.visible
+                 && !resumeStateDialog.visible
                  && !raLoginPrompt.visible
                  && !updateConfirm.visible
+                 && !updateProgressPopup.visible
+                 && !inputManager.virtualKeyboardOpen
+                 && !app.inGameMenuOpen
         onActivated: handleBack()
     }
 
+    // Backspace + Key_Back (controller B/Circle): broader gate than Esc.
+    // ANY visible modal blocks it — text-input contexts live inside modals
+    // (settings, virtual keyboard, login prompts) and Backspace would
+    // clobber them.
+    Shortcut {
+        sequences: ["Backspace", "Back"]
+        enabled: !settingsOverlay.panelOpen
+                 && !gameActionPopup.visible
+                 && !resumeStateDialog.visible
+                 && !raLoginPrompt.visible
+                 && !updateConfirm.visible
+                 && !updateProgressPopup.visible
+                 && !inputManager.virtualKeyboardOpen
+                 && !app.inGameMenuOpen
+        onActivated: handleBack()
+    }
+
+    // M (controller Y/Triangle): "open game actions for the focused theme
+    // page." Defers to any visible modal, and to active gameplay.
     Shortcut {
         sequence: "M"
         enabled: !app.gameRunning
+                 && !settingsOverlay.panelOpen
                  && !gameActionPopup.visible
                  && !resumeStateDialog.visible
-                 && !settingsOverlay.visible
-                 && !app.inGameMenuOpen
+                 && !raLoginPrompt.visible
+                 && !updateConfirm.visible
+                 && !updateProgressPopup.visible
                  && !inputManager.virtualKeyboardOpen
+                 && !app.inGameMenuOpen
         onActivated: {
             var id = themeContext.currentFocusedGameId
             if (id >= 0) themeContext.openGameActions(id)

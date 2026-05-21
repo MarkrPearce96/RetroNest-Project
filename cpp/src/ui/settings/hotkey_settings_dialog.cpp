@@ -6,6 +6,7 @@
 #include "ui/app_controller.h"
 
 #include <QKeyEvent>
+#include <QShortcut>
 #include <QShowEvent>
 #include <QTimer>
 
@@ -29,20 +30,55 @@ HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
             this, &HotkeySettingsDialog::onBindingFocused);
     setHub(m_page);  // single-page dialog — page IS the hub
 
-    // Footer hints match the controller mapping page's pill row:
-    //   confirm  → ↵   Rebind          (Enter / A button)
-    //   clear    → ⌫   Restore Default (Backspace / B button) — focused row
-    //   auto_map → M   Reset All        (M / Y button) — every row to defaults
-    //   close    → Esc Close            (Esc / X button)
+    // Footer hints — each glyph must match the key/button that actually
+    // fires the action.
+    //
+    //   action     keyboard          Xbox    PS         binding
+    //   ────────── ───────────────── ─────── ────────── ─────────────────────────────────────────────
+    //   confirm    ↵ (Enter)         A       Cross      Key_Return                       → Rebind focused
+    //   clear      ⌫ (Backspace)     B       Circle     Key_Backspace / Key_Delete / Key_Back → Restore Default
+    //   auto_map   M                 Y       Triangle   Key_M                            → Reset All
+    //
+    // Esc closes the dialog (no hint pill — would force a lying X/Square
+    // glyph since SDL routes X-button to Key_Backspace, which is bound to
+    // "clear" here). Three hint pills shown; close is keyboard-only.
     if (m_descBar) {
         m_descBar->setInputManager(inputManager);
         m_descBar->setHints({
             { QStringLiteral("confirm"),  QStringLiteral("Rebind") },
             { QStringLiteral("clear"),    QStringLiteral("Restore Default") },
             { QStringLiteral("auto_map"), QStringLiteral("Reset All") },
-            { QStringLiteral("close"),    QStringLiteral("Close") },
         });
     }
+
+    // Window-context shortcuts for the footer actions. Bypasses the
+    // focus tree, so they fire reliably on both the dual-column libretro
+    // instance and the single-column per-emulator instances regardless
+    // of which child widget owns focus. Gated on isCapturing() so the
+    // user can still bind these keys as native hotkey keys.
+    auto* mShortcut = new QShortcut(QKeySequence(Qt::Key_M), this);
+    mShortcut->setContext(Qt::WindowShortcut);
+    connect(mShortcut, &QShortcut::activated, this, [this]{
+        if (m_page && !m_page->isCapturing()) m_page->restoreDefaults();
+    });
+
+    auto* backShortcut = new QShortcut(QKeySequence(Qt::Key_Back), this);
+    backShortcut->setContext(Qt::WindowShortcut);
+    connect(backShortcut, &QShortcut::activated, this, [this]{
+        if (m_page && !m_page->isCapturing()) m_page->restoreFocusedToDefault();
+    });
+
+    auto* delShortcut = new QShortcut(QKeySequence(Qt::Key_Delete), this);
+    delShortcut->setContext(Qt::WindowShortcut);
+    connect(delShortcut, &QShortcut::activated, this, [this]{
+        if (m_page && !m_page->isCapturing()) m_page->restoreFocusedToDefault();
+    });
+
+    auto* backspaceShortcut = new QShortcut(QKeySequence(Qt::Key_Backspace), this);
+    backspaceShortcut->setContext(Qt::WindowShortcut);
+    connect(backspaceShortcut, &QShortcut::activated, this, [this]{
+        if (m_page && !m_page->isCapturing()) m_page->restoreFocusedToDefault();
+    });
 }
 
 void HotkeySettingsDialog::onBindingFocused(HotkeyDef def, QString currentDisplay) {
@@ -58,25 +94,26 @@ void HotkeySettingsDialog::keyPressEvent(QKeyEvent* e) {
         EmulatorSettingsDialogBase::keyPressEvent(e);
         return;
     }
-    // Footer-action shortcuts. SDL translates face buttons to Qt keys:
-    //   A → Return, B → Back, X → Backspace, Y → M
+    // Footer-action shortcuts. Most dispatch is via window-context
+    // QShortcuts (above) which fire before the focus tree. This keyPressEvent
+    // is the fallback path; keep it in sync with the QShortcuts and the
+    // hint-glyph table.
     //
-    //   Enter / A           → Rebind focused row
-    //   B / ⌫               → Restore Default (focused row)
-    //   M / Y               → Reset All
-    //   Esc / X (Backspace) → Close
+    // SDL face-button → Qt key map (CLAUDE.md):
+    //   A → Return, B → Key_Back, X → Backspace, Y → M
     switch (e->key()) {
-        case Qt::Key_Return:
+        case Qt::Key_Return:                            // Enter / A button
             m_page->rebindFocused();
             return;
-        case Qt::Key_Back:                              // B button only
+        case Qt::Key_Back:                              // B button (controller)
+        case Qt::Key_Delete:                            // Del (keyboard)
+        case Qt::Key_Backspace:                         // ⌫ (keyboard) — also X button via SDL synth
             m_page->restoreFocusedToDefault();
             return;
-        case Qt::Key_M:
+        case Qt::Key_M:                                 // M / Y button
             m_page->restoreDefaults();
             return;
-        case Qt::Key_Escape:                            // keyboard Esc
-        case Qt::Key_Backspace:                         // X button
+        case Qt::Key_Escape:                            // keyboard Esc — closes (no hint pill)
             accept();
             return;
         default:

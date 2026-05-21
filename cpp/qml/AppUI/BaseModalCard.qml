@@ -57,4 +57,20 @@ Item {
             root.closeRequested()
         }
     }
+
+    // Preempt AppWindow's universal Esc / Backspace / Back Shortcuts while
+    // this modal is focused and visible. Qt 6 Shortcuts beat the focus tree
+    // unless a focused item explicitly handles `shortcutOverride` — relying
+    // on `Shortcut.enabled` gating alone is fragile (see themes/README.md
+    // "Text input caveat"). With this in place, the modal's own
+    // `Keys.onPressed` reliably runs the close, regardless of whether the
+    // universal Shortcut's `enabled` binding has settled.
+    Keys.shortcutOverride: function(event) {
+        if (!visible) return
+        if (event.key === Qt.Key_Escape
+                || event.key === Qt.Key_Backspace
+                || event.key === Qt.Key_Back) {
+            event.accepted = true
+        }
+    }
 }

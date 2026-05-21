@@ -44,6 +44,12 @@ public:
     // No-op when the page has no entries (Dolphin / empty-state).
     void focusFirstRow();
 
+    // True while the page is mid-rebind (a row's button is showing
+    // "Press a button… [N]"). Hosting dialog's window-context QShortcuts
+    // gate on this so M / B don't double as footer actions while the
+    // user is trying to bind them.
+    bool isCapturing() const { return !m_capturingKey.isEmpty(); }
+
 signals:
     // Emitted when a row gains focus. `currentDisplay` is the formatted
     // display string ("Period", "SDL-0 R1 + SDL-0 Circle", or empty).

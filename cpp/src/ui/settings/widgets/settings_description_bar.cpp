@@ -115,11 +115,13 @@ SettingsDescriptionBar::GlyphStyle SettingsDescriptionBar::glyphFor(const QStrin
         if (action == "navigate")    return { QStringLiteral("D-Pad \u25B4\u25BE\u25C2\u25B8"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };
         if (action == "switch_tab")  return { QStringLiteral("LB / RB"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
     } else {
-        // Keyboard \u2014 use the icon glyphs matching the controller mapping
-        // page's footer pills (\u21B5 / \u232B / Esc / M).
+        // Keyboard. Each keyboard glyph must match the actual key the dialog
+        // binds to that action \u2014 clear=Del (NOT Backspace, which closes via
+        // X-button/Backspace synthesis), close=Esc, etc. Don't reuse a glyph
+        // across two actions or the hint will lie.
         if (action == "confirm")     return { QStringLiteral("\u21B5"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };  // \u21B5
         if (action == "back")        return { QStringLiteral("Esc"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
-        if (action == "clear")       return { QStringLiteral("\u232B"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };  // \u232B
+        if (action == "clear")       return { QStringLiteral("⌫"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };
         if (action == "close")       return { QStringLiteral("Esc"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
         if (action == "auto_map")    return { QStringLiteral("M"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
         if (action == "navigate_ud") return { QStringLiteral("\u2191\u2193"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 18 };

@@ -674,20 +674,17 @@ void AppController::showHotkeySettings(const QString& emuId) {
     }
     auto* dialog = new HotkeySettingsDialog(m_inputManager, this, emuId);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
-    // Always clear the libretro-matcher suppression when the dialog goes
-    // away — applies to the libretro-sentinel emuId path (set by
-    // showLibretroHotkeySettings) and is a harmless no-op for standalone
-    // emuIds (the flag stays false on those paths).
-    connect(dialog, &QObject::destroyed, this,
-            [this]{ setLibretroHotkeysSuppressed(false); });
     dialog->show();
 }
 
 void AppController::showLibretroHotkeySettings() {
-    // Suppress the libretro hotkey matcher while the dialog is open so its
-    // own keys (Esc to close, F2 to rebind a slot, etc.) don't double-fire
-    // ToggleMenu / SaveState in-game. Cleared when the dialog is destroyed.
-    setLibretroHotkeysSuppressed(true);
+    // Suppression of the libretro HotkeyMatcher is driven entirely by the
+    // QML modalRegistry Binding on app.libretroHotkeysSuppressed. Every
+    // path that opens a Widgets settings/hotkey dialog goes through the
+    // SettingsOverlay (panelOpen=true), so the Binding keeps suppression
+    // asserted for the dialog's whole lifetime. Imperative C++ writes
+    // would break the QML Binding (Qt 6 semantics) and leave suppression
+    // stuck false on the next dialog open — see modal-registry-contract.
     showHotkeySettings(libretro_hotkeys::kSentinelEmuId);
 }
 
