@@ -1203,7 +1203,20 @@ void AppController::closeInGameMenu() {
     if (!m_inGameMenu) return;
     const bool wasLibretro = m_inGameMenu->currentBackendIsLibretro();
     m_inGameMenu->closeMenu();
-    if (wasLibretro) return;  // libretro: nothing else to clean up
+    if (wasLibretro) {
+        // Symmetric counterpart to openInGameMenu's pauseEmulation. The
+        // toggle-hotkey close path (Esc / touchpad bound to ToggleMenu)
+        // reaches us via QML's onLibretroMenuToggleRequested without
+        // first going through resumeRequested, so without this resume
+        // VMManager stays paused and the libretro core's EmuThread
+        // watchdog shuts the session down after 500ms. Action signals
+        // (resumeRequested / saveStateRequested / loadStateRequested)
+        // resume themselves before calling closeMenu / closeInGameMenu;
+        // a second retronest_set_paused(false) is safely a no-op inside
+        // the libretro core (ResumeVm guards on prev_state == Running).
+        if (auto* s = gameSession()) s->resumeEmulation();
+        return;
+    }
 
     // External path cleanup follows.
     if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
