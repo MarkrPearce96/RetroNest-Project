@@ -6,6 +6,7 @@
 #include "core/libretro/frontend_settings_store.h"
 #include "core/libretro/input_router.h"
 #include "core/libretro/rcheevos_runtime.h"
+#include "core/libretro/video_hardware_gl.h"
 #include "core/path_overrides_store.h"
 #include "core/platform/host_arch.h"
 #include "core/sdl_input_manager.h"
@@ -150,9 +151,23 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
             QString(), 8000);
     }
 
-    // SP3: detect whether this adapter wants the HW render bridge.
-    const bool hw = lr->prefersHardwareRender();
-    const QString new_backend = hw ? QStringLiteral("metal") : QStringLiteral("software");
+    // SP3 + task #7: detect which HW render path this adapter uses and
+    // surface the right string to QML's EmulationView Loader.
+    //   MetalNSView  → "metal" (PCSX2 — LibretroMetalItem)
+    //   GL           → "gl"    (PPSSPP — LibretroGLItem)
+    //   None         → "software" (mGBA — LibretroVideoItem)
+    const auto backend = lr->hardwareRenderBackend();
+    const bool hw = backend != LibretroAdapter::HardwareRenderBackend::None;
+    QString new_backend;
+    switch (backend) {
+        case LibretroAdapter::HardwareRenderBackend::MetalNSView:
+            new_backend = QStringLiteral("metal"); break;
+        case LibretroAdapter::HardwareRenderBackend::GL:
+            new_backend = QStringLiteral("gl"); break;
+        case LibretroAdapter::HardwareRenderBackend::None:
+        default:
+            new_backend = QStringLiteral("software"); break;
+    }
     if (new_backend != m_libretroBackend) {
         m_libretroBackend = new_backend;
         emit libretroBackendChanged();
@@ -292,7 +307,15 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     // Bounded by an elapsed-time deadline so a misconfigured QML stack
     // (e.g. EmulationView.qml missing, registerHardwareView never called)
     // surfaces as a clean error instead of an infinite spin.
-    if (hw) {
+    //
+    // Task #7: the spin-wait is MetalNSView-specific — the GL backend
+    // doesn't use NSView at all (it goes via SET_HW_RENDER + FBO),
+    // and the VideoHardwareGL it does need is created lazily inside
+    // installHwRender DURING retro_load_game (so waiting for it before
+    // start() would deadlock). Skip the spin-wait for GL.
+    const bool needsNSViewWait =
+        backend == LibretroAdapter::HardwareRenderBackend::MetalNSView;
+    if (needsNSViewWait) {
         qInfo() << "[GameSession] spin-wait: waiting for LibretroMetalItem NSView registration";
         constexpr int kHardwareViewWaitMs = 2000;
         QElapsedTimer waitTimer;
@@ -501,6 +524,15 @@ void GameSession::registerHardwareView(qulonglong view_ptr) {
     auto* rt = m_libretroAdapter->runtime();
     if (!rt) return;
     rt->setActiveNSView(reinterpret_cast<void*>(view_ptr));
+}
+
+QObject* GameSession::videoHardware() const {
+    if (!m_libretroAdapter) return nullptr;
+    auto* rt = m_libretroAdapter->runtime();
+    if (!rt) return nullptr;
+    // VideoHardwareGL inherits from QObject; static_cast for QML to see the
+    // signals (frameReady) when LibretroGLItem calls setVideoHardware.
+    return static_cast<QObject*>(rt->videoHW());
 }
 
 bool GameSession::isRunning() const {

@@ -63,6 +63,15 @@ public:
     // Did init() complete successfully?
     bool isReady() const;
 
+    // Current IOSurface backing the color attachment, exposed as void* to
+    // keep this header Qt-only (IOSurfaceRef is a CoreFoundation type).
+    // Cast to IOSurfaceRef in callers. Returned pointer is valid until
+    // shutdown() or allocateFbo() reallocates (callers may CFRetain to
+    // extend lifetime). Null when no FBO is allocated.
+    void* currentIOSurface() const;
+    int   fboWidth() const;
+    int   fboHeight() const;
+
 signals:
     // Emitted after the core finishes rendering a frame into our FBO.
     // The LibretroGLItem (phase 2) imports the underlying IOSurface as

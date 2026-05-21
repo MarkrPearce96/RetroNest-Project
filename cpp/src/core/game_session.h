@@ -123,6 +123,12 @@ public:
      *  clear when the item is destroyed. */
     Q_INVOKABLE void registerHardwareView(qulonglong view_ptr);
 
+    /** Returns the active VideoHardwareGL pointer (as QObject*) when the
+     *  GL hardware path is in use; nullptr otherwise. LibretroGLItem's
+     *  QML Component.onCompleted reads this and calls setVideoHardware.
+     *  Valid only between aboutToStartLibretro and finished. */
+    Q_INVOKABLE QObject* videoHardware() const;
+
     /** The adapter for the currently running emulator. Null if not running. */
     EmulatorAdapter* adapter() const { return m_adapter; }
 

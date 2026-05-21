@@ -12,7 +12,9 @@ class Pcsx2LibretroAdapter : public LibretroAdapter {
     Q_OBJECT
 public:
     QString coreId() const override { return "pcsx2"; }
-    bool prefersHardwareRender() const override { return true; }
+    HardwareRenderBackend hardwareRenderBackend() const override {
+        return HardwareRenderBackend::MetalNSView;
+    }
 
     // PS2 → rcheevos console ID 21 (RC_CONSOLE_PLAYSTATION_2).
     // Without this override, the base returns 0 (UNKNOWN) →

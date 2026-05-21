@@ -290,6 +290,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 if(APPLE)
     set_source_files_properties(
         src/ui/libretro/libretro_metal_item.mm
+        src/ui/libretro/libretro_gl_item.mm
         src/core/libretro/video_hardware_gl.mm
         PROPERTIES
         COMPILE_FLAGS "-fobjc-arc"
@@ -341,8 +342,12 @@ qt_add_library(appui_backing STATIC)
 target_include_directories(appui_backing PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/libretro
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
 )
-target_link_libraries(appui_backing PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2)
+# libretro_gl_item.mm calls into VideoHardwareGL (which uses Metal /
+# IOSurface APIs) — the QML module needs those frameworks too.
+target_link_libraries(appui_backing PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2
+    "-framework Metal" "-framework IOSurface")
 
 qt_add_qml_module(appui_backing
     URI AppUI
@@ -394,8 +399,10 @@ qt_add_qml_module(appui_backing
     SOURCES
         src/ui/libretro/libretro_video_item.h
         src/ui/libretro/libretro_metal_item.h
+        src/ui/libretro/libretro_gl_item.h
         src/ui/libretro/libretro_video_item.cpp
         src/ui/libretro/libretro_metal_item.mm
+        src/ui/libretro/libretro_gl_item.mm
     RESOURCES
         qml/AppUI/images/pcsx2_logo.png
         qml/AppUI/images/duckstation_logo.png

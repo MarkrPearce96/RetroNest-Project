@@ -10,7 +10,9 @@ class PpssppLibretroAdapter : public LibretroAdapter {
     Q_OBJECT
 public:
     QString coreId() const override { return "ppsspp"; }
-    bool prefersHardwareRender() const override { return true; }
+    HardwareRenderBackend hardwareRenderBackend() const override {
+        return HardwareRenderBackend::GL;
+    }
 
     // RC_CONSOLE_PSP = 41. Without this, rc_libretro_memory_init fails
     // and achievements never trigger — see Pcsx2LibretroAdapter::raConsoleId.

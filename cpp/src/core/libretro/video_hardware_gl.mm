@@ -135,11 +135,11 @@ bool VideoHardwareGL::init() {
 void VideoHardwareGL::shutdown() {
     if (!m_impl->initialised) return;
 
-    // Tear down FBO + attachments on the main context. We need a
-    // context current to delete GL objects — otherwise the driver
-    // leaks them. ARC won't help here; these are raw GL handles.
+    // Tear down FBO + attachments on the HW context (same one that
+    // allocated them — FBO IDs are per-context). Without makeCurrent
+    // the driver leaks the handles.
     if (m_impl->fboId || m_impl->colorTex || m_impl->depthRbo) {
-        [m_impl->mainCtx makeCurrentContext];
+        [m_impl->hwCtx makeCurrentContext];
         if (m_impl->fboId)    { glDeleteFramebuffers(1, &m_impl->fboId);   m_impl->fboId   = 0; }
         if (m_impl->colorTex) { glDeleteTextures(1, &m_impl->colorTex);    m_impl->colorTex = 0; }
         if (m_impl->depthRbo) { glDeleteRenderbuffers(1, &m_impl->depthRbo); m_impl->depthRbo = 0; }
@@ -181,7 +181,15 @@ bool VideoHardwareGL::allocateFbo(int width, int height, bool depth) {
         return true;
     }
 
-    [m_impl->mainCtx makeCurrentContext];
+    // FBOs are NOT shared across NSOpenGL share groups — only the
+    // attachments (textures, renderbuffers) are. PPSSPP's render thread
+    // binds whatever id our get_current_framebuffer thunk returns; that
+    // id must reference an FBO that exists in the HW context PPSSPP
+    // operates on. So allocate the FBO on the HW context, not main.
+    // The IOSurface-backed color texture + depth renderbuffer ARE shared,
+    // so the composite side can still observe writes via the IOSurface
+    // (which is independent of GL FBO identity).
+    [m_impl->hwCtx makeCurrentContext];
 
     // 1) IOSurface — the cross-API backing store. BGRA8 matches what
     // Qt's Metal compositor expects when importing the texture later.
@@ -214,7 +222,10 @@ bool VideoHardwareGL::allocateFbo(int width, int height, bool depth) {
     }
     glGenTextures(1, &m_impl->colorTex);
     glBindTexture(GL_TEXTURE_RECTANGLE, m_impl->colorTex);
-    CGLContextObj cgl = [m_impl->mainCtx CGLContextObj];
+    // CGL requires the context handle to match the currently-current
+    // context. We're on hwCtx (allocateFbo's makeCurrentContext above),
+    // so query its CGL handle, not main's.
+    CGLContextObj cgl = [m_impl->hwCtx CGLContextObj];
     CGLError cglErr = CGLTexImageIOSurface2D(
         cgl, GL_TEXTURE_RECTANGLE, GL_RGBA,
         width, height,
@@ -306,6 +317,11 @@ uintptr_t VideoHardwareGL::getCurrentFramebufferThunk() {
                  s_activeInstance ? s_activeInstance->m_impl->fboId : 0);
         return 0;
     }
+    static int s_call = 0;
+    if ((s_call++ % 240) == 0) {
+        qInfo("[VideoHardwareGL] getCurrentFramebufferThunk #%d -> fbo=%u",
+              s_call, s_activeInstance->m_impl->fboId);
+    }
     return static_cast<uintptr_t>(s_activeInstance->m_impl->fboId);
 }
 
@@ -320,10 +336,19 @@ retro_proc_address_t VideoHardwareGL::getProcAddressThunk(const char* sym) {
 }
 
 void VideoHardwareGL::submitFrame(int width, int height) {
-    // Pending Phase 1f
+    // Pure pass-through after PPSSPP's render — flush to ensure GL
+    // commands have committed to the IOSurface before Metal reads.
+    glFlush();
     emit frameReady(width, height);
 }
 
 bool VideoHardwareGL::isReady() const {
     return m_impl->initialised;
 }
+
+void* VideoHardwareGL::currentIOSurface() const {
+    return static_cast<void*>(m_impl->ioSurface);
+}
+
+int VideoHardwareGL::fboWidth() const  { return m_impl->fboWidth;  }
+int VideoHardwareGL::fboHeight() const { return m_impl->fboHeight; }

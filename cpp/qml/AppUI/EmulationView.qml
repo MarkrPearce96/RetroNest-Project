@@ -35,14 +35,19 @@ Item {
         color: "black"
     }
 
-    // Loader switches between software (LibretroVideoItem) and Metal
-    // (LibretroMetalItem) based on the active core's backend preference.
+    // Loader switches between software (LibretroVideoItem), Metal
+    // (LibretroMetalItem — PCSX2 NSView), and GL (LibretroGLItem —
+    // PPSSPP via SET_HW_RENDER + IOSurface→MTLTexture import) based on
+    // the active core's backend preference.
     Loader {
         id: videoLoader
         anchors.fill: parent
-        sourceComponent: (root.session && root.session.libretroBackend === "metal")
-            ? metalComponent
-            : softwareComponent
+        sourceComponent: {
+            if (!root.session) return softwareComponent
+            if (root.session.libretroBackend === "metal") return metalComponent
+            if (root.session.libretroBackend === "gl")    return glComponent
+            return softwareComponent
+        }
 
         Component {
             id: softwareComponent
@@ -80,6 +85,40 @@ Item {
                     if (root.session)
                         root.session.registerHardwareView(0)
                 }
+            }
+        }
+
+        Component {
+            id: glComponent
+            LibretroGLItem {
+                id: glItem
+                anchors.fill: parent
+                aspectMode: root.session ? root.session.libretroAspectMode : "native"
+                integerScale: root.session ? root.session.libretroIntegerScale : false
+                nativeAspect: root.session ? root.session.libretroAspectRatio : (16.0 / 9.0)
+                // VideoHardwareGL is created lazily inside CoreRuntime's
+                // installHwRender callback during retro_load_game. By the
+                // time aboutToStartLibretro fires (which is what pushes
+                // this view), session.videoHardware() returns null. We
+                // poll on libretroBackendChanged and aspectRatioReported
+                // (the latter is emitted right after retro_get_system_av_info,
+                // by which point installHwRender has completed and the
+                // VideoHardwareGL exists).
+                function rewire() {
+                    if (root.session)
+                        glItem.setVideoHardware(root.session.videoHardware())
+                }
+                Component.onCompleted: rewire()
+                Connections {
+                    target: root.session
+                    // libretroAspectRatioChanged is the GameSession signal that
+                    // fires after CoreRuntime emits aspectRatioReported — by
+                    // which point installHwRender has completed and
+                    // session.videoHardware() returns non-null.
+                    function onLibretroAspectRatioChanged() { glItem.rewire() }
+                    function onLibretroBackendChanged()     { glItem.rewire() }
+                }
+                Component.onDestruction: glItem.setVideoHardware(null)
             }
         }
     }

@@ -84,12 +84,32 @@ public:
     }
 
     /**
-     * True if this core requires a hardware-rendering host context (CAMetalLayer
-     * on macOS). When true, EmulationView hosts LibretroMetalItem and registers
-     * its NSView with CoreRuntime before retro_load_game. When false (default),
-     * EmulationView hosts LibretroVideoItem and the core renders in software.
+     * Which HW render path this core uses. Drives EmulationView's Loader and
+     * GameSession's m_libretroBackend selection:
+     *   - None         → software (VideoSoftware → LibretroVideoItem QImage path).
+     *                    mGBA + any future SW libretro core.
+     *   - MetalNSView  → PCSX2's path: QQuickItem owns NSView, core draws Metal
+     *                    into it via the RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW
+     *                    extension. No GL/FBO involvement.
+     *   - GL           → standard libretro SET_HW_RENDER (RETRO_HW_CONTEXT_OPENGL_CORE).
+     *                    Frontend creates the NSOpenGL context pair + FBO via
+     *                    VideoHardwareGL; LibretroGLItem imports the FBO's
+     *                    IOSurface as a Metal texture for composite.
+     *                    PPSSPP, future Dolphin / Citra.
      */
-    virtual bool prefersHardwareRender() const { return false; }
+    enum class HardwareRenderBackend { None, MetalNSView, GL };
+    virtual HardwareRenderBackend hardwareRenderBackend() const {
+        return HardwareRenderBackend::None;
+    }
+
+    /**
+     * Convenience predicate retained for callers that only need to know
+     * whether the core wants ANY HW context. Returns true unless the
+     * subclass declares HardwareRenderBackend::None.
+     */
+    virtual bool prefersHardwareRender() const {
+        return hardwareRenderBackend() != HardwareRenderBackend::None;
+    }
 
 protected:
     /** Static path: {root}/emulators/libretro/cores/{core_dylib} */
