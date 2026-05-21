@@ -12,7 +12,7 @@
 #include <QDebug>
 
 #import <Foundation/Foundation.h>
-#import <AppKit/NSOpenGL.h>
+#import <AppKit/AppKit.h>
 #import <OpenGL/OpenGL.h>
 #import <OpenGL/gl3.h>
 #import <OpenGL/CGLIOSurface.h>
@@ -45,6 +45,11 @@ struct VideoHardwareGL::Impl {
     NSOpenGLPixelFormat* pixelFormat = nil;
     NSOpenGLContext*     hwCtx       = nil;   // core renders into this
     NSOpenGLContext*     mainCtx     = nil;   // frontend composites with this
+    // Path-A: hwCtx needs a real backing surface so FBO 0 is valid;
+    // without this PPSSPP's "render to default framebuffer" writes go
+    // nowhere. Offscreen NSWindow + NSView gives us that.
+    NSWindow*            backingWindow = nil;
+    NSView*              backingView   = nil;
     GLuint               fboId      = 0;
     GLuint               colorTex   = 0;   // GL_TEXTURE_RECTANGLE bound to ioSurface
     GLuint               depthRbo   = 0;   // 0 when fboHasDepth==false
@@ -120,6 +125,25 @@ bool VideoHardwareGL::init() {
         return false;
     }
 
+    // Path-A: offscreen NSWindow + NSView so hwCtx has a real FBO 0.
+    // Without this, PPSSPP's render-to-default-FBO path writes nowhere
+    // (default framebuffer of a contextless-view NSOpenGL context is
+    // a phantom). NSWindow MUST be constructed on the main thread —
+    // init() runs on the libretro worker thread, so dispatch_sync to
+    // the main queue. setView on hwCtx also has to go via main to
+    // keep AppKit happy with the cross-thread association.
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        NSRect rect = NSMakeRect(-10000, -10000, 480, 272);
+        m_impl->backingWindow =
+            [[NSWindow alloc] initWithContentRect:rect
+                                        styleMask:NSWindowStyleMaskBorderless
+                                          backing:NSBackingStoreBuffered
+                                            defer:NO];
+        m_impl->backingView = [[NSView alloc] initWithFrame:rect];
+        [m_impl->backingWindow setContentView:m_impl->backingView];
+        [m_impl->hwCtx setView:m_impl->backingView];
+    });
+
     m_impl->initialised = true;
     if (s_activeInstance && s_activeInstance != this) {
         qWarning("[VideoHardwareGL] init() called while another instance is "
@@ -128,7 +152,7 @@ bool VideoHardwareGL::init() {
     }
     s_activeInstance = this;
     qInfo("[VideoHardwareGL] init OK — pixel format + 2 shared NSOpenGLContexts "
-          "(GL 3.2 Core, depth=16)");
+          "+ offscreen NSView backing for hwCtx (GL 3.2 Core, depth=16)");
     return true;
 }
 
@@ -150,10 +174,15 @@ void VideoHardwareGL::shutdown() {
         m_impl->ioSurface = nullptr;
     }
 
-    // Contexts + pixel format: ARC releases when the strong refs drop.
-    m_impl->mainCtx     = nil;
-    m_impl->hwCtx       = nil;
-    m_impl->pixelFormat = nil;
+    // Contexts + pixel format + backing window: ARC releases when the
+    // strong refs drop. clearDrawable first so AppKit doesn't dangle
+    // the view pointer on the context after the view is released.
+    [m_impl->hwCtx clearDrawable];
+    m_impl->mainCtx       = nil;
+    m_impl->hwCtx         = nil;
+    m_impl->pixelFormat   = nil;
+    m_impl->backingView   = nil;
+    m_impl->backingWindow = nil;
     m_impl->fboWidth = 0;
     m_impl->fboHeight = 0;
     m_impl->fboHasDepth = false;
@@ -309,20 +338,12 @@ void VideoHardwareGL::makeMainCurrent() {
 }
 
 uintptr_t VideoHardwareGL::getCurrentFramebufferThunk() {
-    if (!s_activeInstance || !s_activeInstance->m_impl->fboId) {
-        qWarning("[VideoHardwareGL] getCurrentFramebufferThunk: no active FBO "
-                 "(instance=%p fboId=%u) — core will render to GL default FB "
-                 "and the frame won't reach our composite path",
-                 (void*)s_activeInstance,
-                 s_activeInstance ? s_activeInstance->m_impl->fboId : 0);
-        return 0;
-    }
-    static int s_call = 0;
-    if ((s_call++ % 240) == 0) {
-        qInfo("[VideoHardwareGL] getCurrentFramebufferThunk #%d -> fbo=%u",
-              s_call, s_activeInstance->m_impl->fboId);
-    }
-    return static_cast<uintptr_t>(s_activeInstance->m_impl->fboId);
+    // Path-A: return 0 so PPSSPP renders into the NSView-backed default
+    // framebuffer (which IS a real surface now that we setView'd
+    // hwCtx). submitFrame blits from FBO 0 to our IOSurface-backed
+    // FBO 1 for Metal compositing. Returning our FBO directly proved
+    // not to work — PPSSPP's present-step writes never landed there.
+    return 0;
 }
 
 retro_proc_address_t VideoHardwareGL::getProcAddressThunk(const char* sym) {
@@ -336,8 +357,19 @@ retro_proc_address_t VideoHardwareGL::getProcAddressThunk(const char* sym) {
 }
 
 void VideoHardwareGL::submitFrame(int width, int height) {
-    // Pure pass-through after PPSSPP's render — flush to ensure GL
-    // commands have committed to the IOSurface before Metal reads.
+    // Path-A wip: blit PPSSPP's render (FBO 0 = NSView's default
+    // framebuffer) into our IOSurface-backed FBO 1 so Metal can sample
+    // it. Currently broken — FBO 0 stays empty (PPSSPP isn't writing
+    // to it either) and the blit produces GL_INVALID_OPERATION after
+    // the first frame. See project_task7_status.md for next steps.
+    if (m_impl->fboId) {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_impl->fboId);
+        glBlitFramebuffer(0, 0, width, height,
+                          0, 0, m_impl->fboWidth, m_impl->fboHeight,
+                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
     glFlush();
     emit frameReady(width, height);
 }
