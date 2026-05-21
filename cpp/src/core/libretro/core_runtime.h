@@ -13,9 +13,11 @@
 #include <QImage>
 #include <atomic>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 
 class SdlInputManager;
+class VideoHardwareGL;
 
 class CoreRuntime : public QObject {
     Q_OBJECT
@@ -129,6 +131,23 @@ public:
     void setSdlInputManager(SdlInputManager* sdl) { m_sdlInput = sdl; }
     SdlInputManager* sdlInputManager() const { return m_sdlInput; }
 
+    /**
+     * Install a libretro hardware render context. Called from the env
+     * handler when the core requests RETRO_ENVIRONMENT_SET_HW_RENDER.
+     * Returns true if the request was honoured; false if we can't grant
+     * (unsupported context type, NSOpenGL creation failure, etc.). On
+     * success the runtime owns a VideoHardwareGL instance and the
+     * callback struct is mutated in place to point its get_proc_address
+     * and get_current_framebuffer fields at our thunks.
+     *
+     * Called on the libretro worker thread during retro_load_game.
+     */
+    bool installHwRender(retro_hw_render_callback* cb);
+
+    /** Live VideoHardwareGL when a HW core is loaded; nullptr otherwise.
+     *  Caller must not store the pointer past stop(). */
+    VideoHardwareGL* videoHW() const { return m_videoHW.get(); }
+
 signals:
     void started();
     void finished(bool crashed);
@@ -191,4 +210,11 @@ private:
 
     double m_frameDurationSec = 1.0 / 60.0;
     int m_sampleRate = 48000;
+
+    // Hardware render path — populated by installHwRender() when the
+    // core asks for SET_HW_RENDER with a context type we can grant.
+    // m_hwRenderCb is the stashed copy of the core-supplied struct
+    // (we need context_reset / context_destroy for later lifecycle).
+    std::unique_ptr<VideoHardwareGL> m_videoHW;
+    retro_hw_render_callback m_hwRenderCb{};
 };

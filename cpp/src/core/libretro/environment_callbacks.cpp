@@ -76,6 +76,18 @@ void coreRuntimeEmitMessage(void* runtime_opaque,
     (void)runtime_opaque; (void)text; (void)durationMs;
 }
 
+// Weak stub for the hw-render install bridge — strong override in
+// core_runtime.cpp. Returning false from the stub means tests that link
+// without the runtime see "HW render not available" and the env handler
+// falls back to its software branch.
+extern "C" bool coreRuntimeInstallHwRender(void* runtime_opaque,
+                                            retro_hw_render_callback* cb) __attribute__((weak));
+bool coreRuntimeInstallHwRender(void* runtime_opaque,
+                                 retro_hw_render_callback* cb) {
+    (void)runtime_opaque; (void)cb;
+    return false;
+}
+
 // Static thunk the core stores via retro_rumble_interface.set_rumble_state.
 // libretro doesn't pass our context pointer to the thunk, so we route
 // through a file-scope pointer stashed at GET_RUMBLE_INTERFACE time.
@@ -106,27 +118,24 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             return true;
         }
         case RETRO_ENVIRONMENT_SET_HW_RENDER: {
-            // Task #7 stub: capture the request and log, but return false
-            // because we can't yet grant a context. PPSSPP libretro falls back
-            // to software rendering when this returns false — black screen
-            // with audio, which is what we observe today. The real handler
-            // will create an NSOpenGLContext pair (main + shared hw), allocate
-            // an FBO, overwrite cb->get_current_framebuffer and
-            // cb->get_proc_address, and return true. context_reset stays
-            // deferred until CoreRuntime finishes video init.
+            // Task #7 step 4: dispatch to CoreRuntime::installHwRender. The
+            // runtime decides whether the requested context type is grantable;
+            // when true is returned the cb struct has been mutated with our
+            // get_proc_address / get_current_framebuffer thunks. The core
+            // (PPSSPP) then proceeds with HW rendering; CoreRuntime fires
+            // context_reset after retro_load_game returns (step 5).
             auto* cb = static_cast<retro_hw_render_callback*>(data);
             if (!cb) return false;
             ctx->hwRender = *cb;
             ctx->hwRenderRequested = true;
-            qInfo("[libretro/env] SET_HW_RENDER stub: context_type=%u version=%u.%u "
-                  "depth=%d stencil=%d bottom_left_origin=%d cache_context=%d — "
-                  "returning false (real grant pending task #7)",
+            qInfo("[libretro/env] SET_HW_RENDER: context_type=%u version=%u.%u "
+                  "depth=%d stencil=%d bottom_left_origin=%d cache_context=%d",
                   static_cast<unsigned>(cb->context_type),
                   cb->version_major, cb->version_minor,
                   static_cast<int>(cb->depth), static_cast<int>(cb->stencil),
                   static_cast<int>(cb->bottom_left_origin),
                   static_cast<int>(cb->cache_context));
-            return false;
+            return coreRuntimeInstallHwRender(ctx->runtime, cb);
         }
         case RETRO_ENVIRONMENT_SET_HW_SHARED_CONTEXT: {
             // Hint flag — record that the core wants a shared GL context.

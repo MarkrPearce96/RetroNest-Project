@@ -1,5 +1,6 @@
 #include "core_runtime.h"
 #include "core/libretro/hotkey_matcher.h"
+#include "core/libretro/video_hardware_gl.h"
 #include "core/path_overrides_store.h"
 #include "core/sdl_input_manager.h"
 #include <QCoreApplication>
@@ -79,7 +80,25 @@ bool CoreRuntime::envTrampoline(unsigned cmd, void* data) {
 }
 
 void CoreRuntime::videoTrampoline(const void* data, unsigned w, unsigned h, size_t pitch) {
-    if (!g_current || !data) return;
+    if (!g_current) return;
+
+    // Task #7 step 6: HW frames arrive with `data == RETRO_HW_FRAME_BUFFER_VALID`
+    // (the libretro sentinel meaning "I rendered into the FBO returned by
+    // get_current_framebuffer; ignore the data pointer"). RETRO_HW_FRAME_BUFFER_VALID
+    // is `(void*)-1`, so the old `!data` early-out passed it through and
+    // VideoSoftware::convert tried to memcpy from 0xff...ff — crash.
+    // Branch on the sentinel before any pointer dereference.
+    if (data == RETRO_HW_FRAME_BUFFER_VALID) {
+        if (g_current->m_videoHW) {
+            g_current->m_videoHW->submitFrame(static_cast<int>(w),
+                                              static_cast<int>(h));
+        }
+        return;
+    }
+
+    // Software path (mGBA + any future SW core). nullptr is the libretro
+    // "duped frame" signal — just no-op.
+    if (!data) return;
     auto pf = g_current->m_envCtx.pixelFormat;
     VideoSoftware::PixelFormat ours =
         (pf == RETRO_PIXEL_FORMAT_RGB565)   ? VideoSoftware::PixelFormat::RGB565   :
@@ -385,6 +404,36 @@ void CoreRuntime::runLoop() {
                         static_cast<int>(av.geometry.base_height),
                         static_cast<int>(av.geometry.max_width),
                         static_cast<int>(av.geometry.max_height));
+
+    // Task #7 step 5: HW render bootstrap. installHwRender (called from
+    // env_cb during retro_load_game above) already created the
+    // NSOpenGLContext pair if the core requested OPENGL_CORE. Now that we
+    // have av_info geometry, allocate the FBO and trigger context_reset
+    // on the HW context — that's the callback PPSSPP uses to run
+    // glewInit + CreateDrawContext, which boots its GL render manager.
+    //
+    // Order matters: allocateFbo runs GL calls on the main context (it
+    // calls makeMainCurrent internally). Then we switch to the HW
+    // context before context_reset so PPSSPP's glewInit and resource
+    // creation land on hwCtx. The two contexts share resources, so the
+    // FBO + textures created on mainCtx are visible from hwCtx via the
+    // NSOpenGL share-group — same pattern RetroArch uses on macOS.
+    if (m_videoHW && m_videoHW->isReady()) {
+        const bool fboOk = m_videoHW->allocateFbo(
+            static_cast<int>(av.geometry.base_width),
+            static_cast<int>(av.geometry.base_height),
+            m_hwRenderCb.depth);
+        if (!fboOk) {
+            qCritical("[CoreRuntime] HW FBO allocation failed — frames "
+                      "won't reach the composite path");
+        } else if (m_hwRenderCb.context_reset) {
+            m_videoHW->makeHwCurrent();
+            qInfo("[CoreRuntime] calling hw_render.context_reset() — PPSSPP "
+                  "runs glewInit + CreateDrawContext from here");
+            m_hwRenderCb.context_reset();
+        }
+    }
+
     // Surface the core's display-aspect hint to GameSession (it forwards
     // to QML's LibretroMetalItem.nativeAspect so the HW render bridge
     // letterboxes correctly). Zero is a valid "not specified" sentinel —
@@ -512,6 +561,24 @@ void CoreRuntime::runLoop() {
 
     m_rcheevos.endSession();
     s.retro_unload_game();
+
+    // Task #7 step 5 teardown: tell the core to release its GL resources
+    // (PPSSPP's ContextDestroy stops the emu thread + drops draw_), then
+    // tear down our FBO + NSOpenGL contexts. Order mirrors RetroArch:
+    // unload_game first, then context_destroy, then deinit. Must be on
+    // the HW context when context_destroy runs — PPSSPP calls into its
+    // own draw context which expects the same thread/context as ctx
+    // reset.
+    if (m_videoHW && m_videoHW->isReady()) {
+        if (m_hwRenderCb.context_destroy) {
+            m_videoHW->makeHwCurrent();
+            m_hwRenderCb.context_destroy();
+        }
+        m_videoHW->shutdown();
+        m_videoHW.reset();
+        m_hwRenderCb = {};
+    }
+
     s.retro_deinit();
     m_audio.close();
     m_loader.close();
@@ -559,4 +626,61 @@ extern "C" void coreRuntimeEmitMessage(void* runtime_opaque,
     if (!runtime_opaque || !text) return;
     auto* rt = static_cast<CoreRuntime*>(runtime_opaque);
     emit rt->coreMessage(QString::fromUtf8(text), durationMs);
+}
+
+bool CoreRuntime::installHwRender(retro_hw_render_callback* cb) {
+    if (!cb) {
+        qWarning("[CoreRuntime] installHwRender: null callback");
+        return false;
+    }
+    // Only OPENGL_CORE today (PPSSPP's preferred ask). The fallback
+    // chain (compat OPENGL / VULKAN / D3D11) lands in future phases —
+    // until then PPSSPP retries with OPENGL after we reject OPENGL_CORE,
+    // which we'd also reject without this gate. Return false for
+    // unsupported types so the core's CreateGraphicsContext loop can
+    // walk to its next preference.
+    if (cb->context_type != RETRO_HW_CONTEXT_OPENGL_CORE) {
+        qInfo("[CoreRuntime] installHwRender: context_type=%u not yet "
+              "supported (only OPENGL_CORE for now) — returning false so "
+              "the core can try its next fallback",
+              static_cast<unsigned>(cb->context_type));
+        return false;
+    }
+
+    if (!m_videoHW) {
+        m_videoHW = std::make_unique<VideoHardwareGL>();
+    }
+    if (!m_videoHW->init()) {
+        qCritical("[CoreRuntime] installHwRender: VideoHardwareGL::init() failed; "
+                  "dropping HW context and falling back to software path");
+        m_videoHW.reset();
+        return false;
+    }
+
+    // Stash the callback (we need context_reset / context_destroy for
+    // lifecycle in subsequent steps), then overwrite the core's
+    // function-pointer fields to point at our static thunks. The
+    // mutation in place follows the libretro spec — RetroArch does the
+    // same at runloop.c:3413-3425.
+    m_hwRenderCb = *cb;
+    cb->get_current_framebuffer = &VideoHardwareGL::getCurrentFramebufferThunk;
+    cb->get_proc_address         = &VideoHardwareGL::getProcAddressThunk;
+
+    qInfo("[CoreRuntime] installHwRender: OPENGL_CORE %u.%u depth=%d "
+          "stencil=%d bottom_left_origin=%d cache_context=%d — granted",
+          m_hwRenderCb.version_major, m_hwRenderCb.version_minor,
+          static_cast<int>(m_hwRenderCb.depth),
+          static_cast<int>(m_hwRenderCb.stencil),
+          static_cast<int>(m_hwRenderCb.bottom_left_origin),
+          static_cast<int>(m_hwRenderCb.cache_context));
+    return true;
+}
+
+// Strong implementation of weak stub from environment_callbacks.cpp.
+// Called by environmentDispatch when the core invokes SET_HW_RENDER.
+extern "C" bool coreRuntimeInstallHwRender(void* runtime_opaque,
+                                            retro_hw_render_callback* cb) {
+    if (!runtime_opaque || !cb) return false;
+    auto* rt = static_cast<CoreRuntime*>(runtime_opaque);
+    return rt->installHwRender(cb);
 }

@@ -88,9 +88,9 @@ set(SOURCES
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/video_hardware_gl.mm
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
-    src/core/libretro/video_hardware_gl.mm
     src/core/libretro/audio_sink.cpp
     src/core/libretro/input_router.cpp
     src/core/libretro/libretro_hotkey_defs.cpp
@@ -290,12 +290,15 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 if(APPLE)
     set_source_files_properties(
         src/ui/libretro/libretro_metal_item.mm
+        src/core/libretro/video_hardware_gl.mm
         PROPERTIES
         COMPILE_FLAGS "-fobjc-arc"
     )
     target_link_libraries(${PROJECT_NAME} PRIVATE
         "-framework QuartzCore"
         "-framework Metal"
+        "-framework OpenGL"
+        "-framework IOSurface"
     )
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
@@ -500,6 +503,7 @@ add_executable(test_hotkey_service_libretro
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/video_hardware_gl.mm
     src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
@@ -524,7 +528,7 @@ target_include_directories(test_hotkey_service_libretro PRIVATE
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
     ${SDL2_INCLUDE_DIRS}
 )
-target_link_libraries(test_hotkey_service_libretro PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries(test_hotkey_service_libretro PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
 add_test(NAME HotkeyServiceLibretro COMMAND test_hotkey_service_libretro)
 
 add_executable(test_hotkey_matcher
@@ -562,6 +566,7 @@ add_executable(test_rom_scanner
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/video_hardware_gl.mm
     src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
@@ -582,7 +587,7 @@ target_include_directories(test_rom_scanner PRIVATE
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
     ${SDL2_INCLUDE_DIRS}
 )
-target_link_libraries(test_rom_scanner PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries(test_rom_scanner PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
 add_test(NAME RomScanner COMMAND test_rom_scanner)
 
 add_executable(test_iso9660_reader
@@ -747,6 +752,7 @@ add_executable(test_controller_bindings_view
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/video_hardware_gl.mm
     src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
@@ -774,6 +780,7 @@ target_include_directories(test_controller_bindings_view PRIVATE
 target_link_libraries(test_controller_bindings_view PRIVATE
     Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg Qt6::Network Qt6::Sql Qt6::Test
     chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS}
+    "-framework OpenGL" "-framework IOSurface"
 )
 add_test(NAME ControllerBindingsView COMMAND test_controller_bindings_view)
 
@@ -842,6 +849,7 @@ add_executable(test_quick_settings_file_field
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/video_hardware_gl.mm
     src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
@@ -865,7 +873,7 @@ target_include_directories(test_quick_settings_file_field PRIVATE
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
     ${SDL2_INCLUDE_DIRS}
 )
-target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
 add_test(NAME QuickSettingsFileField COMMAND test_quick_settings_file_field)
 
 add_executable(test_settings_toggle
@@ -981,6 +989,7 @@ add_executable(test_game_session_save_slot
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/video_hardware_gl.mm
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
     src/core/libretro/audio_sink.cpp
@@ -1005,7 +1014,7 @@ target_include_directories(test_game_session_save_slot PRIVATE
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
     ${SDL2_INCLUDE_DIRS}
 )
-target_link_libraries(test_game_session_save_slot PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries(test_game_session_save_slot PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
 add_test(NAME GameSessionSaveSlot COMMAND test_game_session_save_slot)
 
 add_executable(test_input_router
@@ -1042,6 +1051,7 @@ add_test(NAME EnvironmentCallbacks COMMAND test_environment_callbacks)
 add_executable(test_core_runtime
     tests/test_core_runtime.cpp
     src/core/libretro/core_runtime.cpp
+    src/core/libretro/video_hardware_gl.mm
     src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/rcheevos_runtime.cpp
     src/core/libretro/core_loader.cpp
@@ -1059,7 +1069,8 @@ target_include_directories(test_core_runtime PRIVATE
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
     ${SDL2_INCLUDE_DIRS})
 target_link_libraries(test_core_runtime PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES} rcheevos_static)
+    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES} rcheevos_static
+    "-framework OpenGL" "-framework IOSurface")
 add_dependencies(test_core_runtime fake_libretro_core)
 add_test(NAME CoreRuntime COMMAND test_core_runtime)
 

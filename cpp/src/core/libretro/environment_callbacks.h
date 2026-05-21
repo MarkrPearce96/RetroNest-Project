@@ -144,3 +144,16 @@ extern "C" bool coreRuntimeSetRumbleMotor(void* runtime_opaque,
 extern "C" void coreRuntimeEmitMessage(void* runtime_opaque,
                                        const char* text,
                                        int durationMs);
+
+/**
+ * Bridge into CoreRuntime::installHwRender — called from the env handler
+ * on RETRO_ENVIRONMENT_SET_HW_RENDER. Mirrors the coreRuntimeGetActiveNSView
+ * weak-stub-plus-strong-override pattern so test_environment_callbacks can
+ * link without the runtime.
+ *
+ * Returns true if the runtime granted the requested context type. The cb
+ * pointer is mutated in place — its get_proc_address and
+ * get_current_framebuffer fields are overwritten when true is returned.
+ */
+extern "C" bool coreRuntimeInstallHwRender(void* runtime_opaque,
+                                            retro_hw_render_callback* cb);
