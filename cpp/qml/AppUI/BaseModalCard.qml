@@ -65,7 +65,7 @@ Item {
     // "Text input caveat"). With this in place, the modal's own
     // `Keys.onPressed` reliably runs the close, regardless of whether the
     // universal Shortcut's `enabled` binding has settled.
-    Keys.shortcutOverride: function(event) {
+    Keys.onShortcutOverride: function(event) {
         if (!visible) return
         if (event.key === Qt.Key_Escape
                 || event.key === Qt.Key_Backspace
