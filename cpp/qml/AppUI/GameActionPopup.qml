@@ -264,11 +264,13 @@ BaseModalCard {
                     return
                 executeAction(actionId)
                 event.accepted = true
-            } else if (event.key === Qt.Key_M) {
+            } else if (event.key === Qt.Key_M
+                       || event.key === Qt.Key_Escape
+                       || event.key === Qt.Key_Backspace
+                       || event.key === Qt.Key_Back) {
                 close()
                 event.accepted = true
             }
-            // Escape/Back handled by BaseModalCard → emits closeRequested
         } else if (popupState === "confirm") {
             if (event.key === Qt.Key_Left) {
                 focusIndex = 0
@@ -280,11 +282,12 @@ BaseModalCard {
                 if (focusIndex === 0) confirmRemove()
                 else cancelRemove()
                 event.accepted = true
+            } else if (event.key === Qt.Key_Escape
+                       || event.key === Qt.Key_Backspace
+                       || event.key === Qt.Key_Back) {
+                close()
+                event.accepted = true
             }
-            // Escape/Back in confirm: BaseModalCard's closeRequested closes
-            // the dialog entirely. Pre-migration would cancel back to actions;
-            // new behavior is simpler. To restore: override onCloseRequested
-            // to dispatch on popupState (see plan for the override snippet).
         }
     }
 }

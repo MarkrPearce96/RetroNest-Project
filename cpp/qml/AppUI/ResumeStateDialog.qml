@@ -106,7 +106,11 @@ BaseModalCard {
             if (focusIndex === 0) resumeChosen()
             else startFreshChosen()
             event.accepted = true
+        } else if (event.key === Qt.Key_Escape
+                   || event.key === Qt.Key_Backspace
+                   || event.key === Qt.Key_Back) {
+            closeRequested()
+            event.accepted = true
         }
-        // Escape/Back handled by BaseModalCard → emits closeRequested
     }
 }

@@ -44,9 +44,15 @@ Item {
         // overflow (e.g. ButtonHints floating below the card) renders.
     }
 
+    // Only fires for derived modals that do NOT define their own Keys.onPressed.
+    // QML attached-property semantics mean a derived Keys.onPressed fully replaces
+    // this one — derived modals with custom key handling must call closeRequested()
+    // themselves on Esc / Backspace / Back.
     Keys.onPressed: function(event) {
         if (!visible) return
-        if (event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
+        if (event.key === Qt.Key_Escape
+                || event.key === Qt.Key_Backspace
+                || event.key === Qt.Key_Back) {
             event.accepted = true
             root.closeRequested()
         }
