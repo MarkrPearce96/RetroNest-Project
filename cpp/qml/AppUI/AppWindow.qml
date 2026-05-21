@@ -132,20 +132,24 @@ ApplicationWindow {
         }
     }
 
-    // Settings overlay (Escape key)
-    SettingsOverlay {
-        id: settingsOverlay
-        // While the settings overlay is shown, suppress libretro hotkey
-        // dispatch so Esc/arrows/etc reach the overlay instead of
-        // triggering ToggleMenu, save state, etc. Tied to panelOpen (the
-        // user-intent flag) rather than `visible`, because `visible` only
-        // clears after the slide-out animation completes and can race.
-        onPanelOpenChanged: app.libretroHotkeysSuppressed = panelOpen
-    }
+    SettingsOverlay { id: settingsOverlay }
 
     // Game action popup (M key / Triangle button)
     GameActionPopup {
         id: gameActionPopup
+    }
+
+    // Suppress libretro hotkey dispatch whenever ANY app-level modal is
+    // showing — otherwise the HotkeyMatcher event filter consumes Esc (and
+    // other bound keys) before the focused modal's Keys.onPressed can run.
+    // SettingsOverlay is tied to panelOpen (user-intent flag) instead of
+    // visible because visible lags the slide-out animation and can race.
+    Binding {
+        target: app
+        property: "libretroHotkeysSuppressed"
+        value: settingsOverlay.panelOpen
+               || gameActionPopup.visible
+               || resumeStateDialog.visible
     }
 
     Component {
