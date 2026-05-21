@@ -93,6 +93,49 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
     switch (cmd) {
         case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
             return handlePixelFormat(ctx, data);
+        case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER: {
+            // PPSSPP queries this before SET_HW_RENDER to decide which
+            // context to ask for first. Returning OPENGL_CORE skips its
+            // fallback chain (it would otherwise try OPENGL_CORE → OPENGL
+            // → VULKAN one-by-one). Once HW render lands properly this
+            // makes the init path cleaner; in the meantime it just
+            // reduces log noise.
+            if (!data) return false;
+            *static_cast<unsigned*>(data) =
+                static_cast<unsigned>(RETRO_HW_CONTEXT_OPENGL_CORE);
+            return true;
+        }
+        case RETRO_ENVIRONMENT_SET_HW_RENDER: {
+            // Task #7 stub: capture the request and log, but return false
+            // because we can't yet grant a context. PPSSPP libretro falls back
+            // to software rendering when this returns false — black screen
+            // with audio, which is what we observe today. The real handler
+            // will create an NSOpenGLContext pair (main + shared hw), allocate
+            // an FBO, overwrite cb->get_current_framebuffer and
+            // cb->get_proc_address, and return true. context_reset stays
+            // deferred until CoreRuntime finishes video init.
+            auto* cb = static_cast<retro_hw_render_callback*>(data);
+            if (!cb) return false;
+            ctx->hwRender = *cb;
+            ctx->hwRenderRequested = true;
+            qInfo("[libretro/env] SET_HW_RENDER stub: context_type=%u version=%u.%u "
+                  "depth=%d stencil=%d bottom_left_origin=%d cache_context=%d — "
+                  "returning false (real grant pending task #7)",
+                  static_cast<unsigned>(cb->context_type),
+                  cb->version_major, cb->version_minor,
+                  static_cast<int>(cb->depth), static_cast<int>(cb->stencil),
+                  static_cast<int>(cb->bottom_left_origin),
+                  static_cast<int>(cb->cache_context));
+            return false;
+        }
+        case RETRO_ENVIRONMENT_SET_HW_SHARED_CONTEXT: {
+            // Hint flag — record that the core wants a shared GL context.
+            // Returning true is safe (no work owed). PPSSPP libretro does
+            // not call this; left here for future GL cores that do.
+            ctx->hwSharedContextRequested = true;
+            qInfo("[libretro/env] SET_HW_SHARED_CONTEXT: noted (no-op stub)");
+            return true;
+        }
         case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
             *static_cast<const char**>(data) = ctx->systemDirectory.constData();
             return true;

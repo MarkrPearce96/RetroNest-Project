@@ -1,11 +1,14 @@
 {
   "id": "ppsspp",
   "name": "PPSSPP",
-  "description": "PPSSPP is a PSP emulator. Play PSP games in HD with save states, controller support, and custom configurations.",
+  "description": "PSP emulator (libretro core)",
   "systems": ["psp"],
-  "github_repo": "hrydgard/ppsspp",
-  "executable": "PPSSPPSDL",
-  "install_folder": "ppsspp",
+  "github_repo": "markrpearce96/ppsspp-libretro",
+  "executable": "ppsspp_libretro.dylib",
+  "install_folder": "libretro",
   "rom_extensions": ["iso", "cso", "chd", "pbp", "elf", "prx"],
-  "launch_args": ["--fullscreen", "--escape-exit", "{rom_path}"]
+  "launch_args": [],
+  "backend": "libretro",
+  "core_dylib": "ppsspp_libretro.dylib",
+  "core_buildbot_path": "ppsspp_libretro.dylib.zip"
 }

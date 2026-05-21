@@ -85,10 +85,12 @@ set(SOURCES
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
+    src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/environment_callbacks.cpp
     src/core/libretro/video_software.cpp
+    src/core/libretro/video_hardware_gl.mm
     src/core/libretro/audio_sink.cpp
     src/core/libretro/input_router.cpp
     src/core/libretro/libretro_hotkey_defs.cpp
@@ -152,11 +154,13 @@ set(HEADERS
     src/adapters/libretro/libretro_adapter.h
     src/adapters/libretro/mgba_libretro_adapter.h
     src/adapters/libretro/pcsx2_libretro_adapter.h
+    src/adapters/libretro/ppsspp_libretro_adapter.h
     src/core/libretro/core_loader.h
     src/core/libretro/core_runtime.h
     src/core/libretro/rcheevos_runtime.h
     src/core/libretro/environment_callbacks.h
     src/core/libretro/video_software.h
+    src/core/libretro/video_hardware_gl.h
     src/core/libretro/audio_sink.h
     src/core/libretro/input_router.h
     src/core/sfo_parser.h
@@ -493,6 +497,7 @@ add_executable(test_hotkey_service_libretro
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
+    src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/hotkey_matcher.cpp
@@ -554,6 +559,7 @@ add_executable(test_rom_scanner
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
+    src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/hotkey_matcher.cpp
@@ -738,6 +744,7 @@ add_executable(test_controller_bindings_view
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
+    src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/hotkey_matcher.cpp
@@ -832,6 +839,7 @@ add_executable(test_quick_settings_file_field
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
+    src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/hotkey_matcher.cpp
@@ -970,6 +978,7 @@ add_executable(test_game_session_save_slot
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
+    src/adapters/libretro/ppsspp_libretro_adapter.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/environment_callbacks.cpp

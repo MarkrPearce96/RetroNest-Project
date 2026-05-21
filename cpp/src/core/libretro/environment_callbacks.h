@@ -84,6 +84,22 @@ struct EnvironmentContext {
     QVector<QByteArray> memoryAddrspaces;   // backing storage for descriptor.addrspace
     retro_memory_map memoryMap{};            // points into memoryDescriptors
     bool memoryMapSet = false;
+
+    // Task #7 stub: captured from RETRO_ENVIRONMENT_SET_HW_RENDER. The dispatch
+    // currently returns false (we can't yet grant a context), but stashing the
+    // callback lets us diagnose what cores are asking for and gives the real
+    // implementation a place to land. context_type values of interest:
+    // RETRO_HW_CONTEXT_OPENGL_CORE (PPSSPP), VULKAN (future), D3D11 (Windows).
+    retro_hw_render_callback hwRender{};
+    bool hwRenderRequested = false;
+
+    // Task #7 stub: RETRO_ENVIRONMENT_SET_HW_SHARED_CONTEXT is a hint that
+    // the core will spawn threads needing GL access. PPSSPP libretro does NOT
+    // call this (see reference_retroarch_ppsspp_pattern.md) but we accept it
+    // for any future GL core that does. RetroArch's user-config default for
+    // video_shared_context is true regardless of this flag, so the real
+    // implementation will create shared contexts unconditionally.
+    bool hwSharedContextRequested = false;
 };
 
 /** Returns true if the enum was handled (libretro semantics). */
