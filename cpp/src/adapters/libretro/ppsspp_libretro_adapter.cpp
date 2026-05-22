@@ -243,7 +243,7 @@ QVector<SettingDef> PpssppLibretroAdapter::settingsSchema() const {
              "Use the slow but maximum-accuracy software renderer instead of the GPU backend. Diagnostic / accuracy testing.");
 
     s << optLabeled("ppsspp_internal_resolution", "Rendering Resolution",
-                    "1920x1088",
+                    "960x544",
                     { { "1x (480x272)",     "480x272" },
                       { "2x (960x544)",     "960x544" },
                       { "3x (1440x816)",    "1440x816" },
@@ -479,7 +479,7 @@ QVector<SettingDef> PpssppLibretroAdapter::settingsSchema() const {
              "Emulates a PSP-1000 (32MB RAM) or PSP-2000/3000 (64MB RAM). A few games behave differently.");
 
     s << optLabeled("ppsspp_internal_resolution", "Rendering Resolution",
-                    "1920x1088",
+                    "960x544",
                     { { "1x (480x272)",     "480x272" },
                       { "2x (960x544)",     "960x544" },
                       { "3x (1440x816)",    "1440x816" },
