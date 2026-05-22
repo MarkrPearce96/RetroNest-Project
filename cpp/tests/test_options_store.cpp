@@ -64,20 +64,29 @@ private slots:
         QTemporaryDir d;
         QString path = d.path() + "/options.json";
         QVector<CoreOption> coreOpts = {
-            {"mgba_skip_bios", "Skip BIOS", "OFF", {"OFF","ON"}},
+            {"mgba_solar_sensor_level", "Solar", "0", {"0","1","2","3"}},
         };
-        // Seed an existing on-disk value.
+        // Seed an existing on-disk value distinct from both upstream "0" and schema "2".
         {
             OptionsStore s;
             s.load(path, coreOpts);
-            s.set("mgba_skip_bios", "OFF");
+            s.set("mgba_solar_sensor_level", "3");
             s.save();
         }
-        // Schema says "ON", but the on-disk "OFF" must win.
+        // Schema says "2", upstream says "0", existing says "3". Existing must win.
         OptionsStore s2;
-        QHash<QString, QString> schemaDefaults = { {"mgba_skip_bios", "ON"} };
+        QHash<QString, QString> schemaDefaults = { {"mgba_solar_sensor_level", "2"} };
         QVERIFY(s2.load(path, coreOpts, schemaDefaults));
-        QCOMPARE(s2.get("mgba_skip_bios"), QString("OFF"));
+        QCOMPARE(s2.get("mgba_solar_sensor_level"), QString("3"));
+    }
+    void testSchemaDefaultAppliedInMemoryMode() {
+        OptionsStore s;
+        QVector<CoreOption> coreOpts = {
+            {"mgba_skip_bios", "Skip BIOS", "OFF", {"OFF","ON"}},
+        };
+        QHash<QString, QString> schemaDefaults = { {"mgba_skip_bios", "ON"} };
+        QVERIFY(s.load(":memory:", coreOpts, schemaDefaults));
+        QCOMPARE(s.get("mgba_skip_bios"), QString("ON"));
     }
     void testInvalidSchemaDefaultFallsBackToUpstream() {
         QTemporaryDir d;
