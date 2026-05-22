@@ -94,24 +94,27 @@ enum class ShowStatusFlags {
 };
 ```
 
-From `Core/Config.h:646` and `UI/DevScreens.cpp:89-103`:
+From `Core/Config.h:646` and `Core/ConfigValues.h:253-266`:
 ```cpp
-int iDebugOverlay;  // values per enum DebugOverlay; menu order:
-//   0: "Off"
-//   1: "Debug stats"
-//   2: "Draw Frametimes Graph"
-//   3: "Frame timing"
-//   4: "Frame profile"        (only if USE_PROFILER defined — NOT in libretro builds)
-//   5: "Control Debug"
-//   6: "Audio Debug"
-//   7: "GPU Profile"
-//   8: "GPU Allocator Viewer"
-//   9: "Framebuffer list"
+enum class DebugOverlay : int {
+    OFF,                  // 0
+    DEBUG_STATS,          // 1
+    FRAME_GRAPH,          // 2
+    FRAME_TIMING,         // 3
+#ifdef USE_PROFILER
+    FRAME_PROFILE,
+#endif
+    CONTROL,              // 4 (when USE_PROFILER undefined)
+    Audio,                // 5
+    GPU_PROFILE,          // 6
+    GPU_ALLOCATOR,        // 7
+    FRAMEBUFFER_LIST,     // 8
+};
 ```
 
-**Critical:** The libretro core is built without `USE_PROFILER`, so index 4 ("Frame profile") must be **omitted** from the libretro option's value list to keep indices stable. The libretro option will expose 9 values mapped to enum indices 0,1,2,3,5,6,7,8,9.
+**Verified:** `USE_PROFILER` is never defined anywhere in the source tree (grep found no `#define USE_PROFILER` outside the commented `// #define USE_PROFILER` in `Common/Profiler/Profiler.h:5`, and the libretro CMake / Makefile set no such flag). So the enum is **compactly numbered 0..8** in every build — there is no gap to skip, and the libretro option's 9 values map 1:1 to enum indices 0..8. No mapping table needed.
 
-Verification step (during the plan): dump the actual `enum DebugOverlay` from `Core/ConfigValues.h` to confirm the index assignments before wiring.
+Plan still includes a defensive verification step that re-runs the grep before wiring, so the assumption is checked rather than trusted.
 
 ### The 4 new libretro options
 
@@ -147,19 +150,19 @@ In `libretro/libretro.cpp`, immediately after the existing `ppsspp_psp_model` bl
       g_Config.iShowStatusFlags = (int)flags;
    }
 
-   // OSD debug overlay — single enum, mapped to skip USE_PROFILER gap.
+   // OSD debug overlay — single enum. With USE_PROFILER undefined (verified
+   // for all our builds), enum DebugOverlay is compactly numbered 0..8, so
+   // label index == enum value. No mapping table needed.
    var.key = "ppsspp_osd_debug_overlay";
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value) {
-      // Menu indices we expose -> PPSSPP enum DebugOverlay values.
-      static const int s_overlayMap[] = { 0,1,2,3,5,6,7,8,9 };
-      const char* labels[] = {
+      static const char* labels[] = {
          "Off", "Debug stats", "Frame timings graph", "Frame timing",
          "Control debug", "Audio debug", "GPU profile",
          "GPU allocator viewer", "Framebuffer list",
       };
       for (size_t i = 0; i < sizeof(labels)/sizeof(labels[0]); ++i) {
          if (!strcmp(var.value, labels[i])) {
-            g_Config.iDebugOverlay = s_overlayMap[i];
+            g_Config.iDebugOverlay = (int)i;
             break;
          }
       }
