@@ -383,7 +383,7 @@ void CoreRuntime::runLoop() {
 
     // Reconcile core options now that the core has declared them via SET_CORE_OPTIONS_V2.
     if (!m_envCtx.declaredOptions.isEmpty())
-        m_options.load(m_cfg.optionsJsonPath, m_envCtx.declaredOptions);
+        m_options.load(m_cfg.optionsJsonPath, m_envCtx.declaredOptions, m_cfg.schemaOptionDefaults);
 
     retro_game_info info{};
     QByteArray romPathBytes = m_cfg.romPath.toUtf8();

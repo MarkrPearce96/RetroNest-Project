@@ -35,6 +35,7 @@ public:
         QString raToken;
         bool raHardcore = false;
         bool raEncore = false;   // see LibretroRaConfig::encore
+        QHash<QString, QString> schemaOptionDefaults;  // {libretro_key → adapter schema default}
     };
 
     explicit CoreRuntime(QObject* parent = nullptr);
