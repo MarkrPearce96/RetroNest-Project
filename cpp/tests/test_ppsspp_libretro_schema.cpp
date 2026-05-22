@@ -272,21 +272,43 @@ private slots:
                                    "to intentionalOverrides().")
                         .arg(s.key).arg(s.defaultValue).arg(fixture.value(s.key))));
         }
+
+        // Inverse check: every fixture entry must still be reachable in the
+        // schema. Catches the "upstream removed an option" case where the
+        // schema follows suit but the fixture keeps a dead entry.
+        QSet<QString> schemaLibretroKeys;
+        for (const auto& s : a.settingsSchema()) {
+            if (s.storage == SettingDef::Storage::LibretroOption)
+                schemaLibretroKeys.insert(s.key);
+        }
+        for (auto it = fixture.constBegin(); it != fixture.constEnd(); ++it) {
+            if (allowlist.contains(it.key()))
+                continue;
+            QVERIFY2(schemaLibretroKeys.contains(it.key()),
+                qPrintable(QString("upstreamDefaults fixture has key '%1' but no matching "
+                                   "schema row exists. Either remove it from the fixture "
+                                   "or restore the schema row.").arg(it.key())));
+        }
     }
 
     void duplicatedRows_haveConsistentDefaults() {
         PpssppLibretroAdapter a;
-        QHash<QString, QString> firstSeenDefault;
+        // key → (category-of-first-seen, defaultValue-of-first-seen)
+        QHash<QString, QPair<QString, QString>> firstSeen;
         QStringList violations;
         for (const auto& s : a.settingsSchema()) {
             if (s.storage != SettingDef::Storage::LibretroOption)
                 continue;
-            auto it = firstSeenDefault.constFind(s.key);
-            if (it == firstSeenDefault.constEnd()) {
-                firstSeenDefault.insert(s.key, s.defaultValue);
-            } else if (it.value() != s.defaultValue) {
-                violations << QString("'%1': first=%2 later=%3")
-                                  .arg(s.key).arg(it.value()).arg(s.defaultValue);
+            auto it = firstSeen.constFind(s.key);
+            if (it == firstSeen.constEnd()) {
+                firstSeen.insert(s.key, qMakePair(s.category, s.defaultValue));
+            } else if (it.value().second != s.defaultValue) {
+                violations << QString("'%1': %2=%3 vs %4=%5")
+                                  .arg(s.key)
+                                  .arg(it.value().first)
+                                  .arg(it.value().second)
+                                  .arg(s.category)
+                                  .arg(s.defaultValue);
             }
         }
         if (!violations.isEmpty()) {
