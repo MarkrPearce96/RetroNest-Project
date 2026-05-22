@@ -237,7 +237,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // ── Visual Quality ───────────────────────────────────────────────────
     s.append(opt(
         "Recommended", "Visual Quality",
-        "pcsx2_upscale_multiplier", "Internal Resolution", "1",
+        "pcsx2_upscale_multiplier", "Internal Resolution", "2",
         {{"1x Native (PS2) (Default)",     "1"},
          {"2x Native (~720px/HD)",         "2"},
          {"3x Native (~1080px/FHD)",       "3"},
@@ -255,7 +255,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
 
     s.append(opt(
         "Recommended", "Visual Quality",
-        "pcsx2_aspect_ratio", "Aspect Ratio", "4:3",
+        "pcsx2_aspect_ratio", "Aspect Ratio", "16:9",
         {{"Auto (4:3 Interlaced / 3:2 Progressive)", "Auto 4:3/3:2"},
          {"4:3 (Standard)",                          "4:3"},
          {"16:9 (Widescreen)",                       "16:9"},
@@ -268,7 +268,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
 
     s.append(opt(
         "Recommended", "Visual Quality",
-        "pcsx2_enable_widescreen_patches", "Apply Widescreen Patches", "disabled",
+        "pcsx2_enable_widescreen_patches", "Apply Widescreen Patches", "enabled",
         {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
         "Automatically applies community widescreen patches to supported "
         "games. Reshapes the rendering to true 16:9 instead of stretching "
@@ -682,7 +682,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // Aspect-ratio enum combo: values match the INI string verbatim.
     s.append(gopt(
         "Display", "Display",
-        "pcsx2_aspect_ratio", "Aspect Ratio", "4:3",
+        "pcsx2_aspect_ratio", "Aspect Ratio", "16:9",
         {{"Auto (4:3 Interlaced / 3:2 Progressive)", "Auto 4:3/3:2"},
          {"4:3 (Standard)",                          "4:3"},
          {"16:9 (Widescreen)",                       "16:9"},
@@ -825,7 +825,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // ── Display bools (7) ──
     s.append(gopt(
         "Display", "Display",
-        "pcsx2_enable_widescreen_patches", "Apply Widescreen Patches", "disabled",
+        "pcsx2_enable_widescreen_patches", "Apply Widescreen Patches", "enabled",
         {{"Enabled", "enabled"}, {"Disabled", "disabled"}},
         "Automatically applies community widescreen patches to supported "
         "games. Reshapes the rendering to true 16:9 instead of stretching "
@@ -892,7 +892,7 @@ QVector<SettingDef> Pcsx2LibretroAdapter::settingsSchema() const {
     // '!=' + '&&' grammar handles this.
     s.append(gopt(
         "Rendering", "Rendering",
-        "pcsx2_upscale_multiplier", "Internal Resolution", "1",
+        "pcsx2_upscale_multiplier", "Internal Resolution", "2",
         {{"1x Native (PS2) (Default)",     "1"},
          {"2x Native (~720px/HD)",         "2"},
          {"3x Native (~1080px/FHD)",       "3"},
