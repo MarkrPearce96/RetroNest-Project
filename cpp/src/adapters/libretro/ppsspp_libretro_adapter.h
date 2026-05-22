@@ -23,6 +23,11 @@ public:
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<PathDef> pathsDefs() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
+    QVector<SettingDef> settingsSchema() const override;
+    QVector<SettingsHubCard> settingsHubCards() const override;
+    QVector<QPair<QString, QString>> frontendSettingDefaults() const override;
+    PreviewSpec previewSpec(const QString& category,
+                            const QString& subcategory) const override;
 
     QString extractSerial(const QString& romPath) const override;
 };
