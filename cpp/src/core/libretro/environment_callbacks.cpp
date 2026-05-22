@@ -227,8 +227,27 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             return handleGetVariable(ctx, data);
         case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
             return handleVariableUpdate(ctx, data);
+        case RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION: {
+            // Report v2 so cores choose the V2 declaration path.
+            // Without this, libretro_set_core_options() defaults to version=0
+            // and falls back to V0 SET_VARIABLES, which we don't handle.
+            auto* out = static_cast<unsigned*>(data);
+            if (!out) return false;
+            *out = 2;
+            return true;
+        }
         case RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2:
             return handleCoreOptionsV2(ctx, data);
+        case RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2_INTL: {
+            // V2_INTL wraps a US baseline + optional localized variant in
+            // retro_core_options_v2_intl. We ignore localization and pass
+            // the US struct through to the V2 handler. Cores compiled with
+            // language extras (PPSSPP default) take this path instead of
+            // plain V2.
+            auto* intl = static_cast<retro_core_options_v2_intl*>(data);
+            if (!intl || !intl->us) return false;
+            return handleCoreOptionsV2(ctx, intl->us);
+        }
         case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: {
             auto* cb = static_cast<retro_log_callback*>(data);
             if (!cb) return false;
