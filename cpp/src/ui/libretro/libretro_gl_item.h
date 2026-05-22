@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <QPointer>
 #include <QQuickItem>
 #include <QtQml/qqmlregistration.h>
 #include <memory>
@@ -71,7 +72,12 @@ private slots:
     void onFrameReady(int width, int height);
 
 private:
-    VideoHardwareGL* m_hw = nullptr;
+    // QPointer so the field auto-clears when VideoHardwareGL is destroyed
+    // by CoreRuntime's teardown before this QML item is destroyed. With a
+    // raw pointer, the QML Component.onDestruction handler calls
+    // setVideoHardware(null), which dereferenced the dangling m_hw during
+    // disconnect() and crashed (EXC_BAD_ACCESS in setVideoHardware+51).
+    QPointer<VideoHardwareGL> m_hw;
     QString  m_aspectMode   = QStringLiteral("native");
     qreal    m_nativeAspect = 16.0 / 9.0;   // PSP default; PPSSPP reports via av_info
     bool     m_integerScale = false;
