@@ -22,6 +22,7 @@ public:
 
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<PathDef> pathsDefs() const override;
+    QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
 
     QString extractSerial(const QString& romPath) const override;
 };
