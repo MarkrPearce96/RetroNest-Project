@@ -123,9 +123,7 @@ Don't assume `portable.txt` or `--root` flags work. Launch the emulator natively
 ```sh
 find ~/Library ~/.config ~/Documents -name "{emuId}*.ini" 2>/dev/null
 ```
-Each emulator has its own portable mechanism:
-- **PCSX2 / DuckStation:** check for `portable.txt` next to the binary (inside `Contents/MacOS/` on macOS)
-- **PPSSPP on macOS:** ignores `memstick_dir.txt` entirely and reads from `~/.config/ppsspp/PSP/SYSTEM/` — it only uses an `NSUserDefaults` preference (`UserPreferredMemoryStickDirectoryPath`, app id `org.ppsspp.ppsspp`) which we set via `defaults write` before launch
+Each standalone emulator has its own portable mechanism. The remaining standalone adapters check for `portable.txt` next to the binary (inside `Contents/MacOS/` on macOS) — DuckStation and Dolphin both follow this convention. Don't assume the next emulator does; some use `NSUserDefaults` keys, env vars, or no portable mode at all and need a different launch-time workaround.
 
 ### 2. macOS launch method
 **Always launch the emulator binary via direct exec** (`QProcess::start(execPath, args)`), NOT via `open` or Launch Services. Going through Launch Services applies app translocation/sandbox rules to downloaded `.app` bundles, which blocks `rename()` inside the bundle and breaks portable mode (the emulator can't atomically save its config). Both `GameSession` and `openNativeEmulatorSettings` use direct exec for this reason.
@@ -176,7 +174,7 @@ When in doubt, flip every setting in our UI to a non-default value, save, and `d
 PPSSPP splits settings into `ppsspp.ini` (graphics/audio/system) and `controls.ini` (bindings). Your `ensureConfig` may need to touch multiple files, and `controllerBindingsConfigFilePath()` may need to point at a different file than `configFilePath()`.
 
 ### 9. Does the manifest `executable` field match the actual binary?
-GitHub releases may ship a different binary than you expect (e.g., PPSSPP ships `PPSSPPSDL.app`, not `PPSSPPQt.app`). Check by extracting a release and running `find ./Contents/MacOS -type f`.
+GitHub releases may ship a binary whose name differs from the repo name or the marketing name. Check by extracting a release and running `find ./Contents/MacOS -type f`.
 
 ## Verifying the adapter — settings audit pass
 
