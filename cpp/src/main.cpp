@@ -11,8 +11,6 @@
 #include <QRegularExpression>
 
 #include "core/manifest_loader.h"
-#include "core/migration_pcsx2.h"
-#include "core/migration_ppsspp.h"
 #include "core/paths.h"
 #include "services/emulator_service.h"
 #include "services/patches_installer.h"
@@ -145,23 +143,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     Paths::ensureDirectories();
-
-    // SP8: one-shot retirement migration. Sentinel-gated and idempotent;
-    // failure leaves the sentinel untouched so the next launch retries.
-    if (!MigrationPcsx2::runIfNeeded()) {
-        qCritical() << "[main] SP8 PCSX2 migration failed; data may be inconsistent. "
-                       "Restart RetroNest to retry; the previous standalone install is "
-                       "recoverable from emulators/.archive/ if present.";
-        // Continue running — partial migrations are recoverable.
-    }
-
-    // One-shot PPSSPP standalone → libretro migration. Same gating model.
-    if (!MigrationPpsspp::runIfNeeded()) {
-        qCritical() << "[main] PPSSPP migration failed; data may be inconsistent. "
-                       "Restart RetroNest to retry. Save data under "
-                       "emulators/ppsspp/PSP/SAVEDATA/ and PPSSPP_STATE/ is "
-                       "preserved across attempts.";
-    }
 
     // Auto-fetch PCSX2 patches.zip on launch — staleness-gated, non-blocking.
     // Owned by an automatic-storage object so dtor runs at app exit (any

@@ -54,8 +54,6 @@ include(dev_credentials.cmake OPTIONAL)
 set(SOURCES
     src/main.cpp
     src/core/manifest_loader.cpp
-    src/core/migration_pcsx2.cpp
-    src/core/migration_ppsspp.cpp
     src/core/paths.cpp
     src/services/emulator_installer.cpp
     src/services/installer_utils.cpp
@@ -1041,26 +1039,6 @@ target_link_libraries(test_core_runtime PRIVATE
     "-framework OpenGL" "-framework IOSurface")
 add_dependencies(test_core_runtime fake_libretro_core)
 add_test(NAME CoreRuntime COMMAND test_core_runtime)
-
-add_executable(test_migration_pcsx2
-    tests/test_migration_pcsx2.cpp
-    src/core/migration_pcsx2.cpp
-    src/core/paths.cpp
-)
-set_target_properties(test_migration_pcsx2 PROPERTIES AUTOMOC ON)
-target_include_directories(test_migration_pcsx2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_migration_pcsx2 PRIVATE Qt6::Core Qt6::Test)
-add_test(NAME MigrationPcsx2 COMMAND test_migration_pcsx2)
-
-add_executable(test_migration_ppsspp
-    tests/test_migration_ppsspp.cpp
-    src/core/migration_ppsspp.cpp
-    src/core/paths.cpp
-)
-set_target_properties(test_migration_ppsspp PROPERTIES AUTOMOC ON)
-target_include_directories(test_migration_ppsspp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_migration_ppsspp PRIVATE Qt6::Core Qt6::Test)
-add_test(NAME MigrationPpsspp COMMAND test_migration_ppsspp)
 
 add_executable(test_patches_sidecar
     tests/test_patches_sidecar.cpp
