@@ -53,6 +53,75 @@ private:
         return { "aspect_mode", "integer_scale" };
     }
 
+    // Upstream-declared default for every libretro option key the
+    // PpssppLibretroAdapter schema covers. Mirrors the `default_value`
+    // field (last positional arg) of each `option_defs_us[]` entry in
+    // libretro/libretro_core_options.h.
+    //
+    // When PPSSPP upstream changes a default, the drift-guardrail test
+    // below fails. Resolution: either update this fixture (accept the
+    // change) or add the key to `intentionalOverrides` and update the
+    // schema's SettingDef.defaultValue (reject the change).
+    static QHash<QString, QString> upstreamDefaults() {
+        return {
+            // System (11)
+            {"ppsspp_cpu_core", "JIT"},
+            {"ppsspp_fast_memory", "enabled"},
+            {"ppsspp_ignore_bad_memory_access", "enabled"},
+            {"ppsspp_io_timing_method", "Fast"},
+            {"ppsspp_force_lag_sync", "disabled"},
+            {"ppsspp_locked_cpu_speed", "disabled"},
+            {"ppsspp_memstick_inserted", "enabled"},
+            {"ppsspp_cache_iso", "disabled"},
+            {"ppsspp_cheats", "disabled"},
+            {"ppsspp_language", "Automatic"},
+            {"ppsspp_psp_model", "psp_2000_3000"},
+            // Video (22)
+            {"ppsspp_backend", "auto"},
+            {"ppsspp_software_rendering", "disabled"},
+            {"ppsspp_internal_resolution", "480x272"},
+            {"ppsspp_mulitsample_level", "Disabled"},
+            {"ppsspp_cropto16x9", "enabled"},
+            {"ppsspp_frameskip", "disabled"},
+            {"ppsspp_frameskiptype", "Number of frames"},
+            {"ppsspp_auto_frameskip", "disabled"},
+            {"ppsspp_frame_duplication", "enabled"},
+            {"ppsspp_detect_vsync_swap_interval", "disabled"},
+            {"ppsspp_inflight_frames", "Up to 2"},
+            {"ppsspp_gpu_hardware_transform", "enabled"},
+            {"ppsspp_software_skinning", "enabled"},
+            {"ppsspp_hardware_tesselation", "disabled"},
+            {"ppsspp_texture_scaling_type", "xbrz"},
+            {"ppsspp_texture_scaling_level", "disabled"},
+            {"ppsspp_texture_deposterize", "disabled"},
+            {"ppsspp_texture_shader", "disabled"},
+            {"ppsspp_texture_anisotropic_filtering", "16x"},
+            {"ppsspp_texture_filtering", "Auto"},
+            {"ppsspp_smart_2d_texture_filtering", "disabled"},
+            {"ppsspp_texture_replacement", "disabled"},
+            // Input (4)
+            {"ppsspp_button_preference", "Cross"},
+            {"ppsspp_analog_is_circular", "disabled"},
+            {"ppsspp_analog_deadzone", "0.0"},
+            {"ppsspp_analog_sensitivity", "1.00"},
+            // Hacks (6)
+            {"ppsspp_skip_buffer_effects", "disabled"},
+            {"ppsspp_disable_range_culling", "disabled"},
+            {"ppsspp_skip_gpu_readbacks", "disabled"},
+            {"ppsspp_lazy_texture_caching", "disabled"},
+            {"ppsspp_spline_quality", "High"},
+            {"ppsspp_lower_resolution_for_effects", "disabled"},
+        };
+    }
+
+    // Keys whose schema SettingDef.defaultValue is deliberately different
+    // from upstream. Each entry is a frontend-side product decision; the
+    // drift test skips these so a future upstream-default change in one
+    // of them won't auto-revert RetroNest's preference.
+    static QSet<QString> intentionalOverrides() {
+        return { "ppsspp_internal_resolution" };
+    }
+
 private slots:
     void totalCount_matchesSpec() {
         PpssppLibretroAdapter a;
@@ -182,6 +251,50 @@ private slots:
         for (const auto& p : defs) byKey.insert(p.first, p.second);
         QCOMPARE(byKey.value("aspect_mode"),   QStringLiteral("native"));
         QCOMPARE(byKey.value("integer_scale"), QStringLiteral("OFF"));
+    }
+
+    void libretroOptionDefaults_matchUpstreamUnlessAllowlisted() {
+        PpssppLibretroAdapter a;
+        const auto fixture = upstreamDefaults();
+        const auto allowlist = intentionalOverrides();
+        for (const auto& s : a.settingsSchema()) {
+            if (s.storage != SettingDef::Storage::LibretroOption)
+                continue;
+            if (allowlist.contains(s.key))
+                continue;
+            QVERIFY2(fixture.contains(s.key),
+                qPrintable(QString("schema row for libretro option '%1' not present in "
+                                   "upstreamDefaults fixture. Either add it to the fixture "
+                                   "or mark it as an intentional override.").arg(s.key)));
+            QVERIFY2(s.defaultValue == fixture.value(s.key),
+                qPrintable(QString("default drift for '%1': schema='%2' vs upstream='%3'. "
+                                   "Either update the schema to match upstream or add '%1' "
+                                   "to intentionalOverrides().")
+                        .arg(s.key).arg(s.defaultValue).arg(fixture.value(s.key))));
+        }
+    }
+
+    void duplicatedRows_haveConsistentDefaults() {
+        PpssppLibretroAdapter a;
+        QHash<QString, QString> firstSeenDefault;
+        QStringList violations;
+        for (const auto& s : a.settingsSchema()) {
+            if (s.storage != SettingDef::Storage::LibretroOption)
+                continue;
+            auto it = firstSeenDefault.constFind(s.key);
+            if (it == firstSeenDefault.constEnd()) {
+                firstSeenDefault.insert(s.key, s.defaultValue);
+            } else if (it.value() != s.defaultValue) {
+                violations << QString("'%1': first=%2 later=%3")
+                                  .arg(s.key).arg(it.value()).arg(s.defaultValue);
+            }
+        }
+        if (!violations.isEmpty()) {
+            QFAIL(qPrintable(QString("schema rows with the same key carry different "
+                                     "defaultValue. Recommended card duplicates must "
+                                     "match their canonical row. Violations: %1")
+                                .arg(violations.join("; "))));
+        }
     }
 };
 
