@@ -88,8 +88,7 @@ All directories derive from a single user-chosen root:
       cache/
       videos/                        — PCSX2 only
       logs/, patches/, gamesettings/, inputprofiles/  — PCSX2 only
-  emulators/ppsspp/PSP/              — PPSSPP's forced layout (see below)
-      SYSTEM/                        — ppsspp.ini + controls.ini
+  emulators/ppsspp/psp/              — PPSSPP libretro core's data tree
       SAVEDATA/, PPSSPP_STATE/, SCREENSHOT/, TEXTURES/, Cheats/, GAME/, PLUGINS/
   roms/{systemId}/                   — user ROM files
   config/                            — app-level config
@@ -106,7 +105,7 @@ All directories derive from a single user-chosen root:
 
 **macOS launch rule:** Always launch emulator binaries via direct exec (`QProcess::start(execPath, args)`), NEVER via `open` or Launch Services. Going through Launch Services applies app translocation and sandbox rules to downloaded `.app` bundles, which blocks `rename()` inside the bundle and breaks portable mode. Both `GameSession` and `openNativeEmulatorSettings` use direct exec for this reason.
 
-**Per-emulator portable mechanisms:** Different emulators use different mechanisms to enable portable mode. PCSX2 and DuckStation look for `portable.txt` next to the binary (inside `Contents/MacOS/` on macOS). PPSSPP doesn't read `portable.txt` on macOS — instead, it checks an `NSUserDefaults` preference (`UserPreferredMemoryStickDirectoryPath`, app id `org.ppsspp.ppsspp`) which we set via `defaults write` before launch.
+**Per-emulator portable mechanisms:** Different standalone emulators use different mechanisms to enable portable mode. DuckStation looks for `portable.txt` next to the binary (inside `Contents/MacOS/` on macOS). Libretro cores (mgba, PCSX2, PPSSPP) receive their data directories from RetroNest via `retro_environment` callbacks, so they need no on-disk portable-mode marker.
 
 ## Theme System
 - Fullscreen UI — themes own the entire window, settings via Escape/Start modal overlay
@@ -124,7 +123,7 @@ All directories derive from a single user-chosen root:
 ## In-Game Menu & Emulator Control
 - **Trigger:** Cmd+Shift+Escape (Carbon global hotkey, system-wide), Select+Start (SDL combo, all controllers), or Touchpad press (DualShock 4 / DualSense single-button)
 - **Overlay mechanism:** the menu is a separate `QQuickWindow` (`InGameMenuPanel`) backed by an isa-swizzled `NSPanel` (frameless, status-window-level, fullscreen-auxiliary, non-activating-panel) so it floats over a fullscreened external emulator without our app activating
-- **Pause is per-adapter.** Each adapter overrides `pauseHotkeyVirtualKeyCode()` to return the Carbon `kVK_*` for its TogglePause hotkey; the corresponding INI key is bound to that hotkey in `createDefaultConfig` + `patchExistingConfig`. AppController synthesizes the keystroke via `CGEventPostToPid` for clean native pause (no SIGSTOP audio click). Adapters that don't expose a pause-only hotkey return 0 → AppController falls back to SIGSTOP/SIGCONT (audio click but works universally; PPSSPP currently uses this fallback).
+- **Pause is per-adapter.** Each adapter overrides `pauseHotkeyVirtualKeyCode()` to return the Carbon `kVK_*` for its TogglePause hotkey; the corresponding INI key is bound to that hotkey in `createDefaultConfig` + `patchExistingConfig`. AppController synthesizes the keystroke via `CGEventPostToPid` for clean native pause (no SIGSTOP audio click). Adapters that don't expose a pause-only hotkey return 0 → AppController falls back to SIGSTOP/SIGCONT (audio click but works universally).
 - **`CGEventPostToPid` requires Accessibility permission** on macOS Sonoma+ (System Settings → Privacy & Security → Accessibility → enable RetroNest.app). Without it, synthesized keystrokes are silently dropped and the emulator never pauses. macOS prompts the first time the menu opens.
 - **Pause hotkey is hidden from user-facing settings** — none of the adapters list TogglePause / `General/Toggle Pause` in their `hotkeyBindingDefs()`, so the user can't accidentally rebind the key our synthesis depends on.
 - **Close-side input bleed avoided** by polling SDL state until A/B/X/Y are released before sending the unpause keystroke (e.g. Cross-to-Resume → no jump in the resumed game).

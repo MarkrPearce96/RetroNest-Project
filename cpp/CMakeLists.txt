@@ -230,9 +230,6 @@ add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCES} ${HEADERS} ${APP_ICON_MA
 # exposes bundle-only behaviors (NSApplicationActivationPolicyRegular,
 # Launch Services, Gatekeeper, Carbon global hotkey reliability) during
 # development so we catch issues as they appear rather than at release.
-# Note: RetroNest's bundle ID does NOT affect PPSSPP's NSUserDefaults domain
-# — `defaults write org.ppsspp.ppsspp …` writes to PPSSPP's plist regardless
-# of which process invokes it.
 set_target_properties(${PROJECT_NAME} PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_BUNDLE_NAME "RetroNest"
