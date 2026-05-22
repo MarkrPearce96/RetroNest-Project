@@ -560,20 +560,38 @@ void CoreRuntime::runLoop() {
     }
 
     m_rcheevos.endSession();
+
+    // HW-context callback must run BEFORE retro_unload_game.
+    //
+    // PPSSPP's retro_unload_game (libretro.cpp:1591-1592) does
+    // `delete ctx; ctx = nullptr` on the LibretroHWRenderContext, but
+    // the context_destroy static callback at
+    // LibretroGraphicsContext.cpp:23 dereferences `Libretro::ctx`:
+    //
+    //     static void context_destroy() {
+    //         ((LibretroHWRenderContext *)Libretro::ctx)->ContextDestroy();
+    //     }
+    //
+    // Calling context_destroy AFTER retro_unload_game crashes with
+    // EXC_BAD_ACCESS at context_destroy+12 (verified against three
+    // crash reports 2026-05-22). A previous comment in this file
+    // claimed the AFTER-order "mirrors RetroArch" — but RetroArch
+    // does not in fact drive this exact ordering against PPSSPP's
+    // HW-render path, and PPSSPP's internal lifecycle assumes the
+    // BEFORE-order. Must be on the HW context (makeHwCurrent) so
+    // PPSSPP's ContextDestroy uses the same NSOpenGL context that
+    // ContextReset bound.
+    if (m_videoHW && m_videoHW->isReady() && m_hwRenderCb.context_destroy) {
+        m_videoHW->makeHwCurrent();
+        m_hwRenderCb.context_destroy();
+    }
+
     s.retro_unload_game();
 
-    // Task #7 step 5 teardown: tell the core to release its GL resources
-    // (PPSSPP's ContextDestroy stops the emu thread + drops draw_), then
-    // tear down our FBO + NSOpenGL contexts. Order mirrors RetroArch:
-    // unload_game first, then context_destroy, then deinit. Must be on
-    // the HW context when context_destroy runs — PPSSPP calls into its
-    // own draw context which expects the same thread/context as ctx
-    // reset.
+    // Now tear down our HW-side objects (FBO, NSOpenGL contexts).
+    // retro_unload_game's internal cleanup is done; nothing else needs
+    // the GL context to be current.
     if (m_videoHW && m_videoHW->isReady()) {
-        if (m_hwRenderCb.context_destroy) {
-            m_videoHW->makeHwCurrent();
-            m_hwRenderCb.context_destroy();
-        }
         m_videoHW->shutdown();
         m_videoHW.reset();
         m_hwRenderCb = {};
