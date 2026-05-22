@@ -1,6 +1,5 @@
 #include "adapter_registry.h"
 #include "duckstation_adapter.h"
-#include "ppsspp_adapter.h"
 #include "dolphin_adapter.h"
 #include "libretro/mgba_libretro_adapter.h"
 #include "libretro/pcsx2_libretro_adapter.h"
