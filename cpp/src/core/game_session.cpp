@@ -208,6 +208,22 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     cfg.saveDir = Paths::emulatorDataDir(manifest.id, systemId);
     cfg.optionsJsonPath = Paths::emulatorsDir("libretro") + "/" + lr->coreId() + "/options.json";
 
+    // Phase E: build the schema-defaults override map from the libretro
+    // adapter's settingsSchema(). Filters for Storage::LibretroOption rows
+    // only — FrontendSetting rows (e.g. aspect_mode) live in a separate
+    // sidecar and aren't libretro core options. Duplicate keys in the
+    // schema (Recommended card duplicates rows from other cards) are
+    // expected to carry matching defaultValue; the dupe-consistency test
+    // enforces that invariant.
+    {
+        QHash<QString, QString> schemaDefaults;
+        for (const auto& s : lr->settingsSchema()) {
+            if (s.storage == SettingDef::Storage::LibretroOption && !s.key.isEmpty())
+                schemaDefaults.insert(s.key, s.defaultValue);
+        }
+        cfg.schemaOptionDefaults = std::move(schemaDefaults);
+    }
+
     cfg.raConsoleId = lr->raConsoleId(systemId);
     if (m_raConfig.valid) {
         cfg.raUsername = m_raConfig.username;
