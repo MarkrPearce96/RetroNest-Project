@@ -48,6 +48,50 @@ private slots:
         QCOMPARE(s2.get("a"), QString("y"));
         QCOMPARE(s2.get("b"), QString("p"));
     }
+    void testSchemaDefaultOverridesUpstream() {
+        QTemporaryDir d;
+        OptionsStore s;
+        QString path = d.path() + "/options.json";
+        QVector<CoreOption> coreOpts = {
+            {"mgba_skip_bios", "Skip BIOS", "OFF", {"OFF","ON"}},
+        };
+        QHash<QString, QString> schemaDefaults = { {"mgba_skip_bios", "ON"} };
+        QVERIFY(s.load(path, coreOpts, schemaDefaults));
+        // Schema default overrides upstream's "OFF" on first load.
+        QCOMPARE(s.get("mgba_skip_bios"), QString("ON"));
+    }
+    void testExistingValueBeatsSchemaDefault() {
+        QTemporaryDir d;
+        QString path = d.path() + "/options.json";
+        QVector<CoreOption> coreOpts = {
+            {"mgba_skip_bios", "Skip BIOS", "OFF", {"OFF","ON"}},
+        };
+        // Seed an existing on-disk value.
+        {
+            OptionsStore s;
+            s.load(path, coreOpts);
+            s.set("mgba_skip_bios", "OFF");
+            s.save();
+        }
+        // Schema says "ON", but the on-disk "OFF" must win.
+        OptionsStore s2;
+        QHash<QString, QString> schemaDefaults = { {"mgba_skip_bios", "ON"} };
+        QVERIFY(s2.load(path, coreOpts, schemaDefaults));
+        QCOMPARE(s2.get("mgba_skip_bios"), QString("OFF"));
+    }
+    void testInvalidSchemaDefaultFallsBackToUpstream() {
+        QTemporaryDir d;
+        OptionsStore s;
+        QString path = d.path() + "/options.json";
+        QVector<CoreOption> coreOpts = {
+            {"mgba_skip_bios", "Skip BIOS", "OFF", {"OFF","ON"}},
+        };
+        // Schema names a value upstream doesn't list.
+        QHash<QString, QString> schemaDefaults = { {"mgba_skip_bios", "MAYBE"} };
+        QVERIFY(s.load(path, coreOpts, schemaDefaults));
+        // Invalid schema default → silent fall-through to upstream default.
+        QCOMPARE(s.get("mgba_skip_bios"), QString("OFF"));
+    }
     void testDirtyFlagAndConsume() {
         QTemporaryDir d;
         OptionsStore s;

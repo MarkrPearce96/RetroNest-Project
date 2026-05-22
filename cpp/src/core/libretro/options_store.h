@@ -15,7 +15,9 @@ struct CoreOption {
 
 class OptionsStore {
 public:
-    bool load(const QString& jsonPath, const QVector<CoreOption>& coreOptions);
+    bool load(const QString& jsonPath,
+              const QVector<CoreOption>& coreOptions,
+              const QHash<QString, QString>& schemaDefaults = {});
     bool save() const;
     QString get(const QString& key) const;
     void set(const QString& key, const QString& value);

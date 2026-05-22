@@ -6,14 +6,32 @@
 #include <QJsonObject>
 #include <QDebug>
 
-bool OptionsStore::load(const QString& jsonPath, const QVector<CoreOption>& coreOptions) {
+namespace {
+QString pickInitialValue(const CoreOption& opt,
+                         const QHash<QString, QString>& existing,
+                         const QHash<QString, QString>& schemaDefaults) {
+    auto existIt = existing.constFind(opt.key);
+    if (existIt != existing.constEnd() && opt.values.contains(existIt.value()))
+        return existIt.value();
+    auto schemaIt = schemaDefaults.constFind(opt.key);
+    if (schemaIt != schemaDefaults.constEnd() && opt.values.contains(schemaIt.value()))
+        return schemaIt.value();
+    return opt.defaultValue;
+}
+}  // namespace
+
+bool OptionsStore::load(const QString& jsonPath,
+                        const QVector<CoreOption>& coreOptions,
+                        const QHash<QString, QString>& schemaDefaults) {
     QWriteLocker lk(&m_lock);
     m_path = jsonPath;
     m_values.clear();
 
     if (jsonPath == ":memory:") {
         m_path.clear();          // sentinel: never write to disk
-        for (const auto& opt : coreOptions) m_values.insert(opt.key, opt.defaultValue);
+        QHash<QString, QString> emptyExisting;
+        for (const auto& opt : coreOptions)
+            m_values.insert(opt.key, pickInitialValue(opt, emptyExisting, schemaDefaults));
         return true;
     }
 
@@ -27,13 +45,9 @@ bool OptionsStore::load(const QString& jsonPath, const QVector<CoreOption>& core
         f.close();
     }
 
-    for (const auto& opt : coreOptions) {
-        auto it = existing.constFind(opt.key);
-        if (it != existing.constEnd() && opt.values.contains(it.value()))
-            m_values.insert(opt.key, it.value());
-        else
-            m_values.insert(opt.key, opt.defaultValue);
-    }
+    for (const auto& opt : coreOptions)
+        m_values.insert(opt.key, pickInitialValue(opt, existing, schemaDefaults));
+
     lk.unlock();
     return save();
 }
