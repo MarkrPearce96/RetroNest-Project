@@ -557,6 +557,59 @@ void GameSession::registerLibretroGLItem(QObject* item) {
     }
 }
 
+void GameSession::preShutdownRenderFence() {
+    // Only the libretro GL backend has the IOSurface→MTLTexture coupling
+    // that races against worker-side VideoHardwareGL teardown. Software
+    // (mGBA) and Metal-direct (PCSX2 libretro) paths skip this entirely.
+    if (m_libretroBackend != QStringLiteral("gl")) return;
+    if (!m_libretroGLItem) return;
+
+    LibretroGLItem* item = m_libretroGLItem.data();
+    QQuickWindow* w = item->window();
+    if (!w) {
+        qWarning() << "[GameSession] preShutdownRenderFence: glItem has no "
+                      "window, skipping fence (degraded — same risk as before "
+                      "the fix)";
+        return;
+    }
+
+    // Drop the LibretroGLItem's strong ARC ref to the MTLTexture and
+    // disconnect its VideoHardwareGL signals. After the next sync,
+    // updatePaintNode sees m_hw == nullptr and returns nullptr, deleting
+    // the QSGSimpleTextureNode and its owned QSGTexture — releasing the
+    // QSGMetalTexture wrapper's last strong ARC ref to the MTLTexture.
+    item->setVideoHardware(nullptr);
+    item->update();
+
+    // Wait two render passes. Frame 1 covers the sync that processes the
+    // cleared updatePaintNode and deletes the node + texture. Frame 2
+    // covers any GPU command buffer that captured the MTLTexture before
+    // the clear and is still draining on the GPU.
+    QEventLoop loop;
+    int framesSeen = 0;
+    auto conn = QObject::connect(
+        w, &QQuickWindow::afterRendering, &loop,
+        [&framesSeen, &loop]() {
+            if (++framesSeen >= 2) loop.quit();
+        },
+        Qt::QueuedConnection);   // afterRendering fires on QSGRenderThread
+
+    // Hard cap — covers degenerate cases (window hidden, rendering paused,
+    // app already quitting). At worst we're at the same risk as before the
+    // fix; the cap doesn't make anything worse.
+    QTimer::singleShot(500, &loop, &QEventLoop::quit);
+    loop.exec();
+    // Explicit disconnect before scope exit is load-bearing: the queued
+    // lambda captures &loop and &framesSeen by reference. QObject::~QObject
+    // does flush pending queued events for the context object in Qt 6, but
+    // relying on that is an implementation detail. Disconnecting here
+    // ensures no late delivery arrives after the locals are invalid.
+    QObject::disconnect(conn);
+
+    qInfo() << "[GameSession] preShutdownRenderFence drained" << framesSeen
+            << "frame(s) before stop";
+}
+
 QObject* GameSession::videoHardware() const {
     if (!m_libretroAdapter) return nullptr;
     auto* rt = m_libretroAdapter->runtime();
