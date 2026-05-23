@@ -108,7 +108,11 @@ Item {
                     if (root.session)
                         glItem.setVideoHardware(root.session.videoHardware())
                 }
-                Component.onCompleted: rewire()
+                Component.onCompleted: {
+                    rewire()
+                    if (root.session)
+                        root.session.registerLibretroGLItem(glItem)
+                }
                 Connections {
                     target: root.session
                     // libretroAspectRatioChanged is the GameSession signal that
@@ -118,7 +122,11 @@ Item {
                     function onLibretroAspectRatioChanged() { glItem.rewire() }
                     function onLibretroBackendChanged()     { glItem.rewire() }
                 }
-                Component.onDestruction: glItem.setVideoHardware(null)
+                Component.onDestruction: {
+                    glItem.setVideoHardware(null)
+                    if (root.session)
+                        root.session.registerLibretroGLItem(null)
+                }
             }
         }
     }
