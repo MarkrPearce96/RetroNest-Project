@@ -1,11 +1,14 @@
 {
   "id": "dolphin",
   "name": "Dolphin",
-  "description": "Dolphin is a GameCube and Wii emulator. Play GC/Wii games in HD with save states, controller support, and per-game configurations.",
+  "description": "GameCube and Wii emulator (libretro core)",
   "systems": ["gc", "wii"],
-  "github_repo": "dolphin-emu/dolphin",
-  "executable": "Dolphin",
-  "install_folder": "dolphin",
-  "rom_extensions": ["iso", "gcm", "gcz", "ciso", "wbfs", "rvz", "wad", "wia", "nkit", "m3u"],
-  "launch_args": ["-b", "-e", "{rom_path}"]
+  "github_repo": "markrpearce96/dolphin-libretro",
+  "executable": "dolphin_libretro.dylib",
+  "install_folder": "libretro",
+  "rom_extensions": ["iso", "gcm", "gcz", "ciso", "wbfs", "rvz", "wad", "wia", "nkit", "m3u", "dol", "elf", "tgc"],
+  "launch_args": [],
+  "backend": "libretro",
+  "core_dylib": "dolphin_libretro.dylib",
+  "core_buildbot_path": "dolphin_libretro.dylib.zip"
 }
