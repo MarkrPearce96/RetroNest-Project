@@ -1,6 +1,6 @@
 #include "adapter_registry.h"
 #include "duckstation_adapter.h"
-#include "dolphin_adapter.h"
+#include "libretro/dolphin_libretro_adapter.h"
 #include "libretro/mgba_libretro_adapter.h"
 #include "libretro/pcsx2_libretro_adapter.h"
 #include "libretro/ppsspp_libretro_adapter.h"
@@ -15,7 +15,7 @@ AdapterRegistry& AdapterRegistry::instance() {
 void AdapterRegistry::registerBuiltinAdapters() {
     registerAdapter("duckstation", std::make_unique<DuckStationAdapter>());
     registerAdapter("ppsspp", std::make_unique<PpssppLibretroAdapter>());
-    registerAdapter("dolphin", std::make_unique<DolphinAdapter>());
+    registerAdapter("dolphin", std::make_unique<DolphinLibretroAdapter>());
     registerAdapter("mgba", std::make_unique<MgbaLibretroAdapter>());
     registerAdapter("pcsx2", std::make_unique<Pcsx2LibretroAdapter>());
 }
