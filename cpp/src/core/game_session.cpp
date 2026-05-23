@@ -262,6 +262,17 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         if (m_libretroAdapter) m_libretroAdapter->releaseRuntime();
         m_libretroAdapter = nullptr;
         m_libretroFastForward = false;
+        // Reset session-scoped libretro state so the next game's setters
+        // (CoreRuntime → setLibretroAspectRatio after av_info read) fire
+        // their change signals even if the new game reports the same
+        // backend/aspect as the previous one. Pre-fence the PPSSPP Quit
+        // crash forced an app restart between games; now relaunch stays in
+        // the same process and stale equality short-circuits the QML
+        // rewire chain (black screen on second launch). Sentinel value
+        // -1.0 will never qFuzzyCompare-equal a real aspect (libretro
+        // reports 0 for "no aspect" and positive values for real ones).
+        m_libretroAspectRatio = -1.0;
+        m_libretroBackend = QStringLiteral("software");
         m_adapter = nullptr; m_manifest = nullptr;
         emit runningChanged();
         emit finished(crashed ? -1 : 0, crashed);
