@@ -427,6 +427,7 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
 }
 
 void GameSession::kill() {
+    preShutdownRenderFence();   // no-op for non-GL paths
     if (m_backend == Backend::Libretro && m_libretroAdapter && m_libretroAdapter->runtime())
         m_libretroAdapter->runtime()->stop();
     else if (m_process && m_process->state() != QProcess::NotRunning) {
@@ -436,6 +437,7 @@ void GameSession::kill() {
 }
 
 void GameSession::terminate() {
+    preShutdownRenderFence();   // no-op for non-GL paths
     if (m_backend == Backend::Libretro && m_libretroAdapter && m_libretroAdapter->runtime()) {
         // Save-on-quit: pause the runtime, write resume file, then stop
         const auto* mf = m_manifest;
