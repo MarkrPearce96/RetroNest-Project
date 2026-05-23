@@ -45,6 +45,9 @@ class GameSession : public QObject {
     // Defaults to 4/3 before any core has been loaded.
     Q_PROPERTY(qreal libretroAspectRatio READ libretroAspectRatio NOTIFY libretroAspectRatioChanged)
     Q_PROPERTY(QString libretroBackend READ libretroBackend NOTIFY libretroBackendChanged)
+    // True while toggleFastForwardLibretro is in its FF=on state.
+    // LibretroOverlayPanel binds its sticky 2× HUD pill to this.
+    Q_PROPERTY(bool libretroFastForward READ libretroFastForward NOTIFY libretroFastForwardChanged)
     Q_PROPERTY(int currentSaveSlot READ currentSaveSlot WRITE setCurrentSaveSlot NOTIFY currentSaveSlotChanged)
 
 public:
@@ -86,6 +89,9 @@ public:
     bool libretroIntegerScale() const;
     /** Current render backend for the libretro core: "software" or "metal". */
     QString libretroBackend() const { return m_libretroBackend; }
+    /** True while fast-forward (speed multiplier > 1×) is active. Mirrored
+     *  in QML via the libretroFastForward Q_PROPERTY so HUD pills can bind. */
+    bool libretroFastForward() const { return m_libretroFastForward; }
 
     /** Pause emulation for the in-game menu. Libretro path: stops the core
      *  thread's retro_run loop and routes SDL events back to QML navigation
@@ -164,6 +170,8 @@ signals:
     /** Emitted when a libretro frontend setting (aspect mode, integer scale) changes. */
     void libretroFrontendChanged();
     void libretroAspectRatioChanged();
+    /** Emitted whenever the fast-forward state flips. */
+    void libretroFastForwardChanged();
     /** Emitted when currentSaveSlot is changed via setCurrentSaveSlot. */
     void currentSaveSlotChanged();
     /** Forwarded from the in-process rcheevos runtime (libretro path only).

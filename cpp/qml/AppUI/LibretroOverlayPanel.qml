@@ -132,7 +132,12 @@ Window {
         target: app
         function onRaInfoToast(header, title, description, imageUrl, durationMs) {
             if (!app.gameUsesHardwareRender()) return;
-            achievementToast.show(title, description, imageUrl);
+            // showWithHeader preserves the C++-supplied header label
+            // (e.g. "GAME MASTERED", "HARDCORE MODE", "RA SERVER ERROR",
+            // "Fast Forward") instead of falling back to the default
+            // "ACHIEVEMENT UNLOCKED" used by show().
+            achievementToast.showWithHeader(header, title, description,
+                                             imageUrl, durationMs);
         }
     }
 
@@ -147,13 +152,26 @@ Window {
 
     // ── Local hookups for menu-triggered toasts ──
     // Mirrors AppWindow.qml: Save State pops a "Saved" pill, Load State
-    // pops "Loaded". The Fast Forward toggle is handled by AppController:
-    // it calls gameSession.toggleFastForwardLibretro() which returns the
-    // new state; AppController will tell us which to show via a future
-    // signal (for now FF state lives in the menu).
+    // pops "Loaded".
     Connections {
         target: panelWindow
         function onSaveStateRequested() { saveToast.show(); }
         function onLoadStateRequested() { loadToast.show(); }
+    }
+
+    // Fast Forward — driven by the GameSession property change signal so
+    // both menu-driven and hotkey-driven toggles surface the pill. The
+    // C++ side (AppController + InGameMenuController) handles the toggle
+    // itself; this binding just mirrors the resulting state into the
+    // sticky 2× HUD pill.
+    Connections {
+        target: app.gameSession
+        function onLibretroFastForwardChanged() {
+            if (app.gameSession && app.gameSession.libretroFastForward) {
+                ffToast.show();
+            } else {
+                ffToast.hide();
+            }
+        }
     }
 }

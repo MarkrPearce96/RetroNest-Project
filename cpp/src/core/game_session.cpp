@@ -261,7 +261,9 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         // false (isRunning() is computed live from m_libretroAdapter).
         if (m_libretroAdapter) m_libretroAdapter->releaseRuntime();
         m_libretroAdapter = nullptr;
+        const bool wasFastForward = m_libretroFastForward;
         m_libretroFastForward = false;
+        if (wasFastForward) emit libretroFastForwardChanged();
         // Reset session-scoped libretro state so the next game's setters
         // (CoreRuntime → setLibretroAspectRatio after av_info read) fire
         // their change signals even if the new game reports the same
@@ -544,6 +546,7 @@ bool GameSession::toggleFastForwardLibretro() {
     if (!m_libretroAdapter || !m_libretroAdapter->runtime()) return false;
     m_libretroFastForward = !m_libretroFastForward;
     m_libretroAdapter->runtime()->setSpeedMultiplier(m_libretroFastForward ? 2.0 : 1.0);
+    emit libretroFastForwardChanged();
     return m_libretroFastForward;
 }
 

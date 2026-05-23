@@ -1157,6 +1157,9 @@ void AppController::setQmlEngine(QQmlEngine* engine) {
                 if (m_inGameMenu->currentBackendIsLibretro()) {
                     if (auto* s = gameSession()) s->toggleFastForwardLibretro();
                     // Leave the menu open — FF is a state toggle.
+                    // QML LibretroOverlayPanel listens to
+                    // GameSession::libretroFastForwardChanged and shows/
+                    // hides its ffToast pill from that signal.
                     return;
                 }
                 if (auto* sess = gameSession()) {
