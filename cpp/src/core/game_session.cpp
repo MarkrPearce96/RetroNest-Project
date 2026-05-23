@@ -7,17 +7,20 @@
 #include "core/libretro/input_router.h"
 #include "core/libretro/rcheevos_runtime.h"
 #include "core/libretro/video_hardware_gl.h"
+#include "ui/libretro/libretro_gl_item.h"
 #include "core/path_overrides_store.h"
 #include "core/platform/host_arch.h"
 #include "core/sdl_input_manager.h"
 
 #include <QCoreApplication>
+#include <QDebug>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFileInfo>
+#include <QQuickWindow>
 #include <QRegularExpression>
-#include <QDebug>
+#include <QTimer>
 
 GameSession::GameSession(QObject* parent)
     : QObject(parent) {}
@@ -540,6 +543,18 @@ void GameSession::registerHardwareView(qulonglong view_ptr) {
     auto* rt = m_libretroAdapter->runtime();
     if (!rt) return;
     rt->setActiveNSView(reinterpret_cast<void*>(view_ptr));
+}
+
+void GameSession::registerLibretroGLItem(QObject* item) {
+    // qobject_cast returns nullptr if item is null or not a LibretroGLItem.
+    // QPointer accepts that directly — the field self-clears on destruction
+    // too, so the explicit null call from QML's Component.onDestruction is
+    // belt-and-suspenders.
+    m_libretroGLItem = qobject_cast<LibretroGLItem*>(item);
+    if (item && !m_libretroGLItem) {
+        qWarning() << "[GameSession] registerLibretroGLItem: object is not a "
+                      "LibretroGLItem, ignoring";
+    }
 }
 
 QObject* GameSession::videoHardware() const {
