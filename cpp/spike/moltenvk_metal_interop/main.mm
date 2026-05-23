@@ -263,8 +263,126 @@ static bool runPathA(VkInstance instance, VkPhysicalDevice phys, VkDevice device
     return ok;
 }
 
-// Stub implementation — Task 5 fills this in.
-static bool runPathB(VkInstance, VkPhysicalDevice, VkDevice) {
-    fprintf(stderr, "[Path B] not yet implemented\n");
-    return false;
+static bool runPathB(VkInstance, VkPhysicalDevice phys, VkDevice device) {
+    constexpr uint32_t W = 64, H = 64;
+    constexpr uint8_t kR = 0x12, kG = 0x34, kB = 0x56, kA = 0xFF;
+
+    // 1) Create an IOSurface.
+    NSDictionary* surfaceProps = @{
+        (id)kIOSurfaceWidth:           @(W),
+        (id)kIOSurfaceHeight:          @(H),
+        (id)kIOSurfaceBytesPerElement: @(4),
+        (id)kIOSurfacePixelFormat:     @((unsigned)'BGRA'),  // 0x42475241
+    };
+    IOSurfaceRef surface = IOSurfaceCreate((__bridge CFDictionaryRef)surfaceProps);
+    if (!surface) { fprintf(stderr, "[Path B] IOSurfaceCreate failed\n"); return false; }
+
+    // 2) Wrap as MTLTexture.
+    id<MTLDevice> mtlDevice = MTLCreateSystemDefaultDevice();
+    MTLTextureDescriptor* desc = [MTLTextureDescriptor
+        texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+                                     width:W height:H mipmapped:NO];
+    desc.usage = MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
+    desc.storageMode = MTLStorageModeShared;
+    id<MTLTexture> mtlTex = [mtlDevice newTextureWithDescriptor:desc
+                                                      iosurface:surface
+                                                          plane:0];
+    if (!mtlTex) {
+        fprintf(stderr, "[Path B] Metal IOSurface wrap failed\n");
+        CFRelease(surface);
+        return false;
+    }
+
+    // 3) Wrap the same IOSurface as a VkImage via VK_EXT_metal_objects
+    //    (VkImportMetalIOSurfaceInfoEXT pNext on VkImageCreateInfo).
+    VkImportMetalIOSurfaceInfoEXT importInfo =
+        {VK_STRUCTURE_TYPE_IMPORT_METAL_IO_SURFACE_INFO_EXT};
+    importInfo.ioSurface = surface;
+    VkImageCreateInfo ici = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    ici.pNext = &importInfo;
+    ici.imageType = VK_IMAGE_TYPE_2D;
+    ici.format = VK_FORMAT_B8G8R8A8_UNORM;
+    ici.extent = {W, H, 1};
+    ici.mipLevels = 1;
+    ici.arrayLayers = 1;
+    ici.samples = VK_SAMPLE_COUNT_1_BIT;
+    ici.tiling = VK_IMAGE_TILING_OPTIMAL;
+    ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImage image = VK_NULL_HANDLE;
+    if (vkCreateImage(device, &ici, nullptr, &image) != VK_SUCCESS) {
+        fprintf(stderr, "[Path B] vkCreateImage(IOSurface) failed — VK_EXT_metal_objects required\n");
+        CFRelease(surface);
+        return false;
+    }
+    // Memory is owned by the IOSurface — no vkAllocateMemory/vkBindImageMemory.
+
+    // 4) Clear the image to (kR,kG,kB,kA) in Vulkan.
+    uint32_t gfxQ = 0;
+    VkQueue queue; vkGetDeviceQueue(device, gfxQ, 0, &queue);
+    VkCommandPoolCreateInfo cpi = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+    cpi.queueFamilyIndex = gfxQ;
+    VkCommandPool pool = VK_NULL_HANDLE;
+    vkCreateCommandPool(device, &cpi, nullptr, &pool);
+    VkCommandBufferAllocateInfo cbai = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+    cbai.commandPool = pool; cbai.commandBufferCount = 1;
+    cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    VkCommandBuffer cb; vkAllocateCommandBuffers(device, &cbai, &cb);
+
+    VkCommandBufferBeginInfo cbbi = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    cbbi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cb, &cbbi);
+
+    VkImageMemoryBarrier b1 = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+    b1.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    b1.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    b1.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    b1.image = image;
+    b1.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    b1.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    b1.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                         0, nullptr, 0, nullptr, 1, &b1);
+
+    // VK_FORMAT_B8G8R8A8_UNORM order — clear values follow R,G,B,A interpretation
+    // (Vulkan re-orders for the chosen format when sampling).
+    VkClearColorValue clear = {{ kR / 255.0f, kG / 255.0f, kB / 255.0f, kA / 255.0f }};
+    VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    vkCmdClearColorImage(cb, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
+
+    VkImageMemoryBarrier b2 = b1;
+    b2.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    b2.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    b2.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    b2.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+                         0, nullptr, 0, nullptr, 1, &b2);
+    vkEndCommandBuffer(cb);
+
+    VkSubmitInfo si = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    si.commandBufferCount = 1; si.pCommandBuffers = &cb;
+    vkQueueSubmit(queue, 1, &si, VK_NULL_HANDLE);
+    vkQueueWaitIdle(queue);
+
+    // 5) Read back via the Metal texture sharing the same IOSurface.
+    uint8_t pixels[W * H * 4] = {};
+    [mtlTex getBytes:pixels
+         bytesPerRow:W * 4
+          fromRegion:MTLRegionMake2D(0, 0, W, H)
+         mipmapLevel:0];
+    // MTLPixelFormatBGRA8Unorm → byte order is B,G,R,A in memory.
+    bool ok = pixels[0] == kB && pixels[1] == kG && pixels[2] == kR && pixels[3] == kA;
+    if (!ok) {
+        fprintf(stderr,
+            "[Path B] mismatch: got %02x %02x %02x %02x, want %02x %02x %02x %02x (BGRA)\n",
+            pixels[0], pixels[1], pixels[2], pixels[3], kB, kG, kR, kA);
+    }
+
+    vkDestroyImage(device, image, nullptr);
+    vkDestroyCommandPool(device, pool, nullptr);
+    CFRelease(surface);
+    return ok;
 }
