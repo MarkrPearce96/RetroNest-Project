@@ -3,6 +3,7 @@
 #include "manifest.h"
 #include <QImage>
 #include <QObject>
+#include <QPointer>
 #include <QProcess>
 #include <QString>
 #include <QVariantMap>
@@ -11,6 +12,7 @@ class EmulatorAdapter;
 class LibretroAdapter;
 class SdlInputManager;
 class FrontendSettingsStore;
+class LibretroGLItem;
 
 /**
  * LibretroRaConfig — RetroAchievements values needed by the libretro start
@@ -123,6 +125,15 @@ public:
      *  clear when the item is destroyed. */
     Q_INVOKABLE void registerHardwareView(qulonglong view_ptr);
 
+    /** Register (or clear) the LibretroGLItem* for the active GL hardware-render
+     *  item. Called from QML via Component.onCompleted; pass nullptr from
+     *  Component.onDestruction. Used by preShutdownRenderFence() on kill() /
+     *  terminate() to synchronize scene graph cleanup with worker-side
+     *  VideoHardwareGL destruction (fixes the PPSSPP Quit crash — see
+     *  docs/superpowers/specs/2026-05-23-ppsspp-quit-render-fence-design.md).
+     */
+    Q_INVOKABLE void registerLibretroGLItem(QObject* item);
+
     /** Returns the active VideoHardwareGL pointer (as QObject*) when the
      *  GL hardware path is in use; nullptr otherwise. LibretroGLItem's
      *  QML Component.onCompleted reads this and calls setVideoHardware.
@@ -196,6 +207,15 @@ private:
 
     QString libretroSlotPath(int slot) const;
 
+    /** Pre-teardown synchronization for the libretro GL backend. Clears the
+     *  LibretroGLItem's reference to VideoHardwareGL and waits (bounded) for
+     *  the scene graph to discard the QSGSimpleTextureNode that wraps the
+     *  IOSurface as an MTLTexture. Without this, QSGRenderThread can render
+     *  a stale MTLTexture after the worker has released the backing IOSurface
+     *  (EXC_BAD_ACCESS in AGX setFragmentTextures+154). No-op for non-GL
+     *  backends or when no glItem is registered. */
+    void preShutdownRenderFence();
+
     QProcess* m_process = nullptr;
     EmulatorAdapter* m_adapter = nullptr;
     const EmulatorManifest* m_manifest = nullptr;
@@ -205,6 +225,10 @@ private:
     bool m_libretroFastForward = false;
     qreal m_libretroAspectRatio = 4.0 / 3.0;  // sensible default before av_info is read
     QString m_libretroBackend = QStringLiteral("software"); // "software" | "metal"
+    // Set by registerLibretroGLItem from QML. Used only by
+    // preShutdownRenderFence() — QPointer auto-clears if the item is
+    // destroyed before we register null.
+    QPointer<LibretroGLItem> m_libretroGLItem;
 
     // SP10: gate the "switch to Rosetta for full speed" notice to one
     // emission per RetroNest session.
