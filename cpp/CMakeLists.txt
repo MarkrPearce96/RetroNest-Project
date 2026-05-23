@@ -1045,6 +1045,10 @@ add_executable(test_game_session_save_slot
     src/core/manifest_loader.cpp
     src/core/sdl_input_manager.cpp
     src/core/path_overrides_store.cpp
+    # game_session.cpp now references LibretroGLItem (setVideoHardware,
+    # window(), update()) inside preShutdownRenderFence, so this test
+    # target needs the item's translation unit and Qt::Quick.
+    src/ui/libretro/libretro_gl_item.mm
 )
 set_target_properties(test_game_session_save_slot PROPERTIES AUTOMOC ON)
 target_include_directories(test_game_session_save_slot PRIVATE
@@ -1052,7 +1056,7 @@ target_include_directories(test_game_session_save_slot PRIVATE
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
     ${SDL2_INCLUDE_DIRS}
 )
-target_link_libraries(test_game_session_save_slot PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
+target_link_libraries(test_game_session_save_slot PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Quick Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
 add_test(NAME GameSessionSaveSlot COMMAND test_game_session_save_slot)
 
 add_executable(test_input_router
