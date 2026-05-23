@@ -30,4 +30,11 @@ public:
                             const QString& subcategory) const override;
 
     QString extractSerial(const QString& romPath) const override;
+
+    // GameSession::terminate writes "{serial}.resume" under
+    // emulators/ppsspp/psp/savestates/. Mirror that path on the load
+    // side so Resume picks up Save & Quit state. Mirrors
+    // Pcsx2LibretroAdapter::findResumeFile (ppsspp / psp instead of
+    // pcsx2 / ps2).
+    QString findResumeFile(const QString& serial) const override;
 };

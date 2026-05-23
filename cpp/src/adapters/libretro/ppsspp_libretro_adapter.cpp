@@ -1,7 +1,10 @@
 #include "ppsspp_libretro_adapter.h"
 #include "core/iso9660_reader.h"
+#include "core/path_overrides_store.h"
+#include "core/paths.h"
 #include "core/sfo_parser.h"
 #include <QDebug>
+#include <QDir>
 
 QVector<ControllerTypeDef> PpssppLibretroAdapter::controllerTypes() const {
     return {
@@ -545,4 +548,21 @@ QString PpssppLibretroAdapter::extractSerial(const QString& romPath) const {
         return {};
     }
     return SfoParser::extractDiscId(sfoData);
+}
+
+QString PpssppLibretroAdapter::findResumeFile(const QString& serial) const {
+    if (serial.isEmpty())
+        return {};
+    // Mirror GameSession::terminate's write path: prefer the user's
+    // SaveStates path override if set, otherwise default to
+    // emulators/ppsspp/psp/savestates/. Without the override mirror,
+    // a user who relocates their save dir would silently lose resume.
+    QString dir = PathOverridesStore::instance().read("ppsspp", "SaveStates");
+    if (dir.isEmpty())
+        dir = Paths::emulatorDataDir("ppsspp", "psp") + "/savestates";
+    QDir d(dir);
+    const auto entries = d.entryList({ serial + ".resume" }, QDir::Files);
+    if (!entries.isEmpty())
+        return d.absoluteFilePath(entries.first());
+    return {};
 }
