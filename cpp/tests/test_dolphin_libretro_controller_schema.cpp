@@ -7,7 +7,7 @@
 #include "core/libretro/input_router.h"
 
 // Pins the contract for DolphinLibretroAdapter's controller schema (SP5):
-//  - exactly two controller types (GCPad1, WiiClassic), each with an SVG
+//  - exactly two controller types (GCPad1, Wiimote1), each with an SVG
 //  - every digital BindingDef key resolves to a RetroPad slot, so the
 //    InputRouter actually binds it on launch (game_session.cpp uses
 //    retroPadSlotFromKey + skips RetroPadSlot::None)
@@ -32,14 +32,14 @@ private slots:
         const auto types = adapter_.controllerTypes();
         QCOMPARE(types.size(), 2);
         QCOMPARE(types[0].id, QString("GCPad1"));
-        QCOMPARE(types[1].id, QString("WiiClassic"));
+        QCOMPARE(types[1].id, QString("Wiimote1"));
         for (const auto& t : types)
             QVERIFY2(!t.svgResource.isEmpty(),
                 qPrintable(QString("missing svgResource for %1").arg(t.id)));
     }
 
     void testEveryDigitalKeyResolves() {
-        for (const QString& type : {QStringLiteral("GCPad1"), QStringLiteral("WiiClassic")}) {
+        for (const QString& type : {QStringLiteral("GCPad1"), QStringLiteral("Wiimote1")}) {
             const auto bindings = adapter_.controllerBindingDefsForType(type);
             QVERIFY(!bindings.isEmpty());
             for (const auto& b : bindings) {
@@ -52,7 +52,7 @@ private slots:
     }
 
     void testBindingsHaveValidCardSlot() {
-        for (const QString& type : {QStringLiteral("GCPad1"), QStringLiteral("WiiClassic")}) {
+        for (const QString& type : {QStringLiteral("GCPad1"), QStringLiteral("Wiimote1")}) {
             for (const auto& b : adapter_.controllerBindingDefsForType(type)) {
                 QVERIFY2(validSlots().contains(b.cardSlot),
                     qPrintable(QString("binding '%1' has invalid cardSlot '%2' in %3")
@@ -62,7 +62,7 @@ private slots:
     }
 
     void testSpotlightsNonDegenerate() {
-        for (const QString& type : {QStringLiteral("GCPad1"), QStringLiteral("WiiClassic")}) {
+        for (const QString& type : {QStringLiteral("GCPad1"), QStringLiteral("Wiimote1")}) {
             for (const auto& b : adapter_.controllerBindingDefsForType(type)) {
                 QVERIFY2(b.spotlightR > 0 && b.spotlightX > 0 && b.spotlightY > 0,
                     qPrintable(QString("degenerate spotlight for '%1' in %2").arg(b.label, type)));

@@ -1,5 +1,10 @@
 #include "dolphin_libretro_adapter.h"
 
+#include "core/ini_file.h"
+#include <QDebug>
+#include <QDir>
+#include <QFileInfo>
+
 int DolphinLibretroAdapter::raConsoleId(const QString& systemId) const {
     if (systemId == "gc")
         return 16;
@@ -33,11 +38,12 @@ QVector<BindingDef> gcPadBindings() {
         { BindingDef::Button, "B", "Face Buttons", "Pad1", "B", "SDL-0/FaceEast",  "FaceButtons", 1233, 543, 60 },
         { BindingDef::Button, "X", "Face Buttons", "Pad1", "X", "SDL-0/FaceWest",  "FaceButtons", 1626, 403, 65 },
         { BindingDef::Button, "Y", "Face Buttons", "Pad1", "Y", "SDL-0/FaceNorth", "FaceButtons", 1390, 250, 65 },
-        // Z (borrows RetroPad Select — the only spare seeded slot)
-        { BindingDef::Button, "Z", "Triggers", "Pad1", "Select", "SDL-0/Back", "Shoulders", 1430, 100, 50 },
-        // Shoulders
-        { BindingDef::Button, "L", "Triggers", "Pad1", "L", "SDL-0/LeftShoulder",  "Shoulders", 290, 100, 80 },
-        { BindingDef::Button, "R", "Triggers", "Pad1", "R", "SDL-0/RightShoulder", "Shoulders", 1517, 78, 80 },
+        // GC L/R are analog triggers, so they default to the controller's analog
+        // triggers; Z defaults to the right shoulder.  (RetroPad slots stay L/R
+        // for L/R and Select for Z — only the physical-input default differs.)
+        { BindingDef::Button, "Z", "Triggers", "Pad1", "Select", "SDL-0/RightShoulder", "Shoulders", 1430, 100, 50 },
+        { BindingDef::Button, "L", "Triggers", "Pad1", "L", "SDL-0/+LeftTrigger",  "Shoulders", 290, 100, 80 },
+        { BindingDef::Button, "R", "Triggers", "Pad1", "R", "SDL-0/+RightTrigger", "Shoulders", 1517, 78, 80 },
         // System
         { BindingDef::Button, "Start", "System", "Pad1", "Start", "SDL-0/Start", "System", 920, 420, 35 },
     };
@@ -75,13 +81,43 @@ QVector<ControllerTypeDef> DolphinLibretroAdapter::controllerTypes() const {
     return {
         { "GCPad1", "GameCube Controller",
           ":/AppUI/qml/AppUI/images/controllers/GameCube.svg" },
-        { "WiiClassic", "Wii Classic Controller",
+        { "Wiimote1", "Wii Classic Controller",
           ":/AppUI/qml/AppUI/images/controllers/Wii_classiccontroller.svg" },
     };
 }
 
 QVector<BindingDef> DolphinLibretroAdapter::controllerBindingDefsForType(const QString& type) const {
-    if (type == "WiiClassic")
+    // Type ids match EmulatorDetailPage.qml + Dolphin's native section naming
+    // ("GCPad1" / "Wiimote1"). A mismatch here makes ControllerBindingsView
+    // deref a null matchedType (its Q_ASSERT is a no-op in Release) and crash.
+    if (type == "Wiimote1")
         return wiiClassicBindings();
     return gcPadBindings();  // "GCPad1" or the empty default used by seeding
+}
+
+bool DolphinLibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
+                                          const QString& /*biosPath*/,
+                                          const QString& savesPath) {
+    QDir().mkpath(savesPath);
+    QDir().mkpath(QFileInfo(optionsJsonPath()).absolutePath());
+
+    // Seed a fresh controls.ini from each binding def's own defaultValue. The
+    // base class seeds from a shared hardcoded slot->element map that doesn't
+    // know GC L/R are analog triggers; seeding from defaultValue keeps the
+    // fresh-file defaults identical to what Auto-Map writes. Never overwrite an
+    // existing file — user remaps are preserved across launches.
+    const QString iniPath = controlsIniPath();
+    if (!QFileInfo::exists(iniPath)) {
+        const QString section = controllerBindingsSection(/*port=*/1);
+        IniFile ini;
+        for (const auto& def : controllerBindingDefsForType({})) {
+            if (!def.defaultValue.isEmpty())
+                ini.setValue(section, def.key, def.defaultValue);
+        }
+        if (!ini.save(iniPath))
+            qWarning() << "[DolphinLibretroAdapter] Failed to write default controls.ini to" << iniPath;
+        else
+            qInfo() << "[DolphinLibretroAdapter] Seeded controls.ini from binding defs at" << iniPath;
+    }
+    return true;
 }

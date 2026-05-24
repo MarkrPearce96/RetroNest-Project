@@ -44,4 +44,12 @@ public:
     // are intentionally absent here — they still drive the game in-core via
     // the GCPad profile the libretro core writes at boot.
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
+
+    // SP5: seed a fresh controls.ini from each binding def's defaultValue rather
+    // than the base class's shared hardcoded slot->element map (which would seed
+    // GC L/R as shoulders, not analog triggers). Makes the fresh-file defaults
+    // match what Auto-Map produces (auto-map already uses defaultValue).
+    bool ensureConfig(const EmulatorManifest& manifest,
+                      const QString& biosPath,
+                      const QString& savesPath) override;
 };
