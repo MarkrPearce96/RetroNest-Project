@@ -1,5 +1,7 @@
 #pragma once
 #include "libretro_adapter.h"
+#include "core/binding_def.h"
+#include "core/controller_type_def.h"
 
 // Skeleton-phase DolphinLibretroAdapter.
 //
@@ -29,4 +31,17 @@ public:
     // RetroNest's RA console mapping in cpp/src/core/ra_client.cpp already
     // contains the gc/wii string->id entries.
     int raConsoleId(const QString& systemId) const override;
+
+    // SP5: surface GameCube + Wii Classic controllers to the mapping UI.
+    // Without controllerTypes() the page is empty and ControllerBindingsView
+    // crashes rendering cards (see Pcsx2LibretroAdapter note).
+    QVector<ControllerTypeDef> controllerTypes() const override;
+
+    // SP5: digital binding defs. Keys are RetroPad slots resolved by
+    // retroPadSlotFromKey(); only the slots RetroNest seeds (A/B/X/Y, L/R,
+    // Select/Start, D-Pad) get a default physical binding. Analog sticks are
+    // fixed-routed by SdlInputManager (not controls.ini-remappable), so they
+    // are intentionally absent here — they still drive the game in-core via
+    // the GCPad profile the libretro core writes at boot.
+    QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
 };
