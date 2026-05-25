@@ -52,4 +52,13 @@ public:
     bool ensureConfig(const EmulatorManifest& manifest,
                       const QString& biosPath,
                       const QString& savesPath) override;
+
+    // SP6: Graphics core-options schema. Keys + values + defaults mirror
+    // dolphin-libretro/Source/Core/DolphinLibretro/CoreOptionsGraphics.cpp's
+    // push_back table EXACTLY (enforced by tools/check_schema_fidelity.py).
+    QVector<SettingDef> settingsSchema() const override;
+    QVector<SettingsHubCard> settingsHubCards() const override;
+    QStringList settingsCategoriesWithSubTabs() const override { return {"Graphics"}; }
+    PreviewSpec previewSpec(const QString& category,
+                            const QString& subcategory) const override;
 };
