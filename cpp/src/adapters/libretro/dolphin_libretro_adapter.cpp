@@ -473,6 +473,61 @@ QVector<SettingDef> DolphinLibretroAdapter::settingsSchema() const {
         {{"Auto","0"},{"64 MiB","67108864"},{"128 MiB","134217728"},{"256 MiB","268435456"},{"512 MiB","536870912"},{"1 GiB","1073741824"},{"2 GiB","2147483648"},{"4 GiB (SDHC)","4294967296"},{"8 GiB (SDHC)","8589934592"},{"16 GiB (SDHC)","17179869184"},{"32 GiB (SDHC)","34359738368"}},
         "Capacity of the virtual SD card. Auto uses the image file as-is."));
 
+    // ═══ Recommended (curated cross-category VIEW — re-references existing keys) ═══
+    // Performance
+    s.append(opt("Recommended", "Performance", "dolphin_cpu_thread", "Dual Core (Speed Hack)", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Run CPU and GPU emulation on separate threads. Big speed gain for most games."));
+    s.append(opt("Recommended", "Performance", "dolphin_shader_compilation", "Shader Compilation", "Specialized",
+        {{"Specialized (Default)","Specialized"},{"Exclusive Ubershaders","Exclusive Ubershaders"},{"Hybrid Ubershaders","Hybrid Ubershaders"},{"Skip Drawing","Skip Drawing"}},
+        "Ubershader modes avoid shader-compile stutter at a GPU cost."));
+    s.append(opt("Recommended", "Performance", "dolphin_wait_for_shaders", "Compile Shaders Before Starting", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Pre-compile the shader pipeline before launching. Slower start, smoother first minutes."));
+    // Performance Hacks
+    s.append(opt("Recommended", "Performance Hacks", "dolphin_store_efb_to_texture", "Store EFB Copies to Texture Only", "enabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Skip the slow EFB->RAM copy. Big speed boost; can break games that read EFB on the CPU."));
+    s.append(opt("Recommended", "Performance Hacks", "dolphin_store_xfb_to_texture", "Store XFB Copies to Texture Only", "enabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Skip the slow XFB->RAM copy. Big speed boost; required off for games that decode the XFB on the CPU."));
+    s.append(opt("Recommended", "Performance Hacks", "dolphin_skip_efb_access", "Skip EFB Access from CPU", "enabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Skip CPU read-back of the EFB. Faster; disable for games that need accurate EFB access."));
+    s.append(opt("Recommended", "Performance Hacks", "dolphin_texcache_accuracy", "Texture Cache Accuracy", "Default",
+        {{"Safe (Slowest)","Safe"},{"Default","Default"},{"Fast","Fast"}},
+        "Fast = best performance with glitch risk; Safe = full accuracy. Default is balanced."));
+    // Visual Quality
+    s.append(opt("Recommended", "Visual Quality", "dolphin_internal_resolution", "Internal Resolution", "1x",
+        {{"Auto (Window Size)","Auto"},{"Native (1x)","1x"},{"2x","2x"},{"3x","3x"},{"4x","4x"},{"5x","5x"},{"6x (4K)","6x"},{"7x","7x"},{"8x","8x"}},
+        "Render scale relative to native. The single biggest knob for visual fidelity."));
+    s.append(opt("Recommended", "Visual Quality", "dolphin_aspect_ratio", "Aspect Ratio", "Auto",
+        {{"Auto","Auto"},{"Force 16:9","16:9"},{"Force 4:3","4:3"},{"Stretch to Window","Stretch"}},
+        "Display aspect ratio. Auto matches the game."));
+    s.append(opt("Recommended", "Visual Quality", "dolphin_antialiasing", "Anti-Aliasing", "None",
+        {{"None","None"},{"2x MSAA","2x MSAA"},{"4x MSAA","4x MSAA"},{"8x MSAA","8x MSAA"},{"2x SSAA","2x SSAA"},{"4x SSAA","4x SSAA"},{"8x SSAA","8x SSAA"}},
+        "Smooths edges. SSAA is far more demanding than MSAA."));
+    s.append(opt("Recommended", "Visual Quality", "dolphin_texture_filtering", "Texture Filtering", "Default",
+        {{"Default","Default"},{"1x Anisotropic","1x Anisotropic"},{"2x Anisotropic","2x Anisotropic"},{"4x Anisotropic","4x Anisotropic"},{"8x Anisotropic","8x Anisotropic"},{"16x Anisotropic","16x Anisotropic"},{"Force Nearest and 1x Anisotropic","Force Nearest and 1x Anisotropic"},{"Force Linear and 1x Anisotropic","Force Linear and 1x Anisotropic"},{"Force Linear and 2x Anisotropic","Force Linear and 2x Anisotropic"},{"Force Linear and 4x Anisotropic","Force Linear and 4x Anisotropic"},{"Force Linear and 8x Anisotropic","Force Linear and 8x Anisotropic"},{"Force Linear and 16x Anisotropic","Force Linear and 16x Anisotropic"}},
+        "Sharpens distant textures and optionally forces a magnification filter."));
+    s.append(opt("Recommended", "Visual Quality", "dolphin_widescreen_hack", "Widescreen Hack", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Force 4:3 games to render in widescreen. May produce artifacts."));
+    // Audio
+    s.append(opt("Recommended", "Audio", "dolphin_dsp_engine", "DSP Emulation Engine", "HLE",
+        {{"HLE (Recommended)","HLE"},{"LLE Recompiler (Slow)","LLE Recompiler"},{"LLE Interpreter (Very Slow)","LLE Interpreter"}},
+        "HLE is fast and compatible. Use LLE only when a game needs it."));
+    s.append(opt("Recommended", "Audio", "dolphin_volume", "Volume", "100",
+        {{"0%","0"},{"10%","10"},{"20%","20"},{"30%","30"},{"40%","40"},{"50%","50"},{"60%","60"},{"70%","70"},{"80%","80"},{"90%","90"},{"100%","100"}},
+        "Master output volume."));
+    // Convenience
+    s.append(opt("Recommended", "Convenience", "dolphin_enable_cheats", "Enable Cheats", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Process AR/Gecko cheat codes."));
+    s.append(opt("Recommended", "Convenience", "dolphin_skip_ipl", "Skip GameCube Boot Animation", "enabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Skip the GC IPL boot sequence and start the game directly."));
+
     return s;
 }
 
