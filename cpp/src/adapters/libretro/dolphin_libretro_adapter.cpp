@@ -140,6 +140,28 @@ QVector<SettingDef> DolphinLibretroAdapter::settingsSchema() const {
         return d;
     };
 
+    // opt(): like gopt but with an explicit category (subcategory empty) for
+    // the flat (no sub-tab) categories — Audio/General/Advanced/GameCube/Wii
+    // and the Recommended view. Mirrors pcsx2_libretro_adapter's opt().
+    auto opt = [](const QString& category, const QString& group,
+                  const QString& key, const QString& label, const QString& def,
+                  const QVector<QPair<QString,QString>>& valuesAndLabels,
+                  const QString& tooltip, const QString& dependsOn = {}) -> SettingDef {
+        SettingDef d;
+        d.storage = SettingDef::Storage::LibretroOption;
+        d.category = category;
+        d.subcategory = "";
+        d.group = group;
+        d.key = key;
+        d.label = label;
+        d.defaultValue = def;
+        d.tooltip = tooltip;
+        d.type = SettingDef::Combo;
+        d.options = valuesAndLabels;
+        d.dependsOn = dependsOn;
+        return d;
+    };
+
     // ── General ──────────────────────────────────────────────────────────
     s.append(gopt("General", "General", "dolphin_aspect_ratio", "Aspect Ratio", "Auto",
         {{"Auto","Auto"},{"Force 16:9","16:9"},{"Force 4:3","4:3"},{"Stretch to Window","Stretch"}},
@@ -329,6 +351,127 @@ QVector<SettingDef> DolphinLibretroAdapter::settingsSchema() const {
     s.append(gopt("On-Screen Display", "On-Screen Display", "dolphin_show_speed_colors", "Show Speed Colors", "enabled",
         {{"Enabled","enabled"},{"Disabled","disabled"}},
         "Tint the speed indicator based on how close to native it is."));
+
+    // ═══ Audio ═══
+    s.append(opt("Audio", "DSP", "dolphin_dsp_engine", "DSP Emulation Engine", "HLE",
+        {{"HLE (Recommended)","HLE"},{"LLE Recompiler (Slow)","LLE Recompiler"},{"LLE Interpreter (Very Slow)","LLE Interpreter"}},
+        "How the audio DSP is emulated. HLE is fast and compatible; LLE is slower but accurate and required by a few games."));
+    s.append(opt("Audio", "Backend", "dolphin_audio_latency", "Audio Latency", "20",
+        {{"0 ms","0"},{"10 ms","10"},{"20 ms","20"},{"40 ms","40"},{"60 ms","60"},{"80 ms","80"},{"100 ms","100"},{"150 ms","150"},{"200 ms","200"}},
+        "Output latency in milliseconds. Only active with backends that support latency control (OpenAL)."));
+    s.append(opt("Audio", "Backend", "dolphin_dpl2_decoder", "Dolby Pro Logic II Decoder", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Decode the stereo mix into 5.1 surround. Requires a DPL2-capable backend and DSP in LLE mode."));
+    s.append(opt("Audio", "Backend", "dolphin_dpl2_quality", "DPL2 Decoding Quality", "2",
+        {{"Lowest (Latency ~10 ms)","0"},{"Low (Latency ~20 ms)","1"},{"High (Latency ~40 ms)","2"},{"Highest (Latency ~80 ms)","3"}},
+        "Trade-off between CPU cost and surround-decode accuracy."));
+    s.append(opt("Audio", "Playback", "dolphin_audio_buffer_size", "Audio Buffer Size", "80",
+        {{"32 ms","32"},{"48 ms","48"},{"64 ms","64"},{"80 ms","80"},{"96 ms","96"},{"128 ms","128"},{"160 ms","160"},{"256 ms","256"},{"512 ms","512"}},
+        "Internal mixer buffer in milliseconds. Higher is smoother but adds delay between picture and sound."));
+    s.append(opt("Audio", "Playback", "dolphin_audio_fill_gaps", "Fill Audio Gaps", "enabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Synthesize silence when emulation can't keep up. Disable for accuracy; enable for smoothness."));
+    s.append(opt("Audio", "Playback", "dolphin_audio_preserve_pitch", "Preserve Audio Pitch", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Time-stretch audio to keep pitch constant when emulation runs off 100%. Useful with fast-forward."));
+    s.append(opt("Audio", "Playback", "dolphin_audio_mute_on_unthrottle", "Mute When Unthrottled", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Silence audio while running unthrottled (fast-forward). Avoids pitch/playback artifacts."));
+    s.append(opt("Audio", "Volume", "dolphin_volume", "Volume", "100",
+        {{"0%","0"},{"10%","10"},{"20%","20"},{"30%","30"},{"40%","40"},{"50%","50"},{"60%","60"},{"70%","70"},{"80%","80"},{"90%","90"},{"100%","100"}},
+        "Master output volume."));
+
+    // ═══ General ═══
+    s.append(opt("General", "Basic", "dolphin_cpu_thread", "Dual Core (Speed Hack)", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Run CPU and GPU emulation on separate threads. Big speed gain; a few timing-sensitive games may glitch with it on."));
+    s.append(opt("General", "Basic", "dolphin_enable_cheats", "Enable Cheats", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Process AR/Gecko cheat codes. Off by default for safety."));
+    s.append(opt("General", "Basic", "dolphin_load_game_into_memory", "Load Whole Game Into Memory", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Pre-load the entire disc image into RAM at boot. Eliminates disc I/O stutter; uses more host memory."));
+    s.append(opt("General", "Basic", "dolphin_override_region_settings", "Allow Mismatched Region Settings", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Force a region's settings (language, video mode) regardless of disc region."));
+    s.append(opt("General", "Basic", "dolphin_emulation_speed", "Speed Limit", "1.000000",
+        {{"Unlimited","0.000000"},{"10%","0.100000"},{"20%","0.200000"},{"30%","0.300000"},{"40%","0.400000"},{"50%","0.500000"},{"60%","0.600000"},{"70%","0.700000"},{"80%","0.800000"},{"90%","0.900000"},{"100% (Normal Speed)","1.000000"},{"110%","1.100000"},{"120%","1.200000"},{"130%","1.300000"},{"140%","1.400000"},{"150%","1.500000"},{"160%","1.600000"},{"170%","1.700000"},{"180%","1.800000"},{"190%","1.900000"},{"200%","2.000000"}},
+        "Cap on emulated speed relative to native. Unlimited removes the throttle."));
+    s.append(opt("General", "Region", "dolphin_fallback_region", "Fallback Region", "1",
+        {{"NTSC-J (Japan)","0"},{"NTSC-U (Americas)","1"},{"PAL (Europe)","2"},{"Region-Free / Unknown","3"},{"NTSC-K (Korea)","4"}},
+        "Region used for games whose region can't be auto-detected. Affects boot timing and the system-menu locale."));
+
+    // ═══ Advanced ═══
+    s.append(opt("Advanced", "CPU", "dolphin_cpu_core", "CPU Emulation Engine", "JIT",
+        {{"Interpreter (Slowest)","Interpreter"},{"Cached Interpreter (Slow)","Cached Interpreter"},{"JIT Recompiler (Recommended)","JIT"}},
+        "The CPU backend. JIT is required for full-speed gameplay; the interpreters are debug/accuracy fallbacks."));
+    s.append(opt("Advanced", "CPU", "dolphin_mmu", "Enable MMU", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Emulate the memory management unit. Slower but required by a small set of games."));
+    s.append(opt("Advanced", "CPU", "dolphin_pause_on_panic", "Pause on Panic", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Pause emulation when Dolphin reports a non-fatal error."));
+    s.append(opt("Advanced", "CPU", "dolphin_accurate_cpu_cache", "Enable Write-Back Cache (Slow)", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Emulate the CPU's L1 cache. Slower but more accurate; needed for a handful of self-modifying-code games."));
+    s.append(opt("Advanced", "Timing", "dolphin_correct_time_drift", "Correct Time Drift", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Compensate for accumulated frame-pacing drift over long sessions."));
+    s.append(opt("Advanced", "Timing", "dolphin_rush_frame_presentation", "Rush Frame Presentation", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Aggressively present frames as soon as they're ready. Lower latency, more tearing without V-Sync."));
+    s.append(opt("Advanced", "Timing", "dolphin_smooth_early_presentation", "Smooth Early Presentation", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Smooth pacing for frames that finish ahead of schedule."));
+    s.append(opt("Advanced", "Clock Override", "dolphin_overclock_enable", "Enable CPU Clock Override", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Allow the multiplier below to scale the emulated CPU clock. Some games run smoother overclocked; others crash."));
+    s.append(opt("Advanced", "Clock Override", "dolphin_overclock", "CPU Overclock Multiplier", "1",
+        {{"1x (Native)","1"},{"2x (+100%)","2"},{"3x (+200%)","3"},{"4x (+300%)","4"}},
+        "Multiplier on the emulated CPU clock when overclocking is enabled. 1x = native.", "dolphin_overclock_enable"));
+    s.append(opt("Advanced", "VBI Override", "dolphin_vi_overclock_enable", "Enable VBI Frequency Override", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Scale the video-interface clock independently of the CPU. Affects refresh-rate timing for some games."));
+    s.append(opt("Advanced", "VBI Override", "dolphin_vi_overclock", "VI Overclock Multiplier", "1",
+        {{"1x (Native)","1"},{"2x","2"},{"3x","3"},{"4x","4"}},
+        "Multiplier on the VI clock when VI overclocking is enabled.", "dolphin_vi_overclock_enable"));
+
+    // ═══ GameCube ═══
+    s.append(opt("GameCube", "IPL", "dolphin_skip_ipl", "Skip Main Menu (IPL)", "enabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Skip the GameCube boot animation and start the game directly. When off, requires IPL.bin in the BIOS folder."));
+    s.append(opt("GameCube", "IPL", "dolphin_gc_language", "System Language", "0",
+        {{"English","0"},{"German","1"},{"French","2"},{"Spanish","3"},{"Italian","4"},{"Dutch","5"}},
+        "System language used by GameCube games that respect it."));
+    s.append(opt("GameCube", "Devices", "dolphin_slot_a", "Slot A", "8",
+        {{"Nothing","255"},{"Dummy","0"},{"Memory Card","1"},{"GCI Folder","8"},{"USB Gecko","7"},{"Advance Game Port","9"},{"Microphone","4"}},
+        "Device in the GameCube's left memory-card / EXI slot."));
+    s.append(opt("GameCube", "Devices", "dolphin_slot_b", "Slot B", "255",
+        {{"Nothing","255"},{"Dummy","0"},{"Memory Card","1"},{"GCI Folder","8"},{"USB Gecko","7"},{"Advance Game Port","9"},{"Microphone","4"}},
+        "Device in the GameCube's right memory-card / EXI slot."));
+    s.append(opt("GameCube", "Devices", "dolphin_serial_port_1", "Serial Port 1 (SP1)", "255",
+        {{"Nothing","255"},{"Dummy","0"},{"Broadband Adapter (TAP)","5"},{"Broadband Adapter (XLink Kai)","10"},{"Broadband Adapter (tapserver)","11"},{"Broadband Adapter (HLE)","12"},{"Modem Adapter (tapserver)","13"},{"Triforce AM-Baseboard","6"}},
+        "Device on the GameCube's serial port — network adapters in compatible games."));
+
+    // ═══ Wii ═══
+    s.append(opt("Wii", "Misc", "dolphin_wii_keyboard", "Connect USB Keyboard", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Make a USB keyboard visible to Wii software."));
+    s.append(opt("Wii", "Misc", "dolphin_enable_wiilink", "Enable WiiConnect24 (WiiLink)", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Patch the Wii Shop / Channels to use community WiiLink servers. Off by default to avoid third-party network calls."));
+    s.append(opt("Wii", "SD Card", "dolphin_wii_sd_card", "Insert SD Card", "enabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Make a virtual SD card visible to Wii software. Required for save imports, channel installs, and SD-using homebrew."));
+    s.append(opt("Wii", "SD Card", "dolphin_wii_sd_card_writes", "Allow Writes to SD Card", "enabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "When off, the SD card is read-only — protects a shared image from accidental modification."));
+    s.append(opt("Wii", "SD Card", "dolphin_wii_sd_card_folder_sync", "Auto-Sync SD with Folder", "disabled",
+        {{"Enabled","enabled"},{"Disabled","disabled"}},
+        "Mirror the SD card image from a host folder."));
+    s.append(opt("Wii", "SD Card", "dolphin_wii_sd_card_size", "SD Card Size", "0",
+        {{"Auto","0"},{"64 MiB","67108864"},{"128 MiB","134217728"},{"256 MiB","268435456"},{"512 MiB","536870912"},{"1 GiB","1073741824"},{"2 GiB","2147483648"},{"4 GiB (SDHC)","4294967296"},{"8 GiB (SDHC)","8589934592"},{"16 GiB (SDHC)","17179869184"},{"32 GiB (SDHC)","34359738368"}},
+        "Capacity of the virtual SD card. Auto uses the image file as-is."));
 
     return s;
 }
