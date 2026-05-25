@@ -50,10 +50,9 @@ QVector<BindingDef> gcPadBindings() {
 }
 
 // Wii Classic Controller. Wii_classiccontroller.svg viewBox is 0 0 2340 1182.
-// Display + remap surface only: the libretro core does not yet write a default
-// Wiimote/Classic profile, so these do not drive a Wii game end-to-end yet
-// (tracked as follow-up). Same RetroPad-slot convention as GC. ZL/ZR/Home have
-// no spare seeded slot and are omitted for v1.
+// RetroPad-slot keys must match the core's WiimoteNew.ini Classic profile + the
+// feed set below (they share [Pad1]): ZL<-L2, ZR<-Select (shared with GC Z),
+// minus<-R2, plus<-Start, Home<-R3; L/R analog<-L/R (the analog triggers).
 QVector<BindingDef> wiiClassicBindings() {
     return {
         // D-Pad
@@ -66,13 +65,30 @@ QVector<BindingDef> wiiClassicBindings() {
         { BindingDef::Button, "B", "Face Buttons", "Pad1", "B", "SDL-0/FaceEast",  "FaceButtons", 1883, 633, 80 },
         { BindingDef::Button, "X", "Face Buttons", "Pad1", "X", "SDL-0/FaceWest",  "FaceButtons", 1883, 289, 80 },
         { BindingDef::Button, "Y", "Face Buttons", "Pad1", "Y", "SDL-0/FaceNorth", "FaceButtons", 1659, 461, 80 },
-        // Shoulders
-        { BindingDef::Button, "L", "Triggers", "Pad1", "L", "SDL-0/LeftShoulder",  "Shoulders", 370,  80, 70 },
-        { BindingDef::Button, "R", "Triggers", "Pad1", "R", "SDL-0/RightShoulder", "Shoulders", 1970, 80, 70 },
+        // Shoulders / triggers
+        { BindingDef::Button, "L",  "Triggers", "Pad1", "L",      "SDL-0/+LeftTrigger",  "Shoulders", 370,  80, 70 },
+        { BindingDef::Button, "ZL", "Triggers", "Pad1", "L2",     "SDL-0/LeftShoulder",  "Shoulders", 570,  80, 60 },
+        { BindingDef::Button, "R",  "Triggers", "Pad1", "R",      "SDL-0/+RightTrigger", "Shoulders", 1970, 80, 70 },
+        { BindingDef::Button, "ZR", "Triggers", "Pad1", "Select", "SDL-0/RightShoulder", "Shoulders", 1770, 80, 60 },
         // System
-        { BindingDef::Button, "Minus", "System", "Pad1", "Select", "SDL-0/Back",  "System", 996,  459, 50 },
-        { BindingDef::Button, "Plus",  "System", "Pad1", "Start",  "SDL-0/Start", "System", 1343, 459, 50 },
+        { BindingDef::Button, "Minus", "System", "Pad1", "R2",    "SDL-0/Back",  "System", 996,  459, 50 },
+        { BindingDef::Button, "Home",  "System", "Pad1", "R3",    "SDL-0/Guide", "System", 1170, 545, 45 },
+        { BindingDef::Button, "Plus",  "System", "Pad1", "Start", "SDL-0/Start", "System", 1343, 459, 50 },
     };
+}
+
+// Device-level feed/seed set (the empty controller-type fallback). ensureConfig
+// seeds controls.ini from this and game_session binds the InputRouter from it,
+// so it must be the UNION of every RetroPad slot either controller needs. It is
+// the GameCube layout plus the Wii-Classic-only slots (ZL/minus/Home -> L2/R2/
+// R3); Select/Start are already fed by GameCube (Z / Start). Not shown on any
+// mapping page (spotlights are 0). Physical defaults match wiiClassicBindings().
+QVector<BindingDef> feedBindings() {
+    auto defs = gcPadBindings();
+    defs.append({ BindingDef::Button, "ZL",    "Triggers", "Pad1", "L2", "SDL-0/LeftShoulder", "Shoulders", 0, 0, 0 });
+    defs.append({ BindingDef::Button, "Minus", "System",   "Pad1", "R2", "SDL-0/Back",         "System",    0, 0, 0 });
+    defs.append({ BindingDef::Button, "Home",  "System",   "Pad1", "R3", "SDL-0/Guide",        "System",    0, 0, 0 });
+    return defs;
 }
 
 }  // namespace
@@ -90,9 +106,13 @@ QVector<BindingDef> DolphinLibretroAdapter::controllerBindingDefsForType(const Q
     // Type ids match EmulatorDetailPage.qml + Dolphin's native section naming
     // ("GCPad1" / "Wiimote1"). A mismatch here makes ControllerBindingsView
     // deref a null matchedType (its Q_ASSERT is a no-op in Release) and crash.
+    if (type == "GCPad1")
+        return gcPadBindings();
     if (type == "Wiimote1")
         return wiiClassicBindings();
-    return gcPadBindings();  // "GCPad1" or the empty default used by seeding
+    // Empty type = ensureConfig seeding + game_session InputRouter feed: return
+    // the device feed superset so the Wii-only slots (ZL/ZR/Home) are fed too.
+    return feedBindings();
 }
 
 bool DolphinLibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,

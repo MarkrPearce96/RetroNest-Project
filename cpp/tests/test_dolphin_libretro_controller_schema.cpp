@@ -70,11 +70,29 @@ private slots:
         }
     }
 
-    void testEmptyTypeFallsBackToGc() {
-        // ensureConfig() + game_session call controllerBindingDefsForType({}); it
-        // must return the active (GameCube) layout, not an empty list.
-        QCOMPARE(adapter_.controllerBindingDefsForType({}).size(),
-                 adapter_.controllerBindingDefsForType("GCPad1").size());
+    void testEmptyTypeIsFeedSuperset() {
+        // ensureConfig() + game_session call controllerBindingDefsForType({}) to
+        // seed controls.ini + feed the InputRouter. It must be the UNION of every
+        // RetroPad slot either controller needs: every GameCube key plus the
+        // Wii-Classic-only slots ZL/minus/Home (L2/R2/R3).
+        const auto feed = adapter_.controllerBindingDefsForType({});
+        const auto gc = adapter_.controllerBindingDefsForType("GCPad1");
+        QVERIFY(feed.size() > gc.size());
+
+        QSet<QString> feedKeys;
+        for (const auto& b : feed) feedKeys.insert(b.key);
+        for (const auto& b : gc)
+            QVERIFY2(feedKeys.contains(b.key),
+                qPrintable(QString("feed set missing GameCube key '%1'").arg(b.key)));
+        for (const QString& wiiOnly : {QStringLiteral("L2"), QStringLiteral("R2"), QStringLiteral("R3")})
+            QVERIFY2(feedKeys.contains(wiiOnly),
+                qPrintable(QString("feed set missing Wii Classic slot '%1'").arg(wiiOnly)));
+
+        // Every fed key must resolve to a real RetroPad slot (game_session skips
+        // RetroPadSlot::None, so an unresolved key would silently not be fed).
+        for (const auto& b : feed)
+            QVERIFY2(retroPadSlotFromKey(b.key) != RetroPadSlot::None,
+                qPrintable(QString("unfed feed key '%1'").arg(b.key)));
     }
 };
 
