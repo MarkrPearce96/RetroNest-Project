@@ -487,6 +487,21 @@ ControllerBindingsView::ControllerBindingsView(SdlInputManager* inputManager,
                qPrintable(QString("controller type '%1' not found in adapter list for '%2'")
                           .arg(controllerTypeId, emuId)));
 
+    // Release builds compile Q_ASSERT_X out, so guard the null explicitly: an
+    // unknown controllerTypeId (e.g. a QML id that drifted from the adapter's
+    // controllerTypes()) must degrade gracefully, not dereference null below.
+    if (!matchedType) {
+        if (!adapterTypes.isEmpty()) {
+            qWarning() << "[ControllerBindingsView] controller type" << controllerTypeId
+                       << "not found for" << emuId << "— falling back to" << adapterTypes.first().id;
+            matchedType = &adapterTypes.first();
+        } else {
+            qWarning() << "[ControllerBindingsView] no controller types for" << emuId
+                       << "— rendering empty view";
+            return;
+        }
+    }
+
     const QString svg    = matchedType->svgResource;
     m_slotTitleOverrides = matchedType->slotTitleOverrides;
     const QString typeId = matchedType->id;
