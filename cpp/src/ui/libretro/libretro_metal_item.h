@@ -28,6 +28,7 @@
 #pragma once
 
 #include <QQuickItem>
+#include <QPointer>
 #include <QtQml/qqmlregistration.h>
 
 class QWindow;
@@ -73,7 +74,13 @@ private:
     void updateInnerGeometry();   // letterboxes m_window inside the item's rect
     void syncContentsScale();     // matches NSView layer.contentsScale to host DPR
 
-    QWindow* m_window = nullptr;          // owns the underlying NSView via Qt's surface
+    // QPointer (not raw QWindow*) so the field auto-clears if the host
+    // QQuickWindow reaps this child window during app-shutdown teardown
+    // (QObject::deleteChildren) before ~LibretroMetalItem runs. A raw
+    // pointer dangles there and the dtor's m_window->deleteLater() is a
+    // use-after-free (SIGSEGV in QObject::deleteLater on app-quit while a
+    // game is mounted). Mirrors the GL path (LibretroGLItem / GameSession).
+    QPointer<QWindow> m_window;           // owns the underlying NSView via Qt's surface
     QString m_aspectMode = QStringLiteral("native");
     qreal m_nativeAspect = 4.0 / 3.0;     // PS2 default; PCSX2 reports this via av_info
 };
