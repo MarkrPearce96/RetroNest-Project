@@ -51,13 +51,29 @@ private slots:
         QCOMPARE(subs, expect);
     }
 
-    void noDuplicateKeys() {
+    void noDuplicateKeysPerCategory() {
+        // Recommended deliberately re-references keys that live in other
+        // categories, so global uniqueness no longer holds — enforce
+        // uniqueness within each category instead.
         DolphinLibretroAdapter a;
-        QSet<QString> seen;
+        QSet<QString> seen;  // "category/key"
         for (const auto& d : a.settingsSchema()) {
-            QVERIFY2(!seen.contains(d.key), qPrintable(QString("duplicate key '%1'").arg(d.key)));
-            seen.insert(d.key);
+            const QString id = d.category + "/" + d.key;
+            QVERIFY2(!seen.contains(id),
+                qPrintable(QString("duplicate key '%1' in category '%2'").arg(d.key).arg(d.category)));
+            seen.insert(id);
         }
+    }
+
+    void recommendedRows_haveAHomeElsewhere() {
+        DolphinLibretroAdapter a;
+        QSet<QString> nonRecKeys;
+        for (const auto& d : a.settingsSchema())
+            if (d.category != "Recommended") nonRecKeys.insert(d.key);
+        for (const auto& d : a.settingsSchema())
+            if (d.category == "Recommended")
+                QVERIFY2(nonRecKeys.contains(d.key),
+                    qPrintable(QString("Recommended row '%1' has no home row in another category").arg(d.key)));
     }
 
     void hubCards_referencedByEntries() {
