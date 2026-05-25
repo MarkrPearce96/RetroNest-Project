@@ -8,6 +8,7 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 #include <QEventLoop>
+#include <QDeadlineTimer>
 #include <QRegularExpression>
 
 #include "core/manifest_loader.h"
@@ -23,6 +24,7 @@
 #include "ui/install_controller.h"
 #include "ui/game_list_model.h"
 #include "ui/app_controller.h"
+#include "core/game_session.h"
 #include "ui/theme_manager.h"
 #include "ui/theme_context.h"
 #include "core/sdl_input_manager.h"
@@ -245,6 +247,27 @@ int main(int argc, char* argv[]) {
         MacFullscreen::hideMenuBarAndDock();
 
         int ret = app.exec();
+
+        // On quit, cleanly stop any still-running game BEFORE the QML engine
+        // and static objects tear down. A core left running (e.g. Cmd+Q from
+        // in-game) has joinable worker/emulation threads whose destructors
+        // call std::terminate() during process static-destruction — Dolphin's
+        // static s_emu_thread aborts this way (SIGABRT in __cxa_finalize) —
+        // and the core's save-on-exit flush (memory cards / SRAM) is skipped.
+        // stopGame() is async (CoreRuntime::finished is posted to the main
+        // thread), so pump events until the session reports stopped. Bounded
+        // so a misbehaving core can't hang exit. General to every libretro
+        // core, not just Dolphin.
+        if (GameSession* gs = appController.gameSession(); gs && gs->isRunning()) {
+            qInfo() << "[main] stopping running game before exit";
+            appController.stopGame();
+            QDeadlineTimer deadline(5000);
+            while (gs->isRunning() && !deadline.hasExpired())
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            if (gs->isRunning())
+                qWarning() << "[main] game did not stop within 5s; exiting anyway";
+        }
+
         db.close();
         return ret;
     }
