@@ -9,9 +9,10 @@
 ## Goal
 
 Expose Dolphin's **Graphics** category (General / Enhancements / Hacks / Advanced /
-On-Screen Display, ~45 options) as libretro core options (`dolphin_` prefix) plus host
-`SettingDef`s, so they appear in RetroNest's settings UI and take effect on the next
-launch.
+On-Screen Display) as libretro core options (`dolphin_` prefix) plus host `SettingDef`s,
+so they appear in RetroNest's settings UI and take effect on the next launch. The
+deleted standalone adapter exposed ~79 Graphics rows; SP6 ships a **curated ~50** — see
+the keep/drop curation under "Graphics option set" below.
 
 The Dolphin core currently exposes **zero** libretro options — there is no
 `RETRO_ENVIRONMENT_SET_VARIABLES` / `SET_CORE_OPTIONS` / `GET_VARIABLE` anywhere in
@@ -107,29 +108,55 @@ New files in `Source/Core/DolphinLibretro/`:
 - `Source/Core/DolphinLibretro/CMakeLists.txt` — add the new sources + the
   `check_schema_fidelity` custom target.
 
-## Graphics option set (~45, curated parity with the deleted standalone)
+## Graphics option set (curated ~50)
 
 Five sub-tabs, matching DolphinQt's Graphics window and the standalone adapter
 (recover the exact rows + GFX.ini keys + value lists via
-`git -C RetroNest-Project show 03f48ae^:cpp/src/adapters/dolphin_adapter.cpp`):
+`git -C RetroNest-Project show 03f48ae^:cpp/src/adapters/dolphin_adapter.cpp`). The
+standalone exposed ~79 Graphics rows; SP6 curates to ~50 by dropping rows that are
+meaningless in RetroNest's embedded console UI or are dev-only.
 
-- **General** — Aspect Ratio, V-Sync, Fullscreen, Precision Frame Timing,
-  Render-to-Main, Auto-Adjust Window Size, Shader Compilation mode, Compile-shaders-
-  before-starting.
-- **Enhancements** — Internal Resolution, Anti-Aliasing (→ `MSAA`+`SSAA`),
-  Texture Filtering (→ `MaxAnisotropy`+`ForceTextureFiltering`), Scaled EFB Copy, etc.
-- **Hacks** — Skip EFB→RAM copy (`EFBToTextureEnable`), XFB→Texture
-  (`XFBToTextureEnable`), EFB CPU access (`EFBAccessEnable`), Texture Cache accuracy
-  (`SafeTextureCacheColorSamples`), Store/Immediate XFB, etc.
-- **Advanced** — Wireframe, Show Statistics, backend multithreading, etc.
-- **On-Screen Display** — Show FPS / FTimes / VPS / Speed, etc.
+**Keep (~53):**
+
+- **General (5)** — Aspect Ratio, V-Sync, Precision Frame Timing
+  (`MAIN_PRECISION_FRAME_TIMING`, not a GFX key), Shader Compilation mode,
+  Wait-for-shaders-before-starting.
+- **Enhancements (15)** — Internal Resolution (`GFX_EFB_SCALE`), Anti-Aliasing
+  (→ `GFX_MSAA`+`GFX_SSAA`), Texture Filtering (→ `GFX_ENHANCE_MAX_ANISOTROPY`
+  +`GFX_ENHANCE_FORCE_TEXTURE_FILTERING`), Output Resampling, Scaled EFB Copy,
+  Per-Pixel Lighting, Widescreen Hack, Force 24-Bit Color, Disable Fog, Arbitrary
+  Mipmap Detection, Disable Copy Filter, HDR Post-Processing, Stereoscopic 3D Mode,
+  Swap Eyes, Full Resolution Per Eye.
+- **Hacks (14)** — Skip EFB Access from CPU (inv), Ignore Format Changes (inv), Store
+  EFB Copies to Texture Only, Defer EFB Copies to RAM, Texture-cache Accuracy, GPU
+  Texture Decoding, Store XFB Copies to Texture Only, Immediately Present XFB, Skip
+  Duplicate Frames, Fast Depth Calculation, Disable Bounding Box (inv), Vertex
+  Rounding, Save Texture Cache to State, VBI Skip.
+- **Advanced (9)** — Load Custom Textures, Prefetch Custom Textures, Enable Graphics
+  Mods, Crop, Backend Multithreading, Prefer VS for Point/Line Expansion, Cull on CPU,
+  Defer EFB Cache Invalidation, Manual Texture Sampling (inv).
+- **On-Screen Display (10)** — Show Messages, Font Size, Show FPS, Show Frame Times,
+  Show VPS, Show VBlank Times, Show % Speed, Show Performance Graphs, Show Speed
+  Colors, Performance Sample Window.
+
+**Drop (~26):** GFXBackend (renderer → SP4); Start in Fullscreen / Render to Main /
+Auto-Adjust Window Size (meaningless — RetroNest embeds the render output); Wireframe,
+Texture Format Overlay, API Validation Layers, Log Render Time, Disable EFB VRAM
+Copies (dev/debug); Dump Textures ×3, Dump EFB/XFB Target ×2, Frame-Dump Resolution
+Type, PNG Compression Level (dump tooling); the Movie Window group (Show Movie Window,
+Rerecord/Lag/Frame counters, Input Display, System Clock — 6); NetPlay Ping + Chat;
+Show Statistics + Projection Statistics (render-debug overlays).
 
 **Conventions carried over from the standalone:**
 
-- **Int sliders → enumerated combos.** libretro core options v2 are Combo-only, so
-  slider settings (e.g. texture-cache samples) become combos with enumerated stops
-  chosen so the default + useful extremes are reachable (same approach PCSX2 used for
-  StretchY/Crop).
+- **Int sliders → enumerated combos.** libretro core options v2 are Combo-only, so the
+  one surviving slider (Texture-cache Accuracy / `SafeTextureCacheColorSamples`) keeps
+  the standalone's three enumerated stops (Safe=0 / Default=128 / Fast=512); OSD Font
+  Size and Perf-Sample-Window likewise become enumerated combos.
+- **Complex-combo fan-out moves to the core** (see Architecture): Anti-Aliasing
+  (one combo → `GFX_MSAA`+`GFX_SSAA`) and Texture Filtering (one combo →
+  `GFX_ENHANCE_MAX_ANISOTROPY`+`GFX_ENHANCE_FORCE_TEXTURE_FILTERING`) are single host
+  combos whose multi-key split happens in the core's `Apply`.
 - **Intentional skips** (same as the standalone — they need infra core options can't
   express): Adapter combo (empty on macOS), Custom-Aspect width/height (dynamic
   visibility), Post-Processing effect picker (dynamic shader list), Stereoscopy
@@ -142,7 +169,7 @@ Extend the **existing** `cpp/src/adapters/libretro/dolphin_libretro_adapter.{h,c
 (created in SP3/SP5; no new class) with the settings overrides, mirroring
 `pcsx2_libretro_adapter`:
 
-- `settingsSchema()` — ~45 `SettingDef`s with `storage = SettingDef::Storage::LibretroOption`,
+- `settingsSchema()` — ~50 `SettingDef`s with `storage = SettingDef::Storage::LibretroOption`,
   built via `opt()` / `gopt(subcategory, …)` helpers exactly like PCSX2. The `gopt`
   helper hardcodes `category = "Graphics"` and pushes the sub-tab name into
   `subcategory`. Plain combos — no `saveTransform`/`loadTransform` (fan-out is core-side now).
