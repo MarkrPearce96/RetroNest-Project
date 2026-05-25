@@ -196,11 +196,22 @@ users lose settings. Three guards:
   — the plan pins that path via a CMake cache var / env var (the two trees live in
   separate repos).
 - **Host test (`test_dolphin_libretro_schema.cpp`).** Mirror
-  `cpp/tests/test_ppsspp_libretro_schema.cpp` — load the built `dolphin_libretro.dylib`,
-  capture its emitted option table at runtime, diff against `settingsSchema()`.
-- **Core unit test (`tools/test_settings_apply.cpp`).** Links Common + Core only (no
-  ROM); compiled with `CORE_OPTIONS_TEST_ONLY`. Asserts each option string maps to the
-  correct `Config::Info<T>` setter, including the AA / texture-filtering fan-out.
+  `cpp/tests/test_ppsspp_libretro_schema.cpp` — which does **not** load a dylib; it
+  links the adapter source in-process (`QTEST_GUILESS_MAIN`) and asserts shape contracts
+  against a hand-maintained fixture: every `LibretroOption` key carries the `dolphin_`
+  prefix, every `defaultValue` is present in its own `options` list, each `settingsHubCard`
+  `categoryKey` resolves to ≥1 row, the five Graphics sub-tabs are all present, and storage
+  types are valid. Catches host-side drift/typos; the cross-repo value/default match is the
+  Python script's job (above).
+- **Core unit test (`tools/test_core_options.cpp`).** Standalone `clang++` compile with
+  `-DCORE_OPTIONS_TEST_ONLY` (no Dolphin link — mirrors `pcsx2-libretro`'s
+  `tools/test_core_options.cpp`). Asserts `Graphics::Parse` maps each option string to the
+  correct `Values` field — **including the AA fan-out** (`"4x MSAA"` → `msaa=4, ssaa=false`)
+  and **texture-filtering fan-out** (`"Force Linear and 4x Anisotropic"` →
+  `aniso=Force4x, force=Linear`) — plus `BuildDefinitions` structure (key count, single
+  terminator, no duplicate keys). `Graphics::Apply` (the 1:1 `Config::SetCurrent` writes) is
+  `#ifndef CORE_OPTIONS_TEST_ONLY` so it compiles out of this test; its correctness is
+  covered by the manual smoke.
 
 **Manual smoke (per the build/deploy dance in the build-setup notes):** build the
 universal dylib, deploy to RetroNest, boot a GameCube game and a Wii game, change
