@@ -533,9 +533,27 @@ QVector<SettingDef> DolphinLibretroAdapter::settingsSchema() const {
 
 QVector<SettingsHubCard> DolphinLibretroAdapter::settingsHubCards() const {
     return {
+        {QStringLiteral("\U00002B50"), "Recommended",
+         "The dozen settings that matter most",
+         "Recommended", 0, 0},
         {QStringLiteral("\U0001F3A8"), "Graphics",
          "Resolution, AA, enhancements, hacks, OSD",
-         "Graphics", 0, 0},
+         "Graphics", 0, 1},
+        {QStringLiteral("\U0001F50A"), "Audio",
+         "DSP engine, latency, volume, surround",
+         "Audio", 1, 0},
+        {QStringLiteral("\U00002699\U0000FE0F"), "General",
+         "Dual core, cheats, speed limit, region",
+         "General", 1, 1},
+        {QStringLiteral("\U0001F6E0\U0000FE0F"), "Advanced",
+         "CPU core, MMU, overclock, timing",
+         "Advanced", 2, 0},
+        {QStringLiteral("\U0001F4BE"), "GameCube",
+         "IPL, language, memory-card slots, SP1",
+         "GameCube", 2, 1},
+        {QStringLiteral("\U0001F3AE"), "Wii",
+         "USB keyboard, WiiLink, SD card",
+         "Wii", 3, 0},
     };
 }
 
