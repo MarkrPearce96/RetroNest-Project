@@ -1,6 +1,8 @@
 #include "dolphin_libretro_adapter.h"
 
 #include "core/ini_file.h"
+#include "core/path_overrides_store.h"
+#include "core/paths.h"
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
@@ -11,6 +13,33 @@ int DolphinLibretroAdapter::raConsoleId(const QString& systemId) const {
     if (systemId == "wii")
         return 19;
     return 0;
+}
+
+QString DolphinLibretroAdapter::findResumeFile(const QString& key) const {
+    if (key.isEmpty())
+        return {};
+    // GameSession::terminate writes "<serial-or-basename>.resume" under the
+    // SaveStates path override, else emulators/dolphin/<gc|wii>/savestates.
+    // Dolphin spans two systems, so search both (mirrors
+    // MgbaLibretroAdapter::findResumeFile, which searches gba/gb/gbc). Without
+    // this override the base returns {} and Save & Quit -> Resume silently
+    // no-ops — the .resume file is written but never read back.
+    const QString override = PathOverridesStore::instance().read("dolphin", "SaveStates");
+    if (!override.isEmpty()) {
+        QDir d(override);
+        const auto entries = d.entryList({ key + ".resume" }, QDir::Files);
+        if (!entries.isEmpty())
+            return d.absoluteFilePath(entries.first());
+        return {};  // Override set but no resume file found — don't fall back.
+    }
+    for (const QString& sys : { "gc", "wii" }) {
+        const QString dir = Paths::emulatorDataDir("dolphin", sys) + "/savestates";
+        QDir d(dir);
+        const auto entries = d.entryList({ key + ".resume" }, QDir::Files);
+        if (!entries.isEmpty())
+            return d.absoluteFilePath(entries.first());
+    }
+    return {};
 }
 
 namespace {

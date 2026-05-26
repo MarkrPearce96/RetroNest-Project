@@ -240,10 +240,15 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         cfg.raEncore   = m_raConfig.encore;
     }
 
-    // Fix 4: Populate resume state path
+    // Fix 4: Populate resume state path. Key by serial, or the ROM base name
+    // when serial extraction fails (e.g. RVZ, whose disc header the host can't
+    // parse) — mirrors the save side in GameSession::terminate, which uses the
+    // same serial-or-basename key. Without the fallback, RVZ titles never
+    // resume because the lookup is skipped on the empty serial.
     const QString serial = lr->extractSerial(romPath);
-    if (!serial.isEmpty())
-        cfg.resumeStatePath = lr->findResumeFile(serial);
+    const QString resumeKey =
+        serial.isEmpty() ? QFileInfo(romPath).completeBaseName() : serial;
+    cfg.resumeStatePath = lr->findResumeFile(resumeKey);
 
     // Qt::UniqueConnection requires the slot to be a member function pointer
     // (qobject.h:267 asserts on lambdas + UniqueConnection). The runtime is

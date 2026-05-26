@@ -32,6 +32,13 @@ public:
     // contains the gc/wii string->id entries.
     int raConsoleId(const QString& systemId) const override;
 
+    // SP8: cold-resume lookup. GameSession writes "<serial-or-basename>.resume"
+    // under the SaveStates override or emulators/dolphin/<gc|wii>/savestates;
+    // Dolphin spans two systems, so the impl searches both (mirrors
+    // MgbaLibretroAdapter). Without this override the base returns {} and
+    // Save & Quit -> Resume silently no-ops (file written, never read back).
+    QString findResumeFile(const QString& key) const override;
+
     // SP5: surface GameCube + Wii Classic controllers to the mapping UI.
     // Without controllerTypes() the page is empty and ControllerBindingsView
     // crashes rendering cards (see Pcsx2LibretroAdapter note).
