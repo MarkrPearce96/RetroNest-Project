@@ -330,7 +330,7 @@ void RcheevosRuntime::loadGameCallback(int result, const char* errorMessage,
                                    QString::fromUtf8(gameImg), 5000);
         }
     } else {
-        qWarning() << "[rcheevos] rc_client_begin_identify_and_load_game failed:"
+        qWarning() << "[rcheevos] game load failed:"
                    << (errorMessage ? errorMessage : "(no message)");
     }
 }
@@ -351,6 +351,7 @@ void RcheevosRuntime::loginCallback(int result, const char* errorMessage,
         // Core supplied a precomputed rcheevos hash (Dolphin computes it via
         // DiscIO so RVZ works). Identify directly by hash — rc_hash's own
         // path-based read fails on compressed discs.
+        qInfo().noquote() << "[rcheevos] loading by precomputed hash:" << self->m_pendingHash;
         rc_client_begin_load_game(client,
             self->m_pendingHash.toUtf8().constData(),
             loadGameCallback, self);
