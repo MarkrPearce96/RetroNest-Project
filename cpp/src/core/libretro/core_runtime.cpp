@@ -468,7 +468,8 @@ void CoreRuntime::runLoop() {
     // like mGBA where IWRAM and EWRAM are non-contiguous).
     const retro_memory_map* mmap =
         m_envCtx.memoryMapSet ? &m_envCtx.memoryMap : nullptr;
-    m_rcheevos.beginSession(s, m_cfg.romPath, m_cfg.raConsoleId,
+    m_rcheevos.beginSession(s, m_cfg.romPath, QString::fromUtf8(m_envCtx.raHash),
+                            m_cfg.raConsoleId,
                             m_cfg.raUsername, m_cfg.raToken, m_cfg.raHardcore,
                             m_cfg.raEncore, mmap);
 

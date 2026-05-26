@@ -347,12 +347,20 @@ void RcheevosRuntime::loginCallback(int result, const char* errorMessage,
         return;
     }
     qInfo() << "[rcheevos] Login succeeded; loading game…";
-    rc_client_begin_identify_and_load_game(
-        client,
-        static_cast<uint32_t>(self->m_pendingConsoleId),
-        self->m_pendingRomPath.toUtf8().constData(),
-        nullptr, 0,
-        loadGameCallback, self);
+    if (!self->m_pendingHash.isEmpty()) {
+        // Core supplied a precomputed rcheevos hash (Dolphin computes it via
+        // DiscIO so RVZ works). Identify directly by hash — rc_hash's own
+        // path-based read fails on compressed discs.
+        rc_client_begin_load_game(client,
+            self->m_pendingHash.toUtf8().constData(),
+            loadGameCallback, self);
+    } else {
+        rc_client_begin_identify_and_load_game(client,
+            static_cast<uint32_t>(self->m_pendingConsoleId),
+            self->m_pendingRomPath.toUtf8().constData(),
+            nullptr, 0,
+            loadGameCallback, self);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -365,6 +373,7 @@ RcheevosRuntime::~RcheevosRuntime() { endSession(); }
 
 bool RcheevosRuntime::beginSession(const CoreSymbols& syms,
                                    const QString& romPath,
+                                   const QString& raHash,
                                    int raConsoleId,
                                    const QString& username,
                                    const QString& token,
@@ -436,6 +445,7 @@ bool RcheevosRuntime::beginSession(const CoreSymbols& syms,
     // Store pending values for the chained callbacks.
     m_pendingRomPath   = romPath;
     m_pendingConsoleId = raConsoleId;
+    m_pendingHash      = raHash;
 
     rc_client_begin_login_with_token(m_client,
         username.toUtf8().constData(),

@@ -36,6 +36,7 @@ public:
      *  achievements that read outside SYSTEM_RAM (e.g. GBA IWRAM). */
     bool beginSession(const CoreSymbols& syms,
                       const QString& romPath,
+                      const QString& raHash,
                       int raConsoleId,
                       const QString& username,
                       const QString& token,
@@ -121,6 +122,7 @@ private:
 
     // Pending values stored so login/load-game chained callbacks can access them.
     QString m_pendingRomPath;
+    QString m_pendingHash;
     int m_pendingConsoleId = 0;
 
     // Memory regions populated by rc_libretro_memory_init from the core's
