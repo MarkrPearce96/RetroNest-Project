@@ -533,18 +533,22 @@ QVector<SettingDef> DolphinLibretroAdapter::settingsSchema() const {
 
 QVector<SettingsHubCard> DolphinLibretroAdapter::settingsHubCards() const {
     return {
+        // Row 0: Recommended — full-width across all 3 columns (mirrors the
+        // PCSX2 hub layout).
         {QStringLiteral("\U00002B50"), "Recommended",
          "The dozen settings that matter most",
-         "Recommended", 0, 0},
+         "Recommended", 0, 0, 1, 3},
+        // Row 1: Graphics · Audio · General
         {QStringLiteral("\U0001F3A8"), "Graphics",
          "Resolution, AA, enhancements, hacks, OSD",
-         "Graphics", 0, 1},
+         "Graphics", 1, 0},
         {QStringLiteral("\U0001F50A"), "Audio",
          "DSP engine, latency, volume, surround",
-         "Audio", 1, 0},
+         "Audio", 1, 1},
         {QStringLiteral("\U00002699\U0000FE0F"), "General",
          "Dual core, cheats, speed limit, region",
-         "General", 1, 1},
+         "General", 1, 2},
+        // Row 2: Advanced · GameCube · Wii
         {QStringLiteral("\U0001F6E0\U0000FE0F"), "Advanced",
          "CPU core, MMU, overclock, timing",
          "Advanced", 2, 0},
@@ -553,12 +557,19 @@ QVector<SettingsHubCard> DolphinLibretroAdapter::settingsHubCards() const {
          "GameCube", 2, 1},
         {QStringLiteral("\U0001F3AE"), "Wii",
          "USB keyboard, WiiLink, SD card",
-         "Wii", 3, 0},
+         "Wii", 2, 2},
     };
 }
 
 PreviewSpec DolphinLibretroAdapter::previewSpec(const QString& category,
                                                 const QString& subcategory) const {
+    if (category == "Recommended" && subcategory.isEmpty()) {
+        // Aspect-ratio preview on the Recommended page (mirrors PCSX2/PPSSPP).
+        // Bound to the same dolphin_aspect_ratio key the Recommended card lists.
+        return {"aspect", {
+            {"dolphin_aspect_ratio", "aspectMode"},
+        }};
+    }
     if (category == "Graphics" && subcategory == "On-Screen Display") {
         return {"osd", {
             {"dolphin_show_fps",     "showFps"},

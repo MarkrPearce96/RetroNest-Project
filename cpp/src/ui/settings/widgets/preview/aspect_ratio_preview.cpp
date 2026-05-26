@@ -99,6 +99,11 @@ AspectRatioPreview::fromSchemaValue(const QString& v) {
     if (v == "16:9")           return AspectRatio::R16_9;
     if (v == "10:7")           return AspectRatio::R10_7;
 
+    // Dolphin's aspect core option stores a plain "Auto" string (the numeric
+    // "0" handled above is GFX.ini's AspectMode enum, not the option value).
+    // Auto on GC/Wii is the 4:3 family — show the "Auto 4 : 3" preview/label.
+    if (v == "Auto")           return AspectRatio::Auto4_3_3_2;
+
     // Frontend-setting strings used by mGBA's libretro frontend aspect control.
     // "native" maps to 4:3 in the preview (GBA natural ratio is close to 3:2 but
     // 4:3 is the conventional display shape and gives a cleaner preview label).
