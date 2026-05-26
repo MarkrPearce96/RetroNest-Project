@@ -159,13 +159,19 @@ bool GameService::hasResumeState(const QString& romPath, const QString& emuId) c
 }
 
 QString GameService::resumeStateFile(const QString& romPath, const QString& emuId) const {
-    QString serial = m_db->serialForRomPath(romPath);
-    if (serial.isEmpty()) return {};
-
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return {};
 
-    return adapter->findResumeFile(serial);
+    // Key by the DB serial, or the ROM base name when no serial is known (e.g.
+    // RVZ discs the host can't parse). This MUST mirror the save side
+    // (GameSession::terminate) and the launch side (GameSession::prepareConfig),
+    // which key the .resume file the same way — otherwise hasResumeState() and
+    // clearResumeState() miss the file, so the Resume/Start-Fresh dialog never
+    // appears for serial-less titles even though the launch path resumes them.
+    QString serial = m_db->serialForRomPath(romPath);
+    const QString key =
+        serial.isEmpty() ? QFileInfo(romPath).completeBaseName() : serial;
+    return adapter->findResumeFile(key);
 }
 
 void GameService::clearResumeState(const QString& romPath, const QString& emuId) {
