@@ -289,6 +289,16 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
         case RETRO_ENVIRONMENT_GET_CAN_DUPE:
             *static_cast<bool*>(data) = true;
             return true;
+        case RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY: {
+            const auto* id = static_cast<const retronest_game_identity*>(data);
+            if (!id) return false;
+            ctx->raHash     = id->ra_hash ? QByteArray(id->ra_hash) : QByteArray();
+            ctx->gameSerial = id->serial  ? QByteArray(id->serial)  : QByteArray();
+            qInfo() << "[libretro/env] SET_GAME_IDENTITY hash="
+                    << (ctx->raHash.isEmpty() ? "(none)" : ctx->raHash)
+                    << "serial=" << (ctx->gameSerial.isEmpty() ? "(none)" : ctx->gameSerial);
+            return true;
+        }
         case RETRO_ENVIRONMENT_SET_MEMORY_MAPS: {
             // The core declares its memory layout; rcheevos uses this to
             // translate from RA's normalized address space to actual host

@@ -200,6 +200,25 @@ private slots:
         const char* out = nullptr;
         QVERIFY(!environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR, &out));
     }
+
+    void testSetGameIdentityCopiesHashAndSerial() {
+        EnvironmentContext ctx;
+        retronest_game_identity id{"abc123def456", "GZ2P01"};
+        QVERIFY(environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY, &id));
+        QCOMPARE(ctx.raHash, QByteArray("abc123def456"));
+        QCOMPARE(ctx.gameSerial, QByteArray("GZ2P01"));
+
+        // Null fields tolerated (treated as empty), call still handled.
+        EnvironmentContext ctx2;
+        retronest_game_identity id2{nullptr, nullptr};
+        QVERIFY(environmentDispatch(&ctx2, RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY, &id2));
+        QVERIFY(ctx2.raHash.isEmpty());
+        QVERIFY(ctx2.gameSerial.isEmpty());
+
+        // Null data pointer → not handled.
+        EnvironmentContext ctx3;
+        QVERIFY(!environmentDispatch(&ctx3, RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY, nullptr));
+    }
 };
 QTEST_MAIN(TestEnvironmentCallbacks)
 #include "test_environment_callbacks.moc"

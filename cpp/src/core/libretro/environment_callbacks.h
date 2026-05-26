@@ -40,6 +40,21 @@
 // 0x20004 — RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR
 #define RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR (4 | RETRO_ENVIRONMENT_PRIVATE)
 
+// 0x20005 — RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY
+//           The core CALLS this during retro_load_game to hand us the game's
+//           RetroAchievements hash + serial, both computed via DiscIO so they
+//           work for compressed RVZ (which rcheevos' own path-based hashing
+//           can't read). data is a retronest_game_identity*. We copy both
+//           strings into the EnvironmentContext. The host then identifies the
+//           game by the hash (rc_client_begin_load_game) and lazily stores the
+//           serial. Returns false if data is null.
+#define RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY (5 | RETRO_ENVIRONMENT_PRIVATE)
+
+struct retronest_game_identity {
+    const char* ra_hash;
+    const char* serial;
+};
+
 #include <QByteArray>
 #include <QString>
 #include <QVector>
@@ -84,6 +99,13 @@ struct EnvironmentContext {
     QVector<QByteArray> memoryAddrspaces;   // backing storage for descriptor.addrspace
     retro_memory_map memoryMap{};            // points into memoryDescriptors
     bool memoryMapSet = false;
+
+    // Captured from RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY: the game's RA hash
+    // and serial, computed by the core via DiscIO (works for RVZ). raHash drives
+    // load-by-hash in RcheevosRuntime::beginSession; gameSerial is written to the
+    // DB lazily on launch (the scanner can't read compressed RVZ).
+    QByteArray raHash;
+    QByteArray gameSerial;
 
     // Task #7 stub: captured from RETRO_ENVIRONMENT_SET_HW_RENDER. The dispatch
     // currently returns false (we can't yet grant a context), but stashing the
