@@ -77,12 +77,22 @@ blocks. So a memory map matched by *real address* is required for Wii achievemen
 
 ### Implementation
 
-In the core, after `BootCore` (RAM is allocated at boot, and the GC-vs-Wii layout differs per game):
-
-- Build a `retro_memory_descriptor[]` and emit `RETRO_ENVIRONMENT_SET_MEMORY_MAPS`:
+In the core, build a `retro_memory_descriptor[]` and emit `RETRO_ENVIRONMENT_SET_MEMORY_MAPS`:
   - **Always**: MEM1 — `ptr = GetRAM()`, `len = GetRamSizeReal()` (24 MB), `start = 0x80000000`.
   - **Wii only**: MEM2 — `ptr = GetEXRAM()`, `len = GetExRamSizeReal()` (64 MB), `start = 0x90000000`.
   - Leave the `0x81800000` gap unmapped; rcheevos treats it as UNUSED.
+
+**Emit timing (corrected during implementation — this matters for Wii):** the host calls
+`rc_libretro_memory_init` **synchronously** at `beginSession`, which runs right after
+`retro_load_game` returns and **before** the first `retro_run` (`core_runtime.cpp:471` →
+`rcheevos_runtime.cpp:383`). So the map must be emitted as the **primary** action at the end of
+`retro_load_game`, before returning — not lazily in `retro_run`. But `BootManager::BootCore` is
+**async** (RAM is allocated on Dolphin's emu thread after `StartGame` returns), so `retro_load_game`
+**bounded-waits** for `GetRAM()` to become non-null (≈5 s cap), then emits. A one-shot guarded emit
+in `retro_run` remains as a safety belt. (The earlier assumption that RA init was "network-gated and
+lands many frames later" conflated the async *achievement-set fetch* with the synchronous
+*memory-region init* — only the former is deferred. GameCube would have limped along on the
+`retro_get_memory_data(SYSTEM_RAM)` fallback, but Wii's separate MEM1/MEM2 require the map.)
 - Also implement `retro_get_memory_data(RETRO_MEMORY_SYSTEM_RAM)` → `GetRAM()` and
   `retro_get_memory_size(RETRO_MEMORY_SYSTEM_RAM)` → `GetRamSizeReal()` as the standard
   libretro courtesy/compat accessor. The shared runtime prefers the map when present.
