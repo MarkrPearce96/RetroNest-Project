@@ -65,6 +65,9 @@ public:
     bool updateGameMetadata(int id, const GameRecord& metadata);
     bool updateSerial(int id, const QString& serial);
     QString serialForRomPath(const QString& romPath);
+    // Set the serial for the game at romPath, but only if it currently has none
+    // (used to lazily fill serials the scanner couldn't read, e.g. RVZ).
+    bool updateSerialForRomPath(const QString& romPath, const QString& serial);
     bool toggleFavorite(int id);
     bool recordGameLaunch(int id);
     GameRecord gameById(int id);

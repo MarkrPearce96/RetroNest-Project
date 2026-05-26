@@ -15,6 +15,13 @@ GameService::GameService(ManifestLoader* loader, Database* db, QObject* parent)
     connect(&m_session, &GameSession::started, this, [this]() {
         emit gameRunningChanged();
         emit gameStarted();
+        // Lazily fill the DB serial for formats the scanner couldn't read (RVZ:
+        // EmulatorAdapter::extractSerial fails on the compressed header). The core
+        // reports it via SET_GAME_IDENTITY; updateSerialForRomPath only writes
+        // when the stored serial is still empty.
+        const QString detectedSerial = m_session.detectedGameSerial();
+        if (!detectedSerial.isEmpty())
+            m_db->updateSerialForRomPath(m_currentRomPath, detectedSerial);
     });
 
     connect(&m_session, &GameSession::finished, this, [this](int exitCode, bool crashed) {

@@ -646,6 +646,12 @@ bool GameSession::isRunning() const {
     return m_process && m_process->state() != QProcess::NotRunning;
 }
 
+QString GameSession::detectedGameSerial() const {
+    if (m_libretroAdapter && m_libretroAdapter->runtime())
+        return m_libretroAdapter->runtime()->detectedGameSerial();
+    return {};
+}
+
 qint64 GameSession::pid() const {
     return m_process ? m_process->processId() : -1;
 }

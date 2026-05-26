@@ -532,6 +532,20 @@ QString Database::serialForRomPath(const QString& romPath) {
     return q.value(0).toString();
 }
 
+bool Database::updateSerialForRomPath(const QString& romPath, const QString& serial) {
+    auto db = QSqlDatabase::database(DB_CONNECTION);
+    QSqlQuery q(db);
+    q.prepare("UPDATE games SET serial = ? "
+              "WHERE rom_path = ? AND (serial IS NULL OR serial = '')");
+    q.addBindValue(serial);
+    q.addBindValue(romPath);
+    if (!q.exec()) {
+        qWarning() << "[Database] updateSerialForRomPath failed:" << q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
 bool Database::toggleFavorite(int id) {
     auto db = QSqlDatabase::database(DB_CONNECTION);
     QSqlQuery q(db);

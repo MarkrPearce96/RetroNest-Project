@@ -152,6 +152,10 @@ public:
     /** The manifest for the currently running emulator. */
     const EmulatorManifest* manifest() const { return m_manifest; }
 
+    // Serial the libretro core detected for the running game (empty if none /
+    // non-libretro). Valid once started() has fired.
+    QString detectedGameSerial() const;
+
 signals:
     void runningChanged();
     void started();

@@ -118,6 +118,8 @@ public:
     InputRouter& input() { return m_input; }
     OptionsStore& options() { return m_options; }
     RcheevosRuntime& rcheevos() { return m_rcheevos; }
+    // Game serial reported by the core via SET_GAME_IDENTITY (empty until set).
+    QString detectedGameSerial() const { return QString::fromUtf8(m_envCtx.gameSerial); }
     // Exposed for unit tests (test_core_runtime) so tests can open the loader
     // directly without spawning a worker thread.
     CoreLoader& loader() { return m_loader; }
