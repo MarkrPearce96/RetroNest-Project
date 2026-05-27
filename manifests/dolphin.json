@@ -9,6 +9,5 @@
   "rom_extensions": ["iso", "gcm", "gcz", "ciso", "wbfs", "rvz", "wad", "wia", "nkit", "m3u", "dol", "elf", "tgc"],
   "launch_args": [],
   "backend": "libretro",
-  "core_dylib": "dolphin_libretro.dylib",
-  "core_buildbot_path": "dolphin_libretro.dylib.zip"
+  "core_dylib": "dolphin_libretro.dylib"
 }
