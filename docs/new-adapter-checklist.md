@@ -213,7 +213,7 @@ Then diff that against your `settingsSchema()`. Every difference is a fix:
 
 ### Use the schema-driven `GenericSettingsPage` for new emulators
 
-`cpp/src/ui/settings/generic_settings_page.cpp` is the rendering target. Wire every visible category through it from your dialog (Dolphin-style — see `dolphin_settings_dialog.cpp`). **Do not write bespoke per-emulator C++ pages for new emulators** — those exist for PCSX2/DuckStation only because they predate the schema-driven pipeline, and they're a migration debt, not a model. See `recommended-page-layout-contract.md` for the rendering contract; `previewSpec(category, subcategory)` is usually the only adapter override needed for previews.
+`cpp/src/ui/settings/generic_settings_page.cpp` is the rendering target. Wire every visible category through it from your dialog. **Do not write bespoke per-emulator C++ pages for new emulators** — those exist for PCSX2/DuckStation only because they predate the schema-driven pipeline, and they're a migration debt, not a model. See `recommended-page-layout-contract.md` for the rendering contract; `previewSpec(category, subcategory)` is usually the only adapter override needed for previews.
 
 ### `SettingDef` mechanisms — full toolbox
 
