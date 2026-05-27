@@ -123,7 +123,7 @@ Don't assume `portable.txt` or `--root` flags work. Launch the emulator natively
 ```sh
 find ~/Library ~/.config ~/Documents -name "{emuId}*.ini" 2>/dev/null
 ```
-Each standalone emulator has its own portable mechanism. The remaining standalone adapters check for `portable.txt` next to the binary (inside `Contents/MacOS/` on macOS) — DuckStation and Dolphin both follow this convention. Don't assume the next emulator does; some use `NSUserDefaults` keys, env vars, or no portable mode at all and need a different launch-time workaround.
+Each standalone emulator has its own portable mechanism. The remaining standalone adapters check for `portable.txt` next to the binary (inside `Contents/MacOS/` on macOS) — DuckStation follows this convention (Dolphin used to, but has since migrated to the libretro core, so it's no longer a standalone binary). Don't assume the next emulator does; some use `NSUserDefaults` keys, env vars, or no portable mode at all and need a different launch-time workaround.
 
 ### 2. macOS launch method
 **Always launch the emulator binary via direct exec** (`QProcess::start(execPath, args)`), NOT via `open` or Launch Services. Going through Launch Services applies app translocation/sandbox rules to downloaded `.app` bundles, which blocks `rename()` inside the bundle and breaks portable mode (the emulator can't atomically save its config). Both `GameSession` and `openNativeEmulatorSettings` use direct exec for this reason.
@@ -193,7 +193,7 @@ Section 7 above lists the specific bug classes to look for. The audit reports un
 
 ## Mirroring the upstream UI verbatim (THE rule)
 
-Once round-trip correctness is confirmed, the schema must also **mirror the standalone emulator's settings dialog visually**: same top-level categories, same group order inside each category, same setting order inside each group, same labels, same gating chains. The reference implementation is the Dolphin adapter (`cpp/src/adapters/dolphin_adapter.cpp`) and its alignment memory (`dolphin-schema-alignment.md`). Future emulator migrations follow the same shape.
+Once round-trip correctness is confirmed, the schema must also **mirror the standalone emulator's settings dialog visually**: same top-level categories, same group order inside each category, same setting order inside each group, same labels, same gating chains. The reference implementation is the standalone DuckStation adapter (`cpp/src/adapters/duckstation_adapter.cpp`); the original Dolphin adapter that pioneered this pattern has since migrated to the libretro core (`cpp/src/adapters/libretro/dolphin_libretro_adapter.cpp`). Future emulator migrations follow the same shape.
 
 ### Universal audit recipe
 

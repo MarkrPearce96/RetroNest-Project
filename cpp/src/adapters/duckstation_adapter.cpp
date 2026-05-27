@@ -18,7 +18,7 @@ QString DuckStationAdapter::configFilePath() const {
 
 // ============================================================================
 // Preview spec — wires the shared AspectRatio + OSD previews to schema-driven
-// pages. Mirrors DolphinAdapter::previewSpec; the upstream Graphics > Rendering
+// pages. Mirrors DolphinLibretroAdapter::previewSpec; the upstream Graphics > Rendering
 // pane has the AspectRatio combo near the top, and the OSD pane has the
 // overlay toggles.
 // ============================================================================
@@ -27,7 +27,7 @@ PreviewSpec DuckStationAdapter::previewSpec(const QString& category,
                                              const QString& subcategory) const {
     // Aspect-ratio preview lives on the Recommended category — that's the
     // primary entry point and already has AspectRatio near the top
-    // (mirrors dolphin_adapter / pcsx2_adapter). Graphics > Rendering has
+    // (mirrors dolphin_libretro_adapter / pcsx2_libretro_adapter). Graphics > Rendering has
     // the same combo without the preview, matching the rest of the
     // sub-tabs.
     //
@@ -205,7 +205,7 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
     // produce the same result. The Recommended card is a curated VIEW for
     // users who don't want to hunt through every sub-tab to find the
     // dozen settings that actually matter for most games. Mirrors
-    // dolphin_adapter.cpp / pcsx2_adapter.cpp.
+    // dolphin_libretro_adapter.cpp / pcsx2_libretro_adapter.cpp.
     // =========================================================================
 
     // Performance — biggest impact for getting games playable.
@@ -261,7 +261,7 @@ QVector<SettingDef> DuckStationAdapter::settingsSchema() const {
               "recommended — almost every PS1 game looks better with it on.",
               SettingDef::Bool, "false", {}, 0, 0, 0, "", ""});
     // Multi-Sampling + Texture Filtering — paired side-by-side on the
-    // Recommended page (matches dolphin_adapter's "paired" Anisotropic
+    // Recommended page (matches dolphin_libretro_adapter's "paired" Anisotropic
     // Filtering / Force Texture Filtering pattern).
     s.append({"Recommended", "", "Visual Quality", "GPU", "Multisamples", "Multi-Sampling",
               "Multi-sample anti-aliasing. Smoother edges at modest GPU cost.",

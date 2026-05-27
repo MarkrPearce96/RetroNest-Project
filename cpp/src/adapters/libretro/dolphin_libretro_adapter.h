@@ -3,18 +3,10 @@
 #include "core/binding_def.h"
 #include "core/controller_type_def.h"
 
-// Skeleton-phase DolphinLibretroAdapter.
-//
-// LibretroAdapter declares coreId() pure-virtual; the registry only
-// instantiates concrete subclasses, so even though SP3 ships a minimal
-// surface (most overrides return empty), we need a named class to
-// register. SP4 (Vulkan path), SP5 (controllers), SP6/7 (settings), and
-// SP8 (achievements + polish) fill in the remaining overrides
-// incrementally.
-//
-// Replaces the standalone DolphinAdapter that previously launched
-// Dolphin.app as an external process. The standalone adapter and its
-// tests are deleted in the same commit chain.
+// DolphinLibretroAdapter — wires RetroNest to the Dolphin libretro core
+// (dolphin_libretro.dylib) for GameCube + Wii: controller types/bindings,
+// the settings-schema + Recommended hub, RetroAchievements console IDs
+// (GC=16 / Wii=19), and cold-resume file lookup.
 class DolphinLibretroAdapter : public LibretroAdapter {
     Q_OBJECT
 public:

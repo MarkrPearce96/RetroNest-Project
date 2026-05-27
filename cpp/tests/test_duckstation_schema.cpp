@@ -56,7 +56,7 @@ private slots:
         // Curated cross-cut of the most-tweaked DuckStation settings.
         // These INI keys ALSO appear under their primary category — both
         // entries write the same section/key so editing in either place
-        // produces the same result. Mirrors dolphin_adapter / pcsx2_adapter.
+        // produces the same result. Mirrors dolphin_libretro_adapter / pcsx2_libretro_adapter.
         QCOMPARE(keysFor("Recommended"), QSet<QString>({
             // Performance
             "Renderer", "ExecutionMode", "UseThread", "ReadSpeedup",
