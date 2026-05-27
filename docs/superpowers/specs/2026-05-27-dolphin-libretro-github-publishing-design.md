@@ -1,158 +1,146 @@
-# Dolphin libretro — GitHub publishing (x86_64)
+# Dolphin libretro publishing + libretro install-from-fork wiring (x86_64)
 
-Follow-on to the SP8 / RVZ work. The Dolphin libretro core is now a public fork at
-`github.com/markrpearce96/dolphin-libretro`, but it has **no releases**, so RetroNest's
-"Install Dolphin" / update-checker (which downloads a release asset) finds nothing. This
-spec sets up the GitHub Actions release pipeline so the app can install the x86_64 core
-from the user's own GitHub — mirroring the existing PCSX2 publishing setup
-(`docs/superpowers/specs/2026-05-21-pcsx2-libretro-github-publishing-design.md`).
+Follow-on to SP8 / RVZ. Goal: make RetroNest's **"Install Dolphin"** download the user's own
+x86_64 core from `github.com/markrpearce96/dolphin-libretro`. Investigation found this needs
+two things, not one: a CI release on the fork **and** a host-side fix so the installer
+actually routes patched libretro forks to their GitHub Releases (today it routes them to the
+official libretro buildbot). The host fix is generalized to all patched forks (Dolphin, PCSX2,
+PPSSPP) per the user's decision; mGBA (a standard core) stays on buildbot.
 
-## Problem
+> **Status: spec + plan written for a fresh session to execute (context handoff).** Execute via
+> `superpowers:subagent-driven-development`. The repo-creating / `gh release` / `git push fork` /
+> tag-push steps must be run by the user — Claude Code's auto-mode classifier blocks them.
 
-`emulator_installer.cpp` installs a libretro core by hitting
-`https://api.github.com/repos/<github_repo>/releases/latest`, finding the asset whose name
-ends in `.dylib.zip`, and unzipping it into `emulators/libretro/cores/` (deriving the dylib
-name by stripping `.zip`). `github_client.h::fetchLatestRelease` drives the update check off
-the release `tag` / `published_at`. `manifests/dolphin.json` already points at
-`github_repo: "markrpearce96/dolphin-libretro"` with `core_buildbot_path:
-"dolphin_libretro.dylib.zip"`. The only missing piece is a **release that carries that
-asset**.
+## Problem (verified)
 
-## Goal
+`EmulatorInstaller::fetchReleaseInfo` (`cpp/src/services/emulator_installer.cpp:221`) consults
+`adapter->resolveDirectDownload()` **first** and skips GitHub Releases if it returns a URL.
+`LibretroAdapter::resolveDirectDownload` (`cpp/src/adapters/libretro/libretro_adapter.cpp:99-130`)
+returns a **`buildbot.libretro.com/nightly/apple/osx/<arch>/latest/<core_buildbot_path>`** URL
+whenever `core_buildbot_path` is set — even if the HEAD check fails. Every manifest sets
+`core_buildbot_path`, and no libretro adapter overrides `resolveDirectDownload`/`matchAsset`. So:
 
-A GitHub Actions workflow on the fork that, on a version tag push, builds the **x86_64**
-`dolphin_libretro.dylib`, packages it as `dolphin_libretro.dylib.zip`, and publishes it as a
-GitHub Release asset — so "Install Dolphin" in RetroNest works end-to-end.
+- **Install resolves to the official libretro core on buildbot, not the user's fork.** For the
+  heavily-patched forks (Dolphin: Metal NSView handover, `retronest_set_paused`/`_fast_forward`,
+  `SET_GAME_IDENTITY`; PCSX2/PPSSPP: similar), the official cores wouldn't work in RetroNest. (These
+  forks are currently run from local deploys, not app-installed.)
+- The GitHub-Releases path's asset selection (`matchAsset` → `assetMatchRules()`) has no rule that
+  matches a `*.dylib.zip` asset, so even forcing that path wouldn't pick the core.
+
+## Current fork state (verified 2026-05-27)
+
+| id | manifest `github_repo` | releases | notes |
+|----|------------------------|----------|-------|
+| dolphin | `markrpearce96/dolphin-libretro` ✓ | **none** | needs CI + first release |
+| ppsspp  | `markrpearce96/ppsspp-libretro` ✓  | **yes** (`v2026.05.22`, asset `ppsspp_libretro.dylib.zip`) | routing only |
+| pcsx2   | `markpearce/pcsx2-retronest` ✗ **(404)** | — | manifest repo wrong; real fork `markrpearce96/pcsx2-libretro` **has** `v2026.05.21.3` |
+| mgba    | `libretro/mgba` (official) | — | **unchanged** — stays on buildbot (official core works for a standard SW core) |
+
+All patched forks already publish (or will) a `<core>_libretro.dylib.zip` asset.
 
 ## Scope
 
-**In:** the release workflow (`.github/workflows/libretro_release.yml`), `README.md`,
-`UPSTREAM-UPDATE.md`, the tag/version convention, and cutting the first release.
+**In:** (A) host install-from-fork wiring for Dolphin + PPSSPP + PCSX2; (B) Dolphin CI release
+workflow on the fork; (C) cut the first Dolphin release.
 
-**Out:**
-- **Universal / cross-platform builds.** x86_64-only for now (RetroNest runs under Rosetta);
-  arm64 + Windows is a future "convert all emulators" effort.
-- **Sys-data distribution.** The release is the dylib only (see "Sys data" below).
-- **RetroNest app-bundle packaging** (shipping Dolphin's Sys to fresh machines) — a separate
-  RetroNest-side task.
+**Out:** universal/arm64/Windows builds (x86_64-only for now); Sys-data distribution (dylib-only
+release — Sys comes from the RetroNest app bundle, already present on the dev machine; fresh-machine
+Sys packaging is a separate RetroNest-packaging task); mGBA changes; PPSSPP/PCSX2 CI (their forks
+already publish — only their *routing* is fixed here).
 
-## Key facts (verified)
+## Part A — Host install-from-fork wiring
 
-- Install path (`cpp/src/services/emulator_installer.cpp:299-317`): libretro cores "arrive as
-  a single `.dylib.zip` — unzip into `cores/`"; the dylib name is the archive name minus
-  `.zip`. So the release asset must be **`dolphin_libretro.dylib.zip`** containing
-  `dolphin_libretro.dylib`. No resources/VERSION handling on the libretro path.
-- Download source is **GitHub Releases** `releases/latest` (`emulator_installer.cpp:236,436`),
-  not the libretro buildbot. Update staleness uses the release `tag`/`published_at`
-  (`github_client.h:113-142`).
-- Downloaded dylib quarantine is stripped by the installer ("quarantine removal",
-  `emulator_installer.cpp:288`) — so the dylib needs no code signing / notarization.
-- Local x86_64 build (from `memory/dolphin-libretro-build-setup`): `arch -x86_64` cmake with
-  `-DENABLE_LIBRETRO=ON -DENABLE_QT=OFF -DENABLE_NOGUI=OFF -DENABLE_TESTS=OFF
-  -DENCODE_FRAMEDUMPS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local`; output at
-  `build/Source/Core/DolphinLibretro/dolphin_libretro.dylib`.
-- Fork remotes already set: `origin = dolphin-emu/dolphin` (upstream), `fork =
-  github.com/MarkrPearce96/dolphin-libretro` (writable); `libretro` tracks `fork/libretro`.
+**A1. Drop `core_buildbot_path`** from `manifests/dolphin.json`, `manifests/ppsspp.json`,
+`manifests/pcsx2.json`. With it empty, `LibretroAdapter::resolveDirectDownload` returns an empty
+`DirectDownloadInfo` (`libretro_adapter.cpp:102`), so the installer falls through to the
+`github_repo` `/releases/latest` path. **Keep** `core_buildbot_path` in `manifests/mgba.json`.
 
-## Decisions
+**A2. Fix `manifests/pcsx2.json` `github_repo`**: `markpearce/pcsx2-retronest` →
+`markrpearce96/pcsx2-libretro` (the real fork with releases).
 
-**D1. Workflow lives on the fork's `libretro` branch; net-new files only.**
-`.github/workflows/libretro_release.yml`, `README.md`, `UPSTREAM-UPDATE.md` at the repo root.
-No upstream Dolphin files touched. (Note: Dolphin already has upstream `.github/workflows/` —
-the new file sits alongside them and only triggers on `v*` tags, so it won't interfere with
-upstream CI, which triggers on pushes/PRs.)
+**A3. Add `LibretroAdapter::assetMatchRules()` override** so `matchAsset`
+(`emulator_adapter.h:510`, which walks `assetMatchRules()`) selects the `*.dylib.zip` asset:
 
-**D2. Trigger: version tag push.** `on: push: tags: ['v*']`. Zero CI cost between releases;
-a release is cut by pushing a `v…` tag. Matches PCSX2.
-
-**D3. Build on `macos-13` (Intel runner) — native x86_64.** No cross-compile. (If GitHub
-retires `macos-13`, x86_64 would need cross-compilation on an arm64 runner — future risk.)
-
-**D4. Release asset = `dolphin_libretro.dylib.zip` (dylib only).** No `resources/` dir (unlike
-PCSX2 — Dolphin's data is the host-relative `Sys` folder, handled separately) and no
-`VERSION` file inside the zip (the update-checker uses the release tag/`published_at`). This
-exactly matches what `emulator_installer.cpp` unzips into `cores/`.
-
-**D5. No code signing / notarization.** The installer strips the quarantine xattr on the
-downloaded dylib. Ship it unsigned, as the other core forks do.
-
-**D6. Date tags.** `v2026.MM.DD`, with a numeric suffix for same-day re-cuts
-(`v2026.05.27.1`). Auto-generated release notes + a short prelude (platform + upstream Dolphin
-SHA), via `softprops/action-gh-release@v2`.
-
-**D7. Sys data is out of scope (dylib-only).** Dolphin resolves `Sys` relative to the host
-binary (`RetroNest.app/Contents/Resources/Sys`), and a signed `.app` can't be written at
-install time — so Sys can't ride in the core zip. On the developer machine Sys is already
-deployed there (via `tools/deploy.sh`), so install works now. Bundling Sys into RetroNest's
-distributable build for fresh machines is a separate RetroNest-packaging task (or, later, a
-core patch making the Sys dir configurable like the `GET_SAVE_DIRECTORY` user-dir fix).
-
-## Workflow shape — `.github/workflows/libretro_release.yml`
-
-```yaml
-on:
-  push:
-    tags: ['v*']
+```cpp
+// libretro_adapter.h (public, with the other EmulatorAdapter overrides)
+QVector<AssetMatchRule> assetMatchRules() const override;
+// libretro_adapter.cpp
+QVector<AssetMatchRule> LibretroAdapter::assetMatchRules() const {
+    // Libretro core releases ship one "<core>_libretro.dylib.zip" asset; the
+    // installer's postDownload path keys off the ".dylib.zip" suffix to unzip
+    // into cores/ and derive the dylib name. No platform substring needed
+    // (the forks publish one macOS x86_64 asset).
+    return { AssetMatchRule{/*extension*/ ".dylib.zip", /*substrings*/ {}} };
+}
 ```
 
-**Job `build`** (`runs-on: macos-13`):
-- `actions/checkout@v4` with `submodules: recursive` (Dolphin's `Externals`).
-- `brew install` the x86_64 build deps. Exact list derived in the plan from the local
-  toolchain + the dylibs the core links (seen at link time: `fmt`, `sdl3` (or `sdl2`), `lz4`,
-  `zstd`, `xz`/`lzma`, `lzo`, `libpng`; plus `ninja`, `pkg-config`). Tune over 1–2 CI runs.
-- Configure: `cmake -B build -S . -G Ninja -DENABLE_LIBRETRO=ON -DENABLE_QT=OFF
-  -DENABLE_NOGUI=OFF -DENABLE_TESTS=OFF -DENCODE_FRAMEDUMPS=OFF -DCMAKE_BUILD_TYPE=Release
-  -DCMAKE_PREFIX_PATH=/usr/local -DCMAKE_OSX_ARCHITECTURES=x86_64`.
-- Build: `cmake --build build --target dolphin_libretro`.
-- Package: `ditto`/`zip` `build/Source/Core/DolphinLibretro/dolphin_libretro.dylib` →
-  `dolphin_libretro.dylib.zip` (the dylib at the zip root, so unzip yields the bare dylib).
-- Upload the zip as a workflow artifact.
+(Confirm the exact `AssetMatchRule` field order/types in `emulator_adapter.h` ~line 490 when
+implementing.) mGBA never reaches `matchAsset` (it still uses `resolveDirectDownload`/buildbot),
+so this override is inert for mGBA.
 
-**Job `release`** (`needs: build`):
-- Download the artifact.
-- `softprops/action-gh-release@v2` with the pushed tag: create the release, attach
-  `dolphin_libretro.dylib.zip`, `generate_release_notes: true`, and a `body` prelude
-  (`platform=macos-x86_64`, upstream Dolphin SHA, build date).
+**Result of A:** `postDownload` (`emulator_installer.cpp:301-336`) already unzips a `.dylib.zip`
+into `emulators/libretro/cores/<core>_libretro.dylib`, strips quarantine, and writes a
+`.version` sidecar. So after A, **PPSSPP and PCSX2 install from their forks immediately**
+(releases already exist); Dolphin installs once it has a release (Parts B/C).
 
-## Install-flow contract (must hold)
+## Part B — Dolphin CI release workflow (on the fork)
 
-After a release exists, RetroNest must: resolve `releases/latest` for
-`markrpearce96/dolphin-libretro` → find the `dolphin_libretro.dylib.zip` asset → download +
-unzip into `emulators/libretro/cores/dolphin_libretro.dylib` → record the release
-`tag`/`published_at` for the update-checker. (All existing app behavior; this spec only
-produces the release it consumes.)
+Net-new files at the `dolphin-libretro` repo root (`libretro` branch), pushed to `fork`:
+`.github/workflows/libretro_release.yml`, `README.md`, `UPSTREAM-UPDATE.md`. No upstream Dolphin
+files touched; the workflow triggers only on `v*` tags (won't interfere with upstream CI).
 
-## First release
+Mirror the proven PCSX2/PPSSPP workflows (`/Users/mark/Documents/Projects/pcsx2-libretro/.github/workflows/libretro_release.yml`):
+- `on: push: tags: ['v*']`; `permissions: contents: write`.
+- **Job `build`** on **`macos-14`** (Apple Silicon — the Intel `macos-13` pool is starved): install
+  Rosetta + **x86_64 Homebrew at `/usr/local`** + `arch -x86_64` wrappers; `brew install` Dolphin's
+  x86_64 deps (verified from the local x86_64 dylib's links: `fmt sdl3 lz4 lzo xz zstd` + build
+  tools `cmake ninja pkg-config`; tune over 1–2 CI runs); configure with the `/opt/homebrew`-scrub
+  (`-DCMAKE_IGNORE_PATH=/opt/homebrew`, `PKG_CONFIG_PATH=/usr/local/...`, `HOMEBREW_PREFIX=/usr/local`)
+  and Dolphin's flags (`-DENABLE_LIBRETRO=ON -DENABLE_QT=OFF -DENABLE_NOGUI=OFF -DENABLE_TESTS=OFF
+  -DENCODE_FRAMEDUMPS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64 -G Ninja`);
+  `cmake --build build --target dolphin_libretro`. **No metallib step** (Dolphin's Metal backend
+  compiles shaders at runtime — unlike PCSX2's GS) and **no resources dir** (Sys is host-relative,
+  out of scope). Zip `build/Source/Core/DolphinLibretro/dolphin_libretro.dylib` →
+  **`dolphin_libretro.dylib.zip`** (dylib at the zip root).
+- **Job `release`** (`needs: build`, `ubuntu-latest`): `softprops/action-gh-release@v2` for the tag,
+  attach `dolphin_libretro.dylib.zip`, `generate_release_notes: true` + a prelude (platform +
+  upstream Dolphin SHA via `git merge-base HEAD upstream/master`).
 
-Two ways to produce the first release; either unblocks "Install Dolphin":
-- **Via CI (normal path):** push a `v2026.05.27` tag to `fork` → the workflow builds + publishes.
-- **Manual stopgap (optional, to unblock immediately):** zip the already-built local x86_64
-  `dolphin_libretro.dylib` as `dolphin_libretro.dylib.zip` and attach it to a hand-created
-  release at the same tag. Useful if CI needs a couple of iterations to get the dep list right.
+No code signing/notarization (the installer de-quarantines the downloaded dylib). Date tags
+`v2026.MM.DD` (numeric suffix for same-day re-cuts).
 
-(Either way, the repo-creating / `gh release` / tag-push steps are run by the user — Claude
-Code's auto-mode classifier blocks repo/release-touching `gh`/`git push` commands.)
+## Part C — First Dolphin release
+
+Push a `v2026.MM.DD` tag to `fork` → CI builds + publishes the release. (Optional unblock: a freshly
+built local x86_64 `dolphin_libretro.dylib` can be hand-zipped + uploaded as the first release while
+CI is finalized.) All tag/`gh`/push steps are **user-run** (auto-mode block).
 
 ## Testing / acceptance
 
-- **CI green:** the tag push produces a release with a `dolphin_libretro.dylib.zip` asset; the
-  zip contains a Mach-O x86_64 `dolphin_libretro.dylib` (`lipo -info` / `file`).
-- **End-to-end install:** in RetroNest, uninstall/remove the local core, then "Install Dolphin"
-  → it downloads + unzips the release dylib into `cores/` → launch a GC or Wii game and confirm
-  it boots (Sys already present in the app bundle on this machine).
-- **Update check:** bump the tag, confirm RetroNest reports an update available.
+- **A (routing), no new release needed for PPSSPP/PCSX2:** after the manifest + `assetMatchRules`
+  changes + host rebuild, in RetroNest remove the local PPSSPP core and "Install PPSSPP" → it
+  downloads `ppsspp_libretro.dylib.zip` from `markrpearce96/ppsspp-libretro` releases into
+  `cores/` → launch a PSP game. Repeat for PCSX2 (`markrpearce96/pcsx2-libretro`).
+- **B (CI):** the tag push yields a release with a `dolphin_libretro.dylib.zip` asset; the zip
+  contains a Mach-O **x86_64** dylib (`file`/`lipo -info`).
+- **C (end-to-end):** "Install Dolphin" downloads + unzips the fork's dylib into `cores/` → launch
+  a GC + Wii game (Sys already in the app bundle on this machine).
+- **mGBA unaffected:** still installs from buildbot (official core).
 
 ## Risks
 
-- **CI dep/flag iteration:** porting the local build to a clean `macos-13` runner usually needs
-  1–2 passes to get the Homebrew dep list + prefix paths right. Expected, not a blocker.
-- **`macos-13` retirement:** x86_64 native runner is fine today; would need cross-compile later.
-- **Sys on fresh machines:** install delivers only the dylib; a machine whose RetroNest bundle
-  lacks `Sys` would black-screen. Out of scope here (RetroNest-packaging follow-up).
+- **Routing PPSSPP/PCSX2 before verifying their assets** — both confirmed to have
+  `<core>_libretro.dylib.zip` assets (PPSSPP `v2026.05.22`; PCSX2 `v2026.05.21.3`), so routing is
+  safe. The PCSX2 manifest-repo fix (A2) is required or PCSX2 would 404.
+- **CI dep/flag iteration** for the Dolphin build on a clean runner (1–2 passes expected).
+- **`assetMatchRules` `.dylib.zip` rule** must not regress mGBA — it doesn't (mGBA uses buildbot).
+- **Sys on fresh machines** — install delivers only the dylib; out of scope (RetroNest-packaging).
 
 ## Sequencing (informs the plan)
 
-1. `README.md` + `UPSTREAM-UPDATE.md`.
-2. `libretro_release.yml` (build + release jobs).
-3. First release (CI tag push, or manual stopgap) — user-run.
-4. End-to-end install verification in RetroNest.
+1. **A** (host): manifests (drop `core_buildbot_path` x3 + fix pcsx2 repo) + `assetMatchRules`
+   override → build host → verify PPSSPP/PCSX2 install from forks.
+2. **B** (fork): `README.md` + `UPSTREAM-UPDATE.md` + `libretro_release.yml`.
+3. **C**: first Dolphin release (user-run tag push) → end-to-end install verify.
+
+Parts A and B are independent; A delivers PPSSPP/PCSX2 install immediately, B+C deliver Dolphin.
