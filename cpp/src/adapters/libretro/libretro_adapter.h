@@ -22,6 +22,10 @@ public:
                               const QString& installPath) override;
     bool isInstalled(const EmulatorManifest& manifest) override;
     DirectDownloadInfo resolveDirectDownload(const EmulatorManifest& manifest) const override;
+    /** Select the "<core>_libretro.dylib.zip" GitHub release asset. The
+     *  installer's postDownload path keys off the .dylib.zip suffix to unzip
+     *  into cores/ and derive the dylib name. */
+    QVector<AssetMatchRule> assetMatchRules() const override;
     bool supportsRetroAchievements() const override { return true; }
     bool supportsSaveOnExit() const override { return true; }
     QStringList resumeLaunchArgs(const QString&) const override { return {}; }

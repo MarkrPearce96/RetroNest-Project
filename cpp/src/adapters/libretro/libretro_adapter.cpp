@@ -129,6 +129,14 @@ LibretroAdapter::resolveDirectDownload(const EmulatorManifest& manifest) const {
     return info;
 }
 
+QVector<EmulatorAdapter::AssetMatchRule> LibretroAdapter::assetMatchRules() const {
+    // One macOS x86_64 asset per fork release, named "<core>_libretro.dylib.zip".
+    // No substring requirement. mGBA keeps core_buildbot_path -> buildbot, so it
+    // never reaches matchAsset and this rule is inert for it.
+    // Field order is {substrings, extension} (see EmulatorAdapter::AssetMatchRule).
+    return { AssetMatchRule{ /*substrings*/ {}, /*extension*/ ".dylib.zip" } };
+}
+
 QString LibretroAdapter::findResumeFile(const QString& /*serial*/) const {
     // Concrete adapters override; libretro resume uses ROM-base-name + ".resume"
     // and is resolved at start time via the StartConfig.resumeStatePath.
