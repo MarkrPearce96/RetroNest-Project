@@ -329,6 +329,20 @@ void RcheevosRuntime::loadGameCallback(int result, const char* errorMessage,
                                    title, desc,
                                    QString::fromUtf8(gameImg), 5000);
         }
+    } else if (result == RC_NO_GAME_LOADED) {
+        // The disc hash matched no RetroAchievements entry — this game/version
+        // isn't catalogued (common for non-USA or non-Redump dumps). Surface it
+        // so the user knows it's a catalog miss, not a malfunction: the game
+        // still plays, there's just no achievement session. Other failures
+        // (login/network) fall through to the plain warning below.
+        qWarning() << "[rcheevos] game not recognized by RetroAchievements"
+                      " (unknown hash) — no achievement session for this game";
+        emit self->raInfoToast(
+            QStringLiteral("RETROACHIEVEMENTS"),
+            QStringLiteral("Game not recognized"),
+            QStringLiteral("This game version isn't in the RetroAchievements "
+                           "database — achievements are off for this session."),
+            QString(), 6000);
     } else {
         qWarning() << "[rcheevos] game load failed:"
                    << (errorMessage ? errorMessage : "(no message)");
