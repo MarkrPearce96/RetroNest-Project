@@ -1,11 +1,12 @@
 {
   "id": "duckstation",
   "name": "DuckStation",
-  "description": "DuckStation is a PlayStation 1 emulator. Fast, accurate PS1 emulation with upscaling, save states, and gamepad support.",
+  "description": "PlayStation 1 emulator (libretro core).",
   "systems": ["psx"],
-  "github_repo": "stenzek/duckstation",
-  "executable": "duckstation-qt",
-  "install_folder": "duckstation",
+  "executable": "duckstation_libretro.dylib",
+  "install_folder": "libretro",
   "rom_extensions": ["bin", "cue", "iso", "img", "pbp", "chd", "m3u"],
-  "launch_args": ["-fullscreen", "-nogui", "--", "{rom_path}"]
+  "launch_args": [],
+  "backend": "libretro",
+  "core_dylib": "duckstation_libretro.dylib"
 }

@@ -80,6 +80,7 @@ set(SOURCES
     src/core/libretro/retro_log.cpp
     src/core/libretro/rcheevos_runtime.cpp
     src/adapters/libretro/libretro_adapter.cpp
+    src/adapters/libretro/duckstation_libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
@@ -148,6 +149,7 @@ set(HEADERS
     src/adapters/adapter_registry.h
     src/adapters/duckstation_adapter.h
     src/adapters/libretro/libretro_adapter.h
+    src/adapters/libretro/duckstation_libretro_adapter.h
     src/adapters/libretro/dolphin_libretro_adapter.h
     src/adapters/libretro/mgba_libretro_adapter.h
     src/adapters/libretro/pcsx2_libretro_adapter.h
