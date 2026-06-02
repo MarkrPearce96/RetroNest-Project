@@ -148,6 +148,7 @@ set(HEADERS
     src/adapters/adapter_registry.h
     src/adapters/duckstation_adapter.h
     src/adapters/libretro/libretro_adapter.h
+    src/adapters/libretro/duckstation_libretro_adapter.h
     src/adapters/libretro/dolphin_libretro_adapter.h
     src/adapters/libretro/mgba_libretro_adapter.h
     src/adapters/libretro/pcsx2_libretro_adapter.h
