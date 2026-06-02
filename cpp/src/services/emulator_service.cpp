@@ -264,6 +264,8 @@ void EmulatorService::checkForUpdates() {
         auto* adapter = AdapterRegistry::instance().adapterFor(emu.id);
         if (!adapter || !adapter->isInstalled(emu)) continue;
 
+        if (emu.github_repo.isEmpty()) continue;   // local-only core: no remote to check
+
         QString version = installedVersion(emu.id);
         if (version.isEmpty()) continue;
 
