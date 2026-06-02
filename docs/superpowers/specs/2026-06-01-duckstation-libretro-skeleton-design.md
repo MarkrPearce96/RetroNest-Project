@@ -13,7 +13,7 @@ This is the **skeleton-boot phase only.** It deliberately defers settings-schema
 ## Hard constraints (from the project handoff — do not relitigate)
 
 1. **License (CC BY-NC-ND 4.0).** This DuckStation fork and the produced `.dylib` **never leave the user's machines** — no push to any remote (public or private), no sharing, no bundling into any distributed artifact. The public/commercial RetroNest variant uses SwanStation instead and never ships this core. Personal-use-only reproduction is within the license's NonCommercial grant.
-2. **Source base = Option B, reframed.** Fork **current upstream DuckStation** (`duckstation-libretro/duckstation-src/`). SwanStation's libretro shim (`swanstation/`, pre-relicense GPLv3) is a **reference only** — its `HostInterface`/`HostDisplay` base classes no longer exist upstream, so the shim cannot be ported as code (see delta report). We write fresh frontend code against the current `Host::`/`Core::`/`System::` + `GPUDevice` surface, using SwanStation for the libretro-facing shape and `pcsx2-libretro` as the modern structural template.
+2. **Source base = Option B, reframed.** Fork **current upstream DuckStation** (`duckstation-libretro/`). SwanStation's libretro shim (`swanstation/`, pre-relicense GPLv3) is a **reference only** — its `HostInterface`/`HostDisplay` base classes no longer exist upstream, so the shim cannot be ported as code (see delta report). We write fresh frontend code against the current `Host::`/`Core::`/`System::` + `GPUDevice` surface, using SwanStation for the libretro-facing shape and `pcsx2-libretro` as the modern structural template.
 3. **Structural template = `pcsx2-libretro`.** Closest of the three reference forks (PS-class complexity, in-tree libretro frontend, `HardwareRenderBackend::MetalNSView` on macOS).
 
 ## Decisions locked during brainstorming (2026-06-01)
@@ -29,7 +29,7 @@ This is the **skeleton-boot phase only.** It deliberately defers settings-schema
 
 ### DuckStation fork (the core)
 
-New in-tree libretro frontend target at `duckstation-src/src/duckstation-libretro/`, mirroring `pcsx2-libretro/pcsx2-libretro/`.
+New in-tree libretro frontend target at `duckstation-libretro/src/duckstation-libretro/`, mirroring `pcsx2-libretro/pcsx2-libretro/`.
 
 | File | Role |
 |---|---|
@@ -109,7 +109,7 @@ Launch a PS1 game from RetroNest and observe, through RetroNest directly:
 
 ## Reference paths
 - Delta report: `duckstation-libretro/docs/swanstation-delta-2026-06-01.md`
-- Current DuckStation fork: `duckstation-libretro/duckstation-src/` (CC BY-NC-ND — never push)
+- Current DuckStation fork: `duckstation-libretro/` (CC BY-NC-ND — never push)
 - SwanStation reference (delete after implementation): `swanstation/`
 - PCSX2 template: `pcsx2-libretro/pcsx2-libretro/LibretroFrontend.cpp`, `cpp/src/adapters/libretro/pcsx2_libretro_adapter.{h,cpp}`
 - RetroNest libretro base: `cpp/src/adapters/libretro/libretro_adapter.{h,cpp}`; MetalNSView consumer `cpp/src/ui/libretro/libretro_metal_item.mm`; HW-frame handling `cpp/src/core/libretro/core_runtime.cpp:91`; NSView callback `RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW = 0x20001`.
@@ -121,12 +121,12 @@ Launch a PS1 game from RetroNest and observe, through RetroNest directly:
 Phase 1 was implemented and **verified working through RetroNest**: a PS1 game (Crash Bandicoot) boots, renders (Metal→NSView), plays sound (libretro audio path), takes digital controller input with correct binds, and exits/re-loads cleanly. Universal arm64+x86_64 dylib, reproducibly built+deployed via `package.sh`. Below is what was actually built, including deviations from this spec discovered during implementation.
 
 ## Fork core-touches (DuckStation source modifications — the spec assumed minimal/none)
-All in `duckstation-libretro/duckstation-src/`, branch `master`, local-only (never pushed):
+All in `duckstation-libretro/`, branch `master`, local-only (never pushed):
 1. **`System::RunFrame()`** (`core/system.h` + `core/system.cpp`, commit `69c74a9`) — a thin single-frame driver (the body of `Execute()`'s `Running` case, run once). Needed because `System::Execute()` is a `for(;;)` loop that never yields per-frame; this was the spec's pre-approved risk-#2 fallback. `retro_run` calls `RunFrame()`; `Host::PumpMessagesOnCoreThread`→`System::InterruptExecution()` at `FrameDone` makes the inner `CPU::Execute()` return after one frame.
 2. **Audio capture mode** (`util/core_audio_stream.{h,cpp}` + `core/spu.cpp` routing, commit `3a93303`) — a libretro-flagged capture mode in `CoreAudioStream`: opens no hardware device (no Cubeb), keeps SPU samples flowing into a capture ring, drained synchronously each `retro_run` into `retro_audio_sample_batch`. Guarded by a runtime flag; the normal Qt/regtest audio path is untouched. (Plain `AudioBackend::Null` sets `m_paused` and drops samples, so "Null + read ring" was not viable.)
 3. **Cross/Circle face-button swap** (`libretro_map.cpp`, commit `c7e5d47`) — user preference; our original mapping was the standard libretro PS1 default (B→Cross, A→Circle), swapped to A→Cross, B→Circle on request.
 
-## New libretro frontend (in `duckstation-src/src/duckstation-libretro/`)
+## New libretro frontend (in `duckstation-libretro/src/duckstation-libretro/`)
 `libretro.cpp` (retro_* entry points, run loop, RetroPad→controller, lifecycle bootstrap), `libretro_host.cpp` (full `Host::` contract), `libretro_settings.{h,cpp}` (`ApplySettings`), `libretro_map.cpp` (`MapRetroPadToDigital`, unit-tested), `libretro_audio.{h,cpp}` (capture drain + `FramesPerHostFrame`), `libretro_window.mm` (`Host::AcquireRenderWindow` → NSView), `libretro_core_options.h`, `libretro_internal.h`, `libretro.h`, `CMakeLists.txt`, `libretro_settings_test.cpp`, `package.sh`, `BUILD_NOTES.md`.
 
 ## Key implementation facts (corrections to the spec's assumptions)

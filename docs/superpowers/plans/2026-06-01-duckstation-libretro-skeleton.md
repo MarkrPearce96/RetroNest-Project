@@ -4,7 +4,7 @@
 
 **Goal:** Build `duckstation_libretro.dylib` (universal arm64+x86_64) plus minimal RetroNest wiring so a PS1 game boots end-to-end through RetroNest — load, render (Metal-to-NSView), sound, digital-pad input, clean exit.
 
-**Architecture:** New in-tree libretro frontend target inside the current-upstream DuckStation fork (`duckstation-src/src/duckstation-libretro/`), written fresh against DuckStation's current `Host::`/`Core::`/`System::` + `GPUDevice` surface (SwanStation's shim is reference-only; its `HostInterface`/`HostDisplay` base classes no longer exist). Single-threaded inline run loop (`VideoThread` non-threaded, `System::Execute()` interrupted at `FrameDone`). Renderer drives DuckStation's existing `MetalDevice`, which builds its `CAMetalLayer` on RetroNest's provided NSView (delivered via `Host::AcquireRenderWindow` + the `RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW` private env callback). PCSX2's in-tree frontend is the structural template.
+**Architecture:** New in-tree libretro frontend target inside the current-upstream DuckStation fork (`duckstation-libretro/src/duckstation-libretro/`), written fresh against DuckStation's current `Host::`/`Core::`/`System::` + `GPUDevice` surface (SwanStation's shim is reference-only; its `HostInterface`/`HostDisplay` base classes no longer exist). Single-threaded inline run loop (`VideoThread` non-threaded, `System::Execute()` interrupted at `FrameDone`). Renderer drives DuckStation's existing `MetalDevice`, which builds its `CAMetalLayer` on RetroNest's provided NSView (delivered via `Host::AcquireRenderWindow` + the `RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW` private env callback). PCSX2's in-tree frontend is the structural template.
 
 **Tech Stack:** C++20, CMake, Apple Metal, libretro ABI, Qt (RetroNest side). Build via the DuckStation fork's CMake; test by launching through RetroNest.
 
@@ -13,8 +13,8 @@
 - Delta report: `/Users/mark/Documents/Projects/duckstation-libretro/docs/swanstation-delta-2026-06-01.md`
 
 **Key paths:**
-- Fork: `/Users/mark/Documents/Projects/duckstation-libretro/duckstation-src/`
-- New frontend dir: `duckstation-src/src/duckstation-libretro/`
+- Fork: `/Users/mark/Documents/Projects/duckstation-libretro/`
+- New frontend dir: `duckstation-libretro/src/duckstation-libretro/`
 - RetroNest: `/Users/mark/Documents/Projects/RetroNest-Project/`
 - PCSX2 template: `/Users/mark/Documents/Projects/pcsx2-libretro/pcsx2-libretro/` (`LibretroFrontend.cpp`, `HostStubs.cpp`, `LibretroAudioStream.cpp`, `CMakeLists.txt`, `CoreResources.cpp`)
 - SwanStation reference: `/Users/mark/Documents/Projects/swanstation/src/libretro/`
@@ -33,7 +33,7 @@ Build commands assume the fork configures like upstream DuckStation. Confirm the
 
 ## File structure (locked decomposition)
 
-DuckStation fork — new files under `duckstation-src/src/duckstation-libretro/`:
+DuckStation fork — new files under `duckstation-libretro/src/duckstation-libretro/`:
 
 | File | Responsibility |
 |---|---|
@@ -74,7 +74,7 @@ Goal: RetroNest recognizes a libretro DuckStation core and `dlopen`s a stub dyli
 - [ ] **Step 1: Configure + build the existing fork once (arm64)**
 
 ```bash
-export DS=/Users/mark/Documents/Projects/duckstation-libretro/duckstation-src
+export DS=/Users/mark/Documents/Projects/duckstation-libretro
 cd "$DS"
 cmake -B build-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
 cmake --build build-arm64 --target core util common 2>&1 | tail -20
@@ -84,7 +84,7 @@ Expected: `core`, `util`, `common` static libs build successfully. If CMake opti
 
 - [ ] **Step 2: Record the recipe**
 
-Write the exact working configure+build commands into the top of `duckstation-src/src/duckstation-libretro/BUILD_NOTES.md` (create the dir). This is the canonical build recipe for the rest of the plan.
+Write the exact working configure+build commands into the top of `duckstation-libretro/src/duckstation-libretro/BUILD_NOTES.md` (create the dir). This is the canonical build recipe for the rest of the plan.
 
 - [ ] **Step 3: Commit (fork repo — init if needed)**
 
@@ -254,9 +254,9 @@ git commit -m "feat(manifest): convert duckstation to local-only libretro core"
 ### Task A6: Stub dylib that loads in RetroNest
 
 **Files:**
-- Create: `duckstation-src/src/duckstation-libretro/libretro.cpp` (stub)
-- Create: `duckstation-src/src/duckstation-libretro/CMakeLists.txt`
-- Modify: `duckstation-src/src/CMakeLists.txt`
+- Create: `duckstation-libretro/src/duckstation-libretro/libretro.cpp` (stub)
+- Create: `duckstation-libretro/src/duckstation-libretro/CMakeLists.txt`
+- Modify: `duckstation-libretro/src/CMakeLists.txt`
 
 - [ ] **Step 1: Write a stub `libretro.cpp` exporting all 22 required symbols**
 
@@ -334,7 +334,7 @@ set_target_properties(duckstation_libretro PROPERTIES
 
 - [ ] **Step 3: Wire into the build**
 
-In `duckstation-src/src/CMakeLists.txt` add near the other subdirs:
+In `duckstation-libretro/src/CMakeLists.txt` add near the other subdirs:
 
 ```cmake
 option(ENABLE_LIBRETRO "Build the libretro core (duckstation_libretro.dylib)" OFF)
@@ -376,7 +376,7 @@ Goal: produce a universal arm64+x86_64 dylib and bundle the runtime resources Du
 ### Task B1: Build x86_64 + lipo to universal
 
 **Files:**
-- Create: `duckstation-src/src/duckstation-libretro/build-universal.sh`
+- Create: `duckstation-libretro/src/duckstation-libretro/build-universal.sh`
 
 - [ ] **Step 1: Confirm x86_64 builds**
 
@@ -465,8 +465,8 @@ Goal: implement the `Host::` linker contract so the core links and core-thread/r
 ### Task C1: Implement the no-op / trivial Host functions
 
 **Files:**
-- Create: `duckstation-src/src/duckstation-libretro/libretro_host.cpp`
-- Modify: `duckstation-src/src/duckstation-libretro/CMakeLists.txt` (add the source + link `core util common`)
+- Create: `duckstation-libretro/src/duckstation-libretro/libretro_host.cpp`
+- Modify: `duckstation-libretro/src/duckstation-libretro/CMakeLists.txt` (add the source + link `core util common`)
 
 - [ ] **Step 1: Implement the no-op-safe set**
 
@@ -540,7 +540,7 @@ git commit -m "feat(libretro): Host contract — no-op/trivial functions"
 ### Task C2: Implement the real Host functions
 
 **Files:**
-- Modify: `duckstation-src/src/duckstation-libretro/libretro_host.cpp`
+- Modify: `duckstation-libretro/src/duckstation-libretro/libretro_host.cpp`
 
 - [ ] **Step 1: Core-thread identity + execution**
 
@@ -622,9 +622,9 @@ Goal: configure the core via a base `INISettingsInterface` and point it at the B
 ### Task D1: Core-option table + RetroPad mapping (pure logic, unit-tested)
 
 **Files:**
-- Create: `duckstation-src/src/duckstation-libretro/libretro_core_options.h`
-- Create: `duckstation-src/src/duckstation-libretro/libretro_settings.h` / `.cpp`
-- Create: `duckstation-src/src/duckstation-libretro/libretro_settings_test.cpp` (a tiny standalone test main)
+- Create: `duckstation-libretro/src/duckstation-libretro/libretro_core_options.h`
+- Create: `duckstation-libretro/src/duckstation-libretro/libretro_settings.h` / `.cpp`
+- Create: `duckstation-libretro/src/duckstation-libretro/libretro_settings_test.cpp` (a tiny standalone test main)
 
 - [ ] **Step 1: Write the failing test for RetroPad→DigitalController bind mapping**
 
@@ -713,7 +713,7 @@ git commit -m "feat(libretro): core-option table + RetroPad→DigitalController 
 ### Task D2: Build the base settings layer + EmuFolders at load
 
 **Files:**
-- Modify: `duckstation-src/src/duckstation-libretro/libretro_settings.cpp` (add `ApplySettings`)
+- Modify: `duckstation-libretro/src/duckstation-libretro/libretro_settings.cpp` (add `ApplySettings`)
 
 - [ ] **Step 1: Implement `ApplySettings(retro_environment_t)`**
 
@@ -777,7 +777,7 @@ Goal: `retro_load_game` boots the system; `retro_run` advances exactly one frame
 ### Task E1: Implement boot in `retro_load_game`
 
 **Files:**
-- Modify: `duckstation-src/src/duckstation-libretro/libretro.cpp` (replace the stub bodies; remove the stub Host include collisions)
+- Modify: `duckstation-libretro/src/duckstation-libretro/libretro.cpp` (replace the stub bodies; remove the stub Host include collisions)
 
 - [ ] **Step 1: Wire init + boot**
 
@@ -831,8 +831,8 @@ git commit -m "feat(libretro): retro_load_game boots the system"
 ### Task E2: One-frame run loop
 
 **Files:**
-- Modify: `duckstation-src/src/duckstation-libretro/libretro.cpp` (`retro_run`)
-- Modify: `duckstation-src/src/duckstation-libretro/libretro_host.cpp` (`PumpMessagesOnCoreThread`, shutdown flag)
+- Modify: `duckstation-libretro/src/duckstation-libretro/libretro.cpp` (`retro_run`)
+- Modify: `duckstation-libretro/src/duckstation-libretro/libretro_host.cpp` (`PumpMessagesOnCoreThread`, shutdown flag)
 
 - [ ] **Step 1: Implement single-frame stepping**
 
@@ -898,7 +898,7 @@ Goal: DuckStation's `MetalDevice` builds its layer on RetroNest's NSView and pre
 ### Task F1: Implement `Host::AcquireRenderWindow` (NSView → WindowInfo)
 
 **Files:**
-- Create: `duckstation-src/src/duckstation-libretro/libretro_window.mm` (Objective-C++ for NSView metrics)
+- Create: `duckstation-libretro/src/duckstation-libretro/libretro_window.mm` (Objective-C++ for NSView metrics)
 - Modify: `libretro_host.cpp` (or put the Host function in the .mm), `CMakeLists.txt`
 
 - [ ] **Step 1: Implement the render-window acquisition**
@@ -996,8 +996,8 @@ Goal: PS1 audio plays through RetroNest via `retro_audio_sample_batch`. This req
 ### Task G1: Capturing audio stream + SPU routing
 
 **Files:**
-- Create: `duckstation-src/src/duckstation-libretro/libretro_audio.cpp` / `.h`
-- Modify: `duckstation-src/src/core/spu.cpp` (`CreateOutputStream`)
+- Create: `duckstation-libretro/src/duckstation-libretro/libretro_audio.cpp` / `.h`
+- Modify: `duckstation-libretro/src/core/spu.cpp` (`CreateOutputStream`)
 
 - [ ] **Step 1: Write the frames-per-host-frame test (pure logic)**
 
@@ -1056,7 +1056,7 @@ Goal: a digital pad on port 0 controls the game.
 ### Task H1: Attach controller + push state
 
 **Files:**
-- Modify: `duckstation-src/src/duckstation-libretro/libretro.cpp`
+- Modify: `duckstation-libretro/src/duckstation-libretro/libretro.cpp`
 
 - [ ] **Step 1: Attach a DigitalController at boot**
 
