@@ -16,4 +16,20 @@ public:
     // PS1 → rcheevos console id 12, but RA is out of scope for the skeleton;
     // returning 0 keeps rcheevos disabled until the RA sub-spec wires it.
     int raConsoleId(const QString& systemId) const override { return 0; }
+
+    // PS1 Digital Controller is the controller type RetroNest exposes for
+    // DuckStation. Without this override the base returns {}, the
+    // controller-mapping page is empty, the InputRouter has no bindings to
+    // resolve, and CoreRuntime's input trampoline always reports 0 → "no
+    // controller input". Mirrors Pcsx2LibretroAdapter.
+    QVector<ControllerTypeDef> controllerTypes() const override;
+
+    // PS1 digital pad binding defs. Action keys (the .key field) match
+    // retroPadSlotFromKey() (input_router.h) so GameSession's controls.ini
+    // parser resolves each line to a RetroPadSlot and binds it into the
+    // InputRouter. The PS1 RetroPad layout is identical to PS2's, so the
+    // slots + default SDL bindings mirror Pcsx2LibretroAdapter exactly; only
+    // the labels differ (PS1 button names). A digital pad has no analog
+    // sticks, so L3/R3 are omitted.
+    QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
 };
