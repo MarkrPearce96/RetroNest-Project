@@ -111,11 +111,17 @@ bool ManifestLoader::validateManifest(const EmulatorManifest& m, const QString& 
     if (m.id.isEmpty()) missing << "id";
     if (m.name.isEmpty()) missing << "name";
     if (m.systems.isEmpty()) missing << "systems";
-    if (m.github_repo.isEmpty()) missing << "github_repo";
     if (m.executable.isEmpty()) missing << "executable";
 
     if (!missing.isEmpty()) {
         qWarning() << "Manifest" << filePath << "missing required fields:" << missing.join(", ");
+        return false;
+    }
+
+    // Libretro cores may be local-only (no GitHub release); their dylib is
+    // hand-placed / built locally. Only process-backend emulators require a repo.
+    if (m.backend != "libretro" && m.github_repo.isEmpty()) {
+        qWarning() << "[Manifest] Rejecting" << m.id << "— missing github_repo";
         return false;
     }
 
