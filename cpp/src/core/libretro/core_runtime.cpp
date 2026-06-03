@@ -1,4 +1,5 @@
 #include "core_runtime.h"
+#include "core/libretro/autorelease_scope.h"
 #include "core/libretro/hotkey_matcher.h"
 #include "core/libretro/video_hardware_gl.h"
 #include "core/path_overrides_store.h"
@@ -494,15 +495,23 @@ void CoreRuntime::runLoop() {
         // seconds of samples that then play out at 1× — the resume
         // audio-lag the user hears.
         if (wasPaused) next = clock::now();
-        // Apply a load-state request BEFORE retro_run so the next frame
-        // emits the loaded state's video/audio (post-run flush would
-        // discard the just-rendered frame).
-        flushPendingLoadState(s);
-        const auto frame_start = clock::now();
-        s.retro_run();
-        const auto frame_end = clock::now();
-        m_rcheevos.frame();
-        flushPendingSaveState(s);
+        // Drain autoreleased Metal/ObjC objects every frame so they never
+        // accumulate on this QThread's lifetime autorelease pool and outlive
+        // the core dylib at dlclose() (CoreLoader::close). See
+        // autorelease_scope.h for the resume-crash root cause this prevents.
+        clock::time_point frame_start, frame_end;
+        {
+            mac::AutoreleaseScope arpool;
+            // Apply a load-state request BEFORE retro_run so the next frame
+            // emits the loaded state's video/audio (post-run flush would
+            // discard the just-rendered frame).
+            flushPendingLoadState(s);
+            frame_start = clock::now();
+            s.retro_run();
+            frame_end = clock::now();
+            m_rcheevos.frame();
+            flushPendingSaveState(s);
+        }
         const double mult = m_speedMultiplier.load();
         const long long target_ns =
             static_cast<long long>(m_frameDurationSec * 1e9 / mult);
@@ -546,6 +555,16 @@ void CoreRuntime::runLoop() {
 
         std::this_thread::sleep_until(next);
     }
+
+    // Run all teardown (the final save-state serialize, retro_unload_game,
+    // retro_deinit → Metal device destroy) inside an autorelease pool that we
+    // pop *before* m_loader.close() dlclose()s the core. Otherwise objects
+    // autoreleased here linger on this QThread's lifetime pool and are released
+    // only at thread exit — after the dylib is unmapped — crashing in
+    // objc_autoreleasePoolPop (the resume SIGILL). See autorelease_scope.h.
+    // This region is linear and non-throwing, so a manual push/pop (vs. a
+    // scoped guard that would force re-indenting the whole block) suffices.
+    void* const teardownPool = objc_autoreleasePoolPush();
 
     // Drain any save-state request that arrived after the last retro_run
     // (e.g. from GameSession::terminate → requestSaveState + stop).
@@ -600,6 +619,10 @@ void CoreRuntime::runLoop() {
 
     s.retro_deinit();
     m_audio.close();
+
+    // Drain the teardown pool while the core dylib (and Metal device) are still
+    // mapped, then unload the core.
+    objc_autoreleasePoolPop(teardownPool);
     m_loader.close();
     g_current = nullptr;
     emit finished(false);
