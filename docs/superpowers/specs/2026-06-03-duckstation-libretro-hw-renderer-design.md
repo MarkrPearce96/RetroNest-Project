@@ -1,0 +1,103 @@
+# DuckStation libretro #1 — Hardware Metal renderer (minimal)
+
+**Date:** 2026-06-03
+**Status:** Design approved, ready for implementation plan
+**Repo:** `duckstation-libretro/` (fork `master`, local-only, never push)
+**Predecessors:** [skeleton](2026-06-01-duckstation-libretro-skeleton-design.md), [save-states](2026-06-03-duckstation-libretro-savestates-design.md) — both complete and shipped.
+**Source handoff:** `duckstation-libretro/docs/hardware-renderer-handoff-2026-06-03.md`
+
+## 1. Goal & scope
+
+Flip the DuckStation libretro core from the **Software** renderer to DuckStation's **hardware Metal** renderer at **4× internal resolution**, with **PGXP geometry + texture correction** and **true color** enabled — all via **hardcoded defaults** in `ApplySettings`. This is the headline reason to use modern DuckStation (upscaling + PGXP), which the skeleton deliberately left off for safety.
+
+**In scope:**
+- Hardware Metal renderer selection + a curated set of enhancement defaults, written into the base settings layer.
+- Validating the HW shader pipeline and the inline (non-threaded) render/present path end-to-end through RetroNest.
+
+**Explicitly out of scope (deferred to feature #3, settings migration):**
+- Any user-facing configuration: libretro core options, RetroNest `settingsSchema()` wiring, live-changeable knobs. All values here are fixed defaults.
+- Enabling the GPU video thread (`GPU/UseThread`) — stays `false`; see §5.
+- Widescreen, texture filtering, downsampling, and other knobs not listed in §3.
+
+**Success criteria:**
+- PS1 output through RetroNest is visibly sharper/upscaled vs. the current software output.
+- 3D geometry is stable (no PS1 polygon jitter/wobble) thanks to PGXP.
+- No regression to audio, input, save states, or persistent memcards.
+- `/tmp/rn.log` shows clean Metal HW renderer init + runtime shader compilation, no errors.
+
+## 2. Where the change lives
+
+A single function: `ApplySettings` in `src/duckstation-libretro/libretro_settings.cpp` — the same base-settings-layer block (under `Core::GetSettingsLock()`, on `Core::GetBaseSettingsLayer()`) that today sets `GPU/Renderer`, `GPU/UseThread`, region, memcard type, and Pad1 type.
+
+No other files change. The display/present path (Metal `GPUDevice` + swapchain on RetroNest's NSView, `GPUBackend::HandleSubmitFrameCommand` self-present) and the run loop (`System::RunFrame()` interrupted at `FrameDone`) already work and are unchanged — this feature only changes **which renderer DuckStation uses to draw the frame** and at what internal resolution.
+
+## 3. The settings changes
+
+All values are written in the **same carefully-commented, verified-against-`core/settings.cpp` style** as the existing block. The table below is the intended end state; **exact INI key strings and value spellings MUST be verified against `Settings::Load` in `src/core/settings.cpp` during implementation** before being committed — the PGXP key names and the true-color/dithering folding (delta §3) are not to be guessed.
+
+| Setting (intent) | INI key (verify exact spelling) | Current | New value |
+|---|---|---|---|
+| Renderer | `GPU/Renderer` | `"Software"` | `"Metal"` |
+| GPU video thread | `GPU/UseThread` | `false` | `false` (unchanged) |
+| Internal resolution scale | `GPU/ResolutionScale` | unset (→1) | `4` |
+| PGXP master enable | `GPU/PGXPEnable` | unset (off) | `true` |
+| PGXP culling | `GPU/PGXPCulling` | unset | `true` |
+| PGXP texture correction | `GPU/PGXPTextureCorrection` | unset | `true` |
+| PGXP vertex cache | `GPU/PGXPVertexCache` | unset | `true` |
+| True color (24-bit) | true-color / `GPU/DitheringMode` (delta §3: `gpu_true_color` folded into `gpu_dithering_mode`) | default | true-color on |
+
+**Decisions baked in:**
+- **`"Metal"`, not `"Automatic"`.** Both resolve to the Metal backend on macOS, but forcing it explicitly makes this validation feature deterministic and avoids "what did Automatic pick?" ambiguity in the logs.
+- **`GPU/PGXPCPU` stays OFF.** CPU-mode PGXP is heavy and accuracy-oriented; not needed for the visual win and a perf risk. Not written (engine default off).
+- **Texture filtering, widescreen, downsampling: OFF.** Divisive / artifact-prone; conservative default, deferred to #3 where the user can opt in.
+- **True color exact mechanism is a verification point.** Delta §3 notes `gpu_true_color`/`gpu_scaled_dithering` were folded into `gpu_dithering_mode`. Implementation determines the correct `GPU/DitheringMode` value (or dedicated true-color key, if one still exists) from `core/settings.cpp` and the `GPUDitheringMode` enum before writing it.
+
+## 4. Failure handling
+
+**Hard fail on HW init failure — no silent fallback to Software.** This feature exists to exercise and validate the Metal HW path; a silent downgrade would mask exactly the breakage we want to see. If the Metal HW renderer fails to initialize at runtime, the error surfaces (in `/tmp/rn.log` and via DuckStation's existing error reporting) rather than quietly reverting. Automatic software fallback can be reconsidered later as a robustness feature once the HW path is proven; it is not part of #1.
+
+## 5. Threading — stays inline
+
+`GPU/UseThread` remains `false`. The run loop (`System::RunFrame()` + `InterruptExecution` at `FrameDone`, one frame per `retro_run`) was purpose-built for inline execution. Enabling the GPU video thread would re-open the run-loop design toward the threaded+present-CV model the skeleton deliberately avoided. The HW renderer is validated **inline first**; threading is a separate future decision, not part of this feature.
+
+## 6. Risks & validation order
+
+Implementation validates in this order — cheapest / most-likely-to-break first, per the handoff's flagged risks:
+
+1. **HW shader pipeline (top suspect).** Unlike software (which needed only the prebuilt `metal_shaders.metallib` + shaderc/spirv-cross for ImGui), the HW renderer **generates PS1 draw shaders at runtime** (`video_shadergen` / `gpu_hw_shadergen` → compiled through the Metal device, possibly via shaderc/spirv-cross). First milestone: confirm runtime shader generation + compilation succeeds in the **deployed** bundle (metallib + Frameworks libs already shipped by `package.sh`), watching `/tmp/rn.log`. This is the most likely first break.
+2. **Inline + HW interaction.** Confirm `RunFrame()` still yields exactly one frame per `retro_run` with the HW backend and `VideoThread::IsUsingThread() == false`, with the GPU command pipeline executing inline and no stall.
+3. **Present at scale.** Confirm the upscaled (4×) frame composites correctly to the NSView Metal layer — geometry/aspect via `VideoPresenter`.
+4. **Texture cache / VRAM.** Higher-res render targets + `gpu_hw_texture_cache` at 4× — watch for memory/format issues.
+
+**Key code references:** `src/core/gpu_hw.cpp`, `gpu_hw_shadergen.cpp`, `gpu_hw_texture_cache.cpp`, `video_shadergen.cpp`; `src/util/metal_device.mm`; `src/core/video_thread.cpp` (inline path); `gpu_backend.cpp` (`HandleSubmitFrameCommand` present); `src/core/settings.cpp` (`ParseRendererName` ~301, `ResolutionScale` ~304, `s_gpu_renderer_names` ~1557). Delta report `duckstation-libretro/docs/swanstation-delta-2026-06-01.md` §2 (renderer/GPUDevice) + §3 (GPUSettings fields, renamed/gone ones).
+
+## 7. Build / deploy / test
+
+No automated harness for visual output. Manual loop:
+
+```sh
+export DS=/Users/mark/Documents/Projects/duckstation-libretro
+export MACOSX_DEPLOYMENT_TARGET=13.3
+cd "$DS"
+cmake -B build-arm64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DENABLE_OPENGL=OFF -DCMAKE_NO_SYSTEM_FROM_IMPORTED=ON -DENABLE_LIBRETRO=ON
+cmake --build build-arm64 --target duckstation_libretro
+src/duckstation-libretro/package.sh   # or cp arm64 dylib for quick iteration
+```
+
+Then **the user launches RetroNest** (TCC blocks the agent from the GUI launch + `~/Documents` + the DB):
+`RetroNest-Project/cpp/build/RetroNest.app/Contents/MacOS/RetroNest > /tmp/rn.log 2>&1`
+
+### Pass/fail checklist
+- [ ] Core builds clean (`duckstation_libretro` target).
+- [ ] `/tmp/rn.log`: Metal **hardware** renderer init succeeds (not Software); no shader-gen/compile errors.
+- [ ] PS1 game boots and runs at full speed (one frame per `retro_run`, no stall/slowdown).
+- [ ] Output is visibly **sharper/upscaled** vs. prior software render (compare the same scene).
+- [ ] 3D geometry is **stable** — no PS1 polygon jitter (PGXP working).
+- [ ] No regression: audio plays, input maps correctly, save state save/load works, memcard persists.
+- [ ] No new errors/warnings in `/tmp/rn.log` over a few minutes of play.
+
+## 8. Follow-on (not this feature)
+- **#3 settings migration:** expose renderer/scale/PGXP/filtering/widescreen as libretro core options + RetroNest `settingsSchema()` so the user can change them live. Reference: `pcsx2-libretro/.../CoreOptionsGraphics.cpp` + RetroNest `pcsx2_libretro_adapter.cpp settingsSchema()`.
+- Possible later robustness: automatic HW→Software fallback on init failure.
+- Possible later: GPU video thread (`GPU/UseThread = true`) — requires run-loop rework.
