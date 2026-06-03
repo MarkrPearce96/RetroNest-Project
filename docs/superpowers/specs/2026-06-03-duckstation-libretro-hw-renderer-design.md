@@ -101,3 +101,23 @@ Then **the user launches RetroNest** (TCC blocks the agent from the GUI launch +
 - **#3 settings migration:** expose renderer/scale/PGXP/filtering/widescreen as libretro core options + RetroNest `settingsSchema()` so the user can change them live. Reference: `pcsx2-libretro/.../CoreOptionsGraphics.cpp` + RetroNest `pcsx2_libretro_adapter.cpp settingsSchema()`.
 - Possible later robustness: automatic HW→Software fallback on init failure.
 - Possible later: GPU video thread (`GPU/UseThread = true`) — requires run-loop rework.
+
+## Implementation Outcome (2026-06-03)
+
+**Status: Complete / shipped.** Single commit `211e3bf` on `duckstation-libretro` `master` (local-only, not pushed). Implemented via subagent-driven development (implementer + spec-compliance review + code-quality review, both passed).
+
+**What landed:** the verified settings profile in `ApplySettings` (`libretro_settings.cpp`) — `GPU/Renderer="Metal"`, `ResolutionScale=4`, `PGXPEnable`+`PGXPCulling`+`PGXPTextureCorrection=true`, `DitheringMode="TrueColor"`; `UseThread` stays `false`; `PGXPVertexCache`/`PGXPCPU` left at engine defaults. Built arm64 and deployed via `package.sh --arm64-only` (dylib + `metal_shaders.metallib` + shaderc/spirv-cross Frameworks libs).
+
+**Validation (RetroNest, Toy Story 2, `/tmp/rn.log`):**
+- HW Metal renderer active on Apple M4 (`GPU_HW`, Metal v20300), **4× scale confirmed** (`Resolution Scale: 4 (4096x2048)`), **True Color confirmed** (`Dithering: True Color`).
+- **Top risk cleared:** runtime shader pipeline compiled fully in the deployed bundle — `3 vertex / 200 fragment / 411 pipelines`, `411/411`, no shader errors. Pipeline creation ~2.3s one-time at boot.
+- Booted in 2.4s; ran 30s+ with live memcard save (no stall — inline+HW frame pump holds). Audio = `Null` (RetroNest capture), as expected.
+- **User-confirmed visually:** output much sharper/upscaled, 3D geometry stable (PGXP working), input correct.
+
+**Caveats / notes:**
+- **Deploy was arm64-only** (`--arm64-only`). RetroNest policy is universal — a universal rebuild (drop the flag; needs the x86_64 build working) is required before any real shipping. Fine for this M4 validation.
+- **Save-state save/load under the HW renderer was NOT separately re-verified** this session. Live memcard persistence was confirmed; save-states were validated in the prior (software-renderer) feature. Renderer swap shouldn't affect VRAM-level state serialization, but spot-check recommended.
+- **Pre-existing, unrelated gap surfaced in the log:** `rcheevos` (RetroAchievements) `rc_libretro_memory_init failed` / `hash generation failed` — the core doesn't expose the memory map / disc hash rcheevos needs. Renderer-independent (would fail identically under software). Candidate future ticket, out of scope for #1.
+- **Spec correction during planning:** `PGXPVertexCache` was dropped from ON → engine-default OFF after source diligence (situational fallback that can cause visual errors; anti-jitter comes from `PGXPEnable`+`Culling`). See §3.
+
+**Deferred to feature #3:** expose renderer/scale/PGXP/filtering/widescreen as libretro core options + RetroNest `settingsSchema()` so the user can change them live.
