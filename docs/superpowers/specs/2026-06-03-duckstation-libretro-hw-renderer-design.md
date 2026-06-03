@@ -33,24 +33,24 @@ No other files change. The display/present path (Metal `GPUDevice` + swapchain o
 
 ## 3. The settings changes
 
-All values are written in the **same carefully-commented, verified-against-`core/settings.cpp` style** as the existing block. The table below is the intended end state; **exact INI key strings and value spellings MUST be verified against `Settings::Load` in `src/core/settings.cpp` during implementation** before being committed — the PGXP key names and the true-color/dithering folding (delta §3) are not to be guessed.
+All values are written in the **same carefully-commented, verified-against-`core/settings.cpp` style** as the existing block. Every INI key + value below has been **verified against `Settings::Load` / `LoadPGXPSettings` in `src/core/settings.cpp`** (line refs in the table).
 
-| Setting (intent) | INI key (verify exact spelling) | Current | New value |
-|---|---|---|---|
-| Renderer | `GPU/Renderer` | `"Software"` | `"Metal"` |
-| GPU video thread | `GPU/UseThread` | `false` | `false` (unchanged) |
-| Internal resolution scale | `GPU/ResolutionScale` | unset (→1) | `4` |
-| PGXP master enable | `GPU/PGXPEnable` | unset (off) | `true` |
-| PGXP culling | `GPU/PGXPCulling` | unset | `true` |
-| PGXP texture correction | `GPU/PGXPTextureCorrection` | unset | `true` |
-| PGXP vertex cache | `GPU/PGXPVertexCache` | unset | `true` |
-| True color (24-bit) | true-color / `GPU/DitheringMode` (delta §3: `gpu_true_color` folded into `gpu_dithering_mode`) | default | true-color on |
+| Setting (intent) | INI key | Type | Current | New value | Verified at |
+|---|---|---|---|---|---|
+| Renderer | `GPU/Renderer` | string | `"Software"` | `"Metal"` | parse `settings.cpp:301`, names `:1557` |
+| GPU video thread | `GPU/UseThread` | bool | `false` | `false` (unchanged) | `settings.cpp:320` |
+| Internal resolution scale | `GPU/ResolutionScale` | uint | `1` | `4` | `settings.cpp:304` |
+| PGXP master enable | `GPU/PGXPEnable` | bool | `false` | `true` | `settings.cpp:357` |
+| PGXP culling | `GPU/PGXPCulling` | bool | `true` (default) | `true` (explicit) | `settings.cpp:646` |
+| PGXP texture correction | `GPU/PGXPTextureCorrection` | bool | `true` (default) | `true` (explicit) | `settings.cpp:647` |
+| True color (24-bit) | `GPU/DitheringMode` | string | `"TrueColor"` (default) | `"TrueColor"` (explicit) | `settings.cpp:334,730`; names `:1725`; default `settings.h:226` |
 
 **Decisions baked in:**
 - **`"Metal"`, not `"Automatic"`.** Both resolve to the Metal backend on macOS, but forcing it explicitly makes this validation feature deterministic and avoids "what did Automatic pick?" ambiguity in the logs.
-- **`GPU/PGXPCPU` stays OFF.** CPU-mode PGXP is heavy and accuracy-oriented; not needed for the visual win and a perf risk. Not written (engine default off).
+- **PGXP Vertex Cache stays OFF (engine default).** Source check (`settings.cpp:649`, default `false`) showed vertex cache is a *situational compatibility fallback* (screen-coordinate vertex tracking) that can introduce visual errors in some games — not the source of the anti-jitter fix. The geometry-stability win comes from `PGXPEnable` + `PGXPCulling` (both on). Leaving it off keeps the "conservative safe defaults" intent. (Earlier draft listed it on; corrected after source diligence.) Not written → defaults false.
+- **`GPU/PGXPCPU` stays OFF (engine default `settings.cpp:650`).** CPU-mode PGXP is heavy and accuracy-oriented; not needed for the visual win and a perf risk. Not written.
 - **Texture filtering, widescreen, downsampling: OFF.** Divisive / artifact-prone; conservative default, deferred to #3 where the user can opt in.
-- **True color exact mechanism is a verification point.** Delta §3 notes `gpu_true_color`/`gpu_scaled_dithering` were folded into `gpu_dithering_mode`. Implementation determines the correct `GPU/DitheringMode` value (or dedicated true-color key, if one still exists) from `core/settings.cpp` and the `GPUDitheringMode` enum before writing it.
+- **Culling, texture correction, and true color are written explicitly even though they already match engine defaults.** This makes `ApplySettings` the self-documenting single source of truth for our enhancement profile, robust to upstream default changes. (`gpu_true_color`/`gpu_scaled_dithering` were folded into `gpu_dithering_mode` per delta §3; the `"TrueColor"` enum value — `GPUDitheringMode::TrueColor` — is the modern equivalent and the current default.)
 
 ## 4. Failure handling
 
