@@ -106,3 +106,31 @@ Rewind/runahead memory-state fast path; `SAVE_RAM` exposure; RA hardcore save-st
 - RetroNest save plumbing: `cpp/src/core/libretro/core_runtime.cpp` (`saveState`/`requestLoadState`/resume), `cpp/src/core/game_session.cpp:251,471-479`
 - Reference adapter: `cpp/src/adapters/libretro/pcsx2_libretro_adapter.cpp` (`findResumeFile`, `pathsDefs`)
 - DuckStation save API: `src/core/system.h` (`GetMaxSaveStateSize`, `SaveStateDataToBuffer`), `src/util/state_wrapper.h`, `src/core/save_state_version.h`
+
+---
+
+# Implementation Outcome — COMPLETE (2026-06-03)
+
+Implemented via subagent-driven development and **verified working through RetroNest**: save-state slots, resume-on-exit/launch, and persistent per-game memory cards all confirmed in-game (Crash Bandicoot / Toy Story 2) with clean logs (no serialize/unserialize errors, no crashes).
+
+## What was built (matches the design)
+- **Core fork-touch:** `System::LoadStateDataFromBuffer(std::span<const u8>, Error*)` added (mirrors `SaveStateDataToBuffer` with `Mode::Read` + `DoState(sw, true)`). Fifth intentional fork core modification. (fork `master` `80a5816`)
+- **`retro_serialize_size/serialize/unserialize`** implemented (`GetMaxSaveStateSize(true)` worst-case size; `SaveStateDataToBuffer`; `LoadStateDataFromBuffer`). (fork `0197dd2`)
+- **Persistent memory card:** `MemoryCardType::PerGameTitle`, file-backed, written by DuckStation. (fork `789438b`)
+- **RetroNest adapter:** `pathsDefs()` (MemoryCards, SaveStates) + `findResumeFile()` (mirrors PCSX2; locates `<serial>.resume` under `emulators/duckstation/psx/savestates`). (`9b32458`)
+- Resume uses the **post-load `retro_unserialize`** path (RetroNest's generic plumbing) — confirmed firing via `[ThemeContext] Resuming with state file: …`.
+
+## Fixes made during verification
+- **DataRoot pollution (important):** Phase 1's `DeriveDataRoot` used parent-of-bios (the RetroNest root), so DuckStation created its entire `EmuFolders` tree (cache/shaders/savestates/memcards/…) directly under `~/Documents/RetroNest/`. Fixed to use `RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY` (RetroNest's per-emulator dir) as the primary `DataRoot`, so everything nests under `emulators/duckstation/psx/`; BIOS stays shared at `RetroNest/bios` via the absolute `BIOS/SearchDirectory` key. (fork `4a2ccce`) Verified: all folders now under `emulators/duckstation/psx/`, root clean, no mkdir errors.
+- **Cross/Circle then Triangle/Square** face-button swaps in `MapRetroPadToDigital` per user preference. (fork `c7e5d47`, `a2d1b55`)
+
+## Deploy
+`package.sh` → universal (`x86_64 arm64`) dylib + resources + shader-compiler libs deployed. Memcards/savestates land under `emulators/duckstation/psx/`.
+
+## Deferred / separate
+- **In-game menu doesn't appear after app-switch (pauses, no overlay) — affects ALL emulators.** Pre-existing RetroNest-wide bug in the in-game-menu `NSPanel` overlay (front/activation after focus loss); unrelated to DuckStation or this feature. To be addressed as its own task.
+- Rewind/runahead, `SAVE_RAM`, RA hardcore rules, cross-version state compat — unchanged from "deferred" above.
+- Vestigial DuckStation EmuFolders (covers/gameicons/screenshots/etc.) are created empty and harmless; trimming is optional low-value future work.
+
+## Commits
+RetroNest `feat/duckstation-libretro-savestates`: `10aa8d6` (docs), `9b32458` (adapter). Fork `master` (local-only): `80a5816`, `0197dd2`, `789438b`, `4a2ccce`, `c7e5d47`, `a2d1b55`.
