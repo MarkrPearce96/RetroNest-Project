@@ -32,4 +32,15 @@ public:
     // the labels differ (PS1 button names). A digital pad has no analog
     // sticks, so L3/R3 are omitted.
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
+
+    // Path overrides: two user-overridable folders (Memory Cards, Save
+    // States). DuckStation has no Textures PathDef in this skeleton, unlike
+    // pcsx2's three. Mirrors Pcsx2LibretroAdapter::pathsDefs().
+    QVector<PathDef> pathsDefs() const override;
+
+    // Resolve the per-game resume save state written by GameSession::terminate
+    // under the DuckStation SaveStates dir; without this override the base
+    // returns empty, StartConfig.resumeStatePath stays unset, and launching
+    // the game cold-boots. Mirrors Pcsx2LibretroAdapter::findResumeFile.
+    QString findResumeFile(const QString& serial) const override;
 };

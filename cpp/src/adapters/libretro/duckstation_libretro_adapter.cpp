@@ -2,6 +2,10 @@
 
 #include "core/binding_def.h"
 #include "core/controller_type_def.h"
+#include "core/path_overrides_store.h"
+#include "core/paths.h"
+
+#include <QDir>
 
 // PS1 Digital Controller — the standard (non-analog) PlayStation pad the
 // DuckStation libretro core boots with. No PS1-specific controller SVG ships
@@ -53,4 +57,28 @@ QVector<BindingDef> DuckStationLibretroAdapter::controllerBindingDefsForType(con
         { BindingDef::Button, "Start",  "System", "Pad1", "Start",  "SDL-0/Start", "System", 0, 0, 0 },
         { BindingDef::Button, "Select", "System", "Pad1", "Select", "SDL-0/Back",  "System", 0, 0, 0 },
     };
+}
+
+QVector<PathDef> DuckStationLibretroAdapter::pathsDefs() const {
+    return {
+        { "Memory Cards", "libretro", "MemoryCards", "memcards",   PathBase::EmulatorData },
+        { "Save States",  "libretro", "SaveStates",  "savestates", PathBase::EmulatorData },
+    };
+}
+
+// Resume-on-launch: GameSession::terminate writes "<serial>.resume" under the
+// DuckStation SaveStates dir; locate it here so GameSession feeds it to
+// cfg.resumeStatePath (loaded post-retro_load_game via retro_unserialize).
+// Base id "duckstation", systemId "psx". Mirrors Pcsx2LibretroAdapter::findResumeFile.
+QString DuckStationLibretroAdapter::findResumeFile(const QString& serial) const {
+    if (serial.isEmpty())
+        return {};
+    QString dir = PathOverridesStore::instance().read("duckstation", "SaveStates");
+    if (dir.isEmpty())
+        dir = Paths::emulatorDataDir("duckstation", "psx") + "/savestates";
+    QDir d(dir);
+    const auto entries = d.entryList({ serial + ".resume" }, QDir::Files);
+    if (!entries.isEmpty())
+        return d.absoluteFilePath(entries.first());
+    return {};
 }
