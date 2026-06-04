@@ -31,6 +31,13 @@ public:
     // Save & Quit -> Resume silently no-ops (file written, never read back).
     QString findResumeFile(const QString& key) const override;
 
+    // GameCube/Wii discs store a 6-char game ID (e.g. "GZ2P01") at disc offset 0.
+    // The base extractSerial() reads PlayStation's SYSTEM.CNF, so it fails on GC
+    // discs and can't read Dolphin's compressed .rvz/.wia at all. Read the game
+    // ID directly: at file offset 0 for raw .iso/.gcm, and from the verbatim
+    // disc_header in the WIA/RVZ header for .rvz/.wia.
+    QString extractSerial(const QString& romPath) const override;
+
     // SP5: surface GameCube + Wii Classic controllers to the mapping UI.
     // Without controllerTypes() the page is empty and ControllerBindingsView
     // crashes rendering cards (see Pcsx2LibretroAdapter note).

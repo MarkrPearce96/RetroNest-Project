@@ -5,6 +5,7 @@
 #include "core/paths.h"
 #include <QDebug>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 
 int DolphinLibretroAdapter::raConsoleId(const QString& systemId) const {
@@ -40,6 +41,48 @@ QString DolphinLibretroAdapter::findResumeFile(const QString& key) const {
             return d.absoluteFilePath(entries.first());
     }
     return {};
+}
+
+QString DolphinLibretroAdapter::extractSerial(const QString& romPath) const {
+    // GameCube/Wii discs carry a 6-char game ID at disc offset 0 (e.g. "GZ2P01").
+    // For raw .iso/.gcm that's the start of the file; for Dolphin's compressed
+    // .rvz/.wia the first 0x80 disc bytes are stored verbatim in the WIA/RVZ
+    // header (WIAFileHead is 0x48 bytes; WIADisc.disc_header begins 0x10 into the
+    // following WIADisc -> file offset 0x58), while the rest of the disc is
+    // compressed. The base ISO reader looks for PlayStation's SYSTEM.CNF, so it
+    // can read neither layout. Validate the read against the GameCube/Wii magic
+    // word so a wrong offset or non-disc file yields no serial instead of garbage.
+    QFile f(romPath);
+    if (!f.open(QIODevice::ReadOnly))
+        return {};
+
+    qint64 base = 0;
+    const QByteArray magic = f.read(4);
+    if (magic == QByteArray("RVZ\x01", 4) || magic == QByteArray("WIA\x01", 4))
+        base = 0x58;  // the verbatim disc header lives inside the WIA/RVZ header
+
+    if (!f.seek(base))
+        return {};
+    const QByteArray hdr = f.read(0x20);  // game id [0x00,0x06) + magic words
+    if (hdr.size() < 0x20)
+        return {};
+
+    const auto be32 = [&hdr](int off) -> quint32 {
+        return (quint32(quint8(hdr[off]))     << 24) | (quint32(quint8(hdr[off + 1])) << 16) |
+               (quint32(quint8(hdr[off + 2])) <<  8) |  quint32(quint8(hdr[off + 3]));
+    };
+    constexpr quint32 GC_MAGIC  = 0xC2339F3D;  // GameCube, disc offset 0x1C
+    constexpr quint32 WII_MAGIC = 0x5D1C9EA3;  // Wii, disc offset 0x18
+    if (be32(0x1C) != GC_MAGIC && be32(0x18) != WII_MAGIC)
+        return {};  // not a recognizable GameCube/Wii disc header
+
+    const QByteArray id = hdr.left(6);
+    for (const char c : id) {
+        const bool ok = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+        if (!ok)
+            return {};  // game id must be printable alphanumeric
+    }
+    return QString::fromLatin1(id);
 }
 
 namespace {
