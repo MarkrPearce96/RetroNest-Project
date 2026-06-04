@@ -64,6 +64,40 @@ relaunching; dyld picks the matching dylib slice automatically.
 This eliminates host/core arch-mismatch failure modes. New cores
 (future DuckStation libretro, PPSSPP libretro) follow the same rule.
 
+### Current run mode: x86_64 (Rosetta) for everything (as of 2026-06-04)
+
+The daily-driver build is the **x86_64** RetroNest app run under Rosetta —
+**not** the native arm64 `build/`. Reason: PCSX2 only runs well on x86, and
+RetroNest loads libretro cores **in-process**, so one running app is a single
+architecture — every core in a session must match the host arch (you can't run
+an arm64 DuckStation session and an x86_64 PCSX2 session in the same launch).
+Running everything x86 avoids quitting/relaunching to switch emulators.
+DuckStation/PPSSPP run fine under Rosetta (Metal/GPU is native; only CPU is
+translated).
+
+Build + run the x86 app directly (skip the full `build-universal.sh`, which
+also rebuilds PCSX2/mGBA cores):
+```sh
+arch -x86_64 /usr/local/bin/cmake -S cpp -B cpp/build-x86_64 \
+    -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+    -DCMAKE_PREFIX_PATH="/usr/local/opt/qt;/usr/local/opt/sdl2"
+arch -x86_64 /usr/local/bin/cmake --build cpp/build-x86_64 --target RetroNest -j 6
+arch -x86_64 /usr/local/opt/qt/bin/macdeployqt cpp/build-x86_64/RetroNest.app \
+    -qmldir=cpp/qml -no-codesign -always-overwrite
+# pure-x86 binary → auto-runs under Rosetta, no Finder toggle:
+cpp/build-x86_64/RetroNest.app/Contents/MacOS/RetroNest > /tmp/rn.log 2>&1
+```
+- Build **`--target RetroNest`**, not the default `all` — a few x86 test
+  targets fail to link (`DuckStationLibretroAdapter` vtable missing from their
+  CMake source lists; the app itself is unaffected).
+- The DuckStation libretro core must be **universal**: build via its
+  `package.sh` with **no** `--arm64-only` flag.
+- **Dolphin save states are arch-sensitive** — states made under arm64 won't
+  load under x86_64 (PCSX2/PPSSPP/DuckStation states do carry over). Make fresh
+  Dolphin states after the switch.
+- **Future:** when PCSX2 is arm64-native, switch back to the native arm64
+  `build/` and this Rosetta detour goes away.
+
 ## Architecture
 - **Manifests** (`manifests/*.json`) = metadata (id, name, systems, github_repo, executable, launch_args)
 - **Adapters** (`adapters/`) own all emulator behavior (config patching, platform paths, launch logic)
