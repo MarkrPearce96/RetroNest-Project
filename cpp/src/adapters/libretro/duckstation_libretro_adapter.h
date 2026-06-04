@@ -1,11 +1,10 @@
 #pragma once
 #include "libretro_adapter.h"
 
-// Minimal skeleton-phase DuckStationLibretroAdapter.
-// coreId() is the only pure-virtual on LibretroAdapter; the registry only
-// instantiates concrete subclasses, so we need a named class to register.
-// Settings schema, controller types, RA console id, resume lookup, etc. are
-// deferred to follow-on specs (see 2026-06-01-duckstation-libretro-skeleton-design.md).
+// DuckStationLibretroAdapter — wires RetroNest to the DuckStation libretro
+// core (duckstation_libretro.dylib) for PS1: controller types/bindings, the
+// settings-schema + Recommended hub, RetroAchievements console ID (PS1=12),
+// and cold-resume file lookup.
 class DuckStationLibretroAdapter : public LibretroAdapter {
     Q_OBJECT
 public:
@@ -36,8 +35,7 @@ public:
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
 
     // Path overrides: two user-overridable folders (Memory Cards, Save
-    // States). DuckStation has no Textures PathDef in this skeleton, unlike
-    // pcsx2's three. Mirrors Pcsx2LibretroAdapter::pathsDefs().
+    // States). Mirrors Pcsx2LibretroAdapter::pathsDefs().
     QVector<PathDef> pathsDefs() const override;
 
     // Resolve the per-game resume save state written by GameSession::terminate
@@ -45,4 +43,17 @@ public:
     // returns empty, StartConfig.resumeStatePath stays unset, and launching
     // the game cold-boots. Mirrors Pcsx2LibretroAdapter::findResumeFile.
     QString findResumeFile(const QString& serial) const override;
+
+    // Phase 3: libretro core-option-backed rows for the per-emulator settings
+    // dialog. Keys + values + defaults mirror
+    // duckstation-libretro/src/duckstation-libretro/libretro_core_options.cpp
+    // exactly (enforced by tools/check_schema_fidelity.py).
+    QVector<SettingDef> settingsSchema() const override;
+    QVector<SettingsHubCard> settingsHubCards() const override;
+    QStringList settingsCategoriesWithSubTabs() const override { return {"Graphics"}; }
+
+    // Aspect-ratio preview on the Recommended page (mirrors
+    // DolphinLibretroAdapter::previewSpec). No OSD preview yet — Phase 6.
+    PreviewSpec previewSpec(const QString& category,
+                            const QString& subcategory) const override;
 };
