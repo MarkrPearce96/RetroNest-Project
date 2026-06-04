@@ -755,8 +755,14 @@ PreviewSpec DuckStationLibretroAdapter::previewSpec(const QString& category,
         return {"osd", {
             {"duckstation_osd_show_fps",         "showFps"},
             {"duckstation_osd_show_speed",       "showSpeed"},
-            {"duckstation_osd_show_gpu",         "showVps"},
+            {"duckstation_osd_show_cpu",         "showCpu"},
+            {"duckstation_osd_show_gpu",         "showGpu"},       // was "showVps" — fixed
+            {"duckstation_osd_show_resolution",  "showResolution"},
             {"duckstation_osd_show_frame_times", "showFrameTimes"},
+            {"duckstation_osd_show_inputs",      "showInputs"},
+            // show_gpu_stats  → no showGpuStats in OsdPreview (omitted)
+            // show_latency_stats → no showLatencyStats in OsdPreview (omitted)
+            // show_enhancements  → no showEnhancements in OsdPreview (omitted)
         }};
     }
     return {};
