@@ -498,6 +498,7 @@ add_executable(test_hotkey_service_libretro
     src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
+    src/adapters/libretro/duckstation_libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
@@ -560,6 +561,7 @@ add_executable(test_rom_scanner
     src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
+    src/adapters/libretro/duckstation_libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
@@ -689,6 +691,7 @@ add_executable(test_controller_bindings_view
     src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
+    src/adapters/libretro/duckstation_libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
@@ -930,6 +933,7 @@ add_executable(test_quick_settings_file_field
     src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
+    src/adapters/libretro/duckstation_libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
@@ -1069,6 +1073,7 @@ add_executable(test_game_session_save_slot
     src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
+    src/adapters/libretro/duckstation_libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
