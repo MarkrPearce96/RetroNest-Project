@@ -24,10 +24,18 @@ private slots:
             QCOMPARE(d.storage, SettingDef::Storage::LibretroOption);
     }
     void testGraphicsHasSubTabs() {
-        DuckStationLibretroAdapter adapter;
-        QVERIFY(adapter.settingsCategoriesWithSubTabs().contains("Graphics"));
+        // Use schema_ for the row scan so we don't rebuild the adapter;
+        // construct inline just for the settingsCategoriesWithSubTabs() call.
+        QVERIFY(DuckStationLibretroAdapter().settingsCategoriesWithSubTabs().contains("Graphics"));
+        bool hasGraphicsRow = false;
         QSet<QString> subs;
-        for (const auto& d : schema_) if (d.category == "Graphics") subs.insert(d.subcategory);
+        for (const auto& d : schema_) {
+            if (d.category == "Graphics") {
+                hasGraphicsRow = true;
+                subs.insert(d.subcategory);
+            }
+        }
+        QVERIFY2(hasGraphicsRow, "no Graphics rows found in schema");
         QVERIFY(subs.contains("Rendering"));
     }
     void testFirstRunDefaultsMatchFeature1Profile() {
@@ -41,15 +49,50 @@ private slots:
         QCOMPARE(def("duckstation_gpu_renderer"), QString("Automatic"));
     }
     void testRendererExcludesUnwiredBackends() {
-        for (const auto& d : schema_) if (d.key == "duckstation_gpu_renderer") {
-            // options pairs are {label, value}; .second is the libretro VALUE
-            QSet<QString> vals; for (const auto& p : d.options) vals.insert(p.second);
+        bool found = false;
+        for (const auto& d : schema_) {
+            if (d.key != "duckstation_gpu_renderer") continue;
+            found = true;
+            QSet<QString> vals;
+            for (const auto& p : d.options) vals.insert(p.second);
             QCOMPARE(vals, QSet<QString>({"Automatic","Metal","Software"}));
         }
+        QVERIFY2(found, "duckstation_gpu_renderer not found in schema");
     }
     void testNoUseThreadOption() {
         for (const auto& d : schema_)
             QVERIFY2(!d.key.contains("use_thread"), "UseThread must not be user-exposed");
+    }
+    void testEveryDefaultIsInOptions() {
+        for (const auto& d : schema_) {
+            bool found = false;
+            for (const auto& opt : d.options)
+                if (opt.second == d.defaultValue) { found = true; break; }
+            QVERIFY2(found, qPrintable(QString("row '%1' default '%2' not in its options")
+                                           .arg(d.key).arg(d.defaultValue)));
+        }
+    }
+    void testNoDuplicateKeysWithinACategory() {
+        // Recommended deliberately re-references keys that live in other
+        // categories, so global uniqueness no longer holds — enforce
+        // uniqueness within each category instead.
+        QSet<QString> seen;  // "category/key"
+        for (const auto& d : schema_) {
+            const QString id = d.category + "/" + d.key;
+            QVERIFY2(!seen.contains(id),
+                qPrintable(QString("duplicate key '%1' in category '%2'").arg(d.key).arg(d.category)));
+            seen.insert(id);
+        }
+    }
+    void testRecommendedRowsExistElsewhere() {
+        QSet<QString> nonRecKeys;
+        for (const auto& d : schema_)
+            if (d.category != "Recommended") nonRecKeys.insert(d.key);
+        for (const auto& d : schema_) {
+            if (d.category == "Recommended")
+                QVERIFY2(nonRecKeys.contains(d.key),
+                    qPrintable(QString("Recommended row '%1' has no home row in another category").arg(d.key)));
+        }
     }
 };
 QTEST_GUILESS_MAIN(TestDuckStationLibretroSchema)
