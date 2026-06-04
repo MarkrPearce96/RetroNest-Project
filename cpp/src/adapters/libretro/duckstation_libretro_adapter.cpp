@@ -651,6 +651,70 @@ QVector<SettingDef> DuckStationLibretroAdapter::settingsSchema() const {
         {{"Enabled", "true"}, {"Disabled", "false"}},
         "Uses older MDEC decode routines for VRAM write compatibility."));
 
+    // ── Graphics / On-Screen Display ──────────────────────────────────────
+    // Overlay toggles. Mirrors standalone duckstation_adapter.cpp:837-846
+    // (all Display/* bools, all default false). The DuckStation core already
+    // composites these via its existing present path once the swapchain exists.
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_fps", "Show FPS", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows the internal frame rate of the game."));
+
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_speed", "Show Emulation Speed", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows the current emulation speed as a percentage."));
+
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_cpu", "Show CPU Usage", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows the host CPU usage based on threads used by the system."));
+
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_gpu", "Show GPU Usage", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows the host GPU usage."));
+
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_resolution", "Show Resolution", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows the resolution the game is rendering at."));
+
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_gpu_stats", "Show GPU Statistics", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows information about emulated GPU activity."));
+
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_frame_times", "Show Frame Times", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows a visual history of frame times."));
+
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_latency_stats", "Show Latency Statistics", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows input and audio latency information."));
+
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_inputs", "Show Controller Input", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows the current controller state of the system."));
+
+    s.append(gopt(
+        "On-Screen Display", "Overlays",
+        "duckstation_osd_show_enhancements", "Show Enhancements", "false",
+        {{"Enabled", "true"}, {"Disabled", "false"}},
+        "Shows enhancement settings when starting/resuming the system."));
+
     return s;
 }
 
@@ -686,6 +750,14 @@ PreviewSpec DuckStationLibretroAdapter::previewSpec(const QString& category,
             {"duckstation_display_aspect_ratio", "aspectMode"},
         }};
     }
-    // No OSD sub-tab preview yet — Phase 6.
+    if (category == "Graphics" && subcategory == "On-Screen Display") {
+        // Overlay preview, mirrors dolphin_libretro_adapter's "osd" spec.
+        return {"osd", {
+            {"duckstation_osd_show_fps",         "showFps"},
+            {"duckstation_osd_show_speed",       "showSpeed"},
+            {"duckstation_osd_show_gpu",         "showVps"},
+            {"duckstation_osd_show_frame_times", "showFrameTimes"},
+        }};
+    }
     return {};
 }
