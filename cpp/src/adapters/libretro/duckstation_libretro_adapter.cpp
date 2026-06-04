@@ -178,6 +178,15 @@ QVector<SettingDef> DuckStationLibretroAdapter::settingsSchema() const {
         {"Bilinear (Integer)",         "BilinearInteger"},
         {"Lanczos (Sharp)",            "Lanczos"},
     };
+    const QVector<QPair<QString,QString>> cdromReadSpeedupOptions = {
+        {"None (Double Speed)", "1"},
+        {"2x (Quad Speed)",     "2"},
+        {"3x (6x Speed)",       "3"},
+        {"4x (8x Speed)",       "4"},
+        {"5x (10x Speed)",      "5"},
+        {"6x (12x Speed)",      "6"},
+        {"Maximum (Safer)",     "0"},
+    };
 
     // ── Recommended (curated cross-category view) ─────────────────────────
     //
@@ -206,9 +215,7 @@ QVector<SettingDef> DuckStationLibretroAdapter::settingsSchema() const {
     s.append(opt(
         "Recommended", "Performance",
         "duckstation_cdrom_read_speedup", "CD-ROM Read Speedup", "1",
-        {{"None (Double Speed)", "1"}, {"2x (Quad Speed)", "2"}, {"3x (6x Speed)", "3"},
-         {"4x (8x Speed)", "4"}, {"5x (10x Speed)", "5"}, {"6x (12x Speed)", "6"},
-         {"Maximum (Safer)", "0"}},
+        cdromReadSpeedupOptions,
         "Speeds up CD-ROM reads beyond hardware limits. Cuts loading times in "
         "most games with no risk for the majority of titles."));
 
@@ -353,9 +360,7 @@ QVector<SettingDef> DuckStationLibretroAdapter::settingsSchema() const {
     s.append(opt(
         "Console", "CD-ROM Emulation",
         "duckstation_cdrom_read_speedup", "Read Speedup", "1",
-        {{"None (Double Speed)", "1"}, {"2x (Quad Speed)", "2"}, {"3x (6x Speed)", "3"},
-         {"4x (8x Speed)", "4"}, {"5x (10x Speed)", "5"}, {"6x (12x Speed)", "6"},
-         {"Maximum (Safer)", "0"}},
+        cdromReadSpeedupOptions,
         "Speeds up CD-ROM reads beyond hardware limits."));
 
     s.append(opt(
