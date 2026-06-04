@@ -865,6 +865,43 @@ target_link_libraries(test_dolphin_libretro_schema PRIVATE
 )
 add_test(NAME DolphinLibretroSchema COMMAND test_dolphin_libretro_schema)
 
+# Phase 5: DuckStationLibretroAdapter settings-schema structure + first-run defaults.
+add_executable(test_duckstation_libretro_schema
+    tests/test_duckstation_libretro_schema.cpp
+    src/adapters/emulator_adapter.cpp
+    src/adapters/libretro/libretro_adapter.cpp
+    src/adapters/libretro/duckstation_libretro_adapter.cpp
+    src/core/libretro/core_loader.cpp
+    src/core/libretro/core_runtime.cpp
+    src/core/libretro/video_hardware_gl.mm
+    src/core/libretro/hotkey_matcher.cpp
+    src/core/libretro/environment_callbacks.cpp
+    src/core/libretro/video_software.cpp
+    src/core/libretro/audio_sink.cpp
+    src/core/libretro/input_router.cpp
+    src/core/libretro/options_store.cpp
+    src/core/libretro/frontend_settings_store.cpp
+    src/core/libretro/rcheevos_runtime.cpp
+    src/core/libretro/retro_log.cpp
+    src/core/ini_file.cpp
+    src/core/iso9660_reader.cpp
+    src/core/sfo_parser.cpp
+    src/core/paths.cpp
+    src/core/sdl_input_manager.cpp
+    src/core/path_overrides_store.cpp
+)
+set_target_properties(test_duckstation_libretro_schema PROPERTIES AUTOMOC ON)
+target_include_directories(test_duckstation_libretro_schema PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS}
+)
+target_link_libraries(test_duckstation_libretro_schema PRIVATE
+    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static rcheevos_static
+    ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface"
+)
+add_test(NAME DuckStationLibretroSchema COMMAND test_duckstation_libretro_schema)
+
 # SP5: DolphinLibretroAdapter controller schema (GCPad + Wii Classic).
 add_executable(test_dolphin_libretro_controller_schema
     tests/test_dolphin_libretro_controller_schema.cpp
