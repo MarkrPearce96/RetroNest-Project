@@ -14,6 +14,7 @@
 // 0/0/0 below, i.e. "no spotlight"). A future SP can add a PS1 pad SVG.
 QVector<ControllerTypeDef> DuckStationLibretroAdapter::controllerTypes() const {
     return {
+        {"AnalogController", "Analog Controller", ""},
         {"DigitalController", "Digital Controller", ""},
     };
 }
@@ -394,6 +395,14 @@ QVector<SettingDef> DuckStationLibretroAdapter::settingsSchema() const {
         "duckstation_cdrom_ignore_subcode", "Ignore Drive Subcode", "false",
         {{"Enabled", "true"}, {"Disabled", "false"}},
         "Ignores subcode errors on physical drives."));
+
+    // Controllers group
+    s.append(opt(
+        "Console", "Controllers",
+        "duckstation_pad1_type", "Controller Type (Pad 1)", "AnalogController",
+        {{"Analog Controller (DualShock)", "AnalogController"}, {"Digital Controller", "DigitalController"}},
+        "Controller type for Player 1. Analog adds sticks and rumble."
+    ));
 
     // ── Memory Cards ──────────────────────────────────────────────────────
     s.append(opt(
