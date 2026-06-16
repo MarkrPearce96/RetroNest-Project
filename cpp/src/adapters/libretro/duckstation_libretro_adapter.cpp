@@ -35,7 +35,8 @@ QVector<ControllerTypeDef> DuckStationLibretroAdapter::controllerTypes() const {
 //   RetroPad Y  (west)  = PS1 Square
 //   RetroPad X  (north) = PS1 Triangle
 //
-// A digital pad has no analog sticks, so L3/R3 are omitted. Spotlight coords
+// Stick axes and L3/R3 are fed at runtime by the core (RETRO_DEVICE_ANALOG / RetroPad);
+// they are not listed here as user-rebindable binding rows. Spotlight coords
 // are 0/0/0 (no spotlight) because there is no PS1 controller SVG yet.
 QVector<BindingDef> DuckStationLibretroAdapter::controllerBindingDefsForType(const QString&) const {
     return {
