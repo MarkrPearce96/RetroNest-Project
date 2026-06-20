@@ -48,14 +48,18 @@ bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
     QDir().mkpath(savesPath);
     QDir().mkpath(QFileInfo(optionsJsonPath()).absolutePath());
 
-    // Seed controls.ini with default RetroPad bindings if it doesn't exist yet.
-    // Users can override these via the Controller mapping page; we never overwrite
-    // an existing file so user edits are preserved across ensureConfig calls.
+    // Seed controls.ini with default RetroPad bindings, backfilling any default key
+    // that is MISSING from an existing file (e.g. L2/R2, which earlier versions never
+    // seeded — leaving DualSense triggers dead for the digital-button JOYPAD read).
+    // We only ADD absent keys; existing values are never overwritten, so user edits via
+    // the Controller mapping page are preserved.
+    //
+    // The canonical SDL element names here fold the old hardcoded X↔Y swap: libretro
+    // RetroPad A=south, B=east, X=west, Y=north — SDL physical buttons map straight
+    // through. L2/R2 bind the trigger axes (+LeftTrigger/+RightTrigger); the SDL input
+    // layer thresholds those to digital L2/R2 presses (sdl_input_manager.cpp).
     const QString iniPath = controlsIniPath();
-    if (!QFileInfo::exists(iniPath)) {
-        // Build defaults from controllerBindingDefsForType. The canonical SDL element
-        // names here fold the old hardcoded X↔Y swap: libretro RetroPad A=south,
-        // B=east, X=west, Y=north — SDL physical buttons map straight through.
+    {
         const QMap<QString, QString> defaults = {
             { "A",      "SDL-0/FaceSouth"   },
             { "B",      "SDL-0/FaceEast"    },
@@ -63,6 +67,8 @@ bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
             { "Y",      "SDL-0/FaceNorth"   },
             { "L",      "SDL-0/LeftShoulder" },
             { "R",      "SDL-0/RightShoulder"},
+            { "L2",     "SDL-0/+LeftTrigger"  },
+            { "R2",     "SDL-0/+RightTrigger" },
             { "Select", "SDL-0/Back"        },
             { "Start",  "SDL-0/Start"       },
             { "Up",     "SDL-0/DPadUp"      },
@@ -72,16 +78,27 @@ bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
         };
         const QString section = controllerBindingsSection(1);
         IniFile ini;
-        // Walk binding defs in declared order so keys appear in a stable order.
+        const bool existed = QFileInfo::exists(iniPath);
+        if (existed)
+            ini.load(iniPath);
+        bool changed = false;
+        // Walk binding defs in declared order so new keys append in a stable order.
         for (const auto& def : controllerBindingDefsForType({})) {
             const auto it = defaults.constFind(def.key);
-            if (it != defaults.constEnd())
+            if (it == defaults.constEnd())
+                continue;
+            if (!ini.containsKey(section, def.key)) {
                 ini.setValue(section, def.key, it.value());
+                changed = true;
+            }
         }
-        if (!ini.save(iniPath))
-            qWarning() << "[LibretroAdapter] Failed to write default controls.ini to" << iniPath;
-        else
-            qInfo() << "[LibretroAdapter] Wrote default controls.ini to" << iniPath;
+        if (changed) {
+            if (!ini.save(iniPath))
+                qWarning() << "[LibretroAdapter] Failed to write controls.ini to" << iniPath;
+            else
+                qInfo() << "[LibretroAdapter]" << (existed ? "Backfilled missing bindings in" : "Wrote default")
+                        << "controls.ini at" << iniPath;
+        }
     }
 
     return true;
