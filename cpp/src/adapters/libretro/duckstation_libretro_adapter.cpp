@@ -405,6 +405,13 @@ QVector<SettingDef> DuckStationLibretroAdapter::settingsSchema() const {
         "Controller type for Player 1. Analog adds sticks and rumble."
     ));
 
+    s.append(opt(
+        "Console", "Controllers",
+        "duckstation_pad2_type", "Controller Type (Pad 2)", "AnalogController",
+        {{"Analog Controller (DualShock)", "AnalogController"}, {"Digital Controller", "DigitalController"}},
+        "Controller type for Player 2, used when a second controller is connected. Analog adds sticks and rumble."
+    ));
+
     // ── Memory Cards ──────────────────────────────────────────────────────
     s.append(opt(
         "Memory Cards", "Memory Card 1",

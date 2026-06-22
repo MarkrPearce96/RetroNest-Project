@@ -87,6 +87,11 @@ private slots:
             seen.insert(id);
         }
     }
+    void testPad2TypeOptionPresentWithAnalogDefault() {
+        QString def = "<missing>";
+        for (const auto& d : schema_) if (d.key == "duckstation_pad2_type") def = d.defaultValue;
+        QCOMPARE(def, QString("AnalogController"));
+    }
     void testRecommendedRowsExistElsewhere() {
         QSet<QString> nonRecKeys;
         for (const auto& d : schema_)
