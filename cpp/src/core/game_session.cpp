@@ -410,6 +410,7 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     {
         InputRouter& router = rt->input();
         router.clearBindings();
+        const int maxPlayers = lr->maxLibretroPlayers();
         const QString iniPath = lr->controllerBindingsConfigFilePath();
         IniFile ini;
         if (ini.load(iniPath)) {
@@ -426,8 +427,17 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
                 if (!ok) continue;
                 const QString element = val.mid(slashAt + 1);
                 const RetroPadSlot slot = retroPadSlotFromKey(def.key);
-                if (slot != RetroPadSlot::None)
-                    router.bind(deviceIdx, element, slot);
+                if (slot == RetroPadSlot::None)
+                    continue;
+                // Bind the configured device, and replicate the same element->slot
+                // mapping onto each additional player's device index so a 2nd/3rd
+                // controller drives its own port with the standard layout. For
+                // single-player cores (maxPlayers == 1) this binds only device 0,
+                // exactly as before.
+                router.bind(deviceIdx, element, slot);
+                for (int p = 0; p < maxPlayers; ++p)
+                    if (p != deviceIdx)
+                        router.bind(p, element, slot);
             }
         } else {
             qWarning() << "[GameSession] Could not load controls.ini from" << iniPath
