@@ -312,6 +312,14 @@ QVariantList SdlInputManager::connectedControllers() const {
     return list;
 }
 
+QList<int> SdlInputManager::connectedDeviceIndices() const {
+    std::lock_guard<std::mutex> lock(m_controllerMx);
+    QList<int> indices;
+    for (auto it = m_deviceIndices.constBegin(); it != m_deviceIndices.constEnd(); ++it)
+        indices.append(it.value());
+    return indices;
+}
+
 void SdlInputManager::startCapture() {
     m_capturing = true;
     emit capturingChanged();

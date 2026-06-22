@@ -46,6 +46,10 @@ public:
 
     bool isCapturing() const;
     QVariantList connectedControllers() const;
+    /** Device indices (0-based, lowest-available scheme) of all currently
+     *  connected controllers. Used to compute per-port presence for the
+     *  libretro controller-port-device notification. */
+    QList<int> connectedDeviceIndices() const;
     bool lastInputWasController() const;
     bool virtualKeyboardOpen() const;
     void setVirtualKeyboardOpen(bool open);

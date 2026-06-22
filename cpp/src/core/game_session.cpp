@@ -451,6 +451,25 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     if (m_sdlInputManager)
         m_sdlInputManager->setEmulationMode(&rt->input());
 
+    // Player 2+ support: tell the core which ports currently have a pad, and
+    // keep it updated on hot-plug. Gated to multiplayer-capable cores so
+    // single-player cores are unaffected. `rt` is the connection context, so
+    // the lambda auto-disconnects when the runtime is destroyed on game end.
+    if (m_sdlInputManager && lr->maxLibretroPlayers() > 1) {
+        const int maxPlayers = lr->maxLibretroPlayers();
+        SdlInputManager* sdl = m_sdlInputManager;
+        auto syncPorts = [rt, sdl, maxPlayers]() {
+            const QList<int> connected = sdl->connectedDeviceIndices();
+            for (int port = 0; port < maxPlayers; ++port) {
+                const bool present = connected.contains(port);
+                rt->requestControllerPortDevice(static_cast<unsigned>(port),
+                                                 present ? RETRO_DEVICE_JOYPAD : RETRO_DEVICE_NONE);
+            }
+        };
+        syncPorts();  // initial snapshot at boot
+        QObject::connect(sdl, &SdlInputManager::controllersChanged, rt, syncPorts);
+    }
+
     return true;
 }
 
