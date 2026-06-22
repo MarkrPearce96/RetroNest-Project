@@ -315,6 +315,23 @@ void CoreRuntime::flushPendingLoadState(const CoreSymbols& s) {
     m_pendingLoadPath.clear();
 }
 
+void CoreRuntime::requestControllerPortDevice(unsigned port, unsigned device) {
+    std::lock_guard<std::mutex> l(m_portDevMx);
+    m_pendingPortDevices[port] = device;
+}
+
+void CoreRuntime::flushPendingControllerDevices(const CoreSymbols& s) {
+    std::map<unsigned, unsigned> pending;
+    {
+        std::lock_guard<std::mutex> l(m_portDevMx);
+        pending.swap(m_pendingPortDevices);
+    }
+    if (!s.retro_set_controller_port_device)
+        return;
+    for (const auto& [port, device] : pending)
+        s.retro_set_controller_port_device(port, device);
+}
+
 void CoreRuntime::setSpeedMultiplier(double multiplier) {
     if (multiplier <= 0.0) multiplier = 1.0;
     m_speedMultiplier.store(multiplier);
@@ -505,6 +522,7 @@ void CoreRuntime::runLoop() {
             // Apply a load-state request BEFORE retro_run so the next frame
             // emits the loaded state's video/audio (post-run flush would
             // discard the just-rendered frame).
+            flushPendingControllerDevices(s);
             flushPendingLoadState(s);
             frame_start = clock::now();
             s.retro_run();

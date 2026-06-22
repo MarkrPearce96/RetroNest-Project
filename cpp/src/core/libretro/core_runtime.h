@@ -13,6 +13,7 @@
 #include <QImage>
 #include <atomic>
 #include <condition_variable>
+#include <map>
 #include <memory>
 #include <mutex>
 
@@ -96,6 +97,15 @@ public:
      * clicked Load State before ever saving). Safe to call from any thread.
      */
     void requestLoadState(const QString& path);
+
+    /**
+     * Asynchronously schedule a libretro controller-port device change (e.g.
+     * attach/detach Player 2). Safe to call from any thread; the worker applies
+     * it between frames via retro_set_controller_port_device. The latest device
+     * for a given port wins. `device` is a RETRO_DEVICE_* id (RETRO_DEVICE_NONE
+     * to detach).
+     */
+    void requestControllerPortDevice(unsigned port, unsigned device);
 
     /**
      * Set a frame-pacing multiplier. 1.0 = native speed; 4.0 = 4× fast forward.
@@ -187,6 +197,7 @@ private:
     void runLoop();
     void flushPendingSaveState(const CoreSymbols& s);
     void flushPendingLoadState(const CoreSymbols& s);
+    void flushPendingControllerDevices(const CoreSymbols& s);
 
     StartConfig m_cfg;
     CoreLoader m_loader;
@@ -207,6 +218,9 @@ private:
     QString m_pendingSavePath;
     std::mutex m_loadMx;
     QString m_pendingLoadPath;
+
+    std::mutex m_portDevMx;
+    std::map<unsigned, unsigned> m_pendingPortDevices;  // port -> RETRO_DEVICE_* (latest wins)
 
     std::atomic<double> m_speedMultiplier{1.0};
     std::atomic<void*> m_active_ns_view{nullptr};
