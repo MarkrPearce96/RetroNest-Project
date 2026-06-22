@@ -467,7 +467,13 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
             }
         };
         syncPorts();  // initial snapshot at boot
-        QObject::connect(sdl, &SdlInputManager::controllersChanged, rt, syncPorts);
+        // Queued (not the default direct) connection: openController/closeController
+        // emit controllersChanged() while holding SdlInputManager's controller mutex,
+        // and syncPorts -> connectedDeviceIndices() re-locks that same mutex. A direct
+        // call would deadlock (non-recursive mutex, same thread); queuing defers
+        // syncPorts to the main-thread event loop after the lock is released.
+        QObject::connect(sdl, &SdlInputManager::controllersChanged, rt, syncPorts,
+                         Qt::QueuedConnection);
     }
 
     return true;
