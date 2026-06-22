@@ -71,6 +71,15 @@ public:
     QString controllerBindingsConfigFilePath(const QString& controllerTypeId) const override;
     QString controllerBindingsSection(int port, const QString& controllerTypeId) const override;
 
+    /**
+     * Number of player ports this core supports through the libretro input
+     * path. Default 1 (Player 1 only). Cores that support more return >1; the
+     * host then binds the extra controllers (device indices 1..N-1) and tells
+     * the core via retro_set_controller_port_device when each port gains/loses
+     * a pad. Multitap is NOT modeled here.
+     */
+    virtual int maxLibretroPlayers() const { return 1; }
+
     /** Per-core: e.g. "mgba". Used to compute paths under emulators/libretro/. */
     virtual QString coreId() const = 0;
 

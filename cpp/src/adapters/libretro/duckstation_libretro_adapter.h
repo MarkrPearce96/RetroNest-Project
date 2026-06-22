@@ -9,6 +9,7 @@ class DuckStationLibretroAdapter : public LibretroAdapter {
     Q_OBJECT
 public:
     QString coreId() const override { return "duckstation"; }
+    int maxLibretroPlayers() const override { return 2; }
     HardwareRenderBackend hardwareRenderBackend() const override {
         return HardwareRenderBackend::MetalNSView;
     }

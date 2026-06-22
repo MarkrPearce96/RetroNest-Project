@@ -23,6 +23,9 @@ private slots:
         for (const auto& d : schema_)
             QCOMPARE(d.storage, SettingDef::Storage::LibretroOption);
     }
+    void testMaxLibretroPlayersIsTwo() {
+        QCOMPARE(DuckStationLibretroAdapter().maxLibretroPlayers(), 2);
+    }
     void testGraphicsHasSubTabs() {
         // Use schema_ for the row scan so we don't rebuild the adapter;
         // construct inline just for the settingsCategoriesWithSubTabs() call.
