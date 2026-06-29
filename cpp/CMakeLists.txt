@@ -65,7 +65,6 @@ set(SOURCES
     src/core/game_session.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/duckstation_adapter.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
     src/core/path_overrides_store.cpp
@@ -147,7 +146,6 @@ set(HEADERS
     src/core/game_session.h
     src/adapters/emulator_adapter.h
     src/adapters/adapter_registry.h
-    src/adapters/duckstation_adapter.h
     src/adapters/libretro/libretro_adapter.h
     src/adapters/libretro/duckstation_libretro_adapter.h
     src/adapters/libretro/dolphin_libretro_adapter.h
@@ -467,20 +465,6 @@ target_include_directories(test_patch_ini_keys PRIVATE ${CMAKE_CURRENT_SOURCE_DI
 target_link_libraries(test_patch_ini_keys PRIVATE Qt6::Core Qt6::Test chdr-static)
 add_test(NAME PatchIniKeys COMMAND test_patch_ini_keys)
 
-add_executable(test_format_binding
-    tests/test_format_binding.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/duckstation_adapter.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-)
-set_target_properties(test_format_binding PROPERTIES AUTOMOC ON)
-target_include_directories(test_format_binding PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_format_binding PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static)
-add_test(NAME FormatBinding COMMAND test_format_binding)
-
 add_executable(test_libretro_hotkey_defs
     tests/test_libretro_hotkey_defs.cpp
     src/core/libretro/libretro_hotkey_defs.cpp)
@@ -495,7 +479,6 @@ add_executable(test_hotkey_service_libretro
     src/core/libretro/libretro_hotkey_defs.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
     src/adapters/libretro/duckstation_libretro_adapter.cpp
@@ -558,7 +541,6 @@ add_executable(test_rom_scanner
     src/core/iso9660_reader.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
     src/adapters/libretro/duckstation_libretro_adapter.cpp
@@ -645,34 +627,6 @@ target_link_libraries(test_core_loader PRIVATE Qt6::Core Qt6::Test ${CMAKE_DL_LI
 add_dependencies(test_core_loader fake_libretro_core)
 add_test(NAME CoreLoader COMMAND test_core_loader)
 
-add_executable(test_duckstation_schema
-    tests/test_duckstation_schema.cpp
-    src/adapters/duckstation_adapter.cpp
-    src/adapters/emulator_adapter.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-)
-set_target_properties(test_duckstation_schema PROPERTIES AUTOMOC ON)
-target_include_directories(test_duckstation_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_duckstation_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
-add_test(NAME DuckStationSchema COMMAND test_duckstation_schema)
-
-add_executable(test_duckstation_controller_schema
-    tests/test_duckstation_controller_schema.cpp
-    src/adapters/duckstation_adapter.cpp
-    src/adapters/emulator_adapter.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-)
-set_target_properties(test_duckstation_controller_schema PROPERTIES AUTOMOC ON)
-target_include_directories(test_duckstation_controller_schema PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_duckstation_controller_schema PRIVATE Qt6::Core Qt6::Test chdr-static)
-add_test(NAME DuckStationControllerSchema COMMAND test_duckstation_controller_schema)
-
 # SP8: the three test_pcsx2_* QtTest targets were deleted with the
 # standalone PCSX2Adapter. They asserted against standalone-specific INI
 # key names (e.g. "AspectRatio", "OsdShowFPS") that the libretro core
@@ -688,7 +642,6 @@ add_executable(test_controller_bindings_view
     src/ui/settings/widgets/settings_slider_row.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
     src/adapters/libretro/duckstation_libretro_adapter.cpp
@@ -741,20 +694,6 @@ target_link_libraries(test_hotkey_binding_row PRIVATE
     Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test
 )
 add_test(NAME HotkeyBindingRow COMMAND test_hotkey_binding_row)
-
-add_executable(test_hotkey_defs
-    tests/test_hotkey_defs.cpp
-    src/adapters/duckstation_adapter.cpp
-    src/adapters/emulator_adapter.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-)
-set_target_properties(test_hotkey_defs PROPERTIES AUTOMOC ON)
-target_include_directories(test_hotkey_defs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_hotkey_defs PRIVATE Qt6::Core Qt6::Test chdr-static)
-add_test(NAME HotkeyDefs COMMAND test_hotkey_defs)
 
 add_executable(test_ppsspp_libretro_bindings
     tests/test_ppsspp_libretro_bindings.cpp
@@ -967,7 +906,6 @@ add_executable(test_quick_settings_file_field
     src/core/path_overrides_store.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
     src/adapters/libretro/duckstation_libretro_adapter.cpp
@@ -1107,7 +1045,6 @@ add_executable(test_game_session_save_slot
     src/core/path_overrides_store.cpp
     src/adapters/emulator_adapter.cpp
     src/adapters/adapter_registry.cpp
-    src/adapters/duckstation_adapter.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
     src/adapters/libretro/duckstation_libretro_adapter.cpp
