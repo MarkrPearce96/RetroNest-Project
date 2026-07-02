@@ -3,6 +3,7 @@ cpp/build/
 cpp/build-arm64/
 cpp/build-x86_64/
 cpp/build-universal/
+cpp/spike/**/build/
 
 # CTest scratch output (created when ctest runs from the project root)
 /Testing/
