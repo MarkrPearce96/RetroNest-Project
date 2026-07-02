@@ -452,6 +452,14 @@ target_include_directories(test_path_overrides_store PRIVATE ${CMAKE_CURRENT_SOU
 target_link_libraries(test_path_overrides_store PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME PathOverridesStore COMMAND test_path_overrides_store)
 
+add_executable(test_database_migrations
+    tests/test_database_migrations.cpp
+    src/core/database.cpp
+)
+target_include_directories(test_database_migrations PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(test_database_migrations PRIVATE Qt6::Core Qt6::Sql Qt6::Test)
+add_test(NAME DatabaseMigrations COMMAND test_database_migrations)
+
 add_executable(test_patch_ini_keys
     tests/test_patch_ini_keys.cpp
     src/adapters/emulator_adapter.cpp

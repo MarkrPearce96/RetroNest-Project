@@ -7,6 +7,8 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QDateTime>
+#include <QRegularExpression>
+#include <QSet>
 
 static const char* DB_CONNECTION = "emulator_frontend";
 
@@ -142,8 +144,70 @@ bool Database::setSchemaVersion(int version) {
     return true;
 }
 
+// Columns currently present on the games table (PRAGMA table_info). Used to
+// make ADD COLUMN migration statements idempotent.
+static QSet<QString> existingGamesColumns(QSqlDatabase& db) {
+    QSet<QString> cols;
+    QSqlQuery q(db);
+    if (q.exec("PRAGMA table_info(games)")) {
+        while (q.next())
+            cols.insert(q.value(1).toString());  // column 1 = name
+    }
+    return cols;
+}
+
+bool Database::applyMigrationStep(int targetVersion, const QStringList& statements,
+                                  const QString& description) {
+    auto db = QSqlDatabase::database(DB_CONNECTION);
+    if (!db.transaction()) {
+        qCritical() << "[Database] Failed to begin transaction for migration to v" << targetVersion;
+        return false;
+    }
+
+    // Skip ADD COLUMN statements whose column already exists. A database
+    // half-migrated by the old non-atomic scheme (columns added, version not
+    // stamped) would otherwise fail with "duplicate column" on every launch.
+    const QSet<QString> existing = existingGamesColumns(db);
+    static const QRegularExpression addColumnRe(
+        QStringLiteral("^ALTER TABLE games ADD COLUMN (\\w+)"));
+
+    QSqlQuery q(db);
+    for (const auto& sql : statements) {
+        const auto m = addColumnRe.match(sql);
+        if (m.hasMatch() && existing.contains(m.captured(1))) {
+            qInfo() << "[Database] Migration to v" << targetVersion
+                    << ": column" << m.captured(1) << "already exists, skipping";
+            continue;
+        }
+        if (!q.exec(sql)) {
+            qCritical() << "[Database] Migration to v" << targetVersion << "failed:"
+                        << q.lastError().text() << "SQL:" << sql;
+            db.rollback();
+            return false;
+        }
+    }
+
+    // Stamp the schema version INSIDE the same transaction as the statements:
+    // a crash anywhere in this step leaves the DB atomically at the previous
+    // version, so the next launch simply re-runs the step. (Previously the
+    // version was stamped once after ALL steps, so a crash between steps left
+    // applied DDL with a stale version stamp and every subsequent open() died
+    // on "duplicate column".)
+    if (!setSchemaVersion(targetVersion)) {
+        db.rollback();
+        return false;
+    }
+    if (!db.commit()) {
+        qCritical() << "[Database] Failed to commit migration to v" << targetVersion;
+        db.rollback();
+        return false;
+    }
+    qInfo() << "[Database] Migrated schema to v" << targetVersion << "-" << description;
+    return true;
+}
+
 bool Database::runMigrations() {
-    int current = schemaVersion();
+    const int current = schemaVersion();
 
     // Pre-migration safety: copy the DB file before touching the schema, so
     // a partial-failure leaves the user with a recoverable copy at the
@@ -154,143 +218,72 @@ bool Database::runMigrations() {
             return false;  // refuse to run migrations without a backup
     }
 
-    if (current < 2) {
-        auto db = QSqlDatabase::database(DB_CONNECTION);
-        if (!db.transaction()) {
-            qCritical() << "[Database] Failed to begin transaction for v1→v2 migration";
-            return false;
-        }
-        QSqlQuery q(db);
-        const QStringList alterStatements = {
-            "ALTER TABLE games ADD COLUMN description TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN developer TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN publisher TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN release_date TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN genres TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN rating REAL NOT NULL DEFAULT 0.0",
-            "ALTER TABLE games ADD COLUMN players TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN last_played TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN play_count INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE games ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0",
-        };
-        for (const auto& sql : alterStatements) {
-            if (!q.exec(sql)) {
-                qCritical() << "[Database] Migration v1→v2 failed:" << q.lastError().text() << "SQL:" << sql;
-                db.rollback();
-                return false;
-            }
-        }
-        if (!db.commit()) {
-            qCritical() << "[Database] Failed to commit v1→v2 migration";
-            db.rollback();
-            return false;
-        }
-        qInfo() << "[Database] Migrated schema v1 → v2 (added metadata columns)";
+    if (current < 2 &&
+        !applyMigrationStep(2,
+            {
+                "ALTER TABLE games ADD COLUMN description TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN developer TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN publisher TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN release_date TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN genres TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN rating REAL NOT NULL DEFAULT 0.0",
+                "ALTER TABLE games ADD COLUMN players TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN last_played TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN play_count INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE games ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0",
+            },
+            "added metadata columns")) {
+        return false;
     }
 
-    if (current < 3) {
-        auto db = QSqlDatabase::database(DB_CONNECTION);
-        if (!db.transaction()) {
-            qCritical() << "[Database] Failed to begin transaction for v2→v3 migration";
-            return false;
-        }
-        QSqlQuery q(db);
-        const QStringList alterStatements = {
-            "ALTER TABLE games ADD COLUMN screenshot_path TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN titlescreen_path TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN marquee_path TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN fanart_path TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN box3d_path TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN backcover_path TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN miximage_path TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN physicalmedia_path TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN manual_path TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE games ADD COLUMN video_path TEXT NOT NULL DEFAULT ''",
-        };
-        for (const auto& sql : alterStatements) {
-            if (!q.exec(sql)) {
-                qCritical() << "[Database] Migration v2→v3 failed:" << q.lastError().text() << "SQL:" << sql;
-                db.rollback();
-                return false;
-            }
-        }
-        if (!db.commit()) {
-            qCritical() << "[Database] Failed to commit v2→v3 migration";
-            db.rollback();
-            return false;
-        }
-        qInfo() << "[Database] Migrated schema v2 → v3 (added media path columns)";
+    if (current < 3 &&
+        !applyMigrationStep(3,
+            {
+                "ALTER TABLE games ADD COLUMN screenshot_path TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN titlescreen_path TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN marquee_path TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN fanart_path TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN box3d_path TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN backcover_path TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN miximage_path TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN physicalmedia_path TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN manual_path TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE games ADD COLUMN video_path TEXT NOT NULL DEFAULT ''",
+            },
+            "added media path columns")) {
+        return false;
     }
 
-    if (current < 4) {
-        auto db = QSqlDatabase::database(DB_CONNECTION);
-        if (!db.transaction()) {
-            qCritical() << "[Database] Failed to begin transaction for v3→v4 migration";
-            return false;
-        }
-        QSqlQuery q(db);
-        if (!q.exec("ALTER TABLE games ADD COLUMN disc_count INTEGER NOT NULL DEFAULT 0")) {
-            qCritical() << "[Database] Migration v3→v4 failed:" << q.lastError().text();
-            db.rollback();
-            return false;
-        }
-        if (!db.commit()) {
-            qCritical() << "[Database] Failed to commit v3→v4 migration";
-            db.rollback();
-            return false;
-        }
-        qInfo() << "[Database] Migrated schema v3 → v4 (added disc_count column)";
+    if (current < 4 &&
+        !applyMigrationStep(4,
+            {"ALTER TABLE games ADD COLUMN disc_count INTEGER NOT NULL DEFAULT 0"},
+            "added disc_count column")) {
+        return false;
     }
 
-    // v4→v5 migration removed — RA tables were never used. Schema version kept at 5
-    // to avoid re-running migrations on existing databases.
+    // v4→v5 migration removed — RA tables were never used. Databases stamped 4
+    // or 5 both proceed through the v6 step below.
 
-    if (current < 6) {
-        auto db = QSqlDatabase::database(DB_CONNECTION);
-        if (!db.transaction()) {
-            qCritical() << "[Database] Failed to begin transaction for v5→v6 migration";
-            return false;
-        }
-        QSqlQuery q(db);
-        if (!q.exec("ALTER TABLE games ADD COLUMN serial TEXT NOT NULL DEFAULT ''")) {
-            qCritical() << "[Database] Migration v5→v6 failed:" << q.lastError().text();
-            db.rollback();
-            return false;
-        }
-        if (!db.commit()) {
-            qCritical() << "[Database] Failed to commit v5→v6 migration";
-            db.rollback();
-            return false;
-        }
-        qInfo() << "[Database] Migrated schema v5 → v6 (added serial column)";
+    if (current < 6 &&
+        !applyMigrationStep(6,
+            {"ALTER TABLE games ADD COLUMN serial TEXT NOT NULL DEFAULT ''"},
+            "added serial column")) {
+        return false;
     }
 
-    if (current < 7) {
-        // SP8: pcsx2-libretro id retired in favour of plain "pcsx2".
-        // Rewrite every scanned game's emulator_id so existing libraries
-        // keep launching under the renamed adapter.
-        auto db = QSqlDatabase::database(DB_CONNECTION);
-        if (!db.transaction()) {
-            qCritical() << "[Database] Failed to begin transaction for v6→v7 migration";
-            return false;
-        }
-        QSqlQuery q(db);
-        if (!q.exec("UPDATE games SET emulator_id = 'pcsx2' WHERE emulator_id = 'pcsx2-libretro'")) {
-            qCritical() << "[Database] Migration v6→v7 failed:" << q.lastError().text();
-            db.rollback();
-            return false;
-        }
-        if (!db.commit()) {
-            qCritical() << "[Database] Failed to commit v6→v7 migration";
-            db.rollback();
-            return false;
-        }
-        qInfo() << "[Database] Migrated schema v6 → v7 (renamed pcsx2-libretro → pcsx2)";
+    if (current < 7 &&
+        // SP8: pcsx2-libretro id retired in favour of plain "pcsx2". Rewrite
+        // every scanned game's emulator_id so existing libraries keep
+        // launching under the renamed adapter. (Naturally idempotent.)
+        !applyMigrationStep(7,
+            {"UPDATE games SET emulator_id = 'pcsx2' WHERE emulator_id = 'pcsx2-libretro'"},
+            "renamed pcsx2-libretro → pcsx2")) {
+        return false;
     }
 
-    if (current < CURRENT_SCHEMA_VERSION) {
-        if (!setSchemaVersion(CURRENT_SCHEMA_VERSION)) return false;
-    }
+    // No final version stamp: each step stamps its own target version inside
+    // its transaction. Bumping CURRENT_SCHEMA_VERSION without adding a step
+    // therefore no longer silently fast-forwards the stamp — add a real step.
     return true;
 }
 

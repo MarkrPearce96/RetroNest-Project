@@ -78,6 +78,15 @@ public:
 private:
     bool createTables();
     bool runMigrations();
+    /** One migration step: run `statements`, then stamp `targetVersion`, all in
+     *  ONE transaction — a crash anywhere in the step leaves the DB atomically
+     *  at the previous version, so the next launch re-runs the step instead of
+     *  hitting "duplicate column" on a half-applied step and failing open()
+     *  forever. "ALTER TABLE games ADD COLUMN" statements whose column already
+     *  exists are skipped, so databases damaged by the pre-atomic scheme
+     *  self-heal instead of bricking. */
+    bool applyMigrationStep(int targetVersion, const QStringList& statements,
+                            const QString& description);
     int schemaVersion();
     bool setSchemaVersion(int version);
     /** Copy the current DB file to "<dbPath>.bak-v<N>" before any migration
