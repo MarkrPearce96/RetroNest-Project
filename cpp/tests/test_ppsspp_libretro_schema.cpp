@@ -5,10 +5,20 @@
 // silent breakage if upstream renames an option or the schema drifts.
 
 #include <QtTest>
+#include <QDir>
 #include <QHash>
 #include <QSet>
+#include <QTemporaryDir>
 #include "adapters/libretro/ppsspp_libretro_adapter.h"
+#include "core/paths.h"
 #include "core/setting_def.h"
+
+// Minimal concrete LibretroAdapter used to probe base-class defaults
+// (coreId() is the only pure virtual on the libretro base).
+class StubLibretroAdapter : public LibretroAdapter {
+public:
+    QString coreId() const override { return QStringLiteral("stub"); }
+};
 
 class TestPpssppLibretroSchema : public QObject {
     Q_OBJECT
@@ -317,6 +327,40 @@ private slots:
                                      "match their canonical row. Violations: %1")
                                 .arg(violations.join("; "))));
         }
+    }
+
+    // --- systemDirOverride (asset-directory handoff) --------------------
+    // The PPSSPP core resolves its bundled assets at <system_dir>/PPSSPP/.
+    // GameSession uses the adapter's systemDirOverride() when non-empty,
+    // else falls back to Paths::biosDir(). Paths is a static-root holder,
+    // so tests can redirect it at a QTemporaryDir via Paths::setRoot().
+
+    void baseAdapter_systemDirOverride_isEmpty() {
+        StubLibretroAdapter a;
+        QVERIFY(a.systemDirOverride().isEmpty());
+    }
+
+    void ppssppOverride_returnsResourcesDir_whenPresent() {
+        QTemporaryDir tmp;
+        QVERIFY(tmp.isValid());
+        QVERIFY(Paths::setRoot(tmp.path()));
+        const QString res =
+            tmp.path() + "/emulators/libretro/cores/ppsspp_libretro_resources";
+        QVERIFY(QDir().mkpath(res));
+
+        PpssppLibretroAdapter a;
+        QCOMPARE(a.systemDirOverride(), res);
+    }
+
+    void ppssppOverride_isEmpty_whenResourcesDirAbsent() {
+        QTemporaryDir tmp;
+        QVERIFY(tmp.isValid());
+        QVERIFY(Paths::setRoot(tmp.path()));
+        // No cores/ppsspp_libretro_resources under this root → the legacy
+        // hand-copied {root}/bios/PPSSPP layout must keep working, which
+        // requires an empty override (GameSession then uses biosDir()).
+        PpssppLibretroAdapter a;
+        QVERIFY(a.systemDirOverride().isEmpty());
     }
 };
 

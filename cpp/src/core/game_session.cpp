@@ -207,7 +207,12 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     cfg.emuId    = manifest.id;
     cfg.corePath = lr->resolveExecutable(manifest, Paths::emulatorsDir(manifest.install_folder));
     cfg.romPath = romPath;
-    cfg.systemDir = Paths::biosDir();
+    // System dir: shared bios/ by default, unless the adapter ships its
+    // own asset tree next to the dylib (PPSSPP's ppsspp_libretro_resources
+    // — see PpssppLibretroAdapter::systemDirOverride for the layouts).
+    cfg.systemDir = lr->systemDirOverride();
+    if (cfg.systemDir.isEmpty())
+        cfg.systemDir = Paths::biosDir();
     cfg.saveDir = Paths::emulatorDataDir(manifest.id, systemId);
     cfg.optionsJsonPath = Paths::emulatorsDir("libretro") + "/" + lr->coreId() + "/options.json";
 

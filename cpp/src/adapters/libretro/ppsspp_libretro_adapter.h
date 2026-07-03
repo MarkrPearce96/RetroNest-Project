@@ -31,6 +31,12 @@ public:
 
     QString extractSerial(const QString& romPath) const override;
 
+    // The core resolves its bundled assets (fonts, flash0, compat.ini, …)
+    // at <system_dir>/PPSSPP/. Returns the shipped resources dir when it
+    // exists on disk; empty otherwise (→ Paths::biosDir() fallback). See
+    // the .cpp for the two supported on-disk layouts.
+    QString systemDirOverride() const override;
+
     // GameSession::terminate writes "{serial}.resume" under
     // emulators/ppsspp/psp/savestates/. Mirror that path on the load
     // side so Resume picks up Save & Quit state. Mirrors

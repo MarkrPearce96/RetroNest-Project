@@ -83,6 +83,17 @@ public:
     /** Per-core: e.g. "mgba". Used to compute paths under emulators/libretro/. */
     virtual QString coreId() const = 0;
 
+    /**
+     * Optional per-core override for the libretro system directory
+     * (RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY). Default returns empty →
+     * GameSession falls back to the shared Paths::biosDir(). Cores whose
+     * CI release zip ships an asset tree next to the dylib (e.g. PPSSPP's
+     * cores/ppsspp_libretro_resources/) override this to point system_dir
+     * at that shipped tree. Only affects system_dir — the save/data dir
+     * (GET_SAVE_DIRECTORY) is configured separately and never moves.
+     */
+    virtual QString systemDirOverride() const { return {}; }
+
     /** RA console ID for the given system. Default returns 0 (unknown).
      *  Concrete adapters override to return per-system mappings. */
     virtual int raConsoleId(const QString& systemId) const {

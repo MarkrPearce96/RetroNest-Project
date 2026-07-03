@@ -550,6 +550,30 @@ QString PpssppLibretroAdapter::extractSerial(const QString& romPath) const {
     return SfoParser::extractDiscId(sfoData);
 }
 
+QString PpssppLibretroAdapter::systemDirOverride() const {
+    // The core looks for its bundled assets at <system_dir>/PPSSPP/
+    // (fonts, flash0, compat.ini, lang, …). Missing assets don't fail the
+    // boot — they cause font corruption and silently disable per-game
+    // compat hacks. Two on-disk layouts are supported:
+    //
+    //   Fresh install: the CI release zip ships
+    //   cores/ppsspp_libretro_resources/PPSSPP/<assets> next to the dylib
+    //   and the installer unzips the whole archive into cores/, so
+    //   system_dir must point at ppsspp_libretro_resources.
+    //
+    //   Legacy: assets hand-copied to {root}/bios/PPSSPP/ before this
+    //   override existed. When the resources dir is absent we return
+    //   empty so GameSession keeps its Paths::biosDir() fallback and
+    //   that layout continues to work.
+    //
+    // Only system_dir is redirected here — the memstick data tree
+    // (SAVEDATA, PPSSPP_STATE, …) comes from GET_SAVE_DIRECTORY and
+    // stays at emulators/ppsspp/psp/.
+    const QString dir =
+        Paths::emulatorsDir("libretro") + "/cores/ppsspp_libretro_resources";
+    return QDir(dir).exists() ? dir : QString();
+}
+
 QString PpssppLibretroAdapter::findResumeFile(const QString& serial) const {
     if (serial.isEmpty())
         return {};
