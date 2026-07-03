@@ -21,8 +21,17 @@ class SdlInputManager;
 class VideoHardwareGL;
 
 class CoreRuntime : public QObject {
+    // (sticky wedge flag declared below in the public section)
     Q_OBJECT
 public:
+    /** True once ANY core in this process reported a wedged shutdown
+     *  (retronest_shutdown_wedged). Sticky for the process lifetime.
+     *  main.cpp consults it at exit: a wedged core's dylib stays mapped, so
+     *  normal exit() would run its static destructors under live detached
+     *  threads (observed segv: ~GSTextureCache in __cxa_finalize,
+     *  2026-07-03 16:29 crash report) — the process must _exit() instead. */
+    static bool anyCoreWedged();
+
     struct StartConfig {
         QString emuId;
         QString corePath;

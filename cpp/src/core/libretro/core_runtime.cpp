@@ -26,6 +26,12 @@ namespace {
 // downstream threads). We run exactly one CoreRuntime at a time.
 CoreRuntime* g_current = nullptr;
 
+// Sticky for the process: set when any core reports a wedged shutdown
+// (retronest_shutdown_wedged). Read by CoreRuntime::anyCoreWedged() —
+// main.cpp must _exit() instead of exit() once this is set (the wedged
+// dylib stays mapped and its static destructors crash under live threads).
+static std::atomic<bool> g_anyCoreWedged{false};
+
 // Env-gated audio diagnostic (RETRONEST_AUDIO_TRACE=1).
 bool audioTraceEnabled() {
     static const bool v = (std::getenv("RETRONEST_AUDIO_TRACE") != nullptr);
@@ -626,6 +632,20 @@ void CoreRuntime::runLoop() {
 
     s.retro_unload_game();
 
+    // Wedge check (PCSX2): if the core detached a stuck VM shutdown thread,
+    // that thread is still executing inside the dylib. retro_deinit would
+    // tear state down under it and dlclose would unmap its code (the
+    // documented SIGBUS). Leave the core loaded for the rest of the process;
+    // the core itself refuses further retro_load_game calls while wedged.
+    const bool coreWedged =
+        s.retronest_shutdown_wedged && s.retronest_shutdown_wedged();
+    if (coreWedged) {
+        g_anyCoreWedged.store(true);
+        qCritical() << "[CoreRuntime] core shutdown WEDGED — skipping"
+                    << "retro_deinit + dlclose; dylib stays mapped. Restart"
+                    << "RetroNest before launching this emulator again.";
+    }
+
     // Now tear down our HW-side objects (FBO, NSOpenGL contexts).
     // retro_unload_game's internal cleanup is done; nothing else needs
     // the GL context to be current.
@@ -635,15 +655,21 @@ void CoreRuntime::runLoop() {
         m_hwRenderCb = {};
     }
 
-    s.retro_deinit();
+    if (!coreWedged)
+        s.retro_deinit();
     m_audio.close();
 
     // Drain the teardown pool while the core dylib (and Metal device) are still
     // mapped, then unload the core.
     objc_autoreleasePoolPop(teardownPool);
-    m_loader.close();
+    if (!coreWedged)
+        m_loader.close();
     g_current = nullptr;
     emit finished(false);
+}
+
+bool CoreRuntime::anyCoreWedged() {
+    return g_anyCoreWedged.load();
 }
 
 void CoreRuntime::setActiveNSView(void* ns_view) {

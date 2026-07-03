@@ -25,6 +25,7 @@
 #include "ui/game_list_model.h"
 #include "ui/app_controller.h"
 #include "core/game_session.h"
+#include "core/libretro/core_runtime.h"
 #include "ui/theme_manager.h"
 #include "ui/theme_context.h"
 #include "core/sdl_input_manager.h"
@@ -33,6 +34,7 @@
 #include <QCursor>
 #include <QWindow>
 #include <QtQml/qqmlextensionplugin.h>
+#include <unistd.h>  // ::_exit — wedged-core hard exit
 Q_IMPORT_QML_PLUGIN(SetupWizardPlugin)
 Q_IMPORT_QML_PLUGIN(AppUIPlugin)
 
@@ -181,6 +183,17 @@ int main(int argc, char* argv[]) {
     if (parser.isSet("install") || parser.isSet("launch") || parser.isSet("cli")) {
         int ret = runCli(app, parser, loader);
         db.close();
+
+        // A wedged core's dylib stays mapped (see CoreRuntime teardown), so
+        // normal exit() would run ITS static destructors under live detached
+        // threads — the exact ~GSTextureCache segv this replaces. Everything
+        // of ours is already flushed (db closed above); skip the destructors.
+        if (CoreRuntime::anyCoreWedged()) {
+            qWarning() << "[main] a core wedged this session — hard exit"
+                          " (skipping process static destructors)";
+            fflush(nullptr);
+            ::_exit(ret);
+        }
         return ret;
     }
 
@@ -264,11 +277,31 @@ int main(int argc, char* argv[]) {
             QDeadlineTimer deadline(5000);
             while (gs->isRunning() && !deadline.hasExpired())
                 QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-            if (gs->isRunning())
-                qWarning() << "[main] game did not stop within 5s; exiting anyway";
+            if (gs->isRunning()) {
+                // A wedged core still owns live threads inside its dylib.
+                // Running static destructors under them segfaults (observed
+                // 2026-07-03: ~GSTextureCache in __cxa_finalize during exit()
+                // after a PCSX2 shutdown deadlock). Skip destructors entirely:
+                // SQLite is crash-safe (journal), and the OS reclaims the rest.
+                qWarning() << "[main] game did not stop within 5s; hard-exiting"
+                              " (skipping static destructors — wedged core)";
+                fflush(nullptr);
+                ::_exit(ret);
+            }
         }
 
         db.close();
+
+        // A wedged core's dylib stays mapped (see CoreRuntime teardown), so
+        // normal exit() would run ITS static destructors under live detached
+        // threads — the exact ~GSTextureCache segv this replaces. Everything
+        // of ours is already flushed (db closed above); skip the destructors.
+        if (CoreRuntime::anyCoreWedged()) {
+            qWarning() << "[main] a core wedged this session — hard exit"
+                          " (skipping process static destructors)";
+            fflush(nullptr);
+            ::_exit(ret);
+        }
         return ret;
     }
 }

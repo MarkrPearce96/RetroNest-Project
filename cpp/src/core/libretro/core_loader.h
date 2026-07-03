@@ -48,6 +48,13 @@ struct CoreSymbols {
     // synchronous cores like mGBA).
     using retronest_set_fast_forward_t = void (*)(bool);
     retronest_set_fast_forward_t retronest_set_fast_forward = nullptr;
+
+    // Optional. PCSX2 exports this after a shutdown-timeout: true means the
+    // core detached a wedged VM thread, and the host MUST skip retro_deinit
+    // and dlclose (keep the dylib mapped so the detached thread never runs
+    // unmapped code) — see the CoreRuntime teardown wedge check.
+    using retronest_shutdown_wedged_t = bool (*)();
+    retronest_shutdown_wedged_t retronest_shutdown_wedged = nullptr;
 };
 
 class CoreLoader {

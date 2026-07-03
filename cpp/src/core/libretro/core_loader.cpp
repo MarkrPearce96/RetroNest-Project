@@ -52,6 +52,7 @@ bool CoreLoader::open(const QString& path, QString* err) {
     // Optional libretro extensions — silent if the core doesn't export them.
     resolveOptional(m_handle, "retronest_set_paused", m_syms.retronest_set_paused);
     resolveOptional(m_handle, "retronest_set_fast_forward", m_syms.retronest_set_fast_forward);
+    resolveOptional(m_handle, "retronest_shutdown_wedged", m_syms.retronest_shutdown_wedged);
     return true;
 }
 
