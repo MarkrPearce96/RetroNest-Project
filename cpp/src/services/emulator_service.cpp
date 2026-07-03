@@ -49,40 +49,69 @@ void EmulatorService::ensureConfig(const QString& emuId, const EmulatorManifest&
 
 // ── Version Tracking ──────────────────────────────────────
 
-QString EmulatorService::installedVersion(const QString& emuId) const {
+// Per-dylib version sidecar for libretro cores. All libretro manifests
+// share install_folder "libretro", so a shared .version.json would let
+// installing core A stamp core B's version. Empty for non-libretro
+// backends (and for malformed libretro manifests without a core_dylib).
+static QString libretroVersionSidecarPath(const EmulatorManifest& manifest) {
+    if (manifest.backend != QLatin1String("libretro") || manifest.core_dylib.isEmpty())
+        return {};
+    return Paths::emulatorsDir(manifest.install_folder) + "/cores/"
+           + manifest.core_dylib + ".version";
+}
+
+static QJsonObject readJsonObjectFile(const QString& path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return {};
+    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    return doc.object();  // empty for non-JSON / non-object content
+}
+
+QJsonObject EmulatorService::readVersionRecord(const QString& emuId) const {
     const EmulatorManifest* manifest = m_loader->emulatorById(emuId);
     if (!manifest) return {};
 
-    const QString versionPath = Paths::emulatorsDir(manifest->install_folder) + "/.version.json";
-    QFile file(versionPath);
-    if (!file.open(QIODevice::ReadOnly)) return {};
+    const QString legacyPath =
+        Paths::emulatorsDir(manifest->install_folder) + "/.version.json";
 
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    return doc.object().value("version").toString();
+    const QString sidecarPath = libretroVersionSidecarPath(*manifest);
+    if (sidecarPath.isEmpty()) {
+        // Process backend: install_folder is private to this emulator, so
+        // the shared-file hazard doesn't exist. Unchanged behavior.
+        return readJsonObjectFile(legacyPath);
+    }
+
+    // Libretro: per-dylib sidecar is the source of truth. Older installers
+    // wrote the sidecar as a bare published_at string — that fails JSON
+    // object parsing and falls through to the legacy record, same as a
+    // missing sidecar.
+    QJsonObject record = readJsonObjectFile(sidecarPath);
+    if (record.contains("version")) return record;
+
+    // Migration fallback: legacy shared .version.json (whichever core was
+    // installed last stamped it). Better than showing "not installed"; the
+    // per-dylib sidecar gets written on the next install of this core.
+    QJsonObject legacy = readJsonObjectFile(legacyPath);
+    if (!legacy.isEmpty() && !m_legacyVersionWarned.contains(emuId)) {
+        m_legacyVersionWarned.insert(emuId);
+        qWarning() << "[EmulatorService]" << emuId
+                   << ": no per-core version record at" << sidecarPath
+                   << "— falling back to legacy shared .version.json"
+                   << "(may show another core's version; reinstall/update to migrate)";
+    }
+    return legacy;
+}
+
+QString EmulatorService::installedVersion(const QString& emuId) const {
+    return readVersionRecord(emuId).value("version").toString();
 }
 
 QString EmulatorService::installedPublishedAt(const QString& emuId) const {
-    const EmulatorManifest* manifest = m_loader->emulatorById(emuId);
-    if (!manifest) return {};
-
-    const QString versionPath = Paths::emulatorsDir(manifest->install_folder) + "/.version.json";
-    QFile file(versionPath);
-    if (!file.open(QIODevice::ReadOnly)) return {};
-
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    return doc.object().value("published_at").toString();
+    return readVersionRecord(emuId).value("published_at").toString();
 }
 
 QString EmulatorService::installedAt(const QString& emuId) const {
-    const EmulatorManifest* manifest = m_loader->emulatorById(emuId);
-    if (!manifest) return {};
-
-    const QString versionPath = Paths::emulatorsDir(manifest->install_folder) + "/.version.json";
-    QFile file(versionPath);
-    if (!file.open(QIODevice::ReadOnly)) return {};
-
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    return doc.object().value("installed_at").toString();
+    return readVersionRecord(emuId).value("installed_at").toString();
 }
 
 void EmulatorService::saveVersion(const QString& emuId, const QString& version,
@@ -90,15 +119,19 @@ void EmulatorService::saveVersion(const QString& emuId, const QString& version,
     const EmulatorManifest* manifest = m_loader->emulatorById(emuId);
     if (!manifest) return;
 
-    const QString installDir = Paths::emulatorsDir(manifest->install_folder);
-    QDir().mkpath(installDir);
-
     QJsonObject obj;
     obj["version"] = version;
     obj["published_at"] = publishedAt;
     obj["installed_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
 
-    QFile file(installDir + "/.version.json");
+    // Libretro cores → per-dylib sidecar; process emulators → .version.json
+    // in their private install dir.
+    QString recordPath = libretroVersionSidecarPath(*manifest);
+    if (recordPath.isEmpty())
+        recordPath = Paths::emulatorsDir(manifest->install_folder) + "/.version.json";
+    QDir().mkpath(QFileInfo(recordPath).absolutePath());
+
+    QFile file(recordPath);
     if (file.open(QIODevice::WriteOnly)) {
         file.write(QJsonDocument(obj).toJson(QJsonDocument::Compact));
     } else {
@@ -264,7 +297,18 @@ void EmulatorService::checkForUpdates() {
         auto* adapter = AdapterRegistry::instance().adapterFor(emu.id);
         if (!adapter || !adapter->isInstalled(emu)) continue;
 
-        if (emu.github_repo.isEmpty()) continue;   // local-only core: no remote to check
+        // No github_repo → nowhere to check. This is a deliberate state, not
+        // a config bug: duckstation's manifest omits github_repo because its
+        // license forbids redistribution, so the core is only ever built and
+        // deployed locally (see its package.sh). Same for any manifest with
+        // neither github_repo nor core_buildbot_path (e.g. mgba after the
+        // buildbot path was removed to protect the local universal build).
+        if (emu.github_repo.isEmpty()) {
+            qInfo() << "[EmulatorService]" << emu.id
+                    << ": no distribution source configured — update checks skipped"
+                    << "(deliberate for duckstation: license)";
+            continue;
+        }
 
         QString version = installedVersion(emu.id);
         if (version.isEmpty()) continue;

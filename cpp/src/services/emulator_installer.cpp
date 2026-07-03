@@ -2,6 +2,7 @@
 #include "installer_utils.h"
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -325,10 +326,32 @@ EmulatorInstaller::InstallResult EmulatorInstaller::postDownload(
         // Ignore exit code — the attribute may not be present.
 #endif
 
-        // Write a version sidecar for update-check comparisons.
+        // Core release zips ship a root-level VERSION file; unzipping into
+        // the shared cores/ dir means each install clobbers the previous
+        // core's copy. Keep it, but namespaced per core.
+        const QString looseVersionFile = coreDir + "/VERSION";
+        if (QFileInfo::exists(looseVersionFile)) {
+            const QString renamed = coreDir + "/" + dylibName + ".VERSION.txt";
+            QFile::remove(renamed);  // overwrite ok
+            if (QFile::rename(looseVersionFile, renamed))
+                qInfo() << "[Installer] Renamed loose VERSION file to" << renamed;
+            else
+                qWarning() << "[Installer] Failed to rename" << looseVersionFile
+                           << "to" << renamed;
+        }
+
+        // Write the per-core version record (JSON, same shape as the legacy
+        // shared .version.json). EmulatorService::readVersionRecord treats
+        // this sidecar as the source of truth for libretro cores.
+        QJsonObject record;
+        record["version"] = tagName;
+        record["published_at"] = publishedAt;
+        record["installed_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
         QFile vf(dylibPath + ".version");
         if (vf.open(QIODevice::WriteOnly))
-            vf.write(publishedAt.toUtf8());
+            vf.write(QJsonDocument(record).toJson(QJsonDocument::Compact));
+        else
+            qWarning() << "[Installer] Failed to write version sidecar:" << vf.fileName();
 
         qInfo() << "[Installer] Libretro core installed to" << dylibPath;
         result.success = true;

@@ -20,4 +20,5 @@ struct EmulatorManifest {
     QString backend = "process";   // "process" (default) | "libretro"
     QString core_dylib;             // libretro: filename of the .dylib (relative to cores/)
     QString core_buildbot_path;     // libretro: appended to buildbot URL prefix
+    QString core_arch;              // libretro: "universal" | "x86_64" | "arm64" | "" (undeclared)
 };

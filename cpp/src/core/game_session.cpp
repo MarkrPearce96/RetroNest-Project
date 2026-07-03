@@ -139,19 +139,35 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     if (!lr) { emit errorOccurred("Adapter is not LibretroAdapter"); return false; }
     m_libretroAdapter = lr;
 
-    // SP10: warn the user when launching the PS2 libretro core in arm64
-    // mode — they'll get the interpreter ceiling (~65-70% speed) instead
-    // of recompiler speed. Dismissable per session. Reuses the existing
-    // generic info toast plumbing → AchievementToast QML.
-    if (HostArch::isArm64() && lr->coreId() == QStringLiteral("pcsx2")
-        && !m_slowModeNoticeShown) {
-        m_slowModeNoticeShown = true;
-        emit raInfoToast(
-            QStringLiteral("Performance"),
-            QStringLiteral("PS2 emulation is faster under Rosetta"),
-            QStringLiteral("Quit, right-click RetroNest in Finder → Get Info → "
-                           "tick \"Open using Rosetta\", and relaunch."),
-            QString(), 8000);
+    // SP10 (generalized in packet 6): warn when the manifest-declared core
+    // architecture doesn't match the running process arch. Manifest-driven
+    // via core_arch instead of hardcoding emulator ids:
+    //   x86_64 core + arm64 host → the distributed core hits the
+    //     interpreter ceiling (pcsx2, ~65-70% speed) — advise Rosetta.
+    //   arm64 core + Rosetta host → dlopen has no matching slice.
+    // "universal" or undeclared core_arch never warns. Dismissable per
+    // session. Reuses the existing generic info toast plumbing →
+    // AchievementToast QML.
+    if (!m_slowModeNoticeShown) {
+        if (manifest.core_arch == QLatin1String("x86_64") && HostArch::isArm64()) {
+            m_slowModeNoticeShown = true;
+            emit raInfoToast(
+                QStringLiteral("Performance"),
+                QStringLiteral("%1 is faster under Rosetta").arg(manifest.name),
+                QStringLiteral("Quit, right-click RetroNest in Finder → Get Info → "
+                               "tick \"Open using Rosetta\", and relaunch."),
+                QString(), 8000);
+        } else if (manifest.core_arch == QLatin1String("arm64")
+                   && HostArch::isRosettaX86_64()) {
+            m_slowModeNoticeShown = true;
+            emit raInfoToast(
+                QStringLiteral("Architecture"),
+                QStringLiteral("%1 is built for Apple Silicon only").arg(manifest.name),
+                QStringLiteral("It can't load under Rosetta. Quit, right-click "
+                               "RetroNest in Finder → Get Info → untick "
+                               "\"Open using Rosetta\", and relaunch."),
+                QString(), 8000);
+        }
     }
 
     // SP3 + task #7: detect which HW render path this adapter uses and

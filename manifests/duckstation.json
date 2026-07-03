@@ -8,5 +8,6 @@
   "rom_extensions": ["bin", "cue", "iso", "img", "pbp", "chd", "m3u"],
   "launch_args": [],
   "backend": "libretro",
-  "core_dylib": "duckstation_libretro.dylib"
+  "core_dylib": "duckstation_libretro.dylib",
+  "core_arch": "universal"
 }

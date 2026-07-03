@@ -583,6 +583,16 @@ add_executable(test_manifest_libretro_fields tests/test_manifest_libretro_fields
 target_link_libraries(test_manifest_libretro_fields PRIVATE retronest_core Qt6::Test)
 add_test(NAME ManifestLibretroFields COMMAND test_manifest_libretro_fields)
 
+# EmulatorService/-Installer are app-only sources (not in retronest_core),
+# so this test compiles them directly, like the page-level UI tests do.
+add_executable(test_emulator_version_records
+    tests/test_emulator_version_records.cpp
+    src/services/emulator_service.cpp
+    src/services/emulator_installer.cpp
+)
+target_link_libraries(test_emulator_version_records PRIVATE retronest_core Qt6::Test)
+add_test(NAME EmulatorVersionRecords COMMAND test_emulator_version_records)
+
 add_executable(test_core_loader tests/test_core_loader.cpp)
 target_link_libraries(test_core_loader PRIVATE retronest_core Qt6::Test)
 add_dependencies(test_core_loader fake_libretro_core)

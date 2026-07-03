@@ -3,12 +3,11 @@
   "name": "mGBA",
   "description": "Game Boy / Game Boy Color / Game Boy Advance (libretro)",
   "systems": ["gba", "gbc", "gb"],
-  "github_repo": "libretro/mgba",
   "executable": "mgba_libretro.dylib",
   "install_folder": "libretro",
   "rom_extensions": ["gba", "gbc", "gb", "zip", "7z"],
   "launch_args": [],
   "backend": "libretro",
   "core_dylib": "mgba_libretro.dylib",
-  "core_buildbot_path": "mgba_libretro.dylib.zip"
+  "core_arch": "universal"
 }

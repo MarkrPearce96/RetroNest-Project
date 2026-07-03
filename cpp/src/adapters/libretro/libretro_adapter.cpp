@@ -116,6 +116,11 @@ bool LibretroAdapter::isInstalled(const EmulatorManifest& manifest) {
 EmulatorAdapter::DirectDownloadInfo
 LibretroAdapter::resolveDirectDownload(const EmulatorManifest& manifest) const {
     DirectDownloadInfo info;
+    // No shipped manifest sets core_buildbot_path anymore (mgba's was
+    // removed in packet 6: the buildbot serves single-arch nightlies picked
+    // by the frontend's compile arch, so an in-app "update" would downgrade
+    // the locally built universal core). Kept as generic infrastructure for
+    // any future manifest that opts into buildbot distribution.
     if (manifest.core_buildbot_path.isEmpty()) return info;
     const QString arch =
 #if defined(Q_PROCESSOR_ARM_64)
@@ -147,9 +152,10 @@ LibretroAdapter::resolveDirectDownload(const EmulatorManifest& manifest) const {
 }
 
 QVector<EmulatorAdapter::AssetMatchRule> LibretroAdapter::assetMatchRules() const {
-    // One macOS x86_64 asset per fork release, named "<core>_libretro.dylib.zip".
-    // No substring requirement. mGBA keeps core_buildbot_path -> buildbot, so it
-    // never reaches matchAsset and this rule is inert for it.
+    // One macOS asset per fork release, named "<core>_libretro.dylib.zip".
+    // No substring requirement. mGBA has no distribution source at all
+    // (no github_repo / core_buildbot_path — local universal build only),
+    // so it never reaches matchAsset and this rule is inert for it.
     // Field order is {substrings, extension} (see EmulatorAdapter::AssetMatchRule).
     return { AssetMatchRule{ /*substrings*/ {}, /*extension*/ ".dylib.zip" } };
 }

@@ -69,6 +69,19 @@ bool ManifestLoader::loadAll(const QString& manifestsDir) {
         m.core_dylib = obj.value("core_dylib").toString();
         m.core_buildbot_path = obj.value("core_buildbot_path").toString();
 
+        // Optional declared binary architecture of the distributed core.
+        // Drives the arch-mismatch warning toast (GameSession) and the
+        // verify-universal.sh gate. Unknown values degrade to "undeclared".
+        m.core_arch = obj.value("core_arch").toString();
+        if (!m.core_arch.isEmpty() &&
+            m.core_arch != QLatin1String("universal") &&
+            m.core_arch != QLatin1String("x86_64") &&
+            m.core_arch != QLatin1String("arm64")) {
+            qWarning() << "[Manifest]" << filePath << "has invalid core_arch"
+                       << m.core_arch << "— expected universal|x86_64|arm64; treating as undeclared";
+            m.core_arch.clear();
+        }
+
         // Default install_folder to id if not specified
         if (m.install_folder.isEmpty()) {
             m.install_folder = m.id;

@@ -12,6 +12,63 @@ CORES_DIR="$HOME/Documents/RetroNest/emulators/libretro/cores"
 fail() { echo "  ✗ $1" >&2; exit 1; }
 pass() { echo "  ✓ $1"; }
 
+# Core verification runs FIRST and standalone: the universal .app bundle
+# only exists during full build-universal.sh runs, but the manifest-driven
+# core checks are useful on the daily-driver setup too (packet 6).
+echo "=== verifying libretro cores (manifest-driven core_arch) ==="
+# Every manifests/*.json with backend "libretro" declares (optionally) a
+# core_arch: universal | x86_64 | arm64. Policy:
+#   universal      → hard-fail unless lipo shows both arm64 and x86_64
+#   x86_64 / arm64 → warn-only when the installed file lacks that arch
+#                    (a universal file satisfies a single-arch declaration)
+#   undeclared     → note and skip
+#   core missing   → note and skip (not every core is installed everywhere)
+for mf in manifests/*.json; do
+    info="$(python3 - "$mf" <<'EOF'
+import json, sys
+m = json.load(open(sys.argv[1]))
+print(m.get("backend", "process"))
+print(m.get("id", ""))
+print(m.get("core_dylib", ""))
+print(m.get("core_arch", ""))
+EOF
+)"
+    { read -r backend; read -r emu_id; read -r core_dylib; read -r core_arch; } <<< "$info"
+
+    [[ "$backend" == "libretro" ]] || continue
+    if [[ -z "$core_dylib" ]]; then
+        echo "  ! $emu_id: libretro manifest without core_dylib — skipping"
+        continue
+    fi
+
+    dylib="$CORES_DIR/$core_dylib"
+    if [[ ! -f "$dylib" ]]; then
+        echo "  - $emu_id: $core_dylib not installed — skipping"
+        continue
+    fi
+
+    archs="$(lipo -archs "$dylib" 2>/dev/null || true)"
+    case "$core_arch" in
+        universal)
+            if [[ "$archs" == *arm64* && "$archs" == *x86_64* ]]; then
+                pass "$emu_id: $core_dylib is universal ($archs)"
+            else
+                fail "$emu_id: manifest declares core_arch=universal but $core_dylib is [$archs]"
+            fi
+            ;;
+        x86_64|arm64)
+            if [[ " $archs " == *" $core_arch "* || "$archs" == "$core_arch" ]]; then
+                pass "$emu_id: $core_dylib contains declared arch $core_arch ($archs)"
+            else
+                echo "  ! $emu_id: manifest declares core_arch=$core_arch but $core_dylib is [$archs] — warn-only"
+            fi
+            ;;
+        *)
+            echo "  - $emu_id: no core_arch declared — skipping arch check"
+            ;;
+    esac
+done
+
 echo "=== verifying RetroNest.app ==="
 test -d "$APP" || fail "$APP missing"
 file "$APP/Contents/MacOS/RetroNest" | grep -q "universal binary with 2 architectures" \
@@ -35,27 +92,6 @@ fi
 pass "LSRequiresNativeExecution absent (Rosetta toggle preserved)"
 
 echo
-echo "=== verifying libretro cores ==="
-# Hard-required: pcsx2_libretro is the SP10 goal.
-dylib="$CORES_DIR/pcsx2_libretro.dylib"
-test -f "$dylib" || fail "pcsx2_libretro.dylib missing in $CORES_DIR"
-file "$dylib" | grep -q "universal binary with 2 architectures" \
-    || fail "pcsx2_libretro.dylib not universal"
-pass "pcsx2_libretro.dylib is universal"
-
-# Soft check: mgba_libretro is built from the external mGBA source tree
-# (upstream mgba-emu/mgba). Warn but don't fail when it isn't universal
-# — native arm64 mode still loads it fine. Hard-fail would punish anyone
-# who hasn't cloned mGBA locally.
-dylib="$CORES_DIR/mgba_libretro.dylib"
-if [[ ! -f "$dylib" ]]; then
-    echo "  ! mgba_libretro.dylib missing — skipping (non-fatal)"
-elif file "$dylib" | grep -q "universal binary with 2 architectures"; then
-    pass "mgba_libretro.dylib is universal"
-else
-    echo "  ! mgba_libretro.dylib is not universal (arm64 only) — won't load under Rosetta"
-    echo "    Re-run with BUILD_MGBA=1 (default) after MGBA_SRC is set to upstream mgba-emu."
-fi
 
 echo
 echo "✓ all artifacts verified universal + entitled"

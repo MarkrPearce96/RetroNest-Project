@@ -9,5 +9,6 @@
   "rom_extensions": ["iso", "cso", "chd", "pbp", "elf", "prx"],
   "launch_args": [],
   "backend": "libretro",
-  "core_dylib": "ppsspp_libretro.dylib"
+  "core_dylib": "ppsspp_libretro.dylib",
+  "core_arch": "universal"
 }

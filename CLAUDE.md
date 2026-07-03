@@ -60,9 +60,24 @@ The user switches between native arm64 and Rosetta x86_64 via Finder →
 Get Info → "Open using Rosetta" on the .app. RetroNest does no auto-
 relaunching; dyld picks the matching dylib slice automatically.
 
-**Policy:** all libretro cores RetroNest ships are universal binaries.
-This eliminates host/core arch-mismatch failure modes. New cores
-(future DuckStation libretro, PPSSPP libretro) follow the same rule.
+**Arch policy (real, per core — declared as `core_arch` in each manifest):**
+universal everywhere is the goal, but today's truth is per-source:
+- **duckstation** (local package.sh) and **ppsspp** (CI release): universal.
+- **pcsx2** and **dolphin** GitHub releases: **x86_64-only** (pcsx2's CI
+  builds under Rosetta; dolphin mirrors it). Local dolphin deploys via
+  tools/deploy.sh ARE universal — only the downloadable zips aren't.
+- **mgba**: universal, built locally by scripts/build-universal.sh from
+  mgba-emu/mgba. The libretro-buildbot download path was removed from
+  manifests/mgba.json (2026-07 packet 6): an in-app "update" used to
+  overwrite the universal local build with a single-arch nightly.
+- **duckstation is deliberately excluded from update checks** (no
+  github_repo in its manifest — the core never leaves this machine;
+  license). Build + deploy it only via its package.sh.
+Consequence: while the daily driver is the x86_64 app this all works; a
+return to native arm64 requires pcsx2/dolphin release pipelines to go
+universal first (tracked in the suite review, packet 6/7).
+`scripts/verify-universal.sh` checks every core named in manifests/
+against its declared core_arch.
 
 ### Current run mode: x86_64 (Rosetta) for everything (as of 2026-06-04)
 
