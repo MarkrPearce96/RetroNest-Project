@@ -319,11 +319,42 @@ EmulatorInstaller::InstallResult EmulatorInstaller::postDownload(
         const QString dylibPath = coreDir + "/" + dylibName;
 
 #if defined(Q_OS_MACOS)
-        // Strip quarantine so dlopen() can map the unsigned dylib.
-        QProcess xattr;
-        xattr.start("/usr/bin/xattr", {"-d", "com.apple.quarantine", dylibPath});
-        xattr.waitForFinished(2000);
-        // Ignore exit code — the attribute may not be present.
+        // The core, plus any dylibs shipped beside it, must all be
+        // quarantine-free and ad-hoc signed before they can load in-process:
+        //  - quarantine: a downloaded/unzipped file dlopen()s to a Gatekeeper
+        //    denial otherwise.
+        //  - signing: an unsigned dylib can't allocate JIT/executable memory
+        //    under the hardened runtime, so PCSX2's recompilers fail and the
+        //    VM dies during init with no output (observed 2026-07-04).
+        // The sibling dirs are the release's bundled dependencies:
+        //    <base>_libs      — non-system deps bundled by CI (dylibbundler),
+        //                       loaded via @loader_path/<base>_libs/ so the
+        //                       core doesn't depend on the user's Homebrew
+        //                       versions (a mismatch = silent dlopen failure;
+        //                       this was the actual 2026-07-04 pcsx2 break).
+        //    <base>_resources — shader/metallib and data files.
+        const QString baseName = dylibName.chopped(6);  // strip ".dylib"
+        QStringList dylibsToProcess{dylibPath};
+        for (const QString& suffix : {"_libs", "_resources"}) {
+            const QString dir = coreDir + "/" + baseName + suffix;
+            if (QFileInfo(dir).isDir()) {
+                for (const QFileInfo& f : QDir(dir).entryInfoList({"*.dylib"}, QDir::Files))
+                    dylibsToProcess << f.absoluteFilePath();
+            }
+        }
+        for (const QString& path : dylibsToProcess) {
+            QProcess xattr;
+            xattr.start("/usr/bin/xattr", {"-d", "com.apple.quarantine", path});
+            xattr.waitForFinished(2000);  // absent attr → nonzero, ignored
+            QProcess csign;
+            csign.start("/usr/bin/codesign", {"--force", "--sign", "-", path});
+            csign.waitForFinished(15000);
+            if (csign.exitCode() != 0)
+                qWarning() << "[Installer] codesign failed for" << path
+                           << csign.readAllStandardError();
+        }
+        qInfo() << "[Installer] dequarantined + ad-hoc signed" << dylibsToProcess.size()
+                << "dylib(s) for" << dylibName;
 #endif
 
         // Core release zips ship a root-level VERSION file; unzipping into
