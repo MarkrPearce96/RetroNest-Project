@@ -1,0 +1,35 @@
+name: tests
+
+# Native arm64 build + full ctest suite on every push/PR to main.
+# The x86_64/Rosetta daily-driver flow stays local-only (needs the dual
+# Homebrew toolchain); this job guards the shared source + CMake health.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ctest-macos-arm64:
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      # Widget/QML tests need a QPA platform on a headless runner.
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install qt sdl2 ninja
+
+      - name: Configure
+        run: |
+          cmake -S cpp -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix qt);$(brew --prefix sdl2)"
+
+      - name: Build (all targets)
+        run: cmake --build build -j 3
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure

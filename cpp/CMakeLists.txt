@@ -11,11 +11,15 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Sql Qml Quick Quic
 find_package(SDL2 REQUIRED)
 
 include(FetchContent)
+# Pinned to the exact commit the build trees had checked out while GIT_TAG
+# was still "master" (verified identical on 2026-07-02), so pinning changes
+# nothing behaviorally — it only stops upstream pushes from silently
+# changing our dependency. No GIT_SHALLOW: shallow clones can't check out
+# an arbitrary commit SHA.
 FetchContent_Declare(
     libchdr
     GIT_REPOSITORY https://github.com/rtissera/libchdr.git
-    GIT_TAG        master
-    GIT_SHALLOW    TRUE
+    GIT_TAG        04a177ee3cea055d93da2d5839d3413168837c6f
 )
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(libchdr)
@@ -34,7 +38,8 @@ file(GLOB RCHEEVOS_SOURCES
     ${rcheevos_SOURCE_DIR}/src/rhash/*.c
     ${rcheevos_SOURCE_DIR}/src/*.c)
 add_library(rcheevos_static STATIC ${RCHEEVOS_SOURCES})
-# PUBLIC so consumers (only ${PROJECT_NAME}) get rcheevos headers automatically (e.g. rcheevos_runtime.cpp).
+# PUBLIC so consumers (retronest_core and its dependents) get rcheevos
+# headers automatically (e.g. rcheevos_runtime.cpp).
 target_include_directories(rcheevos_static PUBLIC ${rcheevos_SOURCE_DIR}/include)
 # rc_libretro.h lives in src/ (not include/) but consumers need it for the
 # memory-map helpers (rc_libretro_memory_init / rc_libretro_memory_read) used
@@ -51,39 +56,42 @@ set(SCREENSCRAPER_DEV_PASSWORD "" CACHE STRING "ScreenScraper dev password")
 set(SCREENSCRAPER_SOFTNAME "RetroNest" CACHE STRING "ScreenScraper software name")
 include(dev_credentials.cmake OPTIONAL)
 
-set(SOURCES
-    src/main.cpp
+# ── retronest_core: shared non-UI closure (core/, adapters/, services/) ──
+# Every translation unit that both the app and the QtTest targets compile.
+# Previously each of ~10 test targets hand-copied the ~30-file libretro
+# dependency closure, causing ~10x redundant compilation and historical
+# vtable link failures whenever a newly-added file was forgotten in one of
+# the lists. Tests now link this archive and the linker pulls exactly the
+# objects each test actually references.
+add_library(retronest_core STATIC
+    # core/
+    # NOTE: game_session.cpp is deliberately NOT here even though the app and
+    # test_game_session_save_slot both compile it: GameSession references
+    # LibretroGLItem (appui QML module). If its moc entered this lib's
+    # monolithic mocs_compilation.o, every test linking the archive would
+    # need LibretroGLItem to resolve.
     src/core/manifest_loader.cpp
     src/core/paths.cpp
-    src/services/emulator_installer.cpp
-    src/services/installer_utils.cpp
-    src/services/patches_sidecar.cpp
-    src/services/patches_installer.cpp
-    src/services/config_service.cpp
-    src/services/hotkey_service.h
-    src/services/hotkey_service.cpp
-    src/core/game_session.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/adapter_registry.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
     src/core/path_overrides_store.cpp
-    src/core/scraper.cpp
     src/core/database.cpp
-    src/services/rom_scanner.cpp
-    src/services/ra_credentials.cpp
-    src/core/ra_client.cpp
     src/core/iso9660_reader.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/libretro/rcheevos_runtime.cpp
+    src/core/sdl_input_manager.cpp
+    # adapters/
+    src/adapters/emulator_adapter.cpp
+    src/adapters/adapter_registry.cpp
     src/adapters/libretro/libretro_adapter.cpp
     src/adapters/libretro/duckstation_libretro_adapter.cpp
     src/adapters/libretro/dolphin_libretro_adapter.cpp
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
+    # core/libretro/
+    src/core/libretro/options_store.cpp
+    src/core/libretro/frontend_settings_store.cpp
+    src/core/libretro/retro_log.cpp
+    src/core/libretro/rcheevos_runtime.cpp
     src/core/libretro/core_loader.cpp
     src/core/libretro/core_runtime.cpp
     src/core/libretro/video_hardware_gl.mm
@@ -94,6 +102,118 @@ set(SOURCES
     src/core/libretro/libretro_hotkey_defs.cpp
     src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/hotkey_dispatcher.cpp
+    # services/
+    src/services/config_service.cpp
+    src/services/hotkey_service.cpp
+    src/services/rom_scanner.cpp
+    src/services/patches_sidecar.cpp
+    src/services/patches_installer.cpp
+    src/services/installer_utils.cpp
+    # headers (each header lives in exactly ONE target's source list so
+    # AUTOMOC generates its moc output exactly once — listing a moved
+    # header in the app too would duplicate staticMetaObject symbols)
+    src/core/manifest.h
+    src/core/manifest_loader.h
+    src/core/paths.h
+    src/core/sfo_parser.h
+    src/core/ini_file.h
+    src/core/database.h
+    src/core/iso9660_reader.h
+    src/core/sdl_input_manager.h
+    src/adapters/emulator_adapter.h
+    src/adapters/adapter_registry.h
+    src/adapters/libretro/libretro_adapter.h
+    src/adapters/libretro/duckstation_libretro_adapter.h
+    src/adapters/libretro/dolphin_libretro_adapter.h
+    src/adapters/libretro/mgba_libretro_adapter.h
+    src/adapters/libretro/pcsx2_libretro_adapter.h
+    src/adapters/libretro/ppsspp_libretro_adapter.h
+    src/core/libretro/core_loader.h
+    src/core/libretro/core_runtime.h
+    src/core/libretro/rcheevos_runtime.h
+    src/core/libretro/environment_callbacks.h
+    src/core/libretro/video_software.h
+    src/core/libretro/video_hardware_gl.h
+    src/core/libretro/audio_sink.h
+    src/core/libretro/input_router.h
+    src/services/hotkey_service.h
+    src/services/rom_scanner.h
+    src/services/patches_sidecar.h
+    src/services/patches_installer.h
+    src/services/installer_utils.h
+)
+# Q_OBJECT classes inside the static lib must moc here (their .cpp lives here).
+set_target_properties(retronest_core PROPERTIES AUTOMOC ON)
+target_include_directories(retronest_core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS}
+)
+# PUBLIC: consumers (app + every test) inherit Qt components, third-party
+# libs and the OpenGL/IOSurface frameworks video_hardware_gl.mm needs.
+target_link_libraries(retronest_core PUBLIC
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Network
+    Qt6::Sql
+    Qt6::Concurrent
+    chdr-static
+    rcheevos_static
+    ${SDL2_LIBRARIES}
+    ${CMAKE_DL_LIBS}
+    "-framework OpenGL"
+    "-framework IOSurface"
+)
+# ── retronest_ui: shared Qt Widgets settings building blocks ──
+# The widget files under src/ui/settings/widgets/ are compiled by the app
+# and by the widget-level QtTest targets. Page-level UI sources shared with
+# only a single test (controller_bindings_view.cpp, generic_hotkey_page.cpp)
+# stay per-target because those tests pair them with linker stubs.
+add_library(retronest_ui STATIC
+    src/ui/settings/widgets/settings_card.cpp
+    src/ui/settings/widgets/settings_section_header.cpp
+    src/ui/settings/widgets/settings_toggle.cpp
+    src/ui/settings/widgets/settings_toggle_row.cpp
+    src/ui/settings/widgets/settings_combo_row.cpp
+    src/ui/settings/widgets/settings_slider_row.cpp
+    src/ui/settings/widgets/settings_description_bar.cpp
+    src/ui/settings/widgets/settings_graphics_sub_tab_bar.cpp
+    src/ui/settings/widgets/hotkey_binding_row.cpp
+    src/ui/settings/widgets/preview/aspect_ratio_preview.cpp
+    src/ui/settings/widgets/preview/osd_preview.cpp
+    src/ui/settings/widgets/settings_card.h
+    src/ui/settings/widgets/settings_section_header.h
+    src/ui/settings/widgets/settings_toggle.h
+    src/ui/settings/widgets/settings_toggle_row.h
+    src/ui/settings/widgets/settings_combo_row.h
+    src/ui/settings/widgets/settings_slider_row.h
+    src/ui/settings/widgets/settings_description_bar.h
+    src/ui/settings/widgets/settings_graphics_sub_tab_bar.h
+    src/ui/settings/widgets/hotkey_binding_row.h
+    src/ui/settings/widgets/preview/aspect_ratio_preview.h
+    src/ui/settings/widgets/preview/osd_preview.h
+)
+set_target_properties(retronest_ui PROPERTIES AUTOMOC ON)
+target_include_directories(retronest_ui PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${SDL2_INCLUDE_DIRS}
+)
+target_link_libraries(retronest_ui PUBLIC
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+)
+
+# ── RetroNest app: app-only sources; the shared closure comes from the libs ──
+set(SOURCES
+    src/main.cpp
+    src/core/game_session.cpp
+    src/core/scraper.cpp
+    src/core/ra_client.cpp
+    src/core/macos_fullscreen.mm
+    src/services/emulator_installer.cpp
+    src/services/ra_credentials.cpp
     src/services/game_service.cpp
     src/services/scraper_service.cpp
     src/services/emulator_service.cpp
@@ -117,60 +237,20 @@ set(SOURCES
     src/ui/settings/hotkey_settings_dialog.cpp
     src/ui/settings/generic_settings_page.cpp
     src/ui/settings/settings_page_builder.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/macos_fullscreen.mm
-    src/ui/settings/widgets/settings_card.cpp
-    src/ui/settings/widgets/settings_section_header.cpp
-    src/ui/settings/widgets/settings_toggle.cpp
-    src/ui/settings/widgets/settings_toggle_row.cpp
-    src/ui/settings/widgets/settings_combo_row.cpp
-    src/ui/settings/widgets/settings_slider_row.cpp
-    src/ui/settings/widgets/settings_description_bar.cpp
-    src/ui/settings/widgets/settings_graphics_sub_tab_bar.cpp
-    src/ui/settings/widgets/hotkey_binding_row.cpp
-    src/ui/settings/widgets/preview/aspect_ratio_preview.cpp
-    src/ui/settings/widgets/preview/osd_preview.cpp
     # Per-emulator settings dialogs collapsed into one schema-driven dialog
     # whose hub layout lives as data on each adapter (settingsHubCards()).
     src/ui/settings/generic_emulator_settings_dialog.cpp
 )
 
 set(HEADERS
-    src/core/manifest.h
-    src/core/manifest_loader.h
-    src/core/paths.h
     src/services/emulator_installer.h
-    src/services/installer_utils.h
-    src/services/patches_sidecar.h
-    src/services/patches_installer.h
     src/core/game_session.h
-    src/adapters/emulator_adapter.h
-    src/adapters/adapter_registry.h
-    src/adapters/libretro/libretro_adapter.h
-    src/adapters/libretro/duckstation_libretro_adapter.h
-    src/adapters/libretro/dolphin_libretro_adapter.h
-    src/adapters/libretro/mgba_libretro_adapter.h
-    src/adapters/libretro/pcsx2_libretro_adapter.h
-    src/adapters/libretro/ppsspp_libretro_adapter.h
-    src/core/libretro/core_loader.h
-    src/core/libretro/core_runtime.h
-    src/core/libretro/rcheevos_runtime.h
-    src/core/libretro/environment_callbacks.h
-    src/core/libretro/video_software.h
-    src/core/libretro/video_hardware_gl.h
-    src/core/libretro/audio_sink.h
-    src/core/libretro/input_router.h
-    src/core/sfo_parser.h
-    src/core/ini_file.h
     src/core/scraper.h
     src/core/setting_def.h
-    src/core/database.h
     src/core/cover_resolver.h
     src/core/github_client.h
-    src/services/rom_scanner.h
     src/services/ra_credentials.h
     src/core/ra_client.h
-    src/core/iso9660_reader.h
     src/services/game_service.h
     src/services/scraper_service.h
     src/services/emulator_service.h
@@ -194,7 +274,6 @@ set(HEADERS
     src/ui/settings/hotkey_settings_dialog.h
     src/ui/settings/generic_settings_page.h
     src/ui/settings/settings_page_builder.h
-    src/core/sdl_input_manager.h
     src/core/binding_def.h
     src/ui/settings/binding_display.h
     src/ui/settings/binding_widget_common.h
@@ -202,17 +281,6 @@ set(HEADERS
     src/core/macos_fullscreen.h
     src/ui/settings/settings_dialog_theme.h
     src/ui/settings/generic_emulator_settings_dialog.h
-    src/ui/settings/widgets/settings_card.h
-    src/ui/settings/widgets/settings_section_header.h
-    src/ui/settings/widgets/settings_toggle.h
-    src/ui/settings/widgets/settings_toggle_row.h
-    src/ui/settings/widgets/settings_combo_row.h
-    src/ui/settings/widgets/settings_slider_row.h
-    src/ui/settings/widgets/settings_description_bar.h
-    src/ui/settings/widgets/settings_graphics_sub_tab_bar.h
-    src/ui/settings/widgets/hotkey_binding_row.h
-    src/ui/settings/widgets/preview/aspect_ratio_preview.h
-    src/ui/settings/widgets/preview/osd_preview.h
 )
 
 # App icon — bundled into RetroNest.app/Contents/Resources/AppIcon.icns.
@@ -251,28 +319,25 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
 )
 
+# Only src/services/scraper_credentials.cpp consumes these, and that TU is
+# app-only, so the defines stay scoped to the app target.
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     SCREENSCRAPER_DEV_ID="${SCREENSCRAPER_DEV_ID}"
     SCREENSCRAPER_DEV_PASSWORD="${SCREENSCRAPER_DEV_PASSWORD}"
     SCREENSCRAPER_SOFTNAME="${SCREENSCRAPER_SOFTNAME}"
 )
 
+# Qt6 Core/Gui/Network/Sql/Concurrent, SDL2, chdr-static, rcheevos_static
+# and dl are inherited PUBLIC through retronest_core.
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    Qt6::Core
-    Qt6::Gui
+    retronest_core
+    retronest_ui
     Qt6::Widgets
-    Qt6::Network
-    Qt6::Sql
     Qt6::Qml
     Qt6::Quick
     Qt6::QuickControls2
-    Qt6::Concurrent
     Qt6::Multimedia
     Qt6::Svg
-    ${SDL2_LIBRARIES}
-    ${CMAKE_DL_LIBS}
-    chdr-static
-    rcheevos_static
     "-framework AppKit"
     "-framework Carbon"
 )
@@ -301,6 +366,24 @@ if(APPLE)
         COMMENT "Refreshing Launch Services registration for RetroNest.app"
         VERBATIM
     )
+    # Self-maintaining Qt deployment: after the bundle has been macdeployqt'ed
+    # once by hand (Contents/Frameworks/QtCore.framework exists), every app
+    # relink re-runs the matching-arch macdeployqt automatically, so an
+    # incremental rebuild never leaves a half-deployed bundle that aborts at
+    # launch with a Qt double-load. First-ever builds (no Frameworks/ yet)
+    # skip silently. POST_BUILD only fires on an actual relink, so the
+    # macdeployqt cost (~1-5 min under Rosetta) is only paid when needed.
+    if(TARGET Qt6::macdeployqt)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND /bin/sh -c "if [ -d \"$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/QtCore.framework\" ]; then echo 'RetroNest: previously deployed bundle detected - re-running macdeployqt (this can take a few minutes)...'; \"$<TARGET_FILE:Qt6::macdeployqt>\" \"$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>\" -qmldir=${CMAKE_CURRENT_SOURCE_DIR}/qml -no-codesign -always-overwrite; fi"
+            COMMENT "Checking whether RetroNest.app needs a macdeployqt refresh"
+            VERBATIM
+        )
+    else()
+        message(WARNING "Qt6::macdeployqt tool target not found - automatic "
+            "bundle redeployment after relink is disabled; run macdeployqt "
+            "manually after app rebuilds.")
+    endif()
 endif()
 
 # ── SetupWizard QML module (separate library so types aren't evaluated by app engine) ──
@@ -433,740 +516,218 @@ qt_add_qml_module(appui_backing
 target_link_libraries(${PROJECT_NAME} PRIVATE setupwizard_backingplugin appui_backingplugin)
 
 # ── Tests ──────────────────────────────────────────────────────────────
+# Each test target compiles only its own test .cpp (plus stubs/fixtures and
+# any page-level UI source it uniquely shares with the app) and links
+# retronest_core / retronest_ui for the shared closure. Include dirs, Qt
+# components, SDL2, chdr, rcheevos and frameworks are inherited PUBLIC.
 enable_testing()
 find_package(Qt6 REQUIRED COMPONENTS Test)
 
-add_executable(test_ini_file
-    tests/test_ini_file.cpp
-    src/core/ini_file.cpp
-)
-target_include_directories(test_ini_file PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_ini_file PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_ini_file tests/test_ini_file.cpp)
+target_link_libraries(test_ini_file PRIVATE retronest_core Qt6::Test)
 add_test(NAME IniFile COMMAND test_ini_file)
 
-add_executable(test_path_overrides_store
-    tests/test_path_overrides_store.cpp
-    src/core/path_overrides_store.cpp
-)
-target_include_directories(test_path_overrides_store PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_path_overrides_store PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_path_overrides_store tests/test_path_overrides_store.cpp)
+target_link_libraries(test_path_overrides_store PRIVATE retronest_core Qt6::Test)
 add_test(NAME PathOverridesStore COMMAND test_path_overrides_store)
 
-add_executable(test_database_migrations
-    tests/test_database_migrations.cpp
-    src/core/database.cpp
-)
-target_include_directories(test_database_migrations PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_database_migrations PRIVATE Qt6::Core Qt6::Sql Qt6::Test)
+add_executable(test_database_migrations tests/test_database_migrations.cpp)
+target_link_libraries(test_database_migrations PRIVATE retronest_core Qt6::Test)
 add_test(NAME DatabaseMigrations COMMAND test_database_migrations)
 
-add_executable(test_patch_ini_keys
-    tests/test_patch_ini_keys.cpp
-    src/adapters/emulator_adapter.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-)
-set_target_properties(test_patch_ini_keys PROPERTIES AUTOMOC ON)
-target_include_directories(test_patch_ini_keys PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_patch_ini_keys PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_executable(test_patch_ini_keys tests/test_patch_ini_keys.cpp)
+target_link_libraries(test_patch_ini_keys PRIVATE retronest_core Qt6::Test)
 add_test(NAME PatchIniKeys COMMAND test_patch_ini_keys)
 
-add_executable(test_libretro_hotkey_defs
-    tests/test_libretro_hotkey_defs.cpp
-    src/core/libretro/libretro_hotkey_defs.cpp)
-set_target_properties(test_libretro_hotkey_defs PROPERTIES AUTOMOC ON)
-target_include_directories(test_libretro_hotkey_defs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_libretro_hotkey_defs PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_libretro_hotkey_defs tests/test_libretro_hotkey_defs.cpp)
+target_link_libraries(test_libretro_hotkey_defs PRIVATE retronest_core Qt6::Test)
 add_test(NAME LibretroHotkeyDefs COMMAND test_libretro_hotkey_defs)
 
-add_executable(test_hotkey_service_libretro
-    tests/test_hotkey_service_libretro.cpp
-    src/services/hotkey_service.cpp
-    src/core/libretro/libretro_hotkey_defs.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/adapter_registry.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/dolphin_libretro_adapter.cpp
-    src/adapters/libretro/duckstation_libretro_adapter.cpp
-    src/adapters/libretro/mgba_libretro_adapter.cpp
-    src/adapters/libretro/pcsx2_libretro_adapter.cpp
-    src/adapters/libretro/ppsspp_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-    src/core/path_overrides_store.cpp
-    src/core/database.cpp
-    src/core/manifest_loader.cpp
-    src/core/sdl_input_manager.cpp
-)
-set_target_properties(test_hotkey_service_libretro PROPERTIES AUTOMOC ON)
-target_include_directories(test_hotkey_service_libretro PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
-)
-target_link_libraries(test_hotkey_service_libretro PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
+add_executable(test_hotkey_service_libretro tests/test_hotkey_service_libretro.cpp)
+target_link_libraries(test_hotkey_service_libretro PRIVATE retronest_core Qt6::Test)
 add_test(NAME HotkeyServiceLibretro COMMAND test_hotkey_service_libretro)
 
-add_executable(test_hotkey_matcher
-    tests/test_hotkey_matcher.cpp
-    src/core/libretro/hotkey_matcher.cpp)
-set_target_properties(test_hotkey_matcher PROPERTIES AUTOMOC ON)
-target_include_directories(test_hotkey_matcher PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_hotkey_matcher PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+add_executable(test_hotkey_matcher tests/test_hotkey_matcher.cpp)
+target_link_libraries(test_hotkey_matcher PRIVATE retronest_core Qt6::Test)
 add_test(NAME HotkeyMatcher COMMAND test_hotkey_matcher)
 
-add_executable(test_hotkey_dispatcher
-    tests/test_hotkey_dispatcher.cpp
-    src/core/libretro/hotkey_dispatcher.cpp
-    src/core/libretro/libretro_hotkey_defs.cpp)
-set_target_properties(test_hotkey_dispatcher PROPERTIES AUTOMOC ON)
-target_include_directories(test_hotkey_dispatcher PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_hotkey_dispatcher PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_hotkey_dispatcher tests/test_hotkey_dispatcher.cpp)
+target_link_libraries(test_hotkey_dispatcher PRIVATE retronest_core Qt6::Test)
 add_test(NAME HotkeyDispatcher COMMAND test_hotkey_dispatcher)
 
-add_executable(test_rom_scanner
-    tests/test_rom_scanner.cpp
-    src/services/rom_scanner.cpp
-    src/core/manifest_loader.cpp
-    src/core/paths.cpp
-    src/core/database.cpp
-    src/core/iso9660_reader.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/adapter_registry.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/dolphin_libretro_adapter.cpp
-    src/adapters/libretro/duckstation_libretro_adapter.cpp
-    src/adapters/libretro/mgba_libretro_adapter.cpp
-    src/adapters/libretro/pcsx2_libretro_adapter.cpp
-    src/adapters/libretro/ppsspp_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/sfo_parser.cpp
-    src/core/ini_file.cpp
-    src/core/path_overrides_store.cpp
-)
-set_target_properties(test_rom_scanner PROPERTIES AUTOMOC ON)
-target_include_directories(test_rom_scanner PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
-)
-target_link_libraries(test_rom_scanner PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
+add_executable(test_rom_scanner tests/test_rom_scanner.cpp)
+target_link_libraries(test_rom_scanner PRIVATE retronest_core Qt6::Test)
 add_test(NAME RomScanner COMMAND test_rom_scanner)
 
-add_executable(test_iso9660_reader
-    tests/test_iso9660_reader.cpp
-    src/core/iso9660_reader.cpp
-)
-target_include_directories(test_iso9660_reader PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_iso9660_reader PRIVATE Qt6::Core Qt6::Test chdr-static)
+add_executable(test_iso9660_reader tests/test_iso9660_reader.cpp)
+target_link_libraries(test_iso9660_reader PRIVATE retronest_core Qt6::Test)
 add_test(NAME Iso9660Reader COMMAND test_iso9660_reader)
 
-add_executable(test_sfo_parser
-    tests/test_sfo_parser.cpp
-    src/core/sfo_parser.cpp
-)
-target_include_directories(test_sfo_parser PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_sfo_parser PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_sfo_parser tests/test_sfo_parser.cpp)
+target_link_libraries(test_sfo_parser PRIVATE retronest_core Qt6::Test)
 add_test(NAME SfoParser COMMAND test_sfo_parser)
 
-add_executable(test_bitmask_helpers
-    tests/test_bitmask_helpers.cpp
-)
-set_target_properties(test_bitmask_helpers PROPERTIES AUTOMOC ON)
-target_include_directories(test_bitmask_helpers PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_bitmask_helpers PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_bitmask_helpers tests/test_bitmask_helpers.cpp)
+target_link_libraries(test_bitmask_helpers PRIVATE retronest_core Qt6::Test)
 add_test(NAME BitmaskHelpers COMMAND test_bitmask_helpers)
 
-add_executable(test_setting_dependency
-    tests/test_setting_dependency.cpp
-)
-set_target_properties(test_setting_dependency PROPERTIES AUTOMOC ON)
-target_include_directories(test_setting_dependency PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_setting_dependency PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_setting_dependency tests/test_setting_dependency.cpp)
+target_link_libraries(test_setting_dependency PRIVATE retronest_core Qt6::Test)
 add_test(NAME SettingDependency COMMAND test_setting_dependency)
 
 add_executable(test_setting_def_storage tests/test_setting_def_storage.cpp)
-target_include_directories(test_setting_def_storage PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_setting_def_storage PRIVATE Qt6::Core Qt6::Test)
+target_link_libraries(test_setting_def_storage PRIVATE retronest_core Qt6::Test)
 add_test(NAME SettingDefStorage COMMAND test_setting_def_storage)
 
-add_executable(test_manifest_libretro_fields tests/test_manifest_libretro_fields.cpp
-    src/core/manifest_loader.cpp)
-target_include_directories(test_manifest_libretro_fields PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_manifest_libretro_fields PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_manifest_libretro_fields tests/test_manifest_libretro_fields.cpp)
+target_link_libraries(test_manifest_libretro_fields PRIVATE retronest_core Qt6::Test)
 add_test(NAME ManifestLibretroFields COMMAND test_manifest_libretro_fields)
 
-add_executable(test_core_loader
-    tests/test_core_loader.cpp
-    src/core/libretro/core_loader.cpp)
-set_target_properties(test_core_loader PROPERTIES AUTOMOC ON)
-target_include_directories(test_core_loader PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
-target_link_libraries(test_core_loader PRIVATE Qt6::Core Qt6::Test ${CMAKE_DL_LIBS})
+add_executable(test_core_loader tests/test_core_loader.cpp)
+target_link_libraries(test_core_loader PRIVATE retronest_core Qt6::Test)
 add_dependencies(test_core_loader fake_libretro_core)
 add_test(NAME CoreLoader COMMAND test_core_loader)
 
 # SP8: the three test_pcsx2_* QtTest targets were deleted with the
-# standalone PCSX2Adapter. They asserted against standalone-specific INI
-# key names (e.g. "AspectRatio", "OsdShowFPS") that the libretro core
-# uses in prefixed form (pcsx2_*). The libretro adapter's option schema
-# is covered end-to-end by tools/test_core_options/ (42/42 passing).
+# standalone PCSX2Adapter (they asserted standalone-specific INI key names
+# that the libretro core uses in prefixed pcsx2_* form). PCSX2 option-schema
+# coverage is being restored as a dedicated QtTest target,
+# test_pcsx2_libretro_schema, alongside the other *_libretro_schema guards.
 add_executable(test_controller_bindings_view
     tests/test_controller_bindings_view.cpp
     tests/stubs/app_controller_stub.cpp
     src/ui/settings/controller_bindings_view.cpp
-    src/ui/settings/widgets/settings_card.cpp
-    src/ui/settings/widgets/settings_combo_row.cpp
-    src/ui/settings/widgets/settings_toggle.cpp
-    src/ui/settings/widgets/settings_slider_row.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/adapter_registry.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/dolphin_libretro_adapter.cpp
-    src/adapters/libretro/duckstation_libretro_adapter.cpp
-    src/adapters/libretro/mgba_libretro_adapter.cpp
-    src/adapters/libretro/pcsx2_libretro_adapter.cpp
-    src/adapters/libretro/ppsspp_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-    src/core/manifest_loader.cpp
-    src/core/database.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/path_overrides_store.cpp
-)
-set_target_properties(test_controller_bindings_view PROPERTIES AUTOMOC ON)
-target_include_directories(test_controller_bindings_view PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
 )
 target_link_libraries(test_controller_bindings_view PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Svg Qt6::Network Qt6::Sql Qt6::Test
-    chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS}
-    "-framework OpenGL" "-framework IOSurface"
+    retronest_core retronest_ui Qt6::Svg Qt6::Test
 )
 add_test(NAME ControllerBindingsView COMMAND test_controller_bindings_view)
 
-add_executable(test_hotkey_binding_row
-    tests/test_hotkey_binding_row.cpp
-    src/ui/settings/widgets/hotkey_binding_row.cpp
-)
-set_target_properties(test_hotkey_binding_row PROPERTIES AUTOMOC ON)
-target_include_directories(test_hotkey_binding_row PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-target_link_libraries(test_hotkey_binding_row PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test
-)
+add_executable(test_hotkey_binding_row tests/test_hotkey_binding_row.cpp)
+target_link_libraries(test_hotkey_binding_row PRIVATE retronest_ui Qt6::Test)
 add_test(NAME HotkeyBindingRow COMMAND test_hotkey_binding_row)
 
-add_executable(test_ppsspp_libretro_bindings
-    tests/test_ppsspp_libretro_bindings.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/ppsspp_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/path_overrides_store.cpp
-)
-set_target_properties(test_ppsspp_libretro_bindings PROPERTIES AUTOMOC ON)
-target_include_directories(test_ppsspp_libretro_bindings PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
-)
-target_link_libraries(test_ppsspp_libretro_bindings PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static rcheevos_static
-    ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface"
-)
+add_executable(test_ppsspp_libretro_bindings tests/test_ppsspp_libretro_bindings.cpp)
+target_link_libraries(test_ppsspp_libretro_bindings PRIVATE retronest_core Qt6::Test)
 add_test(NAME PpssppLibretroBindings COMMAND test_ppsspp_libretro_bindings)
 
-add_executable(test_ppsspp_libretro_schema
-    tests/test_ppsspp_libretro_schema.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/ppsspp_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/path_overrides_store.cpp
-)
-set_target_properties(test_ppsspp_libretro_schema PROPERTIES AUTOMOC ON)
-target_include_directories(test_ppsspp_libretro_schema PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
-)
-target_link_libraries(test_ppsspp_libretro_schema PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static rcheevos_static
-    ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface"
-)
+add_executable(test_ppsspp_libretro_schema tests/test_ppsspp_libretro_schema.cpp)
+target_link_libraries(test_ppsspp_libretro_schema PRIVATE retronest_core Qt6::Test)
 add_test(NAME PpssppLibretroSchema COMMAND test_ppsspp_libretro_schema)
 
 # SP6 Task 10: DolphinLibretroAdapter settings schema shape guard.
-add_executable(test_dolphin_libretro_schema
-    tests/test_dolphin_libretro_schema.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/dolphin_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/path_overrides_store.cpp
-)
-set_target_properties(test_dolphin_libretro_schema PROPERTIES AUTOMOC ON)
-target_include_directories(test_dolphin_libretro_schema PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
-)
-target_link_libraries(test_dolphin_libretro_schema PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static rcheevos_static
-    ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface"
-)
+add_executable(test_dolphin_libretro_schema tests/test_dolphin_libretro_schema.cpp)
+target_link_libraries(test_dolphin_libretro_schema PRIVATE retronest_core Qt6::Test)
 add_test(NAME DolphinLibretroSchema COMMAND test_dolphin_libretro_schema)
 
 # Phase 5: DuckStationLibretroAdapter settings-schema structure + first-run defaults.
-add_executable(test_duckstation_libretro_schema
-    tests/test_duckstation_libretro_schema.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/duckstation_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/path_overrides_store.cpp
-)
-set_target_properties(test_duckstation_libretro_schema PROPERTIES AUTOMOC ON)
-target_include_directories(test_duckstation_libretro_schema PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
-)
-target_link_libraries(test_duckstation_libretro_schema PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static rcheevos_static
-    ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface"
-)
+add_executable(test_duckstation_libretro_schema tests/test_duckstation_libretro_schema.cpp)
+target_link_libraries(test_duckstation_libretro_schema PRIVATE retronest_core Qt6::Test)
 add_test(NAME DuckStationLibretroSchema COMMAND test_duckstation_libretro_schema)
 
+# Pcsx2LibretroAdapter settings-schema + hub/preview/controller shape guard
+# (restores the coverage lost when the SP8 tools/test_core_options harness
+# was retired).
+add_executable(test_pcsx2_libretro_schema tests/test_pcsx2_libretro_schema.cpp)
+target_link_libraries(test_pcsx2_libretro_schema PRIVATE retronest_core Qt6::Test)
+add_test(NAME Pcsx2LibretroSchema COMMAND test_pcsx2_libretro_schema)
+
 # SP5: DolphinLibretroAdapter controller schema (GCPad + Wii Classic).
-add_executable(test_dolphin_libretro_controller_schema
-    tests/test_dolphin_libretro_controller_schema.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/dolphin_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/path_overrides_store.cpp
-)
-set_target_properties(test_dolphin_libretro_controller_schema PROPERTIES AUTOMOC ON)
-target_include_directories(test_dolphin_libretro_controller_schema PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
-)
-target_link_libraries(test_dolphin_libretro_controller_schema PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test chdr-static rcheevos_static
-    ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface"
-)
+add_executable(test_dolphin_libretro_controller_schema tests/test_dolphin_libretro_controller_schema.cpp)
+target_link_libraries(test_dolphin_libretro_controller_schema PRIVATE retronest_core Qt6::Test)
 add_test(NAME DolphinLibretroControllerSchema COMMAND test_dolphin_libretro_controller_schema)
 
 add_executable(test_generic_hotkey_page
     tests/test_generic_hotkey_page.cpp
     tests/stubs/generic_hotkey_page_stubs.cpp
     src/ui/settings/generic_hotkey_page.cpp
-    src/ui/settings/widgets/hotkey_binding_row.cpp
-    src/ui/settings/widgets/settings_section_header.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/libretro/input_router.cpp
-)
-set_target_properties(test_generic_hotkey_page PROPERTIES AUTOMOC ON)
-target_include_directories(test_generic_hotkey_page PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${SDL2_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
 )
 target_link_libraries(test_generic_hotkey_page PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Sql Qt6::Test ${SDL2_LIBRARIES}
+    retronest_core retronest_ui Qt6::Test
 )
 add_test(NAME GenericHotkeyPage COMMAND test_generic_hotkey_page)
 
-add_executable(test_quick_settings_file_field
-    tests/test_quick_settings_file_field.cpp
-    src/services/config_service.cpp
-    src/services/hotkey_service.cpp
-    src/core/libretro/libretro_hotkey_defs.cpp
-    src/core/path_overrides_store.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/adapter_registry.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/dolphin_libretro_adapter.cpp
-    src/adapters/libretro/duckstation_libretro_adapter.cpp
-    src/adapters/libretro/mgba_libretro_adapter.cpp
-    src/adapters/libretro/pcsx2_libretro_adapter.cpp
-    src/adapters/libretro/ppsspp_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-    src/core/database.cpp
-    src/core/manifest_loader.cpp
-    src/core/sdl_input_manager.cpp
-)
-set_target_properties(test_quick_settings_file_field PROPERTIES AUTOMOC ON)
-target_include_directories(test_quick_settings_file_field PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
-)
-target_link_libraries(test_quick_settings_file_field PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
+add_executable(test_quick_settings_file_field tests/test_quick_settings_file_field.cpp)
+target_link_libraries(test_quick_settings_file_field PRIVATE retronest_core Qt6::Test)
 add_test(NAME QuickSettingsFileField COMMAND test_quick_settings_file_field)
 
-add_executable(test_settings_toggle
-    tests/test_settings_toggle.cpp
-    src/ui/settings/widgets/settings_toggle.cpp
-)
-set_target_properties(test_settings_toggle PROPERTIES AUTOMOC ON)
-target_include_directories(test_settings_toggle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_settings_toggle PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_executable(test_settings_toggle tests/test_settings_toggle.cpp)
+target_link_libraries(test_settings_toggle PRIVATE retronest_ui Qt6::Test)
 add_test(NAME SettingsToggle COMMAND test_settings_toggle)
 
-add_executable(test_settings_combo_row
-    tests/test_settings_combo_row.cpp
-    src/ui/settings/widgets/settings_combo_row.cpp
-)
-set_target_properties(test_settings_combo_row PROPERTIES AUTOMOC ON)
-target_include_directories(test_settings_combo_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_settings_combo_row PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_executable(test_settings_combo_row tests/test_settings_combo_row.cpp)
+target_link_libraries(test_settings_combo_row PRIVATE retronest_ui Qt6::Test)
 add_test(NAME SettingsComboRow COMMAND test_settings_combo_row)
 
-add_executable(test_settings_slider_row
-    tests/test_settings_slider_row.cpp
-    src/ui/settings/widgets/settings_slider_row.cpp
-)
-set_target_properties(test_settings_slider_row PROPERTIES AUTOMOC ON)
-target_include_directories(test_settings_slider_row PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_settings_slider_row PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_executable(test_settings_slider_row tests/test_settings_slider_row.cpp)
+target_link_libraries(test_settings_slider_row PRIVATE retronest_ui Qt6::Test)
 add_test(NAME SettingsSliderRow COMMAND test_settings_slider_row)
 
-add_executable(test_settings_description_bar
-    tests/test_settings_description_bar.cpp
-    src/ui/settings/widgets/settings_description_bar.cpp
-)
-set_target_properties(test_settings_description_bar PROPERTIES AUTOMOC ON)
-target_include_directories(test_settings_description_bar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${SDL2_INCLUDE_DIRS})
-target_link_libraries(test_settings_description_bar PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_executable(test_settings_description_bar tests/test_settings_description_bar.cpp)
+target_link_libraries(test_settings_description_bar PRIVATE retronest_ui Qt6::Test)
 add_test(NAME SettingsDescriptionBar COMMAND test_settings_description_bar)
 
-add_executable(test_aspect_ratio_preview
-    tests/test_aspect_ratio_preview.cpp
-    src/ui/settings/widgets/preview/aspect_ratio_preview.cpp
-)
-set_target_properties(test_aspect_ratio_preview PROPERTIES AUTOMOC ON)
-target_include_directories(test_aspect_ratio_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_aspect_ratio_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_executable(test_aspect_ratio_preview tests/test_aspect_ratio_preview.cpp)
+target_link_libraries(test_aspect_ratio_preview PRIVATE retronest_ui Qt6::Test)
 add_test(NAME AspectRatioPreview COMMAND test_aspect_ratio_preview)
 
-add_executable(test_osd_preview
-    tests/test_osd_preview.cpp
-    src/ui/settings/widgets/preview/osd_preview.cpp
-)
-set_target_properties(test_osd_preview PROPERTIES AUTOMOC ON)
-target_include_directories(test_osd_preview PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_osd_preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
+add_executable(test_osd_preview tests/test_osd_preview.cpp)
+target_link_libraries(test_osd_preview PRIVATE retronest_ui Qt6::Test)
 add_test(NAME OsdPreview COMMAND test_osd_preview)
 
-add_executable(test_setting_def_ini_routing
-    tests/test_setting_def_ini_routing.cpp
-    src/core/ini_file.cpp
-)
-set_target_properties(test_setting_def_ini_routing PROPERTIES AUTOMOC ON)
-target_include_directories(test_setting_def_ini_routing PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_setting_def_ini_routing PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_setting_def_ini_routing tests/test_setting_def_ini_routing.cpp)
+target_link_libraries(test_setting_def_ini_routing PRIVATE retronest_core Qt6::Test)
 add_test(NAME SettingDefIniRouting COMMAND test_setting_def_ini_routing)
 
-add_executable(test_video_software
-    tests/test_video_software.cpp
-    src/core/libretro/video_software.cpp)
-set_target_properties(test_video_software PROPERTIES AUTOMOC ON)
-target_include_directories(test_video_software PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
-target_link_libraries(test_video_software PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+add_executable(test_video_software tests/test_video_software.cpp)
+target_link_libraries(test_video_software PRIVATE retronest_core Qt6::Test)
 add_test(NAME VideoSoftware COMMAND test_video_software)
 
-add_executable(test_audio_sink
-    tests/test_audio_sink.cpp
-    src/core/libretro/audio_sink.cpp)
-set_target_properties(test_audio_sink PROPERTIES AUTOMOC ON)
-target_include_directories(test_audio_sink PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS})
-target_link_libraries(test_audio_sink PRIVATE Qt6::Core Qt6::Test ${SDL2_LIBRARIES})
+add_executable(test_audio_sink tests/test_audio_sink.cpp)
+target_link_libraries(test_audio_sink PRIVATE retronest_core Qt6::Test)
 add_test(NAME AudioSink COMMAND test_audio_sink)
 
-add_executable(test_audio_sink_mute_volume
-    tests/test_audio_sink_mute_volume.cpp
-    src/core/libretro/audio_sink.cpp)
-set_target_properties(test_audio_sink_mute_volume PROPERTIES AUTOMOC ON)
-target_include_directories(test_audio_sink_mute_volume PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS})
-target_link_libraries(test_audio_sink_mute_volume PRIVATE Qt6::Core Qt6::Test ${SDL2_LIBRARIES})
+add_executable(test_audio_sink_mute_volume tests/test_audio_sink_mute_volume.cpp)
+target_link_libraries(test_audio_sink_mute_volume PRIVATE retronest_core Qt6::Test)
 add_test(NAME AudioSinkMuteVolume COMMAND test_audio_sink_mute_volume)
 
 add_executable(test_game_session_save_slot
     tests/test_game_session_save_slot.cpp
+    # game_session.cpp stays out of retronest_core (see note on the lib) —
+    # it references LibretroGLItem (setVideoHardware, window(), update())
+    # inside preShutdownRenderFence, so this test compiles it directly
+    # together with the item's translation unit and links Qt::Quick.
     src/core/game_session.cpp
-    src/services/config_service.cpp
-    src/services/hotkey_service.cpp
-    src/core/libretro/libretro_hotkey_defs.cpp
-    src/core/path_overrides_store.cpp
-    src/adapters/emulator_adapter.cpp
-    src/adapters/adapter_registry.cpp
-    src/adapters/libretro/libretro_adapter.cpp
-    src/adapters/libretro/dolphin_libretro_adapter.cpp
-    src/adapters/libretro/duckstation_libretro_adapter.cpp
-    src/adapters/libretro/mgba_libretro_adapter.cpp
-    src/adapters/libretro/pcsx2_libretro_adapter.cpp
-    src/adapters/libretro/ppsspp_libretro_adapter.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/frontend_settings_store.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/ini_file.cpp
-    src/core/iso9660_reader.cpp
-    src/core/sfo_parser.cpp
-    src/core/paths.cpp
-    src/core/database.cpp
-    src/core/manifest_loader.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/path_overrides_store.cpp
-    # game_session.cpp now references LibretroGLItem (setVideoHardware,
-    # window(), update()) inside preShutdownRenderFence, so this test
-    # target needs the item's translation unit and Qt::Quick.
     src/ui/libretro/libretro_gl_item.mm
 )
-set_target_properties(test_game_session_save_slot PROPERTIES AUTOMOC ON)
-target_include_directories(test_game_session_save_slot PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS}
+target_link_libraries(test_game_session_save_slot PRIVATE
+    retronest_core Qt6::Quick Qt6::Test
 )
-target_link_libraries(test_game_session_save_slot PRIVATE Qt6::Core Qt6::Gui Qt6::Network Qt6::Quick Qt6::Sql Qt6::Test chdr-static rcheevos_static ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} "-framework OpenGL" "-framework IOSurface")
 add_test(NAME GameSessionSaveSlot COMMAND test_game_session_save_slot)
 
-add_executable(test_input_router
-    tests/test_input_router.cpp
-    src/core/libretro/input_router.cpp)
-set_target_properties(test_input_router PROPERTIES AUTOMOC ON)
-target_include_directories(test_input_router PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
-target_link_libraries(test_input_router PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_input_router tests/test_input_router.cpp)
+target_link_libraries(test_input_router PRIVATE retronest_core Qt6::Test)
 add_test(NAME InputRouter COMMAND test_input_router)
 
-add_executable(test_options_store
-    tests/test_options_store.cpp
-    src/core/libretro/options_store.cpp)
-set_target_properties(test_options_store PROPERTIES AUTOMOC ON)
-target_include_directories(test_options_store PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_options_store PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_options_store tests/test_options_store.cpp)
+target_link_libraries(test_options_store PRIVATE retronest_core Qt6::Test)
 add_test(NAME OptionsStore COMMAND test_options_store)
 
-add_executable(test_environment_callbacks
-    tests/test_environment_callbacks.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/path_overrides_store.cpp)
-set_target_properties(test_environment_callbacks PROPERTIES AUTOMOC ON)
-target_include_directories(test_environment_callbacks PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
-target_link_libraries(test_environment_callbacks PRIVATE Qt6::Core Qt6::Test)
+add_executable(test_environment_callbacks tests/test_environment_callbacks.cpp)
+target_link_libraries(test_environment_callbacks PRIVATE retronest_core Qt6::Test)
 add_test(NAME EnvironmentCallbacks COMMAND test_environment_callbacks)
 
-add_executable(test_core_runtime
-    tests/test_core_runtime.cpp
-    src/core/libretro/core_runtime.cpp
-    src/core/libretro/video_hardware_gl.mm
-    src/core/libretro/hotkey_matcher.cpp
-    src/core/libretro/rcheevos_runtime.cpp
-    src/core/libretro/core_loader.cpp
-    src/core/libretro/environment_callbacks.cpp
-    src/core/libretro/options_store.cpp
-    src/core/libretro/video_software.cpp
-    src/core/libretro/audio_sink.cpp
-    src/core/libretro/input_router.cpp
-    src/core/libretro/retro_log.cpp
-    src/core/sdl_input_manager.cpp
-    src/core/path_overrides_store.cpp)
-set_target_properties(test_core_runtime PROPERTIES AUTOMOC ON)
-target_include_directories(test_core_runtime PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
-    ${SDL2_INCLUDE_DIRS})
-target_link_libraries(test_core_runtime PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Network Qt6::Test ${CMAKE_DL_LIBS} ${SDL2_LIBRARIES} rcheevos_static
-    "-framework OpenGL" "-framework IOSurface")
+add_executable(test_core_runtime tests/test_core_runtime.cpp)
+target_link_libraries(test_core_runtime PRIVATE retronest_core Qt6::Test)
 add_dependencies(test_core_runtime fake_libretro_core)
 add_test(NAME CoreRuntime COMMAND test_core_runtime)
 
-add_executable(test_patches_sidecar
-    tests/test_patches_sidecar.cpp
-    src/services/patches_sidecar.cpp
-)
-target_include_directories(test_patches_sidecar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_patches_sidecar PRIVATE Qt6::Core)
+add_executable(test_patches_sidecar tests/test_patches_sidecar.cpp)
+target_link_libraries(test_patches_sidecar PRIVATE retronest_core)
 add_test(NAME PatchesSidecar COMMAND test_patches_sidecar)
 
-add_executable(test_patches_installer
-    tests/test_patches_installer.cpp
-    src/services/patches_installer.cpp
-    src/services/patches_sidecar.cpp
-    src/services/installer_utils.cpp
-)
-set_target_properties(test_patches_installer PROPERTIES AUTOMOC ON)
-target_include_directories(test_patches_installer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(test_patches_installer PRIVATE Qt6::Core Qt6::Network Qt6::Concurrent)
+add_executable(test_patches_installer tests/test_patches_installer.cpp)
+target_link_libraries(test_patches_installer PRIVATE retronest_core)
 add_test(NAME PatchesInstaller COMMAND test_patches_installer)
 
 add_library(fake_libretro_core MODULE tests/fixtures/fake_libretro_core.c)

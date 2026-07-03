@@ -81,15 +81,24 @@ also rebuilds PCSX2/mGBA cores):
 arch -x86_64 /usr/local/bin/cmake -S cpp -B cpp/build-x86_64 \
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
     -DCMAKE_PREFIX_PATH="/usr/local/opt/qt;/usr/local/opt/sdl2"
-arch -x86_64 /usr/local/bin/cmake --build cpp/build-x86_64 --target RetroNest -j 6
+arch -x86_64 /usr/local/bin/cmake --build cpp/build-x86_64 -j 6
+# FIRST deploy of a fresh build dir only — after that a POST_BUILD hook
+# re-runs macdeployqt automatically whenever the app binary relinks:
 arch -x86_64 /usr/local/opt/qt/bin/macdeployqt cpp/build-x86_64/RetroNest.app \
     -qmldir=cpp/qml -no-codesign -always-overwrite
 # pure-x86 binary → auto-runs under Rosetta, no Finder toggle:
 cpp/build-x86_64/RetroNest.app/Contents/MacOS/RetroNest > /tmp/rn.log 2>&1
 ```
-- Build **`--target RetroNest`**, not the default `all` — a few x86 test
-  targets fail to link (`DuckStationLibretroAdapter` vtable missing from their
-  CMake source lists; the app itself is unaffected).
+- Building the default `all` is fine (shared sources live in the
+  `retronest_core`/`retronest_ui` static libraries — tests no longer carry
+  hand-copied source lists). Run the suite after building:
+  `arch -x86_64 /usr/local/bin/ctest --test-dir cpp/build-x86_64 --output-on-failure`.
+  CI (`.github/workflows/tests.yml`) runs the same suite natively on arm64
+  for every push/PR to main.
+- **macdeployqt is self-maintaining**: once a bundle has been deployed once,
+  every relink re-runs it via a POST_BUILD hook (takes a few minutes under
+  Rosetta — that's the hook working, not a hang). The old failure mode
+  (incremental rebuild → Qt double-load abort at launch) is gone.
 - The DuckStation libretro core must be **universal**: build via its
   `package.sh` with **no** `--arm64-only` flag.
 - **Dolphin save states are arch-sensitive** — states made under arm64 won't
