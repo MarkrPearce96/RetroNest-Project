@@ -46,7 +46,7 @@ target_include_directories(rcheevos_static PUBLIC ${rcheevos_SOURCE_DIR}/include
 # by RetroNest's RcheevosRuntime to translate RA memory addresses through
 # libretro's memory descriptors.
 target_include_directories(rcheevos_static PUBLIC ${rcheevos_SOURCE_DIR}/src)
-target_include_directories(rcheevos_static PRIVATE ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+target_include_directories(rcheevos_static PRIVATE ${CMAKE_SOURCE_DIR}/../vendor/retronest-libretro)
 # Enable hash-based game identification (rc_client_begin_identify_and_load_game).
 target_compile_definitions(rcheevos_static PUBLIC RC_CLIENT_SUPPORTS_HASH)
 
@@ -146,7 +146,7 @@ add_library(retronest_core STATIC
 set_target_properties(retronest_core PROPERTIES AUTOMOC ON)
 target_include_directories(retronest_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${CMAKE_SOURCE_DIR}/../vendor/retronest-libretro
     ${SDL2_INCLUDE_DIRS}
 )
 # PUBLIC: consumers (app + every test) inherit Qt components, third-party
@@ -196,7 +196,7 @@ add_library(retronest_ui STATIC
 set_target_properties(retronest_ui PROPERTIES AUTOMOC ON)
 target_include_directories(retronest_ui PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${CMAKE_SOURCE_DIR}/../vendor/retronest-libretro
     ${SDL2_INCLUDE_DIRS}
 )
 target_link_libraries(retronest_ui PUBLIC
@@ -316,7 +316,7 @@ qt_add_qml_module(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${SDL2_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${CMAKE_SOURCE_DIR}/../vendor/retronest-libretro
 )
 
 # Only src/services/scraper_credentials.cpp consumes these, and that TU is
@@ -419,7 +419,7 @@ qt_add_library(appui_backing STATIC)
 target_include_directories(appui_backing PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/libretro
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api
+    ${CMAKE_SOURCE_DIR}/../vendor/retronest-libretro
 )
 # libretro_gl_item.mm calls into VideoHardwareGL (which uses Metal /
 # IOSurface APIs) — the QML module needs those frameworks too.
@@ -642,6 +642,11 @@ add_executable(test_pcsx2_libretro_schema tests/test_pcsx2_libretro_schema.cpp)
 target_link_libraries(test_pcsx2_libretro_schema PRIVATE retronest_core Qt6::Test)
 add_test(NAME Pcsx2LibretroSchema COMMAND test_pcsx2_libretro_schema)
 
+# Packet 7 Stage 1: ABI pin for the retronest-libretro contract package.
+add_executable(test_retronest_contract tests/test_retronest_contract.cpp)
+target_link_libraries(test_retronest_contract PRIVATE retronest_core Qt6::Test)
+add_test(NAME RetronestContract COMMAND test_retronest_contract)
+
 # SP5: DolphinLibretroAdapter controller schema (GCPad + Wii Classic).
 add_executable(test_dolphin_libretro_controller_schema tests/test_dolphin_libretro_controller_schema.cpp)
 target_link_libraries(test_dolphin_libretro_controller_schema PRIVATE retronest_core Qt6::Test)
@@ -745,4 +750,4 @@ set_target_properties(fake_libretro_core PROPERTIES
     PREFIX "" OUTPUT_NAME "fake_libretro_core"
     SUFFIX ".dylib")
 target_include_directories(fake_libretro_core PRIVATE
-    ${CMAKE_SOURCE_DIR}/../vendor/libretro-api)
+    ${CMAKE_SOURCE_DIR}/../vendor/retronest-libretro)

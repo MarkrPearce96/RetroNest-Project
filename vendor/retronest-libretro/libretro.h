@@ -1,3 +1,11 @@
+/* ============================================================================
+ * RetroNest pinned libretro.h — part of the retronest-libretro contract
+ * package. CANONICAL COPY: RetroNest-Project/vendor/retronest-libretro/.
+ * Source: libretro/RetroArch libretro-common/include/libretro.h (see
+ * README.md in this directory for the refresh procedure).
+ * Synced byte-identical into every core fork by sync.sh — DO NOT EDIT the
+ * vendored copies; edit the canonical file and re-run sync.sh.
+ * ==========================================================================*/
 /*!
  * libretro.h is a simple API that allows for the creation of games and emulators.
  *
