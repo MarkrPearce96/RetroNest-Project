@@ -1,3 +1,7 @@
+/* Compile-check this fake core's retronest_* export signatures against the
+ * canonical contract prototypes. */
+#define RETRONEST_LIBRETRO_CORE
+#include "retronest_libretro.h"
 #include "libretro.h"
 #include <string.h>
 #include <stdlib.h>

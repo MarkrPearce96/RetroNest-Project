@@ -1,6 +1,7 @@
 #pragma once
 
 #include "libretro.h"
+#include "retronest_libretro.h"
 #include <QString>
 
 /**
@@ -38,7 +39,7 @@ struct CoreSymbols {
     // not. CoreLoader resolves via resolveOptional, so this stays
     // nullptr when not exported. CoreRuntime checks for null before
     // calling.
-    using retronest_set_paused_t = void (*)(bool);
+    using retronest_set_paused_t = ::retronest_set_paused_t;   // from retronest_libretro.h
     retronest_set_paused_t retronest_set_paused = nullptr;
 
     // Optional. PCSX2 libretro exports this so the host can engage the
@@ -46,14 +47,14 @@ struct CoreSymbols {
     // PCSX2 because the EmuThread paces itself internally. Cores
     // without it use the standard speed-multiplier path (works for
     // synchronous cores like mGBA).
-    using retronest_set_fast_forward_t = void (*)(bool);
+    using retronest_set_fast_forward_t = ::retronest_set_fast_forward_t;   // from retronest_libretro.h
     retronest_set_fast_forward_t retronest_set_fast_forward = nullptr;
 
     // Optional. PCSX2 exports this after a shutdown-timeout: true means the
     // core detached a wedged VM thread, and the host MUST skip retro_deinit
     // and dlclose (keep the dylib mapped so the detached thread never runs
     // unmapped code) — see the CoreRuntime teardown wedge check.
-    using retronest_shutdown_wedged_t = bool (*)();
+    using retronest_shutdown_wedged_t = ::retronest_shutdown_wedged_t;   // from retronest_libretro.h
     retronest_shutdown_wedged_t retronest_shutdown_wedged = nullptr;
 };
 

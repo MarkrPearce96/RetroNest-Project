@@ -1,59 +1,10 @@
 #pragma once
 #include "libretro.h"
+// Private RETRONEST_ENVIRONMENT_* commands + retronest_game_identity come
+// from the vendored contract package (single source of truth for the
+// host AND all core forks — see vendor/retronest-libretro/README.md).
+#include "retronest_libretro.h"
 #include <cstdint>
-
-// RetroNest-private env command IDs (RETRO_ENVIRONMENT_PRIVATE = 0x20000).
-//
-// 0x20001 — RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW
-//           Used by pcsx2_libretro (and future Metal-backed cores) to fetch
-//           the NSView* that hosts the core's CAMetalLayer. Output pointer
-//           is `void**` written to by the host. Returns false if no native
-//           view is registered (mGBA / software cores hit this case).
-#define RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW (1 | RETRO_ENVIRONMENT_PRIVATE)
-
-// 0x20002 — RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH
-//           Used by pcsx2_libretro to receive a resume-state path from
-//           RetroNest BEFORE the core's VM init runs, so PCSX2 can load
-//           the state via VMBootParameters::save_state — i.e., after
-//           full BIOS init / ELF discovery, which is the only ordering
-//           that produces a runnable VM for cold-resume on launch.
-//           Output is a `const char**` written with a UTF-8 path. The
-//           env handler sets EnvironmentContext::bootStatePathConsumed
-//           on read so CoreRuntime knows to skip the legacy post-load
-//           retro_unserialize block; the QByteArray storage stays alive
-//           for the env_cb call's synchronous duration (clearing it
-//           here would dangle the caller's pointer).
-//           Returns false if no path is set (mGBA / fresh-boot cases).
-#define RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH (2 | RETRO_ENVIRONMENT_PRIVATE)
-
-// Path-override env queries. Each returns the user's override (set via
-// the Paths settings UI; stored in PathOverridesStore) for one PCSX2-
-// owned folder. Same shape as GET_BOOT_STATE_PATH (0x20002): data is
-// const char**, returns true with *data set when override exists,
-// false otherwise. The libretro core falls back to its save_dir-based
-// default when false comes back, so non-RetroNest hosts and mGBA
-// (which doesn't query these) keep working unchanged.
-
-// 0x20003 — RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR
-#define RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR (3 | RETRO_ENVIRONMENT_PRIVATE)
-
-// 0x20004 — RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR
-#define RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR (4 | RETRO_ENVIRONMENT_PRIVATE)
-
-// 0x20005 — RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY
-//           The core CALLS this during retro_load_game to hand us the game's
-//           RetroAchievements hash + serial, both computed via DiscIO so they
-//           work for compressed RVZ (which rcheevos' own path-based hashing
-//           can't read). data is a retronest_game_identity*. We copy both
-//           strings into the EnvironmentContext. The host then identifies the
-//           game by the hash (rc_client_begin_load_game) and lazily stores the
-//           serial. Returns false if data is null.
-#define RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY (5 | RETRO_ENVIRONMENT_PRIVATE)
-
-struct retronest_game_identity {
-    const char* ra_hash;
-    const char* serial;
-};
 
 #include <QByteArray>
 #include <QString>
