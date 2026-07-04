@@ -334,14 +334,44 @@ EmulatorInstaller::InstallResult EmulatorInstaller::postDownload(
         //                       this was the actual 2026-07-04 pcsx2 break).
         //    <base>_resources — shader/metallib and data files.
         const QString baseName = dylibName.chopped(6);  // strip ".dylib"
+        const QString libsSubdir = baseName + "_libs";
         QStringList dylibsToProcess{dylibPath};
+        QStringList bundledLibs;  // just the <base>_libs dylibs (need path repair)
         for (const QString& suffix : {"_libs", "_resources"}) {
             const QString dir = coreDir + "/" + baseName + suffix;
             if (QFileInfo(dir).isDir()) {
-                for (const QFileInfo& f : QDir(dir).entryInfoList({"*.dylib"}, QDir::Files))
+                for (const QFileInfo& f : QDir(dir).entryInfoList({"*.dylib"}, QDir::Files)) {
                     dylibsToProcess << f.absoluteFilePath();
+                    if (suffix == QLatin1String("_libs"))
+                        bundledLibs << f.absoluteFilePath();
+                }
             }
         }
+
+        // Repair inter-library load paths in <base>_libs. dylibbundler applies
+        // ONE install prefix (@loader_path/<base>_libs/) to every rewrite, but
+        // for a lib that itself lives inside <base>_libs the loader dir IS
+        // <base>_libs — so a sibling ref becomes @loader_path/<base>_libs/<base>_libs/lib
+        // (doubled → not found → the whole core fails to dlopen). Rewrite each
+        // bundled lib's sibling references down to @loader_path/<lib>. The main
+        // core (which lives one level up in cores/) keeps the subdir prefix.
+        // Done before signing so the fix is covered by the ad-hoc signature.
+        const QString doubledPrefix = "@loader_path/" + libsSubdir + "/";
+        for (const QString& lib : bundledLibs) {
+            QProcess otool;
+            otool.start("/usr/bin/otool", {"-L", lib});
+            otool.waitForFinished(5000);
+            const QList<QByteArray> lines = otool.readAllStandardOutput().split('\n');
+            for (const QByteArray& raw : lines) {
+                const QString dep = QString::fromUtf8(raw).trimmed().section(' ', 0, 0);
+                if (!dep.startsWith(doubledPrefix)) continue;
+                const QString fixed = "@loader_path/" + dep.mid(doubledPrefix.size());
+                QProcess fix;
+                fix.start("/usr/bin/install_name_tool", {"-change", dep, fixed, lib});
+                fix.waitForFinished(5000);
+            }
+        }
+
         for (const QString& path : dylibsToProcess) {
             QProcess xattr;
             xattr.start("/usr/bin/xattr", {"-d", "com.apple.quarantine", path});
@@ -353,8 +383,8 @@ EmulatorInstaller::InstallResult EmulatorInstaller::postDownload(
                 qWarning() << "[Installer] codesign failed for" << path
                            << csign.readAllStandardError();
         }
-        qInfo() << "[Installer] dequarantined + ad-hoc signed" << dylibsToProcess.size()
-                << "dylib(s) for" << dylibName;
+        qInfo() << "[Installer] repaired" << bundledLibs.size() << "bundled libs, dequarantined + signed"
+                << dylibsToProcess.size() << "dylib(s) for" << dylibName;
 #endif
 
         // Core release zips ship a root-level VERSION file; unzipping into
