@@ -90,6 +90,7 @@ add_library(retronest_core STATIC
     # core/libretro/
     src/core/libretro/options_store.cpp
     src/core/libretro/declared_options.cpp
+    src/core/libretro/core_prober.cpp
     src/core/libretro/frontend_settings_store.cpp
     src/core/libretro/retro_log.cpp
     src/core/libretro/rcheevos_runtime.cpp
@@ -652,6 +653,12 @@ add_test(NAME RetronestContract COMMAND test_retronest_contract)
 add_executable(test_declared_options tests/test_declared_options.cpp)
 target_link_libraries(test_declared_options PRIVATE retronest_core Qt6::Test)
 add_test(NAME DeclaredOptions COMMAND test_declared_options)
+
+# Packet 7 Stage 2: offline sidecar seeding (probes the fake core dylib).
+add_executable(test_core_prober tests/test_core_prober.cpp)
+target_link_libraries(test_core_prober PRIVATE retronest_core Qt6::Test)
+add_dependencies(test_core_prober fake_libretro_core)
+add_test(NAME CoreProber COMMAND test_core_prober)
 
 # SP5: DolphinLibretroAdapter controller schema (GCPad + Wii Classic).
 add_executable(test_dolphin_libretro_controller_schema tests/test_dolphin_libretro_controller_schema.cpp)
