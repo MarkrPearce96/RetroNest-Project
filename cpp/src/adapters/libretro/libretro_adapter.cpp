@@ -75,7 +75,11 @@ QVector<SettingDef> LibretroAdapter::settingsSchema() const {
     // Packet 7 Stage 2: render the settings schema from the core's declared
     // option table × this adapter's curation overlay. Adapters not yet
     // converted override settingsSchema() directly and never reach this.
-    QVector<SettingDef> rows;
+    //
+    // extraSettings() rows lead so hand-authored frontend rows (aspect
+    // ratio etc.) keep their historical top-of-page position within each
+    // category (pages filter by category and render in row order).
+    QVector<SettingDef> rows = extraSettings();
     const QVector<OptionOverlay> overlays = optionOverlays();
     const DeclaredOptionsDoc* doc = declaredOptions();
 
@@ -128,7 +132,6 @@ QVector<SettingDef> LibretroAdapter::settingsSchema() const {
                       "settings page will show only hand-authored rows";
     }
 
-    rows += extraSettings();
     return rows;
 }
 

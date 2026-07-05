@@ -13,7 +13,11 @@ public:
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
     QVector<HotkeyDef> hotkeyBindingDefs() const override;
-    QVector<SettingDef> settingsSchema() const override;
+    // Packet 7 Stage 2: schema rendered from the core's declared options
+    // (LibretroAdapter::settingsSchema base merge) — this adapter supplies
+    // only the curation overlay + the frontend-owned rows.
+    QVector<OptionOverlay> optionOverlays() const override;
+    QVector<SettingDef> extraSettings() const override;
     QVector<SettingsHubCard> settingsHubCards() const override;
     PreviewSpec previewSpec(const QString& category, const QString& subcategory) const override;
     QString configFilePath() const override;

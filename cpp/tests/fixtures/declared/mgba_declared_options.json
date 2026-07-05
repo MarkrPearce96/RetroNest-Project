@@ -1,0 +1,610 @@
+{
+    "categories": [
+        {
+            "info": "Configure base hardware selection / BIOS parameters.",
+            "key": "system",
+            "label": "System"
+        },
+        {
+            "info": "Configure DMG palette / SGB borders.",
+            "key": "video",
+            "label": "Video"
+        },
+        {
+            "info": "Configure audio filtering.",
+            "key": "audio",
+            "label": "Audio"
+        },
+        {
+            "info": "Configure controller / sensor input and controller rumble settings.",
+            "key": "input",
+            "label": "Input & Auxiliary Devices"
+        },
+        {
+            "info": "Configure idle loop removal / frameskipping parameters.",
+            "key": "performance",
+            "label": "Performance"
+        }
+    ],
+    "core_library_version": "0.11-50-9c057be",
+    "format": 1,
+    "options": [
+        {
+            "category": "system",
+            "default": "Autodetect",
+            "info": "Runs loaded content with a specific Game Boy model. 'Autodetect' will select the most appropriate model for the current game.",
+            "key": "mgba_gb_model",
+            "label": "Game Boy Model (Restart)",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Autodetect"
+                },
+                {
+                    "label": "",
+                    "value": "Game Boy"
+                },
+                {
+                    "label": "",
+                    "value": "Super Game Boy"
+                },
+                {
+                    "label": "",
+                    "value": "Game Boy Color"
+                },
+                {
+                    "label": "",
+                    "value": "Super Game Boy Color"
+                },
+                {
+                    "label": "",
+                    "value": "Game Boy Advance"
+                }
+            ]
+        },
+        {
+            "category": "system",
+            "default": "ON",
+            "info": "Use official BIOS/bootloader for emulated hardware, if present in RetroArch's system directory.",
+            "key": "mgba_use_bios",
+            "label": "Use BIOS File if Found (Restart)",
+            "values": [
+                {
+                    "label": "enabled",
+                    "value": "ON"
+                },
+                {
+                    "label": "disabled",
+                    "value": "OFF"
+                }
+            ]
+        },
+        {
+            "category": "system",
+            "default": "OFF",
+            "info": "When using an official BIOS/bootloader, skip the start-up logo animation. This setting is ignored when 'Use BIOS File if Found' is disabled.",
+            "key": "mgba_skip_bios",
+            "label": "Skip BIOS Intro (Restart)",
+            "values": [
+                {
+                    "label": "disabled",
+                    "value": "OFF"
+                },
+                {
+                    "label": "enabled",
+                    "value": "ON"
+                }
+            ]
+        },
+        {
+            "category": "video",
+            "default": "Grayscale",
+            "info": "Selects which palette is used for Game Boy games that are not Game Boy Color or Super Game Boy compatible, or if the model is forced to Game Boy.",
+            "key": "mgba_gb_colors",
+            "label": "Default Game Boy Palette",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Grayscale"
+                },
+                {
+                    "label": "",
+                    "value": "DMG Green"
+                },
+                {
+                    "label": "",
+                    "value": "GB Pocket"
+                },
+                {
+                    "label": "",
+                    "value": "GB Light"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Brown ↑"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Red ↑A"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Dark Brown ↑B"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Pale Yellow ↓"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Orange ↓A"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Yellow ↓B"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Blue ←"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Dark Blue ←A"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Gray ←B"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Green →"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Dark Green →A"
+                },
+                {
+                    "label": "",
+                    "value": "GBC Reverse →B"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 1-A"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 1-B"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 1-C"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 1-D"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 1-E"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 1-F"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 1-G"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 1-H"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 2-A"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 2-B"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 2-C"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 2-D"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 2-E"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 2-F"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 2-G"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 2-H"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 3-A"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 3-B"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 3-C"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 3-D"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 3-E"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 3-F"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 3-G"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 3-H"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 4-A"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 4-B"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 4-C"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 4-D"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 4-E"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 4-F"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 4-G"
+                },
+                {
+                    "label": "",
+                    "value": "SGB 4-H"
+                }
+            ]
+        },
+        {
+            "category": "video",
+            "default": "0",
+            "info": "Use the palettes for Game Boy games that have presets on the Game Boy Color or Super Game Boy.",
+            "key": "mgba_gb_colors_preset",
+            "label": "Hardware Preset Game Boy Palettes (Restart)",
+            "values": [
+                {
+                    "label": "Default Game Boy preset",
+                    "value": "0"
+                },
+                {
+                    "label": "Game Boy Color presets only",
+                    "value": "1"
+                },
+                {
+                    "label": "Super Game Boy presets only",
+                    "value": "2"
+                },
+                {
+                    "label": "Any available presets",
+                    "value": "3"
+                }
+            ]
+        },
+        {
+            "category": "video",
+            "default": "ON",
+            "info": "Display Super Game Boy borders when running Super Game Boy enhanced games.",
+            "key": "mgba_sgb_borders",
+            "label": "Use Super Game Boy Borders (Restart)",
+            "values": [
+                {
+                    "label": "enabled",
+                    "value": "ON"
+                },
+                {
+                    "label": "disabled",
+                    "value": "OFF"
+                }
+            ]
+        },
+        {
+            "category": "audio",
+            "default": "disabled",
+            "info": "Enables a low pass audio filter to reduce the 'harshness' of generated audio.",
+            "key": "mgba_audio_low_pass_filter",
+            "label": "Low Pass Filter",
+            "values": [
+                {
+                    "label": "",
+                    "value": "disabled"
+                },
+                {
+                    "label": "",
+                    "value": "enabled"
+                }
+            ]
+        },
+        {
+            "category": "audio",
+            "default": "60",
+            "info": "Specifies the cut-off frequency of the low pass audio filter. A higher value increases the perceived 'strength' of the filter, since a wider range of the high frequency spectrum is attenuated.",
+            "key": "mgba_audio_low_pass_range",
+            "label": "Filter Level",
+            "values": [
+                {
+                    "label": "5%",
+                    "value": "5"
+                },
+                {
+                    "label": "10%",
+                    "value": "10"
+                },
+                {
+                    "label": "15%",
+                    "value": "15"
+                },
+                {
+                    "label": "20%",
+                    "value": "20"
+                },
+                {
+                    "label": "25%",
+                    "value": "25"
+                },
+                {
+                    "label": "30%",
+                    "value": "30"
+                },
+                {
+                    "label": "35%",
+                    "value": "35"
+                },
+                {
+                    "label": "40%",
+                    "value": "40"
+                },
+                {
+                    "label": "45%",
+                    "value": "45"
+                },
+                {
+                    "label": "50%",
+                    "value": "50"
+                },
+                {
+                    "label": "55%",
+                    "value": "55"
+                },
+                {
+                    "label": "60%",
+                    "value": "60"
+                },
+                {
+                    "label": "65%",
+                    "value": "65"
+                },
+                {
+                    "label": "70%",
+                    "value": "70"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "80%",
+                    "value": "80"
+                },
+                {
+                    "label": "85%",
+                    "value": "85"
+                },
+                {
+                    "label": "90%",
+                    "value": "90"
+                },
+                {
+                    "label": "95%",
+                    "value": "95"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "no",
+            "info": "Enabling this will allow pressing / quickly alternating / holding both left and right (or up and down) directions at the same time. This may cause movement-based glitches.",
+            "key": "mgba_allow_opposing_directions",
+            "label": "Allow Opposing Directional Input",
+            "values": [
+                {
+                    "label": "disabled",
+                    "value": "no"
+                },
+                {
+                    "label": "enabled",
+                    "value": "yes"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "0",
+            "info": "Sets ambient sunlight intensity. Can be used by games that included a solar sensor in their cartridges, e.g: the Boktai series.",
+            "key": "mgba_solar_sensor_level",
+            "label": "Solar Sensor Level",
+            "values": [
+                {
+                    "label": "Use device sensor if available",
+                    "value": "sensor"
+                },
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "3"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                },
+                {
+                    "label": "",
+                    "value": "6"
+                },
+                {
+                    "label": "",
+                    "value": "7"
+                },
+                {
+                    "label": "",
+                    "value": "8"
+                },
+                {
+                    "label": "",
+                    "value": "9"
+                },
+                {
+                    "label": "",
+                    "value": "10"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "OFF",
+            "info": "Enabling this will allow compatible games with the Game Boy Player boot logo to make the controller rumble. Due to how Nintendo decided this feature should work, it may cause glitches such as flickering or lag in some of these games.",
+            "key": "mgba_force_gbp",
+            "label": "Game Boy Player Rumble (Restart)",
+            "values": [
+                {
+                    "label": "disabled",
+                    "value": "OFF"
+                },
+                {
+                    "label": "enabled",
+                    "value": "ON"
+                }
+            ]
+        },
+        {
+            "category": "performance",
+            "default": "Remove Known",
+            "info": "Reduce system load by optimizing so-called 'idle-loops' - sections in the code where nothing happens, but the CPU runs at full speed (like a car revving in neutral). Improves performance, and should be enabled on low-end hardware.",
+            "key": "mgba_idle_optimization",
+            "label": "Idle Loop Removal",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Remove Known"
+                },
+                {
+                    "label": "",
+                    "value": "Detect and Remove"
+                },
+                {
+                    "label": "",
+                    "value": "Don't Remove"
+                }
+            ]
+        },
+        {
+            "category": "performance",
+            "default": "0",
+            "info": "Skip frames to improve performance at the expense of visual smoothness. The value set here is the number of frames omitted after a frame is rendered - i.e. '0' = 60fps, '1' = 30fps, '2' = 15fps, etc.",
+            "key": "mgba_frameskip",
+            "label": "Frameskip",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "3"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                },
+                {
+                    "label": "",
+                    "value": "6"
+                },
+                {
+                    "label": "",
+                    "value": "7"
+                },
+                {
+                    "label": "",
+                    "value": "8"
+                },
+                {
+                    "label": "",
+                    "value": "9"
+                },
+                {
+                    "label": "",
+                    "value": "10"
+                }
+            ]
+        }
+    ]
+}

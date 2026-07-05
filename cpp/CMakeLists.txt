@@ -665,6 +665,12 @@ add_executable(test_libretro_schema_merge tests/test_libretro_schema_merge.cpp)
 target_link_libraries(test_libretro_schema_merge PRIVATE retronest_core Qt6::Test)
 add_test(NAME LibretroSchemaMerge COMMAND test_libretro_schema_merge)
 
+# Packet 7 Stage 2 TRANSITIONAL: per-core conversion parity net (deleted in
+# Task 11 when the last adapter converts).
+add_executable(test_schema_parity tests/test_schema_parity.cpp)
+target_link_libraries(test_schema_parity PRIVATE retronest_core Qt6::Test)
+add_test(NAME SchemaParity COMMAND test_schema_parity)
+
 # SP5: DolphinLibretroAdapter controller schema (GCPad + Wii Classic).
 add_executable(test_dolphin_libretro_controller_schema tests/test_dolphin_libretro_controller_schema.cpp)
 target_link_libraries(test_dolphin_libretro_controller_schema PRIVATE retronest_core Qt6::Test)

@@ -132,7 +132,7 @@ private slots:
         QCOMPARE(rows[0].key, QString("fake_speed"));   // fake_uncurated hidden
     }
 
-    void extraSettingsAppended() {
+    void extraSettingsLead() {
         TestAdapter a;
         a.setDeclaredDocForTest(fixtureDoc());
         OptionOverlay ov;
@@ -149,8 +149,10 @@ private slots:
 
         const auto rows = a.settingsSchema();
         QCOMPARE(rows.size(), 2);
-        QCOMPARE(rows[1].key, QString("aspect_mode"));
-        QVERIFY(rows[1].storage == SettingDef::Storage::FrontendSetting);
+        // Hand-authored rows lead (top of their category pages).
+        QCOMPARE(rows[0].key, QString("aspect_mode"));
+        QVERIFY(rows[0].storage == SettingDef::Storage::FrontendSetting);
+        QCOMPARE(rows[1].key, QString("fake_speed"));
     }
 
     // Packet 7 Stage 2 Task 5: with a declared doc available, the no-runtime

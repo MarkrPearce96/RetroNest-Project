@@ -93,9 +93,10 @@ public:
      *  this INSTEAD of settingsSchema(). */
     virtual QVector<OptionOverlay> optionOverlays() const { return {}; }
 
-    /** Hand-authored rows appended after the merged option rows — the
+    /** Hand-authored rows PREPENDED before the merged option rows — the
      *  genuinely frontend-owned settings (Storage::FrontendSetting / Ini),
-     *  e.g. mGBA's aspect_mode. */
+     *  e.g. mGBA's aspect_mode. Leading keeps them at the top of their
+     *  category pages, matching the historical layouts. */
     virtual QVector<SettingDef> extraSettings() const { return {}; }
 
     /** The core's declared option table: the sidecar written by the last
