@@ -121,8 +121,23 @@ cpp/build-x86_64/RetroNest.app/Contents/MacOS/RetroNest > /tmp/rn.log 2>&1
   Dolphin states after the switch.
 - **Future:** when PCSX2 is arm64-native, switch back to the native arm64
   `build/` and this Rosetta detour goes away.
+- **x86_64 builds of the core forks** (pcsx2/dolphin build dirs) must use
+  `arch -x86_64 /usr/local/bin/cmake` — bare `arch -x86_64 cmake` resolves to
+  the arm64 Homebrew cmake and dies with "Bad CPU type" (and if you pipe the
+  build output, the failure is silently masked by the pipe's exit status).
 
 ## Architecture
+- **retronest-libretro contract package** (`vendor/retronest-libretro/`) =
+  the SINGLE source of truth for everything shared with the core forks: the
+  pinned `libretro.h`, the private `RETRONEST_ENVIRONMENT_*` command registry
+  (0x20001–0x20005, next free slot documented in the header), the
+  `retronest_game_identity` struct, the optional `retronest_*` export
+  prototypes, the shared NSView/emit helpers, and the option style guide.
+  NEVER declare a private env command or vendor a libretro.h locally — edit
+  the canonical package and run its `sync.sh` (copies into duckstation/pcsx2/
+  dolphin; each fork's build checksums its copy via `check-drift.sh`, so
+  editing a vendored copy fails that fork's build). Numeric values are frozen
+  ABI, pinned by `test_retronest_contract`.
 - **Manifests** (`manifests/*.json`) = metadata (id, name, systems, github_repo, executable, launch_args)
 - **Adapters** (`adapters/`) own all emulator behavior (config patching, platform paths, launch logic)
 - **Adapter base class** provides shared helpers: `suppressSetupWizard()`, `patchIniKeys()`, `matchAsset()`
