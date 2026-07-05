@@ -1,9 +1,13 @@
 #include "libretro_adapter.h"
+#include "core/libretro/core_prober.h"
 #include "core/paths.h"
 #include "core/ini_file.h"
 #include "core/setting_def.h"
+#include <QDebug>
 #include <QDir>
 #include <QFileInfo>
+#include <QHash>
+#include <QSet>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -40,6 +44,92 @@ QString LibretroAdapter::controllerBindingsSection(int port, const QString& /*ty
 
 QString LibretroAdapter::frontendJsonPath() const {
     return Paths::emulatorsDir("libretro") + "/" + coreId() + "/frontend.json";
+}
+
+QString LibretroAdapter::declaredOptionsSidecarPath() const {
+    return Paths::emulatorsDir("libretro") + "/" + coreId() + "/declared_options.json";
+}
+
+QString LibretroAdapter::coreDylibInstallPath() const {
+    return Paths::emulatorsDir("libretro") + "/cores/" + coreId() + "_libretro.dylib";
+}
+
+const DeclaredOptionsDoc* LibretroAdapter::declaredOptions() const {
+    if (!m_declaredDocLoaded) {
+        m_declaredDocLoaded = true;
+        m_declaredDoc = DeclaredOptionsDoc::load(declaredOptionsSidecarPath());
+        if (!m_declaredDoc) {
+            // Fresh install / never-run core: seed the sidecar by probing the
+            // dylib (safe — no init, handle retained; see core_prober.h).
+            m_declaredDoc = CoreProber::probe(coreDylibInstallPath());
+            if (m_declaredDoc) {
+                QDir().mkpath(QFileInfo(declaredOptionsSidecarPath()).path());
+                m_declaredDoc->save(declaredOptionsSidecarPath());
+            }
+        }
+    }
+    return m_declaredDoc ? &*m_declaredDoc : nullptr;
+}
+
+QVector<SettingDef> LibretroAdapter::settingsSchema() const {
+    // Packet 7 Stage 2: render the settings schema from the core's declared
+    // option table × this adapter's curation overlay. Adapters not yet
+    // converted override settingsSchema() directly and never reach this.
+    QVector<SettingDef> rows;
+    const QVector<OptionOverlay> overlays = optionOverlays();
+    const DeclaredOptionsDoc* doc = declaredOptions();
+
+    if (doc && !overlays.isEmpty()) {
+        QHash<QString, const DeclaredOption*> byKey;
+        for (const auto& o : doc->options)
+            byKey.insert(o.key, &o);
+
+        QSet<QString> curated;
+        for (const OptionOverlay& ov : overlays) {
+            curated.insert(ov.key);
+            const DeclaredOption* d = byKey.value(ov.key, nullptr);
+            if (!d) {
+                qWarning() << "[LibretroAdapter]" << coreId() << "overlay key not declared by core (skipped):" << ov.key;
+                continue;
+            }
+            for (const QString& cat : ov.categories) {
+                SettingDef def;
+                def.storage = SettingDef::Storage::LibretroOption;
+                def.key = ov.key;
+                def.category = cat;
+                def.subcategory = ov.subcategory;
+                def.group = ov.group;
+                def.label = ov.labelOverride.isEmpty() ? d->label : ov.labelOverride;
+                def.tooltip = ov.tooltipOverride.isEmpty() ? d->info : ov.tooltipOverride;
+                def.defaultValue = ov.defaultOverride.isEmpty() ? d->defaultValue : ov.defaultOverride;
+                def.type = ov.hasTypeOverride ? ov.typeOverride : SettingDef::Combo;
+                def.minVal = ov.minVal;
+                def.maxVal = ov.maxVal;
+                def.step = ov.step;
+                def.layout = ov.layout;
+                def.suffix = ov.suffix;
+                def.dependsOn = ov.dependsOn;
+                def.recommendedValue = ov.recommendedValue;
+                for (const auto& v : d->values)
+                    def.options.append({ v.label.isEmpty() ? v.value : v.label, v.value });
+                rows.append(def);
+            }
+        }
+
+        // Uncurated declared options stay valid in OptionsStore but are not
+        // rendered — new upstream options arrive hidden until curated.
+        for (const auto& o : doc->options) {
+            if (!curated.contains(o.key))
+                qDebug() << "[LibretroAdapter]" << coreId() << "declared option not curated (hidden):" << o.key;
+        }
+    } else if (!overlays.isEmpty()) {
+        qWarning() << "[LibretroAdapter]" << coreId()
+                   << "no declared options available (sidecar missing and probe failed) — "
+                      "settings page will show only hand-authored rows";
+    }
+
+    rows += extraSettings();
+    return rows;
 }
 
 bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,

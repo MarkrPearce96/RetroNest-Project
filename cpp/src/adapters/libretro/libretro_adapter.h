@@ -2,11 +2,14 @@
 
 #include "adapters/emulator_adapter.h"
 #include "core/libretro/core_runtime.h"
+#include "core/libretro/declared_options.h"
 #include "core/libretro/frontend_settings_store.h"
+#include "core/option_overlay.h"
 #include <QObject>
 #include <QPair>
 #include <QVector>
 #include <memory>
+#include <optional>
 
 class LibretroAdapter : public QObject, public EmulatorAdapter {
     Q_OBJECT
@@ -83,6 +86,35 @@ public:
     /** Per-core: e.g. "mgba". Used to compute paths under emulators/libretro/. */
     virtual QString coreId() const = 0;
 
+    // ── Packet 7 Stage 2: core-declared schema ──────────────────────────
+    /** Curation overlay: which declared options appear in the settings UI,
+     *  where, and with what presentation. See core/option_overlay.h for the
+     *  merge rules. Adapters converted to the declared-schema path override
+     *  this INSTEAD of settingsSchema(). */
+    virtual QVector<OptionOverlay> optionOverlays() const { return {}; }
+
+    /** Hand-authored rows appended after the merged option rows — the
+     *  genuinely frontend-owned settings (Storage::FrontendSetting / Ini),
+     *  e.g. mGBA's aspect_mode. */
+    virtual QVector<SettingDef> extraSettings() const { return {}; }
+
+    /** The core's declared option table: the sidecar written by the last
+     *  session, or seeded via CoreProber when none exists yet (fresh
+     *  install, settings browsed before first run). nullptr when both
+     *  fail. Cached for the adapter's lifetime. */
+    const DeclaredOptionsDoc* declaredOptions() const;
+
+    /** Base implementation renders optionOverlays() × declaredOptions()
+     *  into SettingDef rows + extraSettings(). Adapters not yet converted
+     *  keep overriding settingsSchema() directly and never hit this. */
+    QVector<SettingDef> settingsSchema() const override;
+
+    /** Test seam: inject a declared doc (skips sidecar + prober). */
+    void setDeclaredDocForTest(DeclaredOptionsDoc doc) {
+        m_declaredDoc = std::move(doc);
+        m_declaredDocLoaded = true;
+    }
+
     /**
      * Optional per-core override for the libretro system directory
      * (RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY). Default returns empty →
@@ -138,6 +170,11 @@ public:
 protected:
     /** Static path: {root}/emulators/libretro/cores/{core_dylib} */
     static QString coreDylibPath(const EmulatorManifest& manifest);
+    /** Static path: {root}/emulators/libretro/{coreId}/declared_options.json */
+    QString declaredOptionsSidecarPath() const;
+    /** Install-path convention {root}/emulators/libretro/cores/{coreId}_libretro.dylib
+     *  (matches every manifest's core_dylib) — used by the prober fallback. */
+    QString coreDylibInstallPath() const;
     /** Static path: {root}/emulators/libretro/{coreId}/options.json */
     QString optionsJsonPath() const;
     /** Static path: {root}/emulators/libretro/{coreId}/controls.ini */
@@ -153,4 +190,7 @@ private:
      *  settingsSchema(). Reset whenever m_runtime is created or destroyed
      *  so the next no-runtime access reloads fresh values from disk. */
     std::unique_ptr<OptionsStore> m_persistentOptions;
+    /** declaredOptions() cache (mutable: settingsSchema() is const). */
+    mutable std::optional<DeclaredOptionsDoc> m_declaredDoc;
+    mutable bool m_declaredDocLoaded = false;
 };

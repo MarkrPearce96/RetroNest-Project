@@ -660,6 +660,11 @@ target_link_libraries(test_core_prober PRIVATE retronest_core Qt6::Test)
 add_dependencies(test_core_prober fake_libretro_core)
 add_test(NAME CoreProber COMMAND test_core_prober)
 
+# Packet 7 Stage 2: declared-options × overlay → SettingDef merge.
+add_executable(test_libretro_schema_merge tests/test_libretro_schema_merge.cpp)
+target_link_libraries(test_libretro_schema_merge PRIVATE retronest_core Qt6::Test)
+add_test(NAME LibretroSchemaMerge COMMAND test_libretro_schema_merge)
+
 # SP5: DolphinLibretroAdapter controller schema (GCPad + Wii Classic).
 add_executable(test_dolphin_libretro_controller_schema tests/test_dolphin_libretro_controller_schema.cpp)
 target_link_libraries(test_dolphin_libretro_controller_schema PRIVATE retronest_core Qt6::Test)
