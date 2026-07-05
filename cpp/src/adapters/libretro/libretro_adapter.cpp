@@ -261,25 +261,42 @@ OptionsStore* LibretroAdapter::libretroOptionsStore() {
     // game is running.
     if (m_runtime) return &m_runtime->options();
 
-    // Fallback: lazy-init a persistent store loaded from options.json.
-    // Declared options are synthesized from the SettingDef schema so the
+    // Fallback: lazy-init a persistent store loaded from options.json so the
     // settings dialog can read & write libretro options without a running
     // core. Both stores share the same JSON file on disk, so the runtime
     // will see these edits on its next launch.
+    //
+    // Packet 7 Stage 2: prefer the core's declared table (sidecar/probe) —
+    // it covers EVERY option including uncurated ones, so persisted values
+    // for options outside the UI overlay survive validation. Unconverted
+    // adapters (no sidecar-independent schema yet) keep the legacy path of
+    // synthesizing from their hand-written settingsSchema().
     if (!m_persistentOptions) {
         m_persistentOptions = std::make_unique<OptionsStore>();
         QVector<CoreOption> declared;
-        for (const auto& def : settingsSchema()) {
-            if (def.storage != SettingDef::Storage::LibretroOption) continue;
-            CoreOption opt;
-            opt.key = def.key;
-            opt.label = def.label;
-            opt.defaultValue = def.defaultValue;
-            for (const auto& pair : def.options)
-                opt.values.append(pair.second);
-            declared.append(opt);
+        if (const DeclaredOptionsDoc* doc = declaredOptions()) {
+            declared = doc->toCoreOptions();
+        } else {
+            for (const auto& def : settingsSchema()) {
+                if (def.storage != SettingDef::Storage::LibretroOption) continue;
+                CoreOption opt;
+                opt.key = def.key;
+                opt.label = def.label;
+                opt.defaultValue = def.defaultValue;
+                for (const auto& pair : def.options)
+                    opt.values.append(pair.second);
+                declared.append(opt);
+            }
         }
-        m_persistentOptions->load(optionsJsonPath(), declared);
+        // Mirror the runtime path's schemaOptionDefaults precedence so a
+        // deliberate overlay defaultOverride (e.g. a RetroNest-specific
+        // renderer default) also seeds fresh values here, not just in-game.
+        QHash<QString, QString> schemaDefaults;
+        for (const auto& def : settingsSchema()) {
+            if (def.storage == SettingDef::Storage::LibretroOption)
+                schemaDefaults.insert(def.key, def.defaultValue);
+        }
+        m_persistentOptions->load(optionsJsonPath(), declared, schemaDefaults);
     }
     return m_persistentOptions.get();
 }

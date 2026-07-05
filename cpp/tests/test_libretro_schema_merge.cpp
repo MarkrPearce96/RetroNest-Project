@@ -1,6 +1,9 @@
-// Packet 7 Stage 2: generic declared-options × overlay → SettingDef merge.
+// Packet 7 Stage 2: generic declared-options × overlay → SettingDef merge,
+// plus the no-runtime OptionsStore fallback synthesized from the declared doc.
 #include <QtTest>
+#include <QTemporaryDir>
 #include "adapters/libretro/libretro_adapter.h"
+#include "core/paths.h"
 
 namespace {
 
@@ -148,6 +151,29 @@ private slots:
         QCOMPARE(rows.size(), 2);
         QCOMPARE(rows[1].key, QString("aspect_mode"));
         QVERIFY(rows[1].storage == SettingDef::Storage::FrontendSetting);
+    }
+
+    // Packet 7 Stage 2 Task 5: with a declared doc available, the no-runtime
+    // fallback store validates against ALL declared options (superset of the
+    // curated overlay), so uncurated keys keep their persisted values.
+    void fallbackStoreFromDeclaredDoc() {
+        QTemporaryDir tmp;
+        QVERIFY(tmp.isValid());
+        QVERIFY(Paths::setRoot(tmp.path()));
+
+        TestAdapter a;
+        a.setDeclaredDocForTest(fixtureDoc());
+        OptionOverlay ov;
+        ov.key = "fake_speed";           // only ONE key curated...
+        ov.categories = { "Emulation" };
+        a.m_overlays = { ov };
+
+        OptionsStore* store = a.libretroOptionsStore();
+        QVERIFY(store);
+        // ...but ALL THREE declared keys are valid in the store.
+        QCOMPARE(store->get("fake_speed"), QString("1"));
+        QCOMPARE(store->get("fake_bool"), QString("disabled"));
+        QCOMPARE(store->get("fake_uncurated"), QString("x"));
     }
 };
 
