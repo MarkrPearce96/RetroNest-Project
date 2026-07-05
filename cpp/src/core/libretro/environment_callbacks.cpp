@@ -32,16 +32,12 @@ static bool handleVariableUpdate(EnvironmentContext* ctx, void* data) {
 static bool handleCoreOptionsV2(EnvironmentContext* ctx, void* data) {
     auto* opts = static_cast<retro_core_options_v2*>(data);
     if (!opts || !opts->definitions) return false;
-    ctx->declaredOptions.clear();
-    for (const auto* d = opts->definitions; d->key != nullptr; ++d) {
-        CoreOption o;
-        o.key = QString::fromUtf8(d->key);
-        o.label = QString::fromUtf8(d->desc ? d->desc : d->key);
-        o.defaultValue = QString::fromUtf8(d->default_value ? d->default_value : "");
-        for (int i = 0; i < RETRO_NUM_CORE_OPTION_VALUES_MAX && d->values[i].value; ++i)
-            o.values << QString::fromUtf8(d->values[i].value);
-        ctx->declaredOptions.append(o);
-    }
+    // Packet 7 Stage 2: capture the FULL metadata (labels, per-value labels,
+    // category routing, info) — CoreRuntime persists it as the per-core
+    // declared_options.json sidecar, the settings UI's schema source. The
+    // thin CoreOption view continues to feed OptionsStore value-validation.
+    populateFromV2(ctx->declaredDoc, opts);
+    ctx->declaredOptions = ctx->declaredDoc.toCoreOptions();
     return true;
 }
 

@@ -9,7 +9,8 @@
 #include <QByteArray>
 #include <QString>
 #include <QVector>
-#include "options_store.h"   // for CoreOption (used in declaredOptions)
+#include "options_store.h"      // for CoreOption (used in declaredOptions)
+#include "declared_options.h"   // full-metadata capture (declaredDoc)
 
 class OptionsStore;
 
@@ -36,7 +37,8 @@ struct EnvironmentContext {
     retro_pixel_format pixelFormat = RETRO_PIXEL_FORMAT_0RGB1555;
     OptionsStore* options = nullptr;
     void* runtime = nullptr;  // CoreRuntime* (opaque to avoid circular includes)
-    QVector<CoreOption> declaredOptions;  // captured from SET_CORE_OPTIONS_V2
+    QVector<CoreOption> declaredOptions;  // thin view (OptionsStore validation)
+    DeclaredOptionsDoc declaredDoc;       // full v2 metadata (schema source; persisted as sidecar)
 
     // Scratch storage so returned const char* buffers stay alive across calls.
     QByteArray scratchVariableValue;

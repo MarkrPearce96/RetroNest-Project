@@ -89,6 +89,7 @@ add_library(retronest_core STATIC
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
     # core/libretro/
     src/core/libretro/options_store.cpp
+    src/core/libretro/declared_options.cpp
     src/core/libretro/frontend_settings_store.cpp
     src/core/libretro/retro_log.cpp
     src/core/libretro/rcheevos_runtime.cpp
@@ -646,6 +647,11 @@ add_test(NAME Pcsx2LibretroSchema COMMAND test_pcsx2_libretro_schema)
 add_executable(test_retronest_contract tests/test_retronest_contract.cpp)
 target_link_libraries(test_retronest_contract PRIVATE retronest_core Qt6::Test)
 add_test(NAME RetronestContract COMMAND test_retronest_contract)
+
+# Packet 7 Stage 2: declared-options capture + sidecar round-trip.
+add_executable(test_declared_options tests/test_declared_options.cpp)
+target_link_libraries(test_declared_options PRIVATE retronest_core Qt6::Test)
+add_test(NAME DeclaredOptions COMMAND test_declared_options)
 
 # SP5: DolphinLibretroAdapter controller schema (GCPad + Wii Classic).
 add_executable(test_dolphin_libretro_controller_schema tests/test_dolphin_libretro_controller_schema.cpp)
