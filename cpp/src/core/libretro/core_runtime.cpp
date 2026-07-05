@@ -10,6 +10,7 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
+#include <QFileInfo>
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
@@ -408,6 +409,21 @@ void CoreRuntime::runLoop() {
     // Reconcile core options now that the core has declared them via SET_CORE_OPTIONS_V2.
     if (!m_envCtx.declaredOptions.isEmpty())
         m_options.load(m_cfg.optionsJsonPath, m_envCtx.declaredOptions, m_cfg.schemaOptionDefaults);
+
+    // Packet 7 Stage 2: persist the full declared-option metadata beside
+    // options.json — the settings UI's offline schema source (seeded by
+    // CoreProber before any first session; refreshed here on every start so
+    // a core update re-captures its table).
+    if (!m_envCtx.declaredDoc.isEmpty()) {
+        retro_system_info sysinfo{};
+        s.retro_get_system_info(&sysinfo);
+        m_envCtx.declaredDoc.coreLibraryVersion =
+            QString::fromUtf8(sysinfo.library_version ? sysinfo.library_version : "");
+        const QString sidecar =
+            QFileInfo(m_cfg.optionsJsonPath).dir().filePath("declared_options.json");
+        if (!m_envCtx.declaredDoc.save(sidecar))
+            qWarning() << "[CoreRuntime] failed to write declared-options sidecar:" << sidecar;
+    }
 
     retro_game_info info{};
     QByteArray romPathBytes = m_cfg.romPath.toUtf8();

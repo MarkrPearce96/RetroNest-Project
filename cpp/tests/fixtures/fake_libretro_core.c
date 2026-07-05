@@ -19,7 +19,25 @@ static int run_calls = 0;
 static int s_pause_call_count = 0;
 static int s_last_pause_value = -1;
 
-void retro_set_environment(retro_environment_t cb) { env_cb = cb; }
+void retro_set_environment(retro_environment_t cb) {
+    env_cb = cb;
+    /* Packet 7 Stage 2: declare a small option table, mirroring where every
+     * real core in the suite emits its options (spike-verified 2026-07-06).
+     * Ignoring the env_cb result keeps older tests (whose callbacks return
+     * false for this command) working unchanged. */
+    if (env_cb) {
+        static const struct retro_core_option_v2_definition defs[] = {
+            { "fake_speed", "Emulation Speed", NULL,
+              "How fast the fake core pretends to run.", NULL, NULL,
+              { { "1", "Normal" }, { "2", "Double" }, { NULL, NULL } }, "1" },
+            { "fake_bool", "Fake Toggle", NULL, NULL, NULL, NULL,
+              { { "enabled", NULL }, { "disabled", NULL }, { NULL, NULL } }, "disabled" },
+            { NULL, NULL, NULL, NULL, NULL, NULL, { { NULL, NULL } }, NULL }
+        };
+        struct retro_core_options_v2 opts = { NULL, (struct retro_core_option_v2_definition*)defs };
+        env_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2, &opts);
+    }
+}
 void retro_set_video_refresh(retro_video_refresh_t cb) { video_cb = cb; }
 void retro_set_audio_sample(retro_audio_sample_t cb) { (void)cb; }
 void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb) { audio_batch_cb = cb; }
