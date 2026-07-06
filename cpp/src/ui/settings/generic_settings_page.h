@@ -10,6 +10,30 @@ class SettingsGraphicsSubTabBar;
 class SettingsCard;
 
 /**
+ * Roots to harvest dependsOn masters from. Normally just the dialog (its
+ * child tree spans every built page, enabling cross-card gates), but the
+ * page constructor runs refreshDependencies() BEFORE pushPage() reparents
+ * the page into the dialog — during that window the page's own rows are
+ * not in the dialog's tree, so same-page masters must be harvested from
+ * the page directly or first-render gating silently no-ops (unknown
+ * masters default to active). Regression found at Packet 7 GATE 8;
+ * present since b2e0d5a (2026-05-18).
+ *
+ * Inline because generic_settings_page.cpp is an app-only source — a
+ * definition there would be unreachable from the QtTest targets, which
+ * link the retronest_ui/core libs, not the app objects.
+ */
+inline QVector<QObject*> settingsMasterRoots(QWidget* dialog, QWidget* page) {
+    if (!dialog)
+        return { page };
+    if (dialog->isAncestorOf(page))
+        return { dialog };
+    // Constructor-time window: page built but not yet reparented into the
+    // dialog by pushPage — its rows are invisible to the dialog's tree.
+    return { dialog, page };
+}
+
+/**
  * Schema-driven settings page used by every emulator's in-app dialog.
  *
  * Constructor inputs:

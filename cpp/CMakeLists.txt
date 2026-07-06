@@ -698,6 +698,10 @@ add_executable(test_settings_combo_row tests/test_settings_combo_row.cpp)
 target_link_libraries(test_settings_combo_row PRIVATE retronest_ui Qt6::Test)
 add_test(NAME SettingsComboRow COMMAND test_settings_combo_row)
 
+add_executable(test_dependency_master_roots tests/test_dependency_master_roots.cpp)
+target_link_libraries(test_dependency_master_roots PRIVATE retronest_ui Qt6::Test)
+add_test(NAME DependencyMasterRoots COMMAND test_dependency_master_roots)
+
 add_executable(test_settings_slider_row tests/test_settings_slider_row.cpp)
 target_link_libraries(test_settings_slider_row PRIVATE retronest_ui Qt6::Test)
 add_test(NAME SettingsSliderRow COMMAND test_settings_slider_row)

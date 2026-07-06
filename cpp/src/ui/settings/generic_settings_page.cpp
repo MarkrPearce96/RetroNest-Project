@@ -706,40 +706,41 @@ void GenericSettingsPage::refreshDependenciesLocal() {
   // pages on this dialog (not just `this`). Pre-fix, findChildren ran on
   // `this` so cross-card dependsOn (e.g. a Graphics row gating on
   // pcsx2_renderer from Recommended) silently evaluated against an
-  // empty-string master and stayed editable. Running findChildren on
-  // m_dlg makes every other page's masters visible. Fallback to `this`
-  // if the dialog pointer is null (defensive; should not happen in
-  // practice — m_dlg is set at construction).
+  // empty-string master and stayed editable. Harvesting is per-root via
+  // settingsMasterRoots(): normally just m_dlg, PLUS `this` while the
+  // page is not yet parented into the dialog (the constructor refresh
+  // runs before pushPage — without the extra root, same-page gates
+  // no-op on first render; see settingsMasterRoots doc).
   //   masterStates[key] = is the master "active"? (truthy / non-disabled)
   //   masterValues[key] = the master's current raw value (combo equality
   //                       atoms in the dependsOn DSL compare against this).
-  QObject *masterRoot = m_dlg ? static_cast<QObject *>(m_dlg)
-                              : static_cast<QObject *>(this);
   QHash<QString, bool> masterStates;
   QHash<QString, QString> masterValues;
-  // For inverted toggles, the displayed `isChecked()` is the OPPOSITE of
-  // the stored INI value. Dependency expressions reason about the stored
-  // value (so e.g. `dependsOn = "BBoxEnable"` means "true when BBox is
-  // enabled in the INI"), so we un-invert here before populating the
-  // master maps.
-  for (auto *tog : masterRoot->findChildren<SettingsToggleRow *>()) {
-    const bool stored = tog->settingDef().inverted ? !tog->isChecked()
-                                                   : tog->isChecked();
-    masterStates.insert(tog->settingDef().key, stored);
-    masterValues.insert(tog->settingDef().key,
-                        stored ? "true" : "false");
-  }
+  for (QObject *masterRoot : settingsMasterRoots(m_dlg, this)) {
+    // For inverted toggles, the displayed `isChecked()` is the OPPOSITE of
+    // the stored INI value. Dependency expressions reason about the stored
+    // value (so e.g. `dependsOn = "BBoxEnable"` means "true when BBox is
+    // enabled in the INI"), so we un-invert here before populating the
+    // master maps.
+    for (auto *tog : masterRoot->findChildren<SettingsToggleRow *>()) {
+      const bool stored = tog->settingDef().inverted ? !tog->isChecked()
+                                                     : tog->isChecked();
+      masterStates.insert(tog->settingDef().key, stored);
+      masterValues.insert(tog->settingDef().key,
+                          stored ? "true" : "false");
+    }
 
-  // Combos can also act as masters (per setting_def.h:39-42): a combo is
-  // 'active' when its value is not in {"", "0", "false", "Disabled", "None"}.
-  for (auto *combo : masterRoot->findChildren<SettingsComboRow *>()) {
-    const QString v = combo->value();
-    const bool active = !v.isEmpty() && v != "0" &&
-                        v.compare("false", Qt::CaseInsensitive) != 0 &&
-                        v.compare("Disabled", Qt::CaseInsensitive) != 0 &&
-                        v.compare("None", Qt::CaseInsensitive) != 0;
-    masterStates.insert(combo->settingDef().key, active);
-    masterValues.insert(combo->settingDef().key, v);
+    // Combos can also act as masters (per setting_def.h:39-42): a combo is
+    // 'active' when its value is not in {"", "0", "false", "Disabled", "None"}.
+    for (auto *combo : masterRoot->findChildren<SettingsComboRow *>()) {
+      const QString v = combo->value();
+      const bool active = !v.isEmpty() && v != "0" &&
+                          v.compare("false", Qt::CaseInsensitive) != 0 &&
+                          v.compare("Disabled", Qt::CaseInsensitive) != 0 &&
+                          v.compare("None", Qt::CaseInsensitive) != 0;
+      masterStates.insert(combo->settingDef().key, active);
+      masterValues.insert(combo->settingDef().key, v);
+    }
   }
 
   // dependsOn is parsed as a small boolean expression DSL: a bare key
