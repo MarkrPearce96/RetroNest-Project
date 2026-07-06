@@ -1,118 +1,144 @@
-# Adding a New Emulator Adapter
+# Adding a New Emulator (libretro core)
 
-## Files to create/modify (in order)
+Every emulator RetroNest ships is a libretro core loaded in-process by
+`CoreRuntime`. Core #6 follows this recipe. The old standalone-process
+adapter recipe is gone — its surviving reference material (settings audits,
+INI round-trip bug classes, SettingDef toolbox) is kept at the bottom of
+this file under "Legacy reference".
 
-### 1. Manifest
+## The recipe
+
+### 1. Decide: stock core or fork
+- **Stock upstream core** (the mGBA path): the core works unmodified against
+  plain libretro. No repo to maintain; build or fetch a universal dylib and
+  skip straight to step 2. RetroNest-specific niceties that need private ABI
+  (game identity, fast-forward export, NSView handover) are simply absent.
+- **Private fork** (the duckstation/pcsx2/dolphin/ppsspp path): fork the
+  upstream emulator, add a libretro shell, and adopt the contract package:
+  run `vendor/retronest-libretro/sync.sh` to vendor the pinned `libretro.h`
+  + `retronest_libretro.h` into the fork (its build must checksum the copy
+  via `check-drift.sh`), then implement whatever subset of the private env
+  commands (0x20001-0x20005) and `retronest_*` exports the core needs.
+  NEVER invent private ABI locally — extend the canonical package. Option
+  definitions follow `vendor/retronest-libretro/docs/option-style-guide.md`.
+
+### 2. Manifest + logo
 Create `manifests/{emuId}.json`:
 ```json
 {
+  "manifest_version": 1,
   "id": "{emuId}",
   "name": "Display Name",
   "description": "One-line description",
   "systems": ["{systemId}"],
   "github_repo": "owner/repo",
-  "executable": "{binary-name}",
-  "install_folder": "{emuId}",
+  "executable": "{core}_libretro.dylib",
+  "install_folder": "libretro",
   "rom_extensions": ["iso", "bin", "chd"],
-  "launch_args": ["-fullscreen", "{rom_path}"]
+  "launch_args": [],
+  "backend": "libretro",
+  "core_dylib": "{core}_libretro.dylib",
+  "core_arch": "universal",
+  "logo": "qrc:/AppUI/qml/AppUI/images/{emuId}_logo.png",
+  "detail_page": {}
 }
 ```
+- `core_arch` must be honest (`universal` | `x86_64` | `arm64`) — it drives
+  the arch-mismatch warning and `scripts/verify-universal.sh`.
+- `detail_page` only when needed: `controller_pages` for multi-pad cores
+  (see dolphin), `has_patches` for a patches pipeline (see pcsx2). The
+  detail page renders entirely from this block via `detailActionRows()` —
+  no QML edits.
+- Omit `github_repo` for local-only cores (excluded from update checks —
+  the duckstation licensing pattern).
+- Add `qml/AppUI/images/{emuId}_logo.png` and list it in BOTH qrc resource
+  blocks in `cpp/CMakeLists.txt` (grep `dolphin_logo.png` for the spots).
+- The loader warns on unknown keys — if you add a manifest field, extend
+  `kKnownKeys` + `EmulatorManifest` + the parse block in
+  `cpp/src/core/manifest_loader.cpp`, and cover it in
+  `tests/test_manifest_libretro_fields.cpp`.
 
-### 2. Adapter header
-Create `cpp/src/adapters/{emuId}_adapter.h`:
-- Inherit from `EmulatorAdapter`
-- Override required methods (see list below)
-- Declare `portableDir()`, `createDefaultConfig()`, `patchExistingConfig()` as private
+### 3. systems.json entries
+For each new `{systemId}`, add to `manifests/systems.json`: display name,
+`screenscraper_id`, and `ra_console_id` when RetroAchievements supports the
+system. That single entry lights up theme display names, scraping, and the
+whole RA stack (fetch set, session runtime, dashboards). Pin the new values
+in `tests/test_system_registry.cpp`.
 
-### 3. Adapter implementation
-Create `cpp/src/adapters/{emuId}_adapter.cpp`:
-- **`ensureConfig()`** — check if config exists, call create or patch
-- **`createDefaultConfig()`** — write **only** embedding-critical keys:
-  - Use `suppressSetupWizard()` helper (inherited) with emulator's wizard section name
-  - Use `patchIniKeys()` helper (inherited) with `QVector<IniKeyPatch>` for folder paths
-  - Write fullscreen keys, input source section headers, controller section header (no Type=)
-- **`patchExistingConfig()`** — same helpers, same keys, defensive patching
-- **`resolveExecutable()`** — handle macOS .app bundle, Windows .exe, Linux paths
-- **`configFilePath()`** — return path to the emulator's main INI/config file
-- **`pathsDefs()`** — declare paths with `PathBase::Bios`/`Saves`/`Data`
-- **`biosFiles()`** — list required/optional BIOS files with MD5s
-- **`settingsSchema()`** — define INI keys the settings UI exposes
-- **`resolutionOptions()`** / **`aspectRatioOptions()`** — wizard options
-- **`controllerTypes()`** — available controller types (e.g. DualShock2, Guitar, Jogcon, NeGcon, Popn)
-- **`controllerBindingDefs()`** — button/axis binding definitions (default/DualShock2)
-- **`controllerBindingDefsForType(type)`** — per-type binding definitions
-- **`controllerSettingDefsForType(type)`** — per-type controller settings (deadzone, sensitivity, etc.)
-- **`hotkeyBindingDefs()`** — hotkey definitions
-- **`formatBinding()`** — override if emulator uses non-standard binding format (no `+` prefix for buttons, only for axes)
+### 4. Adapter subclass
+Create `cpp/src/adapters/libretro/{emuId}_libretro_adapter.{h,cpp}`,
+inheriting `LibretroAdapter`. Typical surface (see mgba for the minimal
+stock-core shape, dolphin/pcsx2 for the full fork shape):
+- `coreId()` — required; everything else has workable defaults.
+- `hardwareRenderBackend()` — GL / MetalNSView per the core's video path.
+- `controllerTypes()` + `controllerBindingDefsForType()` — RetroPad slot
+  keys must resolve via `retroPadSlotFromKey()`; defaults are `SDL-0/...`
+  element names seeded into the core's `controls.ini`.
+- `pathsDefs()` — user-relocatable dirs (saves, savestates, ...).
+- `extractSerial()` / `findResumeFile()` — Save & Quit -> Resume support.
+- `biosFiles()` if the system needs BIOS.
+- Settings surface: see step 6.
+Register it in `cpp/src/adapters/adapter_registry.cpp` and add the .cpp/.h
+to the `retronest_core` source list in `cpp/CMakeLists.txt`.
 
-### 4. Register adapter
-In `cpp/src/adapters/adapter_registry.cpp`:
-- `#include "{emuId}_adapter.h"`
-- Add `registerAdapter<{EmuId}Adapter>("{emuId}")` in constructor
+### 5. Build + first boot
+Full x86_64 build (see CLAUDE.md build section), install the core dylib at
+`{root}/emulators/libretro/cores/`, import a ROM, boot it. Fix the boring
+stuff (paths, video backend, input) before touching settings.
 
-### 5. CMakeLists.txt
-Add to SOURCES and HEADERS sections.
+### 6. Settings: the core declares, the adapter curates
+There is no hand-written schema. The pipeline:
+1. The core's `SET_CORE_OPTIONS_V2(_INTL)` is captured at session start and
+   written to `{root}/emulators/libretro/{emuId}/declared_options.json`;
+   opening the settings page before any session seeds it via `CoreProber`.
+2. Implement `optionOverlays()` — one entry per option the UI should show:
+   placements (category / Graphics sub-tab / group, incl. "Recommended"
+   cross-listings), `dependsOn` gates, and the RARE deliberate
+   `defaultOverride`. Uncurated options stay hidden but valid.
+3. `extraSettings()` for frontend-owned rows (aspect mode / integer scale,
+   `Storage::FrontendSetting`) and `settingsHubCards()` + `previewSpec()`
+   for the hub layout.
+4. Add a guard test (`tests/test_{emuId}_libretro_schema.cpp`) asserting the
+   merged shape against a committed fixture in `tests/fixtures/declared/`
+   (record it by probing the installed core — see the stage-2 guards for
+   the pattern: count lock, defaults-in-values, dependsOn pins).
+To change option values/defaults/wording: change the CORE (fork) source,
+rebuild, re-probe. Never mirror option data into the adapter.
 
-### 6. Installer asset matching
-Override `matchAsset()` in the adapter class to select the correct GitHub release asset
-per platform (macOS .dmg/.tar.xz, Windows .zip, Linux .AppImage, etc.). The base class
-provides a generic platform-keyword fallback. No changes needed to `emulator_installer.cpp`.
-
-### 7. System mappings
-Add system ID in two places:
-- `theme_context.cpp` — `systemDisplayNames` map (display name for UI)
-- `scraper.cpp` — `systemToScreenScraperId()` (ScreenScraper API ID for scraping)
-
-### 8. Logo
-Add emulator logo PNG to `qml/AppUI/images/` and update:
-- `EmulatorLogos.js` — add the logo path mapping
-- `SetupWizard/EmulatorCard.qml` — add to its local `logoForEmu()` function
-- CMakeLists.txt RESOURCES sections (both AppUI and SetupWizard modules)
-
-### 9. Theme assets (optional)
+### 7. Theme assets (optional)
 Add system artwork to `themes/modern/assets/`:
 - `artwork/{systemId}.webp` — system background
 - `logos/{systemId}.webp` — system logo
 - `gamepage-logos/{systemId}.webp` — game list logo
 
-### 10. Quick settings previews (optional)
+### 8. Quick settings previews (optional)
 - `AspectRatioSettings.qml` — add to `previewImages` map + add image files to `images/ar/`
 - `ResolutionSettings.qml` — add to `previewImages` map + add image files to `images/res/`
 
-### 11. In-game menu support (if applicable)
-- Add `PauseOnFocusLoss = true` (or equivalent) to `createDefaultConfig()` and `patchExistingConfig()`
-- Add `SaveStateOnShutdown = true` (or equivalent) to enable save-on-SIGTERM
-- Suppress native pause menu in INI patching (prevent conflict with our overlay)
-- Clear any native pause/toggle hotkeys that would conflict with `PauseOnFocusLoss`
-- Override `extractSerial(romPath)` to extract the game serial/ID from the ROM file.
-  For disc-based systems (ISO/BIN/CHD), use the shared `Iso9660::readFile()` + `parseSystemCnfSerial()`.
-  For cartridge-based systems (N64, GB, GBA), read the serial from the ROM header at the
-  platform-specific offset. The serial is stored in the DB at import time (schema v6).
-- Override `findResumeFile(serial, savesRoot)` to scan `{savesRoot}/{systemId}/savestates/`
-  for resume files matching the serial. **Important:** emulators often reformat the serial
-  in filenames (e.g. `SCUS_949.00` → `SCUS-94900`). Check what format the emulator uses
-  and convert accordingly in this method.
-- If the emulator's CLI flag for loading a state file differs from `-statefile`, override
-  `resumeLaunchArgs()` (see DuckStation's `-resume` example)
+### 9. Smoke checklist (hand to the user)
+- Manage grid tile shows the logo; detail page rows navigate cleanly with a
+  gamepad (settings / controller page(s) / reinstall / reset / uninstall).
+- Settings pages render pre-launch (prober-seeded), one option change
+  applies in-game and survives an app restart.
+- Controller mapping page renders; a remap takes effect in-game.
+- Save & Quit -> Resume round-trip.
+- Scrape one game (systems.json SS id) and, if RA-supported, one
+  achievement unlocks or at least the game identifies (RA console id).
+- Arch-mismatch toast absent when core_arch matches the app slice.
 
-### 12. RetroAchievements support (if the emulator has native RA support)
-- Add console ID mapping in `ra_client.cpp` `consoleIdMapping()` (e.g. `{"n64", 2}`)
-  — automatically updates `raConsoleId()`, `allConsoleIds()`, pre-caching, title matching
-- Override `supportsRetroAchievements()` → `true` in adapter header
-- Override `patchRetroAchievements(username, token, enabled, hardcore, notifications, sounds)`
-  to patch the emulator's RA INI section (Enabled + preferences only, ignore username/token)
-- Everything else is automatic: title matching, game popup, in-game menu, first-launch
-  prompt, settings dashboard, console game list pre-caching
+## Automatic behaviors (no per-emulator code needed)
+- Setup Wizard pages, directory creation, install/update flow, ROM
+  scanning, game scraping, RA display + session runtime, settings hub +
+  pages, controller mapping dialog, detail page rows — all driven by the
+  manifest, `systems.json`, and adapter virtuals above.
 
-## Settings Sync Strategy
+## Legacy reference — standalone-era settings playbook
 
-**`configFilePath()` must point at the file the emulator actually reads.** Our settings UI reads and writes that same file, so any change in either UI is instantly visible to the other — no merge logic, no waiting for a game launch. This is how all three current adapters work (PCSX2, DuckStation, PPSSPP).
-
-`ensureConfig()` is called both before launching a game AND when the user clicks "Open Native Settings" in our app. Use it to write embedding-critical keys (wizard suppression, fullscreen, folder paths) so the emulator's native UI never sees a fresh-install state.
-
-**Settings the user has touched in our app are managed; settings they haven't touched are left alone.** Don't write defaults the user never asked for — let the user freely tweak unmanaged settings in the native UI without our app overwriting them on next launch.
-
-**Only keep a sync step for things that live in a different file or section from where our UI writes.** Example: PPSSPP's controller bindings live in `controls.ini` but the controller UI defaults to writing to the main config. Override `controllerBindingsConfigFilePath()` and `controllerBindingsSection(port)` so the UI writes directly to the right place — no sync required. The only thing PPSSPP's `ensureConfig()` still syncs is controller settings (deadzone/sensitivity) from `[Pad1]` to the `[Control]` section in the same `ppsspp.ini`.
+Everything below predates the libretro migration. It matters when a row
+uses `Storage::Ini` (no shipped adapter today) or when auditing a fork's
+CoreOptions source for round-trip quality; the SettingDef toolbox
+(dependsOn DSL, transforms, bitmask) is still the live mechanism set used
+by overlays and extraSettings.
 
 ## Investigating an Emulator Before Writing the Adapter
 

@@ -14,7 +14,7 @@ to preserve the illusion. Do not weaken this rule.
 - **UI Framework:** Qt6 (QML + Widgets for settings sub-pages)
 - **Media/Input:** SDL2
 - **Build:** CMake 3.16+
-- **Emulators:** PCSX2, DuckStation, PPSSPP (more to follow)
+- **Emulators:** five libretro cores loaded in-process — PCSX2, DuckStation, PPSSPP, Dolphin (private forks) + mGBA (stock upstream core)
 
 ## Build & Run
 ```sh
@@ -138,11 +138,32 @@ cpp/build-x86_64/RetroNest.app/Contents/MacOS/RetroNest > /tmp/rn.log 2>&1
   dolphin; each fork's build checksums its copy via `check-drift.sh`, so
   editing a vendored copy fails that fork's build). Numeric values are frozen
   ABI, pinned by `test_retronest_contract`.
-- **Manifests** (`manifests/*.json`) = metadata (id, name, systems, github_repo, executable, launch_args)
-- **Adapters** (`adapters/`) own all emulator behavior (config patching, platform paths, launch logic)
-- **Adapter base class** provides shared helpers: `suppressSetupWizard()`, `patchIniKeys()`, `matchAsset()`
+- **Registries** = the two JSON surfaces UI/services read instead of branching on ids:
+  - `manifests/*.json` (one per emulator, `manifest_version` 1): identity,
+    systems, `backend`/`core_dylib`/`core_arch`, `logo` (qrc path), and the
+    `detail_page` capability block (controller pages, has_patches) that
+    drives `EmulatorDetailPage`'s row model via `detailActionRows()`. The
+    loader warns on unknown keys — extend `kKnownKeys` when adding one.
+  - `manifests/systems.json` → `SystemRegistry`: per-system display name,
+    ScreenScraper platform ID, RA console ID. The ONLY place system facts
+    live; `test_system_registry` pins every value.
+- **Settings schema pipeline (libretro)** = the core is the single source of
+  truth. `SET_CORE_OPTIONS_V2(_INTL)` is captured at session start and
+  persisted to `{root}/emulators/libretro/<core>/declared_options.json`
+  (seeded offline by `CoreProber` — dlopen, never `retro_init`, never
+  `dlclose`). `LibretroAdapter::settingsSchema()` merges that declared table
+  with the adapter's `optionOverlays()` (UI routing + dependsOn gates + rare
+  deliberate `defaultOverride`) and `extraSettings()` (frontend-owned rows).
+  Adapters carry NO option keys/values/labels of their own; per-core QtTest
+  guards assert the merged shape against committed fixtures in
+  `cpp/tests/fixtures/declared/`.
+- **Adapters** (`adapters/libretro/`) own per-core curation + identity:
+  overlays, hub cards, controller types/bindings, serial extraction, resume
+  lookup, paths. Base `LibretroAdapter` owns everything generic.
 - **Services** (`services/`) = thin orchestration between UI and core
-- **Core** (`core/`) = shared utilities: Database, IniFile, RomScanner, GameSession, SdlInputManager, etc.
+- **Core** (`core/`) = shared utilities: Database, RomScanner, GameSession,
+  SdlInputManager, CoreRuntime (the in-process libretro host), OptionsStore,
+  SystemRegistry, etc.
 - **UI** (`ui/`) = QML pages (`qml/AppUI/`, `qml/SetupWizard/`) + Widgets settings sub-pages (`ui/settings/`)
 - **Themes** (`themes/`) = runtime-loaded QML directories with `theme.json` manifests
 
@@ -178,7 +199,7 @@ All directories derive from a single user-chosen root:
 
 **macOS launch rule:** Always launch emulator binaries via direct exec (`QProcess::start(execPath, args)`), NEVER via `open` or Launch Services. Going through Launch Services applies app translocation and sandbox rules to downloaded `.app` bundles, which blocks `rename()` inside the bundle and breaks portable mode. Both `GameSession` and `openNativeEmulatorSettings` use direct exec for this reason.
 
-**Per-emulator portable mechanisms:** Different standalone emulators use different mechanisms to enable portable mode. DuckStation looks for `portable.txt` next to the binary (inside `Contents/MacOS/` on macOS). Libretro cores (mgba, PCSX2, PPSSPP) receive their data directories from RetroNest via `retro_environment` callbacks, so they need no on-disk portable-mode marker.
+**Portable mode is inherent for libretro cores:** every shipped emulator is a libretro core that receives its data directories from RetroNest via `retro_environment` callbacks (`GET_SAVE_DIRECTORY`, `GET_SYSTEM_DIRECTORY`, private `GET_*_DIR` overrides) — no on-disk portable-mode marker exists or is needed. The `portable.txt` / `NSUserDefaults` mechanisms described in older notes were for standalone process-backend emulators, none of which ship today.
 
 ## Theme System
 - Fullscreen UI — themes own the entire window, settings via Escape/Start modal overlay
@@ -196,49 +217,79 @@ All directories derive from a single user-chosen root:
 ## In-Game Menu & Emulator Control
 - **Trigger:** Cmd+Shift+Escape (Carbon global hotkey, system-wide), Select+Start (SDL combo, all controllers), or Touchpad press (DualShock 4 / DualSense single-button)
 - **Overlay mechanism:** the menu is a separate `QQuickWindow` (`InGameMenuPanel`) backed by an isa-swizzled `NSPanel` (frameless, status-window-level, fullscreen-auxiliary, non-activating-panel) so it floats over a fullscreened external emulator without our app activating
-- **Pause is per-adapter.** Each adapter overrides `pauseHotkeyVirtualKeyCode()` to return the Carbon `kVK_*` for its TogglePause hotkey; the corresponding INI key is bound to that hotkey in `createDefaultConfig` + `patchExistingConfig`. AppController synthesizes the keystroke via `CGEventPostToPid` for clean native pause (no SIGSTOP audio click). Adapters that don't expose a pause-only hotkey return 0 → AppController falls back to SIGSTOP/SIGCONT (audio click but works universally).
-- **`CGEventPostToPid` requires Accessibility permission** on macOS Sonoma+ (System Settings → Privacy & Security → Accessibility → enable RetroNest.app). Without it, synthesized keystrokes are silently dropped and the emulator never pauses. macOS prompts the first time the menu opens.
-- **Pause hotkey is hidden from user-facing settings** — none of the adapters list TogglePause / `General/Toggle Pause` in their `hotkeyBindingDefs()`, so the user can't accidentally rebind the key our synthesis depends on.
-- **Close-side input bleed avoided** by polling SDL state until A/B/X/Y are released before sending the unpause keystroke (e.g. Cross-to-Resume → no jump in the resumed game).
-- Save-on-exit via emulator's **SaveStateOnShutdown** config — SIGTERM triggers save, SIGKILL skips
+- **Pause is a direct call.** Libretro cores run in-process, so opening the
+  menu is `CoreRuntime::pause()` / `resume()` — no keystroke synthesis, no
+  Accessibility permission, no SIGSTOP. (The `pauseHotkeyVirtualKeyCode()` /
+  `CGEventPostToPid` / SIGSTOP machinery on the adapter base is process-era
+  legacy; no shipped emulator uses it.)
+- **Close-side input bleed avoided** by polling SDL state until A/B/X/Y are released before resuming (e.g. Cross-to-Resume → no jump in the resumed game).
+- **Save & Quit** serializes the core state (`retro_serialize`) to
+  `<serial-or-basename>.resume` under the emulator's savestates dir;
+  `findResumeFile()` on the adapter locates it at next launch and
+  `CoreRuntime` restores it post-`retro_load_game`.
 - Resume detection: serial extracted from ROM at import → scan savestates dir for resume file by serial
-- Serial format conversion per emulator (e.g. `SCUS_949.00` → `SCUS-94900`)
 
 ## RetroAchievements
-- Web API only — emulators handle achievement tracking at runtime; we only display data
-- No credential patching — emulators handle their own RA login (DuckStation encrypts, PCSX2 was unreliable)
+- **Runtime tracking is RetroNest's own** — `RcheevosRuntime`
+  (`core/libretro/rcheevos_runtime.cpp`, rc_client + libretro memory
+  descriptors) runs in-process per session: game identification by hash,
+  achievement triggers, unlock submission, in-game toasts/indicator.
+  `GameSession` feeds it the RA console id from `SystemRegistry`.
+- The **Web API** (`RAClient`) additionally powers the display surfaces:
+  achievement catalogs, game lists, dashboards.
+- Login happens once in RetroNest's Settings → RetroAchievements; the
+  token is passed to each session's rc_client. No per-emulator credential
+  patching.
 - Title matching: 7-tier scoring (exact → deep substring) with normalization + brand prefix stripping
-- Console IDs in `ra_client.cpp` `consoleIdMapping()` — single source of truth
+- Console IDs come from `manifests/systems.json` (`ra_console_id`) via `SystemRegistry` — single source of truth
 
 ## Controller Mapping (Qt Widgets)
-- Per-emulator controller types declared via `controllerTypes()`
-- **PCSX2 binding format:** `SDL-0/FaceSouth` (generic names, no `+` for buttons, `+/-` for axes only)
-- **DuckStation binding format:** `SDL-0/A` (SDL names, bare axis names for full axes)
-- **PPSSPP binding format:** `{deviceId}-{keyCode}` (numeric, e.g. `10-19` for d-pad up). Often needs dual bindings (`10-96,10-189`) — GameController NKCODE + raw joystick button fallback.
-- Each emulator's `formatBinding()` override handles the differences
+- Per-emulator controller types declared via `controllerTypes()`; the
+  detail-page buttons that open each type come from the manifest's
+  `detail_page.controller_pages` (dolphin: GCPad1 + Wiimote1).
+- **One binding format for every core** — bindings live in each core's
+  `controls.ini` as `SDL-0/...` element names (`SDL-0/FaceSouth`,
+  `SDL-0/+LeftTrigger`), seeded by `LibretroAdapter::ensureConfig` from the
+  adapter's `controllerBindingDefsForType()` defaults. `GameSession` parses
+  them through `retroPadSlotFromKey()` into the InputRouter — the core never
+  sees host bindings, it sees RetroPad. (The per-emulator native formats and
+  `formatBinding()` overrides were standalone-era; libretro retired them.)
+- Analog sticks/L3/R3 are fixed-routed by `SdlInputManager` at the RetroPad
+  layer, not controls.ini-remappable.
 - Profile management: INI files under `{root}/config/controller_profiles/`
-- **Bindings in a separate file/section?** Override `controllerBindingsConfigFilePath()` and `controllerBindingsSection(port)` so the UI writes directly to where the emulator reads (PPSSPP uses `controls.ini` `[ControlMapping]`, not the main config). This makes binding changes instant in both UIs.
 
-## Emulator Config Strategy (INI Patching)
+## Emulator Config Strategy (libretro)
 
-### Source of truth = our app, via the shared config file
-Our settings UI reads/writes the same file the emulator reads, so changes are instant in both UIs and there's no merge logic. `configFilePath()` should point at the file the emulator actually reads (not a separate managed copy). `ensureConfig()` runs both before launching a game AND when the user opens the native settings UI, so the file always has wizard-suppressed and embedding-critical keys before the emulator touches it.
+### Three per-core stores under `{root}/emulators/libretro/<core>/`
+- **`options.json`** — the core's libretro option values (`OptionsStore`).
+  Written by the settings UI, handed to the core via `RETRO_ENVIRONMENT_GET_VARIABLE`.
+  On session start `OptionsStore::load` reconciles against the core's
+  declared value lists and silently drops values the core no longer accepts.
+- **`declared_options.json`** — the core's full declared option table
+  (keys, value sets, labels, defaults), rewritten on every session start and
+  seeded offline by `CoreProber` when absent. Never hand-edited; it is the
+  schema's source of truth (see Architecture).
+- **`frontend.json` / `controls.ini`** — RetroNest-owned frontend settings
+  (aspect mode, integer scale) and controller bindings.
 
-### createDefaultConfig — minimal keys only
-Only write keys **required for embedding**: wizard suppression, fullscreen, managed folder paths,
-input source headers. Do NOT write graphics, audio, speed, or controller type.
+### Schema = declared table × overlay — adapters carry no option data
+Do NOT add option rows to an adapter by hand. To expose a new core option:
+curate it in `optionOverlays()` (routing + optional dependsOn/defaultOverride);
+to change values/defaults/wording, change the FORK's CoreOptions source —
+it flows through automatically. Uncurated declared options stay valid in
+`options.json` but hidden from the UI. Defaults come from the core unless
+the overlay deliberately overrides (pinned in each core's guard test).
 
-### patchExistingConfig — defensive
-Same critical keys, check existence before overwrite, force-inject truly required keys, warn on missing.
+### Reset Configuration
+`LibretroAdapter::resetSettingsToDefaults()` deletes `options.json` +
+`frontend.json` and drops caches — wired through `config_service.cpp`.
+Bindings/hotkeys reset separately.
 
-### settingsSchema — validated at load
-Missing INI keys → disabled/greyed UI widgets + qWarning. Stale keys skipped on save.
-
-### Bitmask checkboxes — when an emulator packs flags into a single int key
-Some emulators store multiple boolean flags as bits of a single int-valued INI key (e.g. PPSSPP's `iShowStatusFlags` packs FPS/speed/CPU/GPU/debug toggles into one int). For these, set `SettingDef::bitmask` to the bit value the checkbox owns (e.g. `1`, `2`, `4`, `8`, …). The widget renders as a normal `Bool` checkbox; on load it reads the int and tests the bit, on save it re-reads the current int from disk, sets/clears the bit, and writes the full int back. Multiple bitmask checkboxes that share the same `section`/`key` merge correctly without caching. Default `bitmask = 0` means "normal Bool" — every existing setting in PCSX2 and DuckStation uses this path because both emulators expose flags as individual bool keys, not packed ints. Only reach for `bitmask` when the native emulator's source actually packs the flags; do not introduce it as a refactor.
-
-### Stored value format must round-trip
-If the emulator rewrites a setting in a different format than ours (e.g. PPSSPP writes `GraphicsBackend = 3 (VULKAN)` via a `ConfigTranslator`, not just `3`), our combo values **must** match the format the emulator writes — otherwise the UI can't match the stored value on the next read and falls back to the default. Always check what the emulator writes after a save before defining combo options.
+### Ini-storage rows (legacy mechanism, kept for future non-option needs)
+`SettingDef::Storage::Ini` plus bitmask checkboxes, load/save transforms and
+round-trip rules still exist for rows that must write a real INI file; the
+full playbook (round-trip bug classes, bitmask semantics) lives in
+`docs/new-adapter-checklist.md`. No shipped adapter uses Ini storage today.
 
 ## Multi-Disc M3U Support
 - Auto-detects disc patterns, generates M3U, suppresses individual discs from game list
