@@ -34,6 +34,8 @@ bool ManifestLoader::loadAll(const QString& manifestsDir) {
     }
 
     for (const auto& filename : files) {
+        if (filename == QLatin1String("systems.json"))
+            continue;   // system registry, not an emulator manifest (SystemRegistry::load)
         const QString filePath = dir.absoluteFilePath(filename);
         QFile file(filePath);
         if (!file.open(QIODevice::ReadOnly)) {

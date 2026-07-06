@@ -13,6 +13,7 @@
 
 #include "core/manifest_loader.h"
 #include "core/paths.h"
+#include "core/system_registry.h"
 #include "services/emulator_service.h"
 #include "services/patches_installer.h"
 #include "core/database.h"
@@ -81,6 +82,12 @@ int main(int argc, char* argv[]) {
     const QString manifestsDir = resolveResourceDir("manifests");
     if (!loader.loadAll(manifestsDir)) {
         qCritical() << "Failed to load manifests from" << manifestsDir;
+        return 1;
+    }
+    // System-facts registry (packet 7 stage 3): display names, ScreenScraper
+    // IDs, RA console IDs. Same directory, own file — loadAll skips it.
+    if (!SystemRegistry::load(manifestsDir + "/systems.json")) {
+        qCritical() << "Failed to load system registry from" << manifestsDir;
         return 1;
     }
 

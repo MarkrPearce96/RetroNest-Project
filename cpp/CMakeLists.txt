@@ -72,6 +72,7 @@ add_library(retronest_core STATIC
     # need LibretroGLItem to resolve.
     src/core/manifest_loader.cpp
     src/core/paths.cpp
+    src/core/system_registry.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
     src/core/path_overrides_store.cpp
@@ -653,6 +654,11 @@ add_test(NAME RetronestContract COMMAND test_retronest_contract)
 add_executable(test_declared_options tests/test_declared_options.cpp)
 target_link_libraries(test_declared_options PRIVATE retronest_core Qt6::Test)
 add_test(NAME DeclaredOptions COMMAND test_declared_options)
+
+# Packet 7 Stage 3: system-facts registry (manifests/systems.json).
+add_executable(test_system_registry tests/test_system_registry.cpp)
+target_link_libraries(test_system_registry PRIVATE retronest_core Qt6::Test)
+add_test(NAME SystemRegistry COMMAND test_system_registry)
 
 # Packet 7 Stage 2: offline sidecar seeding (probes the fake core dylib).
 add_executable(test_core_prober tests/test_core_prober.cpp)

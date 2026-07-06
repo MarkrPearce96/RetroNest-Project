@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "systems": {
+    "psx":          { "name": "PlayStation",      "screenscraper_id": 57,  "ra_console_id": 12 },
+    "ps2":          { "name": "PlayStation 2",    "screenscraper_id": 58,  "ra_console_id": 21 },
+    "psp":          { "name": "PSP",              "screenscraper_id": 61,  "ra_console_id": 41 },
+    "nes":          { "name": "Nintendo NES",     "screenscraper_id": 3 },
+    "snes":         { "name": "Super Nintendo",   "screenscraper_id": 4 },
+    "n64":          { "name": "Nintendo 64",      "screenscraper_id": 14 },
+    "gb":           { "name": "Game Boy",         "screenscraper_id": 9,   "ra_console_id": 4 },
+    "gbc":          { "name": "Game Boy Color",   "screenscraper_id": 10,  "ra_console_id": 6 },
+    "gba":          { "name": "Game Boy Advance", "screenscraper_id": 12,  "ra_console_id": 5 },
+    "nds":          { "name": "Nintendo DS",      "screenscraper_id": 15 },
+    "3ds":          { "name": "Nintendo 3DS",     "screenscraper_id": 17 },
+    "gc":           { "name": "GameCube",         "screenscraper_id": 13,  "ra_console_id": 16 },
+    "wii":          { "name": "Wii",              "screenscraper_id": 16,  "ra_console_id": 19 },
+    "wiiu":         { "name": "Wii U",            "screenscraper_id": 18 },
+    "switch":       { "name": "Nintendo Switch",  "screenscraper_id": 225 },
+    "genesis":      { "name": "Sega Genesis",     "screenscraper_id": 1 },
+    "saturn":       { "name": "Sega Saturn",      "screenscraper_id": 22 },
+    "dreamcast":    { "name": "Dreamcast",        "screenscraper_id": 23 },
+    "gamegear":     { "name": "Game Gear",        "screenscraper_id": 21 },
+    "mastersystem": { "name": "Master System",    "screenscraper_id": 2 },
+    "atari2600":    { "name": "Atari 2600",       "screenscraper_id": 26 },
+    "atari7800":    { "name": "Atari 7800",       "screenscraper_id": 41 },
+    "lynx":         { "name": "Atari Lynx",       "screenscraper_id": 28 },
+    "jaguar":       { "name": "Atari Jaguar",     "screenscraper_id": 27 },
+    "pcengine":     { "name": "PC Engine",        "screenscraper_id": 31 },
+    "neogeo":       { "name": "Neo Geo",          "screenscraper_id": 142 },
+    "arcade":       { "name": "Arcade",           "screenscraper_id": 75 }
+  }
+}
