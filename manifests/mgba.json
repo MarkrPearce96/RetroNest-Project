@@ -1,13 +1,25 @@
 {
+  "manifest_version": 1,
   "id": "mgba",
   "name": "mGBA",
   "description": "Game Boy / Game Boy Color / Game Boy Advance (libretro)",
-  "systems": ["gba", "gbc", "gb"],
+  "systems": [
+    "gba",
+    "gbc",
+    "gb"
+  ],
   "executable": "mgba_libretro.dylib",
   "install_folder": "libretro",
-  "rom_extensions": ["gba", "gbc", "gb", "zip", "7z"],
+  "rom_extensions": [
+    "gba",
+    "gbc",
+    "gb",
+    "zip",
+    "7z"
+  ],
   "launch_args": [],
   "backend": "libretro",
   "core_dylib": "mgba_libretro.dylib",
-  "core_arch": "universal"
+  "core_arch": "universal",
+  "logo": "qrc:/AppUI/qml/AppUI/images/mgba_logo.png"
 }

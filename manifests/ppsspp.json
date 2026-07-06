@@ -1,14 +1,25 @@
 {
+  "manifest_version": 1,
   "id": "ppsspp",
   "name": "PPSSPP",
   "description": "PSP emulator (libretro core)",
-  "systems": ["psp"],
+  "systems": [
+    "psp"
+  ],
   "github_repo": "markrpearce96/ppsspp-libretro",
   "executable": "ppsspp_libretro.dylib",
   "install_folder": "libretro",
-  "rom_extensions": ["iso", "cso", "chd", "pbp", "elf", "prx"],
+  "rom_extensions": [
+    "iso",
+    "cso",
+    "chd",
+    "pbp",
+    "elf",
+    "prx"
+  ],
   "launch_args": [],
   "backend": "libretro",
   "core_dylib": "ppsspp_libretro.dylib",
-  "core_arch": "universal"
+  "core_arch": "universal",
+  "logo": "qrc:/AppUI/qml/AppUI/images/ppsspp_logo.png"
 }

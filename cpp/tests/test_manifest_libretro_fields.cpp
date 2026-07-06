@@ -85,6 +85,74 @@ private slots:
         QVERIFY(m != nullptr);            // manifest still loads
         QVERIFY(m->core_arch.isEmpty());  // invalid value degrades to undeclared
     }
+
+    // ── Packet 7 Stage 3: version stamp, logo, detail_page, typo net ──
+
+    void testDetailPageFieldsParse() {
+        QTemporaryDir dir;
+        writeManifest(dir.path(), "d.json", R"({
+            "manifest_version":1,"id":"d","name":"D","systems":["s"],"github_repo":"o/r",
+            "executable":"D","rom_extensions":["bin"],"launch_args":[],
+            "logo":"qrc:/AppUI/qml/AppUI/images/dolphin_logo.png",
+            "detail_page":{
+                "controller_pages":[{"label":"GameCube Controller","type":"GCPad1"},
+                                     {"label":"Wii Classic Controller","type":"Wiimote1"}],
+                "has_patches":true}
+        })");
+        ManifestLoader loader;
+        loader.loadAll(dir.path());
+        const auto* m = loader.emulatorById("d");
+        QVERIFY(m != nullptr);
+        QCOMPARE(m->manifest_version, 1);
+        QCOMPARE(m->logo, QString("qrc:/AppUI/qml/AppUI/images/dolphin_logo.png"));
+        QCOMPARE(m->controller_pages.size(), 2);
+        QCOMPARE(m->controller_pages[0].label, QString("GameCube Controller"));
+        QCOMPARE(m->controller_pages[0].type,  QString("GCPad1"));
+        QCOMPARE(m->controller_pages[1].label, QString("Wii Classic Controller"));
+        QCOMPARE(m->controller_pages[1].type,  QString("Wiimote1"));
+        QVERIFY(m->has_patches);
+    }
+    void testDetailPageFieldsDefault() {
+        QTemporaryDir dir;
+        writeManifest(dir.path(), "x.json", R"({
+            "manifest_version":1,"id":"x","name":"X","systems":["s"],"github_repo":"o/r",
+            "executable":"X","rom_extensions":["bin"],"launch_args":[]
+        })");
+        ManifestLoader loader;
+        loader.loadAll(dir.path());
+        const auto* m = loader.emulatorById("x");
+        QVERIFY(m != nullptr);
+        QVERIFY(m->logo.isEmpty());
+        QVERIFY(m->controller_pages.isEmpty());
+        QVERIFY(!m->has_patches);
+    }
+    void testUnknownKeyWarns() {
+        QTemporaryDir dir;
+        writeManifest(dir.path(), "u.json", R"({
+            "manifest_version":1,"id":"u","name":"U","systems":["s"],"github_repo":"o/r",
+            "executable":"U","rom_extensions":["bin"],"launch_args":[],
+            "tpyo_field":true
+        })");
+        QTest::ignoreMessage(QtWarningMsg,
+            QRegularExpression(QStringLiteral("unknown key.*tpyo_field")));
+        ManifestLoader loader;
+        loader.loadAll(dir.path());
+        QVERIFY(loader.emulatorById("u") != nullptr);   // warn, don't reject
+    }
+    void testMissingVersionWarns() {
+        QTemporaryDir dir;
+        writeManifest(dir.path(), "v.json", R"({
+            "id":"v","name":"V","systems":["s"],"github_repo":"o/r",
+            "executable":"V","rom_extensions":["bin"],"launch_args":[]
+        })");
+        QTest::ignoreMessage(QtWarningMsg,
+            QRegularExpression(QStringLiteral("missing manifest_version")));
+        ManifestLoader loader;
+        loader.loadAll(dir.path());
+        const auto* m = loader.emulatorById("v");
+        QVERIFY(m != nullptr);                          // grandfathered, not rejected
+        QCOMPARE(m->manifest_version, 0);
+    }
 };
 QTEST_MAIN(TestManifestLibretroFields)
 #include "test_manifest_libretro_fields.moc"

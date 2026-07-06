@@ -1,14 +1,45 @@
 {
+  "manifest_version": 1,
   "id": "dolphin",
   "name": "Dolphin",
   "description": "GameCube and Wii emulator (libretro core)",
-  "systems": ["gc", "wii"],
+  "systems": [
+    "gc",
+    "wii"
+  ],
   "github_repo": "markrpearce96/dolphin-libretro",
   "executable": "dolphin_libretro.dylib",
   "install_folder": "libretro",
-  "rom_extensions": ["iso", "gcm", "gcz", "ciso", "wbfs", "rvz", "wad", "wia", "nkit", "m3u", "dol", "elf", "tgc"],
+  "rom_extensions": [
+    "iso",
+    "gcm",
+    "gcz",
+    "ciso",
+    "wbfs",
+    "rvz",
+    "wad",
+    "wia",
+    "nkit",
+    "m3u",
+    "dol",
+    "elf",
+    "tgc"
+  ],
   "launch_args": [],
   "backend": "libretro",
   "core_dylib": "dolphin_libretro.dylib",
-  "core_arch": "x86_64"
+  "core_arch": "x86_64",
+  "logo": "qrc:/AppUI/qml/AppUI/images/dolphin_logo.png",
+  "detail_page": {
+    "controller_pages": [
+      {
+        "label": "GameCube Controller",
+        "type": "GCPad1"
+      },
+      {
+        "label": "Wii Classic Controller",
+        "type": "Wiimote1"
+      }
+    ]
+  }
 }

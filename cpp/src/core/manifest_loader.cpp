@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDebug>
+#include <QSet>
 
 static QStringList jsonArrayToStringList(const QJsonArray& arr) {
     QStringList result;
@@ -57,7 +58,26 @@ bool ManifestLoader::loadAll(const QString& manifestsDir) {
 
         const auto obj = doc.object();
 
+        // Loader hardening (packet 7 stage 3): version stamp + typo net.
+        static const QSet<QString> kKnownKeys = {
+            "manifest_version", "id", "name", "description", "systems",
+            "github_repo", "executable", "install_folder", "rom_extensions",
+            "launch_args", "backend", "core_dylib", "core_buildbot_path",
+            "core_arch", "logo", "detail_page",
+        };
+        for (const QString& key : obj.keys()) {
+            if (!kKnownKeys.contains(key))
+                qWarning() << "[Manifest]" << filePath << "unknown key" << key
+                           << "— ignored (typo?)";
+        }
+
         EmulatorManifest m;
+        m.manifest_version = obj.value("manifest_version").toInt(0);
+        if (m.manifest_version == 0)
+            qWarning() << "[Manifest]" << filePath << "missing manifest_version — treating as v0";
+        else if (m.manifest_version > 1)
+            qWarning() << "[Manifest]" << filePath << "manifest_version" << m.manifest_version
+                       << "is newer than this build understands (1)";
         m.id = obj["id"].toString();
         m.name = obj["name"].toString();
         m.description = obj["description"].toString();
@@ -82,6 +102,19 @@ bool ManifestLoader::loadAll(const QString& manifestsDir) {
             qWarning() << "[Manifest]" << filePath << "has invalid core_arch"
                        << m.core_arch << "— expected universal|x86_64|arm64; treating as undeclared";
             m.core_arch.clear();
+        }
+
+        // Packet 7 stage 3: UI-facing capability fields.
+        m.logo = obj.value("logo").toString();
+        const QJsonObject dp = obj.value("detail_page").toObject();
+        m.has_patches = dp.value("has_patches").toBool(false);
+        for (const auto& v : dp.value("controller_pages").toArray()) {
+            const QJsonObject po = v.toObject();
+            ManifestControllerPage page;
+            page.label = po.value("label").toString();
+            page.type  = po.value("type").toString();
+            if (!page.label.isEmpty())
+                m.controller_pages.append(page);
         }
 
         // Default install_folder to id if not specified

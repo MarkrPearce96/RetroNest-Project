@@ -1,13 +1,25 @@
 {
+  "manifest_version": 1,
   "id": "duckstation",
   "name": "DuckStation",
   "description": "PlayStation 1 emulator (libretro core).",
-  "systems": ["psx"],
+  "systems": [
+    "psx"
+  ],
   "executable": "duckstation_libretro.dylib",
   "install_folder": "libretro",
-  "rom_extensions": ["bin", "cue", "iso", "img", "pbp", "chd", "m3u"],
+  "rom_extensions": [
+    "bin",
+    "cue",
+    "iso",
+    "img",
+    "pbp",
+    "chd",
+    "m3u"
+  ],
   "launch_args": [],
   "backend": "libretro",
   "core_dylib": "duckstation_libretro.dylib",
-  "core_arch": "universal"
+  "core_arch": "universal",
+  "logo": "qrc:/AppUI/qml/AppUI/images/duckstation_logo.png"
 }
