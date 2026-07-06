@@ -1,4 +1,5 @@
 #include "scraper.h"
+#include "system_registry.h"
 
 #include <QCoreApplication>
 #include <QNetworkAccessManager>
@@ -69,38 +70,9 @@ QStringList Scraper::screenScraperMediaTypes(const QString& mediaType) {
 }
 
 int Scraper::systemToScreenScraperId(const QString& system) {
-    // ScreenScraper system IDs: https://www.screenscraper.fr/webapi2.php?action=systemesListe
-    static const QHash<QString, int> map = {
-        {"psx",          57},   // Sony PlayStation
-        {"ps2",          58},   // Sony PlayStation 2
-        {"psp",          61},   // Sony PSP
-        {"nes",          3},    // Nintendo NES
-        {"snes",         4},    // Super Nintendo
-        {"n64",          14},   // Nintendo 64
-        {"gb",           9},    // Game Boy
-        {"gbc",          10},   // Game Boy Color
-        {"gba",          12},   // Game Boy Advance
-        {"nds",          15},   // Nintendo DS
-        {"3ds",          17},   // Nintendo 3DS
-        {"gc",           13},   // GameCube
-        {"wii",          16},   // Wii
-        {"wiiu",         18},   // Wii U
-        {"switch",       225},  // Nintendo Switch
-        {"genesis",      1},    // Sega Genesis/Mega Drive
-        {"saturn",       22},   // Sega Saturn
-        {"dreamcast",    23},   // Sega Dreamcast
-        {"gamegear",     21},   // Sega Game Gear
-        {"mastersystem", 2},    // Sega Master System
-        {"atari2600",    26},   // Atari 2600
-        {"atari7800",    41},   // Atari 7800
-        {"lynx",         28},   // Atari Lynx
-        {"jaguar",       27},   // Atari Jaguar
-        {"pcengine",     31},   // PC Engine/TurboGrafx-16
-        {"neogeo",       142},  // Neo Geo
-        {"arcade",       75},   // MAME/Arcade
-    };
-
-    return map.value(system.toLower(), -1);
+    // Packet 7 stage 3: IDs come from manifests/systems.json.
+    // (Reference list: https://www.screenscraper.fr/webapi2.php?action=systemesListe)
+    return SystemRegistry::screenScraperId(system);
 }
 
 Scraper::ScrapeResult Scraper::scrapeGame(const GameRecord& game,

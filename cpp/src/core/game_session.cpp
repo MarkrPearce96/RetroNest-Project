@@ -1,5 +1,6 @@
 #include "game_session.h"
 #include "paths.h"
+#include "system_registry.h"
 #include "adapters/emulator_adapter.h"
 #include "adapters/libretro/libretro_adapter.h"
 #include "core/ini_file.h"
@@ -248,7 +249,10 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         cfg.schemaOptionDefaults = std::move(schemaDefaults);
     }
 
-    cfg.raConsoleId = lr->raConsoleId(systemId);
+    // RA console id comes from the system registry (adapter overrides
+    // retired in packet 7 stage 3). rcheevos treats 0 as "unknown console".
+    const int raId = SystemRegistry::raConsoleId(systemId);
+    cfg.raConsoleId = raId > 0 ? raId : 0;
     if (m_raConfig.valid) {
         cfg.raUsername = m_raConfig.username;
         if (m_raConfig.loginToken.isEmpty() && !m_raConfig.apiKey.isEmpty()) {

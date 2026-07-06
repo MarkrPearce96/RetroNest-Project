@@ -14,12 +14,6 @@ public:
         return HardwareRenderBackend::GL;
     }
 
-    // RC_CONSOLE_PSP = 41. Without this, rc_libretro_memory_init fails
-    // and achievements never trigger — see Pcsx2LibretroAdapter::raConsoleId.
-    int raConsoleId(const QString& systemId) const override {
-        return (systemId == "psp") ? 41 : 0;
-    }
-
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<PathDef> pathsDefs() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;

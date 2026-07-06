@@ -13,12 +13,6 @@ public:
     HardwareRenderBackend hardwareRenderBackend() const override {
         return HardwareRenderBackend::MetalNSView;
     }
-    // PS1 → RC_CONSOLE_PLAYSTATION = 12. Without this, rc_libretro_memory_init
-    // fails and achievements never trigger — see Pcsx2LibretroAdapter::raConsoleId.
-    int raConsoleId(const QString& systemId) const override {
-        return (systemId == "psx") ? 12 : 0;
-    }
-
     // PS1 Digital Controller is the controller type RetroNest exposes for
     // DuckStation. Without this override the base returns {}, the
     // controller-mapping page is empty, the InputRouter has no bindings to

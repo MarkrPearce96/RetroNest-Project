@@ -19,11 +19,6 @@ public:
         return HardwareRenderBackend::MetalNSView;
     }
 
-    // GameCube = RC_CONSOLE_GAMECUBE (16); Wii = RC_CONSOLE_WII (19).
-    // RetroNest's RA console mapping in cpp/src/core/ra_client.cpp already
-    // contains the gc/wii string->id entries.
-    int raConsoleId(const QString& systemId) const override;
-
     // SP8: cold-resume lookup. GameSession writes "<serial-or-basename>.resume"
     // under the SaveStates override or emulators/dolphin/<gc|wii>/savestates;
     // Dolphin spans two systems, so the impl searches both (mirrors

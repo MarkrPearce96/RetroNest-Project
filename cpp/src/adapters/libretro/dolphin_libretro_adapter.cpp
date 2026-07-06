@@ -8,13 +8,6 @@
 #include <QFile>
 #include <QFileInfo>
 
-int DolphinLibretroAdapter::raConsoleId(const QString& systemId) const {
-    if (systemId == "gc")
-        return 16;
-    if (systemId == "wii")
-        return 19;
-    return 0;
-}
 
 QString DolphinLibretroAdapter::findResumeFile(const QString& key) const {
     if (key.isEmpty())

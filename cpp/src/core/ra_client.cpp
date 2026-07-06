@@ -1,4 +1,5 @@
 #include "ra_client.h"
+#include "system_registry.h"
 
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -330,25 +331,12 @@ QVector<RAClient::ConsoleGame> RAClient::fetchConsoleGames(int consoleId, QAtomi
 }
 
 // ── Console ID Mapping ──
-
-static const QMap<QString, int>& consoleIdMapping() {
-    static const QMap<QString, int> mapping = {
-        {"psx", 12},
-        {"ps2", 21},
-        {"psp", 41},
-        {"gc", 16},
-        {"wii", 19},
-        {"gb",   4},   // Game Boy
-        {"gbc",  6},   // Game Boy Color
-        {"gba",  5},   // Game Boy Advance
-    };
-    return mapping;
-}
+// Packet 7 stage 3: RA console IDs come from manifests/systems.json.
 
 int RAClient::raConsoleId(const QString& systemId) {
-    return consoleIdMapping().value(systemId, -1);
+    return SystemRegistry::raConsoleId(systemId);   // -1 when unsupported
 }
 
 QList<int> RAClient::allConsoleIds() {
-    return consoleIdMapping().values();
+    return SystemRegistry::allRaConsoleIds();
 }

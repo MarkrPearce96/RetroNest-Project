@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include "core/paths.h"
+#include "core/system_registry.h"
 
 ThemeContext::ThemeContext(AppController* app, GameListModel* model, Database* db, QObject* parent)
     : QObject(parent), m_app(app), m_gameModel(model), m_db(db)
@@ -250,36 +251,8 @@ void ThemeContext::refreshSystems() {
 }
 
 QString ThemeContext::systemDisplayName(const QString& systemId) {
-    static const QHash<QString, QString> names = {
-        {"psx",          "PlayStation"},
-        {"ps2",          "PlayStation 2"},
-        {"psp",          "PSP"},
-        {"nes",          "Nintendo NES"},
-        {"snes",         "Super Nintendo"},
-        {"n64",          "Nintendo 64"},
-        {"gb",           "Game Boy"},
-        {"gbc",          "Game Boy Color"},
-        {"gba",          "Game Boy Advance"},
-        {"nds",          "Nintendo DS"},
-        {"3ds",          "Nintendo 3DS"},
-        {"gc",           "GameCube"},
-        {"wii",          "Wii"},
-        {"wiiu",         "Wii U"},
-        {"switch",       "Nintendo Switch"},
-        {"genesis",      "Sega Genesis"},
-        {"saturn",       "Sega Saturn"},
-        {"dreamcast",    "Dreamcast"},
-        {"gamegear",     "Game Gear"},
-        {"mastersystem", "Master System"},
-        {"atari2600",    "Atari 2600"},
-        {"atari7800",    "Atari 7800"},
-        {"lynx",         "Atari Lynx"},
-        {"jaguar",       "Atari Jaguar"},
-        {"pcengine",     "PC Engine"},
-        {"neogeo",       "Neo Geo"},
-        {"arcade",       "Arcade"},
-    };
-    return names.value(systemId.toLower(), systemId);
+    // Packet 7 stage 3: names come from manifests/systems.json.
+    return SystemRegistry::displayName(systemId);
 }
 
 int ThemeContext::currentFocusedGameId() const {

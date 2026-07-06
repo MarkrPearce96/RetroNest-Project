@@ -134,12 +134,6 @@ public:
      */
     virtual QString systemDirOverride() const { return {}; }
 
-    /** RA console ID for the given system. Default returns 0 (unknown).
-     *  Concrete adapters override to return per-system mappings. */
-    virtual int raConsoleId(const QString& systemId) const {
-        Q_UNUSED(systemId); return 0;
-    }
-
     /** Default frontend setting (key, defaultValue) pairs for this core.
      *  Subclasses override to declare their frontend-managed settings.
      *  Default returns empty (no frontend settings). */

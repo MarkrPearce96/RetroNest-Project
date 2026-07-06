@@ -16,16 +16,6 @@ public:
         return HardwareRenderBackend::MetalNSView;
     }
 
-    // PS2 → rcheevos console ID 21 (RC_CONSOLE_PLAYSTATION_2).
-    // Without this override, the base returns 0 (UNKNOWN) →
-    // rc_libretro_memory_init fails → cheevo set loads with regions=0
-    // and achievements never trigger. Discovered during SP6 smoke
-    // testing (the SP6 spec assumed RetroNest side was fully wired —
-    // the adapter override was missing for PCSX2 specifically).
-    int raConsoleId(const QString& systemId) const override {
-        return (systemId == "ps2") ? 21 : 0;
-    }
-
     // SP8: PS2 DualShock 2 is the only controller type RetroNest exposes for
     // PCSX2 — matches the deleted standalone adapter's surface. Without
     // this override the base returns {}, the controller-mapping page is
