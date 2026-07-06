@@ -9,12 +9,11 @@
 
 // Controller artwork: the Analog Controller page uses the PS1 analog-pad
 // SVG that has shipped in images/controllers/ since the first commit but
-// was never wired up (found at Packet 7 GATE 10). Spotlight coords stay
-// 0/0/0 ("no spotlight") — the same presentation as PCSX2's DualShock_2
-// page; calibrating spotlights for both PlayStation pads is a separate
-// pass. The Digital Controller page stays artless deliberately: no
-// digital-pad (stickless) SVG exists, and showing a stick-equipped pad on
-// the digital page would be wrong.
+// was never wired up (found at Packet 7 GATE 10). Spotlight coords below
+// target analog_controller.svg's viewBox (12175 x 8310), calibrated
+// against the rendered artwork. The Digital Controller page stays artless
+// deliberately: no digital-pad (stickless) SVG exists, and showing a
+// stick-equipped pad on the digital page would be wrong.
 QVector<ControllerTypeDef> DuckStationLibretroAdapter::controllerTypes() const {
     return {
         {"AnalogController", "Analog Controller",
@@ -40,28 +39,28 @@ QVector<ControllerTypeDef> DuckStationLibretroAdapter::controllerTypes() const {
 //   RetroPad X  (north) = PS1 Triangle
 //
 // Stick axes and L3/R3 are fed at runtime by the core (RETRO_DEVICE_ANALOG / RetroPad);
-// they are not listed here as user-rebindable binding rows. Spotlight coords
-// are 0/0/0 (no spotlight) because there is no PS1 controller SVG yet.
+// they are not listed here as user-rebindable binding rows. Spotlight
+// coords target analog_controller.svg's viewBox (12175 x 8310).
 QVector<BindingDef> DuckStationLibretroAdapter::controllerBindingDefsForType(const QString&) const {
     return {
         // D-Pad
-        { BindingDef::Button, "D-Pad Up",    "D-Pad", "Pad1", "Up",    "SDL-0/DPadUp",    "DPad", 0, 0, 0 },
-        { BindingDef::Button, "D-Pad Down",  "D-Pad", "Pad1", "Down",  "SDL-0/DPadDown",  "DPad", 0, 0, 0 },
-        { BindingDef::Button, "D-Pad Left",  "D-Pad", "Pad1", "Left",  "SDL-0/DPadLeft",  "DPad", 0, 0, 0 },
-        { BindingDef::Button, "D-Pad Right", "D-Pad", "Pad1", "Right", "SDL-0/DPadRight", "DPad", 0, 0, 0 },
+        { BindingDef::Button, "D-Pad Up",    "D-Pad", "Pad1", "Up",    "SDL-0/DPadUp",    "DPad", 2452, 3449, 380 },
+        { BindingDef::Button, "D-Pad Down",  "D-Pad", "Pad1", "Down",  "SDL-0/DPadDown",  "DPad", 2452, 4944, 380 },
+        { BindingDef::Button, "D-Pad Left",  "D-Pad", "Pad1", "Left",  "SDL-0/DPadLeft",  "DPad", 1679, 4197, 380 },
+        { BindingDef::Button, "D-Pad Right", "D-Pad", "Pad1", "Right", "SDL-0/DPadRight", "DPad", 3225, 4197, 380 },
         // Face buttons
-        { BindingDef::Button, "Cross",    "Buttons", "Pad1", "B", "SDL-0/FaceSouth", "FaceButtons", 0, 0, 0 },
-        { BindingDef::Button, "Circle",   "Buttons", "Pad1", "A", "SDL-0/FaceEast",  "FaceButtons", 0, 0, 0 },
-        { BindingDef::Button, "Square",   "Buttons", "Pad1", "Y", "SDL-0/FaceWest",  "FaceButtons", 0, 0, 0 },
-        { BindingDef::Button, "Triangle", "Buttons", "Pad1", "X", "SDL-0/FaceNorth", "FaceButtons", 0, 0, 0 },
+        { BindingDef::Button, "Cross",    "Buttons", "Pad1", "B", "SDL-0/FaceSouth", "FaceButtons", 9764, 5169, 400 },
+        { BindingDef::Button, "Circle",   "Buttons", "Pad1", "A", "SDL-0/FaceEast",  "FaceButtons", 10820, 4155, 400 },
+        { BindingDef::Button, "Square",   "Buttons", "Pad1", "Y", "SDL-0/FaceWest",  "FaceButtons", 8659, 4172, 400 },
+        { BindingDef::Button, "Triangle", "Buttons", "Pad1", "X", "SDL-0/FaceNorth", "FaceButtons", 9764, 3091, 400 },
         // Shoulders + triggers (triggers route as digital here; full analog is future work)
-        { BindingDef::Button, "L1", "Shoulders", "Pad1", "L",  "SDL-0/LeftShoulder",  "Shoulders", 0, 0, 0 },
-        { BindingDef::Button, "R1", "Shoulders", "Pad1", "R",  "SDL-0/RightShoulder", "Shoulders", 0, 0, 0 },
-        { BindingDef::Button, "L2", "Shoulders", "Pad1", "L2", "SDL-0/+LeftTrigger",  "Shoulders", 0, 0, 0 },
-        { BindingDef::Button, "R2", "Shoulders", "Pad1", "R2", "SDL-0/+RightTrigger", "Shoulders", 0, 0, 0 },
+        { BindingDef::Button, "L1", "Shoulders", "Pad1", "L",  "SDL-0/LeftShoulder",  "Shoulders", 2520, 1180, 400 },
+        { BindingDef::Button, "R1", "Shoulders", "Pad1", "R",  "SDL-0/RightShoulder", "Shoulders", 9624, 1180, 400 },
+        { BindingDef::Button, "L2", "Shoulders", "Pad1", "L2", "SDL-0/+LeftTrigger",  "Shoulders", 2650, 432, 400 },
+        { BindingDef::Button, "R2", "Shoulders", "Pad1", "R2", "SDL-0/+RightTrigger", "Shoulders", 9490, 432, 400 },
         // System
-        { BindingDef::Button, "Start",  "System", "Pad1", "Start",  "SDL-0/Start", "System", 0, 0, 0 },
-        { BindingDef::Button, "Select", "System", "Pad1", "Select", "SDL-0/Back",  "System", 0, 0, 0 },
+        { BindingDef::Button, "Start",  "System", "Pad1", "Start",  "SDL-0/Start", "System", 7350, 4155, 300 },
+        { BindingDef::Button, "Select", "System", "Pad1", "Select", "SDL-0/Back",  "System", 4919, 4113, 300 },
     };
 }
 
