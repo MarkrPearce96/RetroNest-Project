@@ -21,6 +21,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include "adapters/libretro/dolphin_libretro_adapter.h"
 #include "adapters/libretro/duckstation_libretro_adapter.h"
 #include "adapters/libretro/mgba_libretro_adapter.h"
 #include "adapters/libretro/ppsspp_libretro_adapter.h"
@@ -152,6 +153,10 @@ private slots:
     void ppssppParity() {
         PpssppLibretroAdapter adapter;
         runParity(adapter, "ppsspp");
+    }
+    void dolphinParity() {
+        DolphinLibretroAdapter adapter;
+        runParity(adapter, "dolphin");
     }
 };
 

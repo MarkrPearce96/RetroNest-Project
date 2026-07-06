@@ -1,0 +1,1328 @@
+[
+    {
+        "category": "Graphics",
+        "default": "Auto",
+        "key": "dolphin_aspect_ratio",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto",
+            "16:9",
+            "4:3",
+            "Stretch"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_vsync",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_precision_frame_timing",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Specialized",
+        "key": "dolphin_shader_compilation",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Specialized",
+            "Exclusive Ubershaders",
+            "Hybrid Ubershaders",
+            "Skip Drawing"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_wait_for_shaders",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "1x",
+        "key": "dolphin_internal_resolution",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto",
+            "1x",
+            "2x",
+            "3x",
+            "4x",
+            "5x",
+            "6x",
+            "7x",
+            "8x"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "None",
+        "key": "dolphin_antialiasing",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "None",
+            "2x MSAA",
+            "4x MSAA",
+            "8x MSAA",
+            "2x SSAA",
+            "4x SSAA",
+            "8x SSAA"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Default",
+        "key": "dolphin_texture_filtering",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Default",
+            "1x Anisotropic",
+            "2x Anisotropic",
+            "4x Anisotropic",
+            "8x Anisotropic",
+            "16x Anisotropic",
+            "Force Nearest and 1x Anisotropic",
+            "Force Linear and 1x Anisotropic",
+            "Force Linear and 2x Anisotropic",
+            "Force Linear and 4x Anisotropic",
+            "Force Linear and 8x Anisotropic",
+            "Force Linear and 16x Anisotropic"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Default",
+        "key": "dolphin_output_resampling",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Default",
+            "Bilinear",
+            "Bicubic B-Spline",
+            "Bicubic Mitchell-Netravali",
+            "Bicubic Catmull-Rom",
+            "Sharp Bilinear",
+            "Area Sampling"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_scaled_efb_copy",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_per_pixel_lighting",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_widescreen_hack",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_force_true_color",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_disable_fog",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_arbitrary_mipmap_detection",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_disable_copy_filter",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_hdr_output",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Off",
+        "key": "dolphin_stereo_mode",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Off",
+            "Side-by-Side",
+            "Top-and-Bottom",
+            "Anaglyph",
+            "HDMI 3D",
+            "Passive"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_stereo_swap_eyes",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_stereo_per_eye_full",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Default",
+        "key": "dolphin_texcache_accuracy",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Safe",
+            "Default",
+            "Fast"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_skip_efb_access",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_ignore_format_changes",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_store_efb_to_texture",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_defer_efb_copies",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_gpu_texture_decoding",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_store_xfb_to_texture",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_immediate_xfb",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_skip_duplicate_xfbs",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_fast_depth_calc",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_disable_bounding_box",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_vertex_rounding",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_save_texcache_to_state",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_vbi_skip",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_load_custom_textures",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_prefetch_custom_textures",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_enable_graphics_mods",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_crop",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_backend_multithreading",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_prefer_vs_expansion",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_cpu_cull",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_defer_efb_invalidation",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_manual_texture_sampling",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "13",
+        "key": "dolphin_osd_font_size",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "13",
+            "18",
+            "24",
+            "36"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "1000",
+        "key": "dolphin_perf_samp_window",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "250",
+            "500",
+            "1000",
+            "2000",
+            "5000"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_osd_messages",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_show_fps",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_show_ftimes",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_show_vps",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_show_vtimes",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_show_speed",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "dolphin_show_graphs",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "dolphin_show_speed_colors",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "HLE",
+        "key": "dolphin_dsp_engine",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "HLE",
+            "LLE Recompiler",
+            "LLE Interpreter"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "20",
+        "key": "dolphin_audio_latency",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "10",
+            "20",
+            "40",
+            "60",
+            "80",
+            "100",
+            "150",
+            "200"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "disabled",
+        "key": "dolphin_dpl2_decoder",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "2",
+        "key": "dolphin_dpl2_quality",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "80",
+        "key": "dolphin_audio_buffer_size",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "32",
+            "48",
+            "64",
+            "80",
+            "96",
+            "128",
+            "160",
+            "256",
+            "512"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "enabled",
+        "key": "dolphin_audio_fill_gaps",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "disabled",
+        "key": "dolphin_audio_preserve_pitch",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "disabled",
+        "key": "dolphin_audio_mute_on_unthrottle",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "100",
+        "key": "dolphin_volume",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "10",
+            "20",
+            "30",
+            "40",
+            "50",
+            "60",
+            "70",
+            "80",
+            "90",
+            "100"
+        ]
+    },
+    {
+        "category": "General",
+        "default": "disabled",
+        "key": "dolphin_cpu_thread",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "General",
+        "default": "disabled",
+        "key": "dolphin_enable_cheats",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "General",
+        "default": "disabled",
+        "key": "dolphin_load_game_into_memory",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "General",
+        "default": "disabled",
+        "key": "dolphin_override_region_settings",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "General",
+        "default": "1.000000",
+        "key": "dolphin_emulation_speed",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0.000000",
+            "0.100000",
+            "0.200000",
+            "0.300000",
+            "0.400000",
+            "0.500000",
+            "0.600000",
+            "0.700000",
+            "0.800000",
+            "0.900000",
+            "1.000000",
+            "1.100000",
+            "1.200000",
+            "1.300000",
+            "1.400000",
+            "1.500000",
+            "1.600000",
+            "1.700000",
+            "1.800000",
+            "1.900000",
+            "2.000000"
+        ]
+    },
+    {
+        "category": "General",
+        "default": "1",
+        "key": "dolphin_fallback_region",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "JIT",
+        "key": "dolphin_cpu_core",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Interpreter",
+            "Cached Interpreter",
+            "JIT"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "disabled",
+        "key": "dolphin_mmu",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "disabled",
+        "key": "dolphin_pause_on_panic",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "disabled",
+        "key": "dolphin_accurate_cpu_cache",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "disabled",
+        "key": "dolphin_correct_time_drift",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "disabled",
+        "key": "dolphin_rush_frame_presentation",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "disabled",
+        "key": "dolphin_smooth_early_presentation",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "disabled",
+        "key": "dolphin_overclock_enable",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "1",
+        "key": "dolphin_overclock",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "3",
+            "4"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "disabled",
+        "key": "dolphin_vi_overclock_enable",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Advanced",
+        "default": "1",
+        "key": "dolphin_vi_overclock",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "3",
+            "4"
+        ]
+    },
+    {
+        "category": "GameCube",
+        "default": "enabled",
+        "key": "dolphin_skip_ipl",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "GameCube",
+        "default": "0",
+        "key": "dolphin_gc_language",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+        ]
+    },
+    {
+        "category": "GameCube",
+        "default": "8",
+        "key": "dolphin_slot_a",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "255",
+            "0",
+            "1",
+            "8",
+            "7",
+            "9",
+            "4"
+        ]
+    },
+    {
+        "category": "GameCube",
+        "default": "255",
+        "key": "dolphin_slot_b",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "255",
+            "0",
+            "1",
+            "8",
+            "7",
+            "9",
+            "4"
+        ]
+    },
+    {
+        "category": "GameCube",
+        "default": "255",
+        "key": "dolphin_serial_port_1",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "255",
+            "0",
+            "5",
+            "10",
+            "11",
+            "12",
+            "13",
+            "6"
+        ]
+    },
+    {
+        "category": "Wii",
+        "default": "disabled",
+        "key": "dolphin_wii_keyboard",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Wii",
+        "default": "disabled",
+        "key": "dolphin_enable_wiilink",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Wii",
+        "default": "enabled",
+        "key": "dolphin_wii_sd_card",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Wii",
+        "default": "enabled",
+        "key": "dolphin_wii_sd_card_writes",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Wii",
+        "default": "disabled",
+        "key": "dolphin_wii_sd_card_folder_sync",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Wii",
+        "default": "0",
+        "key": "dolphin_wii_sd_card_size",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "67108864",
+            "134217728",
+            "268435456",
+            "536870912",
+            "1073741824",
+            "2147483648",
+            "4294967296",
+            "8589934592",
+            "17179869184",
+            "34359738368"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "disabled",
+        "key": "dolphin_cpu_thread",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "Specialized",
+        "key": "dolphin_shader_compilation",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Specialized",
+            "Exclusive Ubershaders",
+            "Hybrid Ubershaders",
+            "Skip Drawing"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "disabled",
+        "key": "dolphin_wait_for_shaders",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "enabled",
+        "key": "dolphin_store_efb_to_texture",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "enabled",
+        "key": "dolphin_store_xfb_to_texture",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "enabled",
+        "key": "dolphin_skip_efb_access",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "Default",
+        "key": "dolphin_texcache_accuracy",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Safe",
+            "Default",
+            "Fast"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "1x",
+        "key": "dolphin_internal_resolution",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto",
+            "1x",
+            "2x",
+            "3x",
+            "4x",
+            "5x",
+            "6x",
+            "7x",
+            "8x"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "Auto",
+        "key": "dolphin_aspect_ratio",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto",
+            "16:9",
+            "4:3",
+            "Stretch"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "None",
+        "key": "dolphin_antialiasing",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "None",
+            "2x MSAA",
+            "4x MSAA",
+            "8x MSAA",
+            "2x SSAA",
+            "4x SSAA",
+            "8x SSAA"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "Default",
+        "key": "dolphin_texture_filtering",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Default",
+            "1x Anisotropic",
+            "2x Anisotropic",
+            "4x Anisotropic",
+            "8x Anisotropic",
+            "16x Anisotropic",
+            "Force Nearest and 1x Anisotropic",
+            "Force Linear and 1x Anisotropic",
+            "Force Linear and 2x Anisotropic",
+            "Force Linear and 4x Anisotropic",
+            "Force Linear and 8x Anisotropic",
+            "Force Linear and 16x Anisotropic"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "disabled",
+        "key": "dolphin_widescreen_hack",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "HLE",
+        "key": "dolphin_dsp_engine",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "HLE",
+            "LLE Recompiler",
+            "LLE Interpreter"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "100",
+        "key": "dolphin_volume",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "10",
+            "20",
+            "30",
+            "40",
+            "50",
+            "60",
+            "70",
+            "80",
+            "90",
+            "100"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "disabled",
+        "key": "dolphin_enable_cheats",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "enabled",
+        "key": "dolphin_skip_ipl",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    }
+]

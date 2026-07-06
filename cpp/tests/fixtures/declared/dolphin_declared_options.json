@@ -1,0 +1,2030 @@
+{
+    "categories": [
+    ],
+    "core_library_version": "SP2",
+    "format": 1,
+    "options": [
+        {
+            "category": "",
+            "default": "Auto",
+            "info": "Display aspect ratio. Auto matches the game's native aspect; Stretch fills the window.",
+            "key": "dolphin_aspect_ratio",
+            "label": "Aspect Ratio",
+            "values": [
+                {
+                    "label": "Auto",
+                    "value": "Auto"
+                },
+                {
+                    "label": "Force 16:9",
+                    "value": "16:9"
+                },
+                {
+                    "label": "Force 4:3",
+                    "value": "4:3"
+                },
+                {
+                    "label": "Stretch to Window",
+                    "value": "Stretch"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Synchronizes output to the display refresh rate. Reduces tearing.",
+            "key": "dolphin_vsync",
+            "label": "V-Sync",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Uses high-resolution timers and busy-waiting for improved frame pacing. Slightly higher power use.",
+            "key": "dolphin_precision_frame_timing",
+            "label": "Precision Frame Timing",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Specialized",
+            "info": "How shaders are compiled. Ubershader modes reduce stutter at a GPU cost; Skip Drawing is for debugging.",
+            "key": "dolphin_shader_compilation",
+            "label": "Shader Compilation",
+            "values": [
+                {
+                    "label": "Specialized (Default)",
+                    "value": "Specialized"
+                },
+                {
+                    "label": "Exclusive Ubershaders",
+                    "value": "Exclusive Ubershaders"
+                },
+                {
+                    "label": "Hybrid Ubershaders",
+                    "value": "Hybrid Ubershaders"
+                },
+                {
+                    "label": "Skip Drawing",
+                    "value": "Skip Drawing"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Pre-compile the shader pipeline before launching. Slower start, smoother first minutes of gameplay.",
+            "key": "dolphin_wait_for_shaders",
+            "label": "Compile Shaders Before Starting",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1x",
+            "info": "Render scale relative to native (1x = 640x528; 6x is roughly 4K).",
+            "key": "dolphin_internal_resolution",
+            "label": "Internal Resolution",
+            "values": [
+                {
+                    "label": "Auto (Window Size)",
+                    "value": "Auto"
+                },
+                {
+                    "label": "Native (1x)",
+                    "value": "1x"
+                },
+                {
+                    "label": "2x",
+                    "value": "2x"
+                },
+                {
+                    "label": "3x",
+                    "value": "3x"
+                },
+                {
+                    "label": "4x",
+                    "value": "4x"
+                },
+                {
+                    "label": "5x",
+                    "value": "5x"
+                },
+                {
+                    "label": "6x (4K)",
+                    "value": "6x"
+                },
+                {
+                    "label": "7x",
+                    "value": "7x"
+                },
+                {
+                    "label": "8x",
+                    "value": "8x"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "None",
+            "info": "Reduces aliasing on edges. SSAA is far more demanding than MSAA but also anti-aliases shader effects.",
+            "key": "dolphin_antialiasing",
+            "label": "Anti-Aliasing",
+            "values": [
+                {
+                    "label": "None",
+                    "value": "None"
+                },
+                {
+                    "label": "2x MSAA",
+                    "value": "2x MSAA"
+                },
+                {
+                    "label": "4x MSAA",
+                    "value": "4x MSAA"
+                },
+                {
+                    "label": "8x MSAA",
+                    "value": "8x MSAA"
+                },
+                {
+                    "label": "2x SSAA",
+                    "value": "2x SSAA"
+                },
+                {
+                    "label": "4x SSAA",
+                    "value": "4x SSAA"
+                },
+                {
+                    "label": "8x SSAA",
+                    "value": "8x SSAA"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Default",
+            "info": "Sharpens distant textures (anisotropic) and optionally forces a fixed magnification filter.",
+            "key": "dolphin_texture_filtering",
+            "label": "Texture Filtering",
+            "values": [
+                {
+                    "label": "Default",
+                    "value": "Default"
+                },
+                {
+                    "label": "1x Anisotropic",
+                    "value": "1x Anisotropic"
+                },
+                {
+                    "label": "2x Anisotropic",
+                    "value": "2x Anisotropic"
+                },
+                {
+                    "label": "4x Anisotropic",
+                    "value": "4x Anisotropic"
+                },
+                {
+                    "label": "8x Anisotropic",
+                    "value": "8x Anisotropic"
+                },
+                {
+                    "label": "16x Anisotropic",
+                    "value": "16x Anisotropic"
+                },
+                {
+                    "label": "Force Nearest and 1x Anisotropic",
+                    "value": "Force Nearest and 1x Anisotropic"
+                },
+                {
+                    "label": "Force Linear and 1x Anisotropic",
+                    "value": "Force Linear and 1x Anisotropic"
+                },
+                {
+                    "label": "Force Linear and 2x Anisotropic",
+                    "value": "Force Linear and 2x Anisotropic"
+                },
+                {
+                    "label": "Force Linear and 4x Anisotropic",
+                    "value": "Force Linear and 4x Anisotropic"
+                },
+                {
+                    "label": "Force Linear and 8x Anisotropic",
+                    "value": "Force Linear and 8x Anisotropic"
+                },
+                {
+                    "label": "Force Linear and 16x Anisotropic",
+                    "value": "Force Linear and 16x Anisotropic"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Default",
+            "info": "Algorithm used to resample the rendered image to the window size.",
+            "key": "dolphin_output_resampling",
+            "label": "Output Resampling",
+            "values": [
+                {
+                    "label": "Default",
+                    "value": "Default"
+                },
+                {
+                    "label": "Bilinear",
+                    "value": "Bilinear"
+                },
+                {
+                    "label": "Bicubic: B-Spline",
+                    "value": "Bicubic B-Spline"
+                },
+                {
+                    "label": "Bicubic: Mitchell-Netravali",
+                    "value": "Bicubic Mitchell-Netravali"
+                },
+                {
+                    "label": "Bicubic: Catmull-Rom",
+                    "value": "Bicubic Catmull-Rom"
+                },
+                {
+                    "label": "Sharp Bilinear",
+                    "value": "Sharp Bilinear"
+                },
+                {
+                    "label": "Area Sampling",
+                    "value": "Area Sampling"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Off",
+            "info": "3D-stereoscopic rendering mode. Off disables stereo entirely.",
+            "key": "dolphin_stereo_mode",
+            "label": "Stereoscopic 3D Mode",
+            "values": [
+                {
+                    "label": "Off",
+                    "value": "Off"
+                },
+                {
+                    "label": "Side-by-Side",
+                    "value": "Side-by-Side"
+                },
+                {
+                    "label": "Top-and-Bottom",
+                    "value": "Top-and-Bottom"
+                },
+                {
+                    "label": "Anaglyph",
+                    "value": "Anaglyph"
+                },
+                {
+                    "label": "HDMI 3D",
+                    "value": "HDMI 3D"
+                },
+                {
+                    "label": "Passive",
+                    "value": "Passive"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Resize EFB copies to match the rendering scale. Required for high internal resolutions to look right.",
+            "key": "dolphin_scaled_efb_copy",
+            "label": "Scaled EFB Copy",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Higher-quality lighting at a small performance cost.",
+            "key": "dolphin_per_pixel_lighting",
+            "label": "Per-Pixel Lighting",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Force 4:3 games to render in widescreen by hacking the projection matrix. Can produce artifacts.",
+            "key": "dolphin_widescreen_hack",
+            "label": "Widescreen Hack",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Force higher-precision color output. Reduces banding on gradients.",
+            "key": "dolphin_force_true_color",
+            "label": "Force 24-Bit Color",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Skip rendering fog effects.",
+            "key": "dolphin_disable_fog",
+            "label": "Disable Fog",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Detect when a game uses mipmaps as separate images rather than true LODs.",
+            "key": "dolphin_arbitrary_mipmap_detection",
+            "label": "Arbitrary Mipmap Detection",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Disable the post-process copy-filter pass. Reduces blur some games apply.",
+            "key": "dolphin_disable_copy_filter",
+            "label": "Disable Copy Filter",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Output in HDR when the display supports it.",
+            "key": "dolphin_hdr_output",
+            "label": "HDR Post-Processing",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Swap the left and right eye images.",
+            "key": "dolphin_stereo_swap_eyes",
+            "label": "Swap Eyes",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Render each eye at the full internal resolution instead of half. Doubles GPU cost.",
+            "key": "dolphin_stereo_per_eye_full",
+            "label": "Full Resolution Per Eye",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Default",
+            "info": "How aggressively cached textures are validated. Safe = fewest misses (most accurate), Fast = highest performance.",
+            "key": "dolphin_texcache_accuracy",
+            "label": "Texture Cache Accuracy",
+            "values": [
+                {
+                    "label": "Safe",
+                    "value": "Safe"
+                },
+                {
+                    "label": "Default",
+                    "value": "Default"
+                },
+                {
+                    "label": "Fast",
+                    "value": "Fast"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Ignore CPU reads/writes of the EFB. Speed boost; disables some EFB-based effects.",
+            "key": "dolphin_skip_efb_access",
+            "label": "Skip EFB Access from CPU",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Ignore EFB format changes. Speed win for many games; minor defects in a few.",
+            "key": "dolphin_ignore_format_changes",
+            "label": "Ignore Format Changes",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Keep EFB copies on the GPU, bypassing RAM. Big speed boost; rare defects.",
+            "key": "dolphin_store_efb_to_texture",
+            "label": "Store EFB Copies to Texture Only",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Wait for GPU sync before writing EFB copies to RAM. Speed boost.",
+            "key": "dolphin_defer_efb_copies",
+            "label": "Defer EFB Copies to RAM",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Decode textures on the GPU instead of the CPU.",
+            "key": "dolphin_gpu_texture_decoding",
+            "label": "GPU Texture Decoding",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Keep XFB copies on the GPU. Big speed boost; rare defects.",
+            "key": "dolphin_store_xfb_to_texture",
+            "label": "Store XFB Copies to Texture Only",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Display the XFB as soon as it's drawn. Lower latency, slight tearing risk.",
+            "key": "dolphin_immediate_xfb",
+            "label": "Immediately Present XFB",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Detect and skip identical consecutive frames to save GPU work.",
+            "key": "dolphin_skip_duplicate_xfbs",
+            "label": "Skip Presenting Duplicate Frames",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Use a faster GPU-friendly depth calculation path.",
+            "key": "dolphin_fast_depth_calc",
+            "label": "Fast Depth Calculation",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Disable bounding-box emulation. Big GPU speed-up; a few games need it (e.g. Paper Mario).",
+            "key": "dolphin_disable_bounding_box",
+            "label": "Disable Bounding Box",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Round vertex coordinates to integers. Fixes seams in some games at high resolutions.",
+            "key": "dolphin_vertex_rounding",
+            "label": "Vertex Rounding",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Save the texture cache in save states. Larger states, smoother resume.",
+            "key": "dolphin_save_texcache_to_state",
+            "label": "Save Texture Cache to State",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Skip Vertical Blank Interrupts when lag is detected. Smoother audio off-100%; can freeze.",
+            "key": "dolphin_vbi_skip",
+            "label": "VBI Skip",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Load high-resolution texture replacements from the user's Load/Textures folder.",
+            "key": "dolphin_load_custom_textures",
+            "label": "Load Custom Textures",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Pre-load all custom textures into VRAM at boot. Eliminates load stutter; uses more memory.",
+            "key": "dolphin_prefetch_custom_textures",
+            "label": "Prefetch Custom Textures",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Load graphics mods from the user's Load/GraphicMods folder.",
+            "key": "dolphin_enable_graphics_mods",
+            "label": "Enable Graphics Mods",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Crop overscan/black borders from the rendered image.",
+            "key": "dolphin_crop",
+            "label": "Crop",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Distribute video-backend work across multiple threads. Recommended on.",
+            "key": "dolphin_backend_multithreading",
+            "label": "Backend Multithreading",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Expand line/point primitives in the vertex shader instead of the geometry shader. Driver workaround.",
+            "key": "dolphin_prefer_vs_expansion",
+            "label": "Prefer VS for Point/Line Expansion",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Cull invisible geometry on the CPU before sending to the GPU. Speeds up some games.",
+            "key": "dolphin_cpu_cull",
+            "label": "Cull Vertices on the CPU",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Reduce overhead by deferring EFB-cache invalidations. Speed win; rare glitches.",
+            "key": "dolphin_defer_efb_invalidation",
+            "label": "Defer EFB Cache Invalidation",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Trade some speed for accuracy in the texture sampler. (Checked = manual; disables fast sampling.)",
+            "key": "dolphin_manual_texture_sampling",
+            "label": "Manual Texture Sampling",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "13",
+            "info": "Point size for on-screen messages.",
+            "key": "dolphin_osd_font_size",
+            "label": "On-Screen Message Font Size",
+            "values": [
+                {
+                    "label": "Small",
+                    "value": "13"
+                },
+                {
+                    "label": "Medium",
+                    "value": "18"
+                },
+                {
+                    "label": "Large",
+                    "value": "24"
+                },
+                {
+                    "label": "Extra Large",
+                    "value": "36"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1000",
+            "info": "Sliding window for FPS/VPS averaging. Higher = more stable, slower to update.",
+            "key": "dolphin_perf_samp_window",
+            "label": "Performance Sample Window",
+            "values": [
+                {
+                    "label": "250 ms",
+                    "value": "250"
+                },
+                {
+                    "label": "500 ms",
+                    "value": "500"
+                },
+                {
+                    "label": "1000 ms",
+                    "value": "1000"
+                },
+                {
+                    "label": "2000 ms",
+                    "value": "2000"
+                },
+                {
+                    "label": "5000 ms",
+                    "value": "5000"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Display Dolphin's own status messages (save states, achievements, etc.).",
+            "key": "dolphin_osd_messages",
+            "label": "Show On-Screen Messages",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Frames per second the GPU is drawing.",
+            "key": "dolphin_show_fps",
+            "label": "Show FPS",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Per-frame GPU time graph.",
+            "key": "dolphin_show_ftimes",
+            "label": "Show Frame Times",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "VBlanks per second — the rate the game thinks it's running at.",
+            "key": "dolphin_show_vps",
+            "label": "Show VPS",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Per-vblank time graph.",
+            "key": "dolphin_show_vtimes",
+            "label": "Show VBlank Times",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Emulation speed as a percentage of native.",
+            "key": "dolphin_show_speed",
+            "label": "Show % Speed",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Render the FPS/VPS history as a graph.",
+            "key": "dolphin_show_graphs",
+            "label": "Show Performance Graphs",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Tint the speed indicator based on how close to native it is.",
+            "key": "dolphin_show_speed_colors",
+            "label": "Show Speed Colors",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "HLE",
+            "info": "How the audio DSP is emulated. HLE is fast and compatible; LLE is slower but accurate and required by a few games.",
+            "key": "dolphin_dsp_engine",
+            "label": "DSP Emulation Engine",
+            "values": [
+                {
+                    "label": "HLE (Recommended)",
+                    "value": "HLE"
+                },
+                {
+                    "label": "LLE Recompiler (Slow)",
+                    "value": "LLE Recompiler"
+                },
+                {
+                    "label": "LLE Interpreter (Very Slow)",
+                    "value": "LLE Interpreter"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "20",
+            "info": "Output latency in milliseconds. Lower is tighter but risks dropouts. Only active with backends that support latency control (OpenAL).",
+            "key": "dolphin_audio_latency",
+            "label": "Audio Latency",
+            "values": [
+                {
+                    "label": "0 ms",
+                    "value": "0"
+                },
+                {
+                    "label": "10 ms",
+                    "value": "10"
+                },
+                {
+                    "label": "20 ms",
+                    "value": "20"
+                },
+                {
+                    "label": "40 ms",
+                    "value": "40"
+                },
+                {
+                    "label": "60 ms",
+                    "value": "60"
+                },
+                {
+                    "label": "80 ms",
+                    "value": "80"
+                },
+                {
+                    "label": "100 ms",
+                    "value": "100"
+                },
+                {
+                    "label": "150 ms",
+                    "value": "150"
+                },
+                {
+                    "label": "200 ms",
+                    "value": "200"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Decode the stereo mix into 5.1 surround. Requires a backend that supports DPL2 (OpenAL) and DSP in LLE mode; otherwise inert.",
+            "key": "dolphin_dpl2_decoder",
+            "label": "Dolby Pro Logic II Decoder",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "2",
+            "info": "Trade-off between CPU cost and surround-decode accuracy.",
+            "key": "dolphin_dpl2_quality",
+            "label": "DPL2 Decoding Quality",
+            "values": [
+                {
+                    "label": "Lowest (Latency ~10 ms)",
+                    "value": "0"
+                },
+                {
+                    "label": "Low (Latency ~20 ms)",
+                    "value": "1"
+                },
+                {
+                    "label": "High (Latency ~40 ms)",
+                    "value": "2"
+                },
+                {
+                    "label": "Highest (Latency ~80 ms)",
+                    "value": "3"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "80",
+            "info": "Internal mixer buffer in milliseconds. Higher is smoother but adds delay between picture and sound.",
+            "key": "dolphin_audio_buffer_size",
+            "label": "Audio Buffer Size",
+            "values": [
+                {
+                    "label": "32 ms",
+                    "value": "32"
+                },
+                {
+                    "label": "48 ms",
+                    "value": "48"
+                },
+                {
+                    "label": "64 ms",
+                    "value": "64"
+                },
+                {
+                    "label": "80 ms",
+                    "value": "80"
+                },
+                {
+                    "label": "96 ms",
+                    "value": "96"
+                },
+                {
+                    "label": "128 ms",
+                    "value": "128"
+                },
+                {
+                    "label": "160 ms",
+                    "value": "160"
+                },
+                {
+                    "label": "256 ms",
+                    "value": "256"
+                },
+                {
+                    "label": "512 ms",
+                    "value": "512"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Synthesize silence when emulation can't keep up. Disable for more accurate native behaviour; enable for smoothness.",
+            "key": "dolphin_audio_fill_gaps",
+            "label": "Fill Audio Gaps",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Time-stretch audio to keep pitch constant when emulation runs off 100%. Useful with fast-forward.",
+            "key": "dolphin_audio_preserve_pitch",
+            "label": "Preserve Audio Pitch",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Silence audio while running unthrottled (fast-forward). Avoids pitch/playback artifacts.",
+            "key": "dolphin_audio_mute_on_unthrottle",
+            "label": "Mute When Unthrottled",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "100",
+            "info": "Master output volume.",
+            "key": "dolphin_volume",
+            "label": "Volume",
+            "values": [
+                {
+                    "label": "0%",
+                    "value": "0"
+                },
+                {
+                    "label": "10%",
+                    "value": "10"
+                },
+                {
+                    "label": "20%",
+                    "value": "20"
+                },
+                {
+                    "label": "30%",
+                    "value": "30"
+                },
+                {
+                    "label": "40%",
+                    "value": "40"
+                },
+                {
+                    "label": "50%",
+                    "value": "50"
+                },
+                {
+                    "label": "60%",
+                    "value": "60"
+                },
+                {
+                    "label": "70%",
+                    "value": "70"
+                },
+                {
+                    "label": "80%",
+                    "value": "80"
+                },
+                {
+                    "label": "90%",
+                    "value": "90"
+                },
+                {
+                    "label": "100%",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Run CPU and GPU emulation on separate threads. Big speed gain; a few timing-sensitive games may glitch with it on.",
+            "key": "dolphin_cpu_thread",
+            "label": "Dual Core (Speed Hack)",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Process AR/Gecko cheat codes. Off by default for safety.",
+            "key": "dolphin_enable_cheats",
+            "label": "Enable Cheats",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Pre-load the entire disc image into RAM at boot. Eliminates disc I/O stutter; uses more host memory.",
+            "key": "dolphin_load_game_into_memory",
+            "label": "Load Whole Game Into Memory",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Force a region's settings (language, video mode) regardless of disc region.",
+            "key": "dolphin_override_region_settings",
+            "label": "Allow Mismatched Region Settings",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1.000000",
+            "info": "Cap on emulated speed relative to native. Unlimited removes the throttle.",
+            "key": "dolphin_emulation_speed",
+            "label": "Speed Limit",
+            "values": [
+                {
+                    "label": "Unlimited",
+                    "value": "0.000000"
+                },
+                {
+                    "label": "10%",
+                    "value": "0.100000"
+                },
+                {
+                    "label": "20%",
+                    "value": "0.200000"
+                },
+                {
+                    "label": "30%",
+                    "value": "0.300000"
+                },
+                {
+                    "label": "40%",
+                    "value": "0.400000"
+                },
+                {
+                    "label": "50%",
+                    "value": "0.500000"
+                },
+                {
+                    "label": "60%",
+                    "value": "0.600000"
+                },
+                {
+                    "label": "70%",
+                    "value": "0.700000"
+                },
+                {
+                    "label": "80%",
+                    "value": "0.800000"
+                },
+                {
+                    "label": "90%",
+                    "value": "0.900000"
+                },
+                {
+                    "label": "100% (Normal Speed)",
+                    "value": "1.000000"
+                },
+                {
+                    "label": "110%",
+                    "value": "1.100000"
+                },
+                {
+                    "label": "120%",
+                    "value": "1.200000"
+                },
+                {
+                    "label": "130%",
+                    "value": "1.300000"
+                },
+                {
+                    "label": "140%",
+                    "value": "1.400000"
+                },
+                {
+                    "label": "150%",
+                    "value": "1.500000"
+                },
+                {
+                    "label": "160%",
+                    "value": "1.600000"
+                },
+                {
+                    "label": "170%",
+                    "value": "1.700000"
+                },
+                {
+                    "label": "180%",
+                    "value": "1.800000"
+                },
+                {
+                    "label": "190%",
+                    "value": "1.900000"
+                },
+                {
+                    "label": "200%",
+                    "value": "2.000000"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Region used for games whose region can't be auto-detected. Affects boot timing and the system-menu locale.",
+            "key": "dolphin_fallback_region",
+            "label": "Fallback Region",
+            "values": [
+                {
+                    "label": "NTSC-J (Japan)",
+                    "value": "0"
+                },
+                {
+                    "label": "NTSC-U (Americas)",
+                    "value": "1"
+                },
+                {
+                    "label": "PAL (Europe)",
+                    "value": "2"
+                },
+                {
+                    "label": "Region-Free / Unknown",
+                    "value": "3"
+                },
+                {
+                    "label": "NTSC-K (Korea)",
+                    "value": "4"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "JIT",
+            "info": "The CPU backend. JIT is required for full-speed gameplay; the interpreters are debug/accuracy fallbacks.",
+            "key": "dolphin_cpu_core",
+            "label": "CPU Emulation Engine",
+            "values": [
+                {
+                    "label": "Interpreter (Slowest)",
+                    "value": "Interpreter"
+                },
+                {
+                    "label": "Cached Interpreter (Slow)",
+                    "value": "Cached Interpreter"
+                },
+                {
+                    "label": "JIT Recompiler (Recommended)",
+                    "value": "JIT"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Emulate the memory management unit. Slower but required by a small set of games (typically Virtual Console / homebrew).",
+            "key": "dolphin_mmu",
+            "label": "Enable MMU",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Pause emulation when Dolphin reports a non-fatal error.",
+            "key": "dolphin_pause_on_panic",
+            "label": "Pause on Panic",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Emulate the CPU's L1 cache. Slower but more accurate; needed for a handful of self-modifying-code games.",
+            "key": "dolphin_accurate_cpu_cache",
+            "label": "Enable Write-Back Cache (Slow)",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Compensate for accumulated frame-pacing drift over long sessions.",
+            "key": "dolphin_correct_time_drift",
+            "label": "Correct Time Drift",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Aggressively present frames as soon as they're ready. Lower latency, more tearing without V-Sync.",
+            "key": "dolphin_rush_frame_presentation",
+            "label": "Rush Frame Presentation",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Smooth pacing for frames that finish ahead of schedule.",
+            "key": "dolphin_smooth_early_presentation",
+            "label": "Smooth Early Presentation",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Allow the multiplier below to scale the emulated CPU clock. Some games run smoother overclocked; others crash.",
+            "key": "dolphin_overclock_enable",
+            "label": "Enable CPU Clock Override",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Multiplier on the emulated CPU clock when overclocking is enabled. 1x = native.",
+            "key": "dolphin_overclock",
+            "label": "CPU Overclock Multiplier",
+            "values": [
+                {
+                    "label": "1x (Native)",
+                    "value": "1"
+                },
+                {
+                    "label": "2x (+100%)",
+                    "value": "2"
+                },
+                {
+                    "label": "3x (+200%)",
+                    "value": "3"
+                },
+                {
+                    "label": "4x (+300%)",
+                    "value": "4"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Scale the video-interface clock independently of the CPU. Affects refresh-rate timing for some games.",
+            "key": "dolphin_vi_overclock_enable",
+            "label": "Enable VBI Frequency Override",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Multiplier on the VI clock when VI overclocking is enabled.",
+            "key": "dolphin_vi_overclock",
+            "label": "VI Overclock Multiplier",
+            "values": [
+                {
+                    "label": "1x (Native)",
+                    "value": "1"
+                },
+                {
+                    "label": "2x",
+                    "value": "2"
+                },
+                {
+                    "label": "3x",
+                    "value": "3"
+                },
+                {
+                    "label": "4x",
+                    "value": "4"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Skip the GameCube boot animation and start the game directly. When off, requires IPL.bin in the BIOS folder.",
+            "key": "dolphin_skip_ipl",
+            "label": "Skip Main Menu (IPL)",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "System language used by GameCube games that respect it.",
+            "key": "dolphin_gc_language",
+            "label": "System Language",
+            "values": [
+                {
+                    "label": "English",
+                    "value": "0"
+                },
+                {
+                    "label": "German",
+                    "value": "1"
+                },
+                {
+                    "label": "French",
+                    "value": "2"
+                },
+                {
+                    "label": "Spanish",
+                    "value": "3"
+                },
+                {
+                    "label": "Italian",
+                    "value": "4"
+                },
+                {
+                    "label": "Dutch",
+                    "value": "5"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "8",
+            "info": "Device in the GameCube's left memory-card / EXI slot.",
+            "key": "dolphin_slot_a",
+            "label": "Slot A",
+            "values": [
+                {
+                    "label": "Nothing",
+                    "value": "255"
+                },
+                {
+                    "label": "Dummy",
+                    "value": "0"
+                },
+                {
+                    "label": "Memory Card",
+                    "value": "1"
+                },
+                {
+                    "label": "GCI Folder",
+                    "value": "8"
+                },
+                {
+                    "label": "USB Gecko",
+                    "value": "7"
+                },
+                {
+                    "label": "Advance Game Port",
+                    "value": "9"
+                },
+                {
+                    "label": "Microphone",
+                    "value": "4"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "255",
+            "info": "Device in the GameCube's right memory-card / EXI slot.",
+            "key": "dolphin_slot_b",
+            "label": "Slot B",
+            "values": [
+                {
+                    "label": "Nothing",
+                    "value": "255"
+                },
+                {
+                    "label": "Dummy",
+                    "value": "0"
+                },
+                {
+                    "label": "Memory Card",
+                    "value": "1"
+                },
+                {
+                    "label": "GCI Folder",
+                    "value": "8"
+                },
+                {
+                    "label": "USB Gecko",
+                    "value": "7"
+                },
+                {
+                    "label": "Advance Game Port",
+                    "value": "9"
+                },
+                {
+                    "label": "Microphone",
+                    "value": "4"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "255",
+            "info": "Device on the GameCube's serial port — network adapters in compatible games.",
+            "key": "dolphin_serial_port_1",
+            "label": "Serial Port 1 (SP1)",
+            "values": [
+                {
+                    "label": "Nothing",
+                    "value": "255"
+                },
+                {
+                    "label": "Dummy",
+                    "value": "0"
+                },
+                {
+                    "label": "Broadband Adapter (TAP)",
+                    "value": "5"
+                },
+                {
+                    "label": "Broadband Adapter (XLink Kai)",
+                    "value": "10"
+                },
+                {
+                    "label": "Broadband Adapter (tapserver)",
+                    "value": "11"
+                },
+                {
+                    "label": "Broadband Adapter (HLE)",
+                    "value": "12"
+                },
+                {
+                    "label": "Modem Adapter (tapserver)",
+                    "value": "13"
+                },
+                {
+                    "label": "Triforce AM-Baseboard",
+                    "value": "6"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Make a USB keyboard visible to Wii software.",
+            "key": "dolphin_wii_keyboard",
+            "label": "Connect USB Keyboard",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Patch the Wii Shop / Channels to use community WiiLink servers. Off by default to avoid third-party network calls.",
+            "key": "dolphin_enable_wiilink",
+            "label": "Enable WiiConnect24 (WiiLink)",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Make a virtual SD card visible to Wii software. Required for save imports, channel installs, and SD-using homebrew.",
+            "key": "dolphin_wii_sd_card",
+            "label": "Insert SD Card",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "When off, the SD card is read-only — protects a shared image from accidental modification.",
+            "key": "dolphin_wii_sd_card_writes",
+            "label": "Allow Writes to SD Card",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Mirror the SD card image from a host folder.",
+            "key": "dolphin_wii_sd_card_folder_sync",
+            "label": "Auto-Sync SD with Folder",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Capacity of the virtual SD card. Auto uses the image file as-is.",
+            "key": "dolphin_wii_sd_card_size",
+            "label": "SD Card Size",
+            "values": [
+                {
+                    "label": "Auto",
+                    "value": "0"
+                },
+                {
+                    "label": "64 MiB",
+                    "value": "67108864"
+                },
+                {
+                    "label": "128 MiB",
+                    "value": "134217728"
+                },
+                {
+                    "label": "256 MiB",
+                    "value": "268435456"
+                },
+                {
+                    "label": "512 MiB",
+                    "value": "536870912"
+                },
+                {
+                    "label": "1 GiB",
+                    "value": "1073741824"
+                },
+                {
+                    "label": "2 GiB",
+                    "value": "2147483648"
+                },
+                {
+                    "label": "4 GiB (SDHC)",
+                    "value": "4294967296"
+                },
+                {
+                    "label": "8 GiB (SDHC)",
+                    "value": "8589934592"
+                },
+                {
+                    "label": "16 GiB (SDHC)",
+                    "value": "17179869184"
+                },
+                {
+                    "label": "32 GiB (SDHC)",
+                    "value": "34359738368"
+                }
+            ]
+        }
+    ]
+}

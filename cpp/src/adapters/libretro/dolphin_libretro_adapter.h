@@ -59,10 +59,10 @@ public:
                       const QString& biosPath,
                       const QString& savesPath) override;
 
-    // SP6: Graphics core-options schema. Keys + values + defaults mirror
-    // dolphin-libretro/Source/Core/DolphinLibretro/CoreOptionsGraphics.cpp's
-    // push_back table EXACTLY (enforced by tools/check_schema_fidelity.py).
-    QVector<SettingDef> settingsSchema() const override;
+    // Packet 7 Stage 2: schema renders from the core's declared options
+    // (LibretroAdapter::settingsSchema base merge) — this adapter supplies
+    // routing/curation only (all rows are core options; no extraSettings).
+    QVector<OptionOverlay> optionOverlays() const override;
     QVector<SettingsHubCard> settingsHubCards() const override;
     QStringList settingsCategoriesWithSubTabs() const override { return {"Graphics"}; }
     PreviewSpec previewSpec(const QString& category,
