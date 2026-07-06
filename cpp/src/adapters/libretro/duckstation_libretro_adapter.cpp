@@ -7,14 +7,18 @@
 
 #include <QDir>
 
-// PS1 Digital Controller — the standard (non-analog) PlayStation pad the
-// DuckStation libretro core boots with. No PS1-specific controller SVG ships
-// under :/AppUI/qml/AppUI/images/controllers/ yet, so svgResource is empty —
-// ControllerBindingsView renders without artwork (spotlight coords are all
-// 0/0/0 below, i.e. "no spotlight"). A future SP can add a PS1 pad SVG.
+// Controller artwork: the Analog Controller page uses the PS1 analog-pad
+// SVG that has shipped in images/controllers/ since the first commit but
+// was never wired up (found at Packet 7 GATE 10). Spotlight coords stay
+// 0/0/0 ("no spotlight") — the same presentation as PCSX2's DualShock_2
+// page; calibrating spotlights for both PlayStation pads is a separate
+// pass. The Digital Controller page stays artless deliberately: no
+// digital-pad (stickless) SVG exists, and showing a stick-equipped pad on
+// the digital page would be wrong.
 QVector<ControllerTypeDef> DuckStationLibretroAdapter::controllerTypes() const {
     return {
-        {"AnalogController", "Analog Controller", ""},
+        {"AnalogController", "Analog Controller",
+         ":/AppUI/qml/AppUI/images/controllers/analog_controller.svg"},
         {"DigitalController", "Digital Controller", ""},
     };
 }
