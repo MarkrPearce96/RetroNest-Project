@@ -2,6 +2,7 @@
 #include "hotkey_service.h"
 
 #include "adapters/adapter_registry.h"
+#include "adapters/libretro/libretro_adapter.h"
 #include "core/ini_file.h"
 #include "core/libretro/libretro_hotkey_defs.h"
 #include "core/path_overrides_store.h"
@@ -220,6 +221,13 @@ void ConfigService::resetConfiguration(const QString& emuId) {
         QFile::remove(configPath);
         qInfo() << "[Reset] Removed config:" << configPath;
     }
+
+    // Libretro cores keep their settings in options.json/frontend.json, not
+    // an INI (configFilePath() is empty for them) — reset those too. Gap
+    // existed since the libretro conversion: the button only ever reset
+    // bindings + hotkeys for these cores.
+    if (auto* libretro = adapter->asLibretro())
+        libretro->resetSettingsToDefaults();
 
     if (m_settingsCachePath == configPath) {
         m_settingsCache.reset();

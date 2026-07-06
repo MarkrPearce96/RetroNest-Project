@@ -304,6 +304,19 @@ OptionsStore* LibretroAdapter::libretroOptionsStore() {
     return m_persistentOptions.get();
 }
 
+void LibretroAdapter::resetSettingsToDefaults() {
+    QFile::remove(optionsJsonPath());
+    QFile::remove(frontendJsonPath());
+    // Drop the cached stores — the next libretroOptionsStore() /
+    // frontendSettingsStore() access rebuilds from the now-absent files,
+    // i.e. pure defaults (declared table + overlay defaultOverrides via
+    // schemaDefaults, frontendSettingDefaults for frontend.json).
+    m_persistentOptions.reset();
+    m_frontendSettings.reset();
+    qInfo() << "[LibretroAdapter]" << coreId()
+            << "settings reset to defaults (options.json + frontend.json removed)";
+}
+
 FrontendSettingsStore* LibretroAdapter::frontendSettingsStore() {
     if (!m_frontendSettings) {
         m_frontendSettings = std::make_unique<FrontendSettingsStore>();

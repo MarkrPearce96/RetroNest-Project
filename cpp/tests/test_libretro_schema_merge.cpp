@@ -155,6 +155,28 @@ private slots:
         QCOMPARE(rows[1].key, QString("fake_speed"));
     }
 
+    // Reset Configuration must restore libretro option + frontend values to
+    // defaults (user-reported gap: the INI-era reset never touched
+    // options.json/frontend.json on any libretro core).
+    void resetSettingsToDefaults() {
+        QTemporaryDir tmp;
+        QVERIFY(tmp.isValid());
+        QVERIFY(Paths::setRoot(tmp.path()));
+
+        TestAdapter a;
+        a.setDeclaredDocForTest(fixtureDoc());
+        OptionOverlay ov;
+        ov.key = "fake_speed";
+        ov.placements = { { "Emulation", {}, {} } };
+        a.m_overlays = { ov };
+
+        a.libretroOptionsStore()->set("fake_speed", "2");
+        QCOMPARE(a.libretroOptionsStore()->get("fake_speed"), QString("2"));
+
+        a.resetSettingsToDefaults();
+        QCOMPARE(a.libretroOptionsStore()->get("fake_speed"), QString("1"));   // core default
+    }
+
     // Packet 7 Stage 2 Task 5: with a declared doc available, the no-runtime
     // fallback store validates against ALL declared options (superset of the
     // curated overlay), so uncurated keys keep their persisted values.

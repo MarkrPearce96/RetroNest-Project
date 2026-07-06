@@ -61,6 +61,13 @@ public:
     // runtime — frontend settings are independent of the core thread).
     virtual FrontendSettingsStore* frontendSettingsStore();
 
+    /** Reset Configuration support: delete options.json + frontend.json and
+     *  drop the cached fallback stores so the next access re-seeds from
+     *  defaults (core-declared + overlay overrides). No-op on the live
+     *  runtime store — reset from the manage page happens outside sessions;
+     *  a running game keeps its in-memory values until it exits. */
+    void resetSettingsToDefaults();
+
     // Used by GameSession when manifest.backend == "libretro".
     CoreRuntime* runtime() { return m_runtime.get(); }
     void prepareRuntime();
