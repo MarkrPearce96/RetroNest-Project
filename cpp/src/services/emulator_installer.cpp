@@ -83,87 +83,10 @@ bool EmulatorInstaller::extract(const QString& archivePath, const QString& destP
         proc.start("unzip", {"-o", absArchive, "-d", absDest});
     } else if (name.endsWith(".tar.xz") || name.endsWith(".tar.gz")) {
         proc.start("tar", {"-xf", absArchive, "-C", absDest});
-    } else if (name.endsWith(".dmg")) {
-        // Mount, copy .app, unmount
-        QTemporaryDir mountPoint;
-        if (!mountPoint.isValid()) return false;
-        mountPoint.setAutoRemove(false);  // prevent deletion while detach runs
-
-        QProcess mount;
-        mount.start("hdiutil", {"attach", absArchive, "-mountpoint",
-                                mountPoint.path(), "-nobrowse", "-quiet"});
-        mount.waitForFinished(60000);
-        if (mount.exitCode() != 0) {
-            qWarning() << "[Installer] hdiutil attach failed:" << mount.readAllStandardError();
-            QDir(mountPoint.path()).removeRecursively();
-            return false;
-        }
-
-        // Find .app inside mount. Skip the "Applications" symlink that
-        // many DMGs include as a drop target.
-        QDir mountDir(mountPoint.path());
-        auto apps = mountDir.entryList({"*.app"}, QDir::Dirs | QDir::NoSymLinks);
-        bool ok = false;
-        if (!apps.isEmpty()) {
-            const QString src = mountPoint.path() + "/" + apps.first();
-            const QString dst = absDest + "/" + apps.first();
-            // ditto preserves code signatures, extended attributes, and
-            // resource forks. cp -R can subtly corrupt signed bundles when
-            // copying off a mounted HFS+ DMG onto APFS, leading to
-            // Gatekeeper "damaged" errors at launch time.
-            QProcess dittoProc;
-            dittoProc.start("ditto", {src, dst});
-            dittoProc.waitForFinished(120000);
-            ok = (dittoProc.exitCode() == 0);
-            if (!ok)
-                qWarning() << "[Installer] ditto failed:" << dittoProc.readAllStandardError();
-        }
-
-        // Detach the volume before cleaning up the mountpoint directory.
-        // If we don't wait for detach to actually finish — or if it fails
-        // with "resource busy" — removeRecursively() races against an
-        // in-progress unmount and can corrupt or hang. Belt-and-braces:
-        //   1. waitForFinished() may return false on timeout — track that.
-        //   2. Non-zero exit means detach refused (busy / already gone) —
-        //      escalate to `hdiutil detach -force`.
-        //   3. Only remove the mountpoint *directory* once we're sure no
-        //      volume is mounted there. setAutoRemove(false) earlier means
-        //      QTemporaryDir won't reap it for us.
-        QProcess detach;
-        detach.start("hdiutil", {"detach", mountPoint.path(), "-quiet"});
-        const bool detachExited = detach.waitForFinished(30000);
-        bool detached = detachExited && detach.exitCode() == 0;
-        if (!detached) {
-            qWarning() << "[Installer] hdiutil detach failed (exited:"
-                       << detachExited << "code:" << detach.exitCode()
-                       << "); retrying with -force";
-            QProcess force;
-            force.start("hdiutil", {"detach", mountPoint.path(), "-force", "-quiet"});
-            const bool forceExited = force.waitForFinished(15000);
-            detached = forceExited && force.exitCode() == 0;
-            if (!detached)
-                qWarning() << "[Installer] hdiutil detach -force also failed:"
-                           << force.readAllStandardError();
-        }
-        if (detached)
-            QDir(mountPoint.path()).removeRecursively();
-        else
-            qWarning() << "[Installer] Leaving mountpoint dir to avoid race"
-                       << "with stuck mount:" << mountPoint.path();
-        return ok;
-    } else if (name.endsWith(".appimage")) {
-        // AppImage: just copy and make executable
-        const QString dest = absDest + "/" + QFileInfo(absArchive).fileName();
-        if (!QFile::copy(archivePath, dest)) {
-            qWarning() << "[Installer] Failed to copy AppImage to" << dest;
-            return false;
-        }
-        if (QProcess::execute("chmod", {"755", dest}) != 0) {
-            qWarning() << "[Installer] Failed to set AppImage executable:" << dest;
-            return false;
-        }
-        return true;
     } else {
+        // Process-era retirement (2026-07): .dmg / .AppImage app-bundle
+        // handling deleted — every emulator installs as a core zip
+        // (deploy-contract.md); tar kept as generic archive plumbing.
         qWarning() << "[Installer] Unknown archive type:" << archivePath;
         return false;
     }
@@ -201,7 +124,7 @@ QString EmulatorInstaller::matchAsset(const QString& emuId, const QStringList& a
         const QString lower = name.toLower();
         if (lower.contains(platform) &&
             (name.endsWith(".zip") || name.endsWith(".tar.xz") ||
-             name.endsWith(".dmg") || name.endsWith(".tar.gz"))) {
+             name.endsWith(".tar.gz"))) {
             return name;
         }
     }
