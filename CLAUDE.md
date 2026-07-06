@@ -33,13 +33,10 @@ freshly-linked bundle, so `open ./build/RetroNest.app` always launches the
 current build — Launch Services can't cache a stale path for
 `com.markpearce.retronest` across rebuilds, moves, or renames.
 
-**Note on the "never use Launch Services" rule:** that rule applies to how
-**RetroNest launches emulator binaries** (`GameSession`,
-`openNativeEmulatorSettings` — always direct `QProcess::start(execPath, args)`).
-It does **not** apply to how you launch RetroNest itself. Emulator portable
-mode is enforced by RetroNest at runtime (writing `portable.txt` / setting
-the PPSSPP `NSUserDefaults` key) before spawning each emulator, regardless
-of how RetroNest itself was started.
+**Note:** launching RetroNest itself via Launch Services is fine (and the
+default above). Emulators are never launched as separate binaries at all —
+they are in-process libretro cores loaded with dlopen (the process-era
+QProcess launch path was retired 2026-07).
 
 ### Universal (Rosetta-capable) builds
 
@@ -172,7 +169,8 @@ All directories derive from a single user-chosen root:
 ```
 {root}/
   bios/                              — shared BIOS (all emulators)
-  emulators/{emuId}/                 — binaries + portable config/INI files
+  emulators/libretro/cores/          — core dylibs + _libs/ + _resources/ (+ .version sidecars)
+  emulators/libretro/{coreId}/       — per-core options.json, declared_options.json, frontend.json, controls.ini
   emulators/{emuId}/{systemId}/      — ALL runtime data for that emulator
       savestates/
       memcards/
@@ -197,7 +195,7 @@ All directories derive from a single user-chosen root:
 - PathDef/PathBase system: `Bios` → `{root}/bios/`, `EmulatorData` → `{root}/emulators/{emuId}/{systemId}/{suffix}`
 - Helper: `Paths::emulatorDataDir(emuId, systemId)` returns `{root}/emulators/{emuId}/{systemId}/` — every adapter resolves its managed folders from there
 
-**macOS launch rule:** Always launch emulator binaries via direct exec (`QProcess::start(execPath, args)`), NEVER via `open` or Launch Services. Going through Launch Services applies app translocation and sandbox rules to downloaded `.app` bundles, which blocks `rename()` inside the bundle and breaks portable mode. Both `GameSession` and `openNativeEmulatorSettings` use direct exec for this reason.
+**No emulator binaries are launched.** Every emulator is an in-process libretro core (dlopen via `CoreRuntime`); the process-era launch machinery — direct-exec rules, `openNativeEmulatorSettings`, keystroke-synthesized pause — was retired 2026-07. If a standalone-process emulator is ever reintroduced, recover that machinery deliberately from git history rather than rebuilding it from scratch.
 
 **Portable mode is inherent for libretro cores:** every shipped emulator is a libretro core that receives its data directories from RetroNest via `retro_environment` callbacks (`GET_SAVE_DIRECTORY`, `GET_SYSTEM_DIRECTORY`, private `GET_*_DIR` overrides) — no on-disk portable-mode marker exists or is needed. The `portable.txt` / `NSUserDefaults` mechanisms described in older notes were for standalone process-backend emulators, none of which ship today.
 
