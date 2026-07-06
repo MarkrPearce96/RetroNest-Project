@@ -27,7 +27,7 @@ struct EmulatorManifest {
     QString install_folder;
     QStringList rom_extensions;
     QStringList launch_args;  // may contain {rom_path} placeholder
-    QString backend = "process";   // "process" (default) | "libretro"
+    QString backend;               // must be "libretro" (process backend retired 2026-07)
     QString core_dylib;             // libretro: filename of the .dylib (relative to cores/)
     QString core_buildbot_path;     // libretro: appended to buildbot URL prefix
     QString core_arch;              // libretro: "universal" | "x86_64" | "arm64" | "" (undeclared)

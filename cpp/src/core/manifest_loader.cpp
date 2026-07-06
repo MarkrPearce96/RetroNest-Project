@@ -87,7 +87,7 @@ bool ManifestLoader::loadAll(const QString& manifestsDir) {
         m.install_folder = obj["install_folder"].toString();
         m.rom_extensions = jsonArrayToStringList(obj["rom_extensions"].toArray());
         m.launch_args = jsonArrayToStringList(obj["launch_args"].toArray());
-        m.backend = obj.value("backend").toString("process");
+        m.backend = obj.value("backend").toString();  // must be "libretro" (validated below)
         m.core_dylib = obj.value("core_dylib").toString();
         m.core_buildbot_path = obj.value("core_buildbot_path").toString();
 
@@ -166,10 +166,15 @@ bool ManifestLoader::validateManifest(const EmulatorManifest& m, const QString& 
         return false;
     }
 
-    // Libretro cores may be local-only (no GitHub release); their dylib is
-    // hand-placed / built locally. Only process-backend emulators require a repo.
-    if (m.backend != "libretro" && m.github_repo.isEmpty()) {
-        qWarning() << "[Manifest] Rejecting" << m.id << "— missing github_repo";
+    // Process-era retirement (2026-07): every emulator is an in-process
+    // libretro core. A manifest that declares anything else — or nothing —
+    // is rejected loudly instead of silently defaulting to a launch path
+    // that no longer exists. (Cores may be local-only: github_repo stays
+    // optional — the duckstation licensing pattern.)
+    if (m.backend != QLatin1String("libretro")) {
+        qWarning() << "[Manifest] Rejecting" << m.id << "— unsupported backend"
+                   << (m.backend.isEmpty() ? QStringLiteral("<missing>") : m.backend)
+                   << "(process-backend emulators were retired; only libretro cores load)";
         return false;
     }
 
