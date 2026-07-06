@@ -198,7 +198,8 @@ QVector<BindingDef> DolphinLibretroAdapter::controllerBindingDefsForType(const Q
 // overclock dependsOn gates. Entry order = per-category row order (natural
 // pages preserved exactly; the Recommended card's group boxes follow
 // first-encounter order of these entries). Generated mechanically from the
-// retired hand-written rows (parity-checked by test_schema_parity).
+// retired hand-written rows (parity-checked at conversion time by the
+// since-retired test_schema_parity net).
 QVector<OptionOverlay> DolphinLibretroAdapter::optionOverlays() const {
     QVector<OptionOverlay> list;
     auto add = [&list](const QString& key, QVector<OverlayPlacement> places,

@@ -8,9 +8,10 @@
 // loud rather than producing a silently-wrong UI or — worse — an
 // OptionsStore::load whitelist mismatch that wipes persisted user settings.
 //
-// Cross-repo value/default parity against pcsx2-libretro/CoreOptions*.cpp is
-// enforced separately by tools/check_schema_fidelity.py; this test pins the
-// RetroNest-side contract only.
+// Cross-repo parity needs no checker since Packet 7 Stage 2: the schema
+// renders FROM the core's declared option table (committed fixture below),
+// so the two sides cannot drift. This test pins the RetroNest-side merge
+// contract only.
 
 #include <QtTest>
 #include <QFileInfo>
@@ -62,7 +63,7 @@ private slots:
     void initTestCase() {
         // Packet 7 Stage 2: the schema renders from the core's declared
         // option table — hermetic tests inject the committed fixture
-        // (recorded by test_schema_parity's snapshot mode) instead of
+        // (recorded at conversion time by the retired test_schema_parity tool) instead of
         // touching the live sidecar / prober.
         const QString fixture = QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()
             + "/fixtures/declared/pcsx2_declared_options.json";

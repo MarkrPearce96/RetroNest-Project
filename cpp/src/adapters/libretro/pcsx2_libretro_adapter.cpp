@@ -99,7 +99,8 @@ QVector<PathDef> Pcsx2LibretroAdapter::pathsDefs() const {
 //   pcsx2_enable_widescreen_patches "enabled" (core: "disabled").
 // Entry order = per-category row order (Recommended block leads, exactly
 // as the hand schema did). Generated mechanically from the retired
-// hand-written rows (parity-checked by test_schema_parity).
+// hand-written rows (parity-checked at conversion time by the
+// since-retired test_schema_parity net).
 //
 // pcsx2_filter appears as TWO entries: its Graphics row is gated on
 // pcsx2_tri_filter, but the Recommended copy is deliberately ungated —

@@ -108,8 +108,8 @@ PreviewSpec PpssppLibretroAdapter::previewSpec(const QString& category,
 // ad-hoc/networking options (ppsspp_enable_wlan, MAC digits, pro ad-hoc
 // server address digits, UPnP, ...) stay uncurated: valid in OptionsStore,
 // hidden from the UI. Entry order = per-category row order. Generated
-// mechanically from the retired hand-written rows (parity-checked by
-// test_schema_parity).
+// mechanically from the retired hand-written rows (parity-checked at
+// conversion time by the since-retired test_schema_parity net).
 QVector<OptionOverlay> PpssppLibretroAdapter::optionOverlays() const {
     QVector<OptionOverlay> list;
     auto add = [&list](const QString& key, QVector<OverlayPlacement> places,

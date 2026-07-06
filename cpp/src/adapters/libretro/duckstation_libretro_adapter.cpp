@@ -94,7 +94,8 @@ QString DuckStationLibretroAdapter::findResumeFile(const QString& serial) const 
 // can no longer drift). The overlay carries only UI routing: category /
 // Graphics sub-tab / group box, Recommended cross-listings, and dependency
 // gates. Entry order = per-category row order. Generated mechanically from
-// the retired hand-written rows (parity-checked by test_schema_parity).
+// the retired hand-written rows (parity-checked at conversion time by
+// the since-retired test_schema_parity net).
 QVector<OptionOverlay> DuckStationLibretroAdapter::optionOverlays() const {
     QVector<OptionOverlay> list;
     auto add = [&list](const QString& key, QVector<OverlayPlacement> places,

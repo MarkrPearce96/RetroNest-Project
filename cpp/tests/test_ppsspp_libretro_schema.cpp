@@ -73,7 +73,7 @@ private slots:
         PpssppLibretroAdapter adapter;
         // Packet 7 Stage 2: the schema renders from the core's declared
         // option table — hermetic tests inject the committed fixture
-        // (recorded by test_schema_parity's snapshot mode) instead of
+        // (recorded at conversion time by the retired test_schema_parity tool) instead of
         // touching the live sidecar / prober.
         const QString fixture = QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()
             + "/fixtures/declared/ppsspp_declared_options.json";
