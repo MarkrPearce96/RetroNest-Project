@@ -23,6 +23,7 @@
 #include <QJsonObject>
 #include "adapters/libretro/duckstation_libretro_adapter.h"
 #include "adapters/libretro/mgba_libretro_adapter.h"
+#include "adapters/libretro/ppsspp_libretro_adapter.h"
 #include "core/libretro/core_prober.h"
 
 namespace {
@@ -147,6 +148,10 @@ private slots:
     void duckstationParity() {
         DuckStationLibretroAdapter adapter;
         runParity(adapter, "duckstation");
+    }
+    void ppssppParity() {
+        PpssppLibretroAdapter adapter;
+        runParity(adapter, "ppsspp");
     }
 };
 

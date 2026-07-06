@@ -23,7 +23,11 @@ public:
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<PathDef> pathsDefs() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
-    QVector<SettingDef> settingsSchema() const override;
+    // Packet 7 Stage 2: schema renders from the core's declared options
+    // (LibretroAdapter::settingsSchema base merge) — this adapter supplies
+    // routing/curation only, plus the FrontendSetting aspect rows.
+    QVector<OptionOverlay> optionOverlays() const override;
+    QVector<SettingDef> extraSettings() const override;
     QVector<SettingsHubCard> settingsHubCards() const override;
     QVector<QPair<QString, QString>> frontendSettingDefaults() const override;
     PreviewSpec previewSpec(const QString& category,

@@ -1,11 +1,15 @@
 // cpp/tests/test_ppsspp_libretro_schema.cpp
 //
-// Phase B+C regression guard for PpssppLibretroAdapter::settingsSchema()
-// and settingsHubCards(). Asserts data-shape contracts that prevent
-// silent breakage if upstream renames an option or the schema drifts.
+// Shape guard for PpssppLibretroAdapter's settings schema and
+// settingsHubCards(). Since Packet 7 Stage 2 the schema renders from the
+// core's declared option table (committed fixture) × the adapter's
+// curation overlay — this guard locks the merged shape: routing, the
+// Recommended cross-listings, storage kinds, and the deliberate RetroNest
+// default overrides.
 
 #include <QtTest>
 #include <QDir>
+#include <QFileInfo>
 #include <QHash>
 #include <QSet>
 #include <QTemporaryDir>
@@ -22,11 +26,12 @@ public:
 
 class TestPpssppLibretroSchema : public QObject {
     Q_OBJECT
+    QVector<SettingDef> schema_;
 private:
-    // The 43 unique upstream option keys this schema exposes.
-    // Maintained in sync with libretro/libretro_core_options.h.
-    // Changes here must be matched by the .cpp implementation.
-    static QSet<QString> knownUpstreamKeys() {
+    // The 43 upstream option keys the overlay curates. The core declares 76
+    // (fixture) — the other 33 (ad-hoc networking, MAC digits, UPnP, …) are
+    // deliberately uncurated: valid in OptionsStore, hidden from the UI.
+    static QSet<QString> curatedUpstreamKeys() {
         return {
             // System (11)
             "ppsspp_cpu_core", "ppsspp_fast_memory",
@@ -63,89 +68,33 @@ private:
         return { "aspect_mode", "integer_scale" };
     }
 
-    // Upstream-declared default for every libretro option key the
-    // PpssppLibretroAdapter schema covers. Mirrors the `default_value`
-    // field (last positional arg) of each `option_defs_us[]` entry in
-    // libretro/libretro_core_options.h.
-    //
-    // When PPSSPP upstream changes a default, the drift-guardrail test
-    // below fails. Resolution: either update this fixture (accept the
-    // change) or add the key to `intentionalOverrides` and update the
-    // schema's SettingDef.defaultValue (reject the change).
-    static QHash<QString, QString> upstreamDefaults() {
-        return {
-            // System (11)
-            {"ppsspp_cpu_core", "JIT"},
-            {"ppsspp_fast_memory", "enabled"},
-            {"ppsspp_ignore_bad_memory_access", "enabled"},
-            {"ppsspp_io_timing_method", "Fast"},
-            {"ppsspp_force_lag_sync", "disabled"},
-            {"ppsspp_locked_cpu_speed", "disabled"},
-            {"ppsspp_memstick_inserted", "enabled"},
-            {"ppsspp_cache_iso", "disabled"},
-            {"ppsspp_cheats", "disabled"},
-            {"ppsspp_language", "Automatic"},
-            {"ppsspp_psp_model", "psp_2000_3000"},
-            // Video (22)
-            {"ppsspp_backend", "auto"},
-            {"ppsspp_software_rendering", "disabled"},
-            {"ppsspp_internal_resolution", "480x272"},
-            {"ppsspp_mulitsample_level", "Disabled"},
-            {"ppsspp_cropto16x9", "enabled"},
-            {"ppsspp_frameskip", "disabled"},
-            {"ppsspp_frameskiptype", "Number of frames"},
-            {"ppsspp_auto_frameskip", "disabled"},
-            {"ppsspp_frame_duplication", "enabled"},
-            {"ppsspp_detect_vsync_swap_interval", "disabled"},
-            {"ppsspp_inflight_frames", "Up to 2"},
-            {"ppsspp_gpu_hardware_transform", "enabled"},
-            {"ppsspp_software_skinning", "enabled"},
-            {"ppsspp_hardware_tesselation", "disabled"},
-            {"ppsspp_texture_scaling_type", "xbrz"},
-            {"ppsspp_texture_scaling_level", "disabled"},
-            {"ppsspp_texture_deposterize", "disabled"},
-            {"ppsspp_texture_shader", "disabled"},
-            {"ppsspp_texture_anisotropic_filtering", "16x"},
-            {"ppsspp_texture_filtering", "Auto"},
-            {"ppsspp_smart_2d_texture_filtering", "disabled"},
-            {"ppsspp_texture_replacement", "disabled"},
-            // Input (4)
-            {"ppsspp_button_preference", "Cross"},
-            {"ppsspp_analog_is_circular", "disabled"},
-            {"ppsspp_analog_deadzone", "0.0"},
-            {"ppsspp_analog_sensitivity", "1.00"},
-            // Hacks (6)
-            {"ppsspp_skip_buffer_effects", "disabled"},
-            {"ppsspp_disable_range_culling", "disabled"},
-            {"ppsspp_skip_gpu_readbacks", "disabled"},
-            {"ppsspp_lazy_texture_caching", "disabled"},
-            {"ppsspp_spline_quality", "High"},
-            {"ppsspp_lower_resolution_for_effects", "disabled"},
-        };
-    }
-
-    // Keys whose schema SettingDef.defaultValue is deliberately different
-    // from upstream. Each entry is a frontend-side product decision; the
-    // drift test skips these so a future upstream-default change in one
-    // of them won't auto-revert RetroNest's preference.
-    static QSet<QString> intentionalOverrides() {
-        return { "ppsspp_internal_resolution" };
-    }
-
 private slots:
-    void totalCount_matchesSpec() {
-        PpssppLibretroAdapter a;
-        // 43 libretro originals + 10 Recommended libretro dupes
+    void initTestCase() {
+        PpssppLibretroAdapter adapter;
+        // Packet 7 Stage 2: the schema renders from the core's declared
+        // option table — hermetic tests inject the committed fixture
+        // (recorded by test_schema_parity's snapshot mode) instead of
+        // touching the live sidecar / prober.
+        const QString fixture = QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()
+            + "/fixtures/declared/ppsspp_declared_options.json";
+        const auto doc = DeclaredOptionsDoc::load(fixture);
+        QVERIFY2(doc.has_value(), "declared fixture missing");
+        adapter.setDeclaredDocForTest(*doc);
+        schema_ = adapter.settingsSchema();
+        QVERIFY(!schema_.isEmpty());
+    }
+
+    void totalCount_matchesOverlay() {
+        // 43 curated originals + 10 Recommended cross-listings
         //  + 2 FrontendSetting rows in Recommended (aspect_mode, integer_scale) = 55.
-        QCOMPARE(a.settingsSchema().size(), 55);
+        QCOMPARE(schema_.size(), 55);
     }
 
     void everyKey_hasValidShape() {
         // LibretroOption keys must carry the ppsspp_ prefix; FrontendSetting
         // keys (aspect_mode / integer_scale) intentionally don't because
         // they're shared across adapters.
-        PpssppLibretroAdapter a;
-        for (const auto& d : a.settingsSchema()) {
+        for (const auto& d : schema_) {
             if (d.storage == SettingDef::Storage::LibretroOption) {
                 QVERIFY2(d.key.startsWith("ppsspp_"),
                          qPrintable(QString("LibretroOption key '%1' missing ppsspp_ prefix").arg(d.key)));
@@ -154,10 +103,9 @@ private slots:
     }
 
     void everyKey_isKnown() {
-        PpssppLibretroAdapter a;
-        const auto libretro = knownUpstreamKeys();
+        const auto libretro = curatedUpstreamKeys();
         const auto fe = knownFrontendKeys();
-        for (const auto& d : a.settingsSchema()) {
+        for (const auto& d : schema_) {
             const auto& allow =
                 (d.storage == SettingDef::Storage::FrontendSetting) ? fe : libretro;
             QVERIFY2(allow.contains(d.key),
@@ -168,11 +116,26 @@ private slots:
         }
     }
 
+    void everyCuratedKey_isRendered() {
+        // The inverse of everyKey_isKnown: an overlay key the core no longer
+        // declares is skipped by the merge with only a qWarning — this trips
+        // loud instead (the mGBA pilot found 4 such dead rows).
+        QSet<QString> rendered;
+        for (const auto& d : schema_) {
+            if (d.storage == SettingDef::Storage::LibretroOption)
+                rendered.insert(d.key);
+        }
+        for (const auto& k : curatedUpstreamKeys()) {
+            QVERIFY2(rendered.contains(k),
+                     qPrintable(QString("curated key '%1' missing from merged schema — "
+                                        "core no longer declares it?").arg(k)));
+        }
+    }
+
     void everyDefault_isInOptions() {
-        PpssppLibretroAdapter a;
-        for (const auto& d : a.settingsSchema()) {
+        for (const auto& d : schema_) {
             QVERIFY2(d.type == SettingDef::Combo,
-                     qPrintable(QString("SettingDef '%1' is not Combo type (this phase only ships Combos)").arg(d.key)));
+                     qPrintable(QString("SettingDef '%1' is not Combo type (this schema only ships Combos)").arg(d.key)));
             bool found = false;
             for (const auto& opt : d.options) {
                 if (opt.second == d.defaultValue) { found = true; break; }
@@ -183,19 +146,30 @@ private slots:
         }
     }
 
+    void intentionalDefaultOverrides_hold() {
+        // The one deliberate RetroNest default: render at 2x, not the
+        // core's native 1x. Everything else adopts the core's default by
+        // construction (empty defaultOverride in the overlay).
+        bool found = false;
+        for (const auto& d : schema_) {
+            if (d.key != "ppsspp_internal_resolution") continue;
+            found = true;
+            QCOMPARE(d.defaultValue, QStringLiteral("960x544"));
+        }
+        QVERIFY2(found, "ppsspp_internal_resolution not found in schema");
+    }
+
     void recommendedHasNaturalDupe() {
         // Libretro-backed Recommended rows must have a System/Video/Input/Hacks
         // twin so users editing in either place mutate the same OptionsStore
         // key. FrontendSetting rows on Recommended (aspect_mode etc.) are
         // intentionally NOT duplicated — they live only in Recommended.
-        PpssppLibretroAdapter a;
-        const auto schema = a.settingsSchema();
         const QSet<QString> naturalCats{"System", "Video", "Input", "Hacks"};
-        for (const auto& rec : schema) {
+        for (const auto& rec : schema_) {
             if (rec.category != "Recommended") continue;
             if (rec.storage != SettingDef::Storage::LibretroOption) continue;
             bool foundDupe = false;
-            for (const auto& nat : schema) {
+            for (const auto& nat : schema_) {
                 if (nat.key == rec.key && nat.category != "Recommended"
                     && naturalCats.contains(nat.category)) {
                     foundDupe = true;
@@ -211,10 +185,9 @@ private slots:
     void hubCards_referencedByEntries() {
         PpssppLibretroAdapter a;
         const auto cards = a.settingsHubCards();
-        const auto schema = a.settingsSchema();
         for (const auto& card : cards) {
             bool found = false;
-            for (const auto& d : schema) {
+            for (const auto& d : schema_) {
                 if (d.category == card.categoryKey) { found = true; break; }
             }
             QVERIFY2(found,
@@ -224,15 +197,41 @@ private slots:
     }
 
     void allEntries_useExpectedStorage() {
-        // Phase B/C: every entry is either LibretroOption (the 43+10 core
-        // options) or FrontendSetting (the 2 RetroNest-side aspect rows).
-        PpssppLibretroAdapter a;
-        for (const auto& d : a.settingsSchema()) {
+        // Every entry is either LibretroOption (the 43+10 core options) or
+        // FrontendSetting (the 2 RetroNest-side aspect rows).
+        for (const auto& d : schema_) {
             const bool ok = d.storage == SettingDef::Storage::LibretroOption
                          || d.storage == SettingDef::Storage::FrontendSetting;
             QVERIFY2(ok,
                      qPrintable(QString("SettingDef '%1' uses an unexpected storage type "
                                         "(must be LibretroOption or FrontendSetting)").arg(d.key)));
+        }
+    }
+
+    void duplicatedRows_haveConsistentDefaults() {
+        // key → (category-of-first-seen, defaultValue-of-first-seen)
+        QHash<QString, QPair<QString, QString>> firstSeen;
+        QStringList violations;
+        for (const auto& s : schema_) {
+            if (s.storage != SettingDef::Storage::LibretroOption)
+                continue;
+            auto it = firstSeen.constFind(s.key);
+            if (it == firstSeen.constEnd()) {
+                firstSeen.insert(s.key, qMakePair(s.category, s.defaultValue));
+            } else if (it.value().second != s.defaultValue) {
+                violations << QString("'%1': %2=%3 vs %4=%5")
+                                  .arg(s.key)
+                                  .arg(it.value().first)
+                                  .arg(it.value().second)
+                                  .arg(s.category)
+                                  .arg(s.defaultValue);
+            }
+        }
+        if (!violations.isEmpty()) {
+            QFAIL(qPrintable(QString("schema rows with the same key carry different "
+                                     "defaultValue. Recommended card duplicates must "
+                                     "match their canonical row. Violations: %1")
+                                .arg(violations.join("; "))));
         }
     }
 
@@ -261,72 +260,6 @@ private slots:
         for (const auto& p : defs) byKey.insert(p.first, p.second);
         QCOMPARE(byKey.value("aspect_mode"),   QStringLiteral("native"));
         QCOMPARE(byKey.value("integer_scale"), QStringLiteral("OFF"));
-    }
-
-    void libretroOptionDefaults_matchUpstreamUnlessAllowlisted() {
-        PpssppLibretroAdapter a;
-        const auto fixture = upstreamDefaults();
-        const auto allowlist = intentionalOverrides();
-        for (const auto& s : a.settingsSchema()) {
-            if (s.storage != SettingDef::Storage::LibretroOption)
-                continue;
-            if (allowlist.contains(s.key))
-                continue;
-            QVERIFY2(fixture.contains(s.key),
-                qPrintable(QString("schema row for libretro option '%1' not present in "
-                                   "upstreamDefaults fixture. Either add it to the fixture "
-                                   "or mark it as an intentional override.").arg(s.key)));
-            QVERIFY2(s.defaultValue == fixture.value(s.key),
-                qPrintable(QString("default drift for '%1': schema='%2' vs upstream='%3'. "
-                                   "Either update the schema to match upstream or add '%1' "
-                                   "to intentionalOverrides().")
-                        .arg(s.key).arg(s.defaultValue).arg(fixture.value(s.key))));
-        }
-
-        // Inverse check: every fixture entry must still be reachable in the
-        // schema. Catches the "upstream removed an option" case where the
-        // schema follows suit but the fixture keeps a dead entry.
-        QSet<QString> schemaLibretroKeys;
-        for (const auto& s : a.settingsSchema()) {
-            if (s.storage == SettingDef::Storage::LibretroOption)
-                schemaLibretroKeys.insert(s.key);
-        }
-        for (auto it = fixture.constBegin(); it != fixture.constEnd(); ++it) {
-            if (allowlist.contains(it.key()))
-                continue;
-            QVERIFY2(schemaLibretroKeys.contains(it.key()),
-                qPrintable(QString("upstreamDefaults fixture has key '%1' but no matching "
-                                   "schema row exists. Either remove it from the fixture "
-                                   "or restore the schema row.").arg(it.key())));
-        }
-    }
-
-    void duplicatedRows_haveConsistentDefaults() {
-        PpssppLibretroAdapter a;
-        // key → (category-of-first-seen, defaultValue-of-first-seen)
-        QHash<QString, QPair<QString, QString>> firstSeen;
-        QStringList violations;
-        for (const auto& s : a.settingsSchema()) {
-            if (s.storage != SettingDef::Storage::LibretroOption)
-                continue;
-            auto it = firstSeen.constFind(s.key);
-            if (it == firstSeen.constEnd()) {
-                firstSeen.insert(s.key, qMakePair(s.category, s.defaultValue));
-            } else if (it.value().second != s.defaultValue) {
-                violations << QString("'%1': %2=%3 vs %4=%5")
-                                  .arg(s.key)
-                                  .arg(it.value().first)
-                                  .arg(it.value().second)
-                                  .arg(s.category)
-                                  .arg(s.defaultValue);
-            }
-        }
-        if (!violations.isEmpty()) {
-            QFAIL(qPrintable(QString("schema rows with the same key carry different "
-                                     "defaultValue. Recommended card duplicates must "
-                                     "match their canonical row. Violations: %1")
-                                .arg(violations.join("; "))));
-        }
     }
 
     // --- systemDirOverride (asset-directory handoff) --------------------
