@@ -15,6 +15,7 @@ FILES=(
   emit_core_options_v2.h
   README.md
   check-drift.sh
+  package-core.sh
   docs/option-style-guide.md
   docs/deploy-contract.md
 )
@@ -38,6 +39,6 @@ for dest in "${DESTS[@]}"; do
     cp "$HERE/$f" "$dest/$f"
   done
   cp "$HERE/MANIFEST.sha256" "$dest/MANIFEST.sha256"
-  chmod 755 "$dest/check-drift.sh"
+  chmod 755 "$dest/check-drift.sh" "$dest/package-core.sh"
   echo "synced -> $dest"
 done
