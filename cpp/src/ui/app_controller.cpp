@@ -635,44 +635,6 @@ void AppController::showEmulatorSettings(const QString& emuId) {
     dialog->show();
 }
 
-void AppController::openNativeEmulatorSettings(const QString& emuId) {
-    const auto* manifest = m_loader->emulatorById(emuId);
-    if (!manifest) return;
-
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return;
-
-    QString installPath = Paths::emulatorsDir(manifest->install_folder);
-    QString exec = adapter->resolveExecutable(*manifest, installPath);
-    if (exec.isEmpty() || !QFileInfo::exists(exec)) {
-        setStatus(manifest->name + " is not installed.");
-        return;
-    }
-
-    // Run the same setup that happens before launching a game so the native
-    // UI sees a properly initialized config (wizard suppressed, paths set, etc.)
-    const QString systemId = Paths::systemIdFor(emuId, manifest->systems);
-    adapter->ensureConfig(*manifest, Paths::biosDir(),
-                          Paths::emulatorDataDir(emuId, systemId));
-
-#if defined(Q_OS_MACOS)
-    // Defensive: re-strip the quarantine attribute. If it's re-applied (user
-    // replaced the bundle, zip was re-extracted, etc.), macOS would translocate
-    // the app to a read-only path, and atomic-save rename() would fail with
-    // EPERM — crashing the emulator. Idempotent if already clean.
-    QProcess::execute("xattr", {"-rd", "com.apple.quarantine", installPath});
-#endif
-
-    // Direct exec — bypassing Launch Services on macOS. Using `open` would
-    // route through Launch Services which applies app translocation/sandbox
-    // rules to downloaded .app bundles, causing emulators like DuckStation to
-    // fail when trying to save settings inside their own bundle.
-    //
-    // additionalLaunchArgs() lets adapters inject CLI flags that must be
-    // present on every launch (e.g. Dolphin's `-u <user-dir>`). Default empty.
-    QProcess::startDetached(exec, adapter->additionalLaunchArgs());
-}
-
 void AppController::showHotkeySettings(const QString& emuId) {
     if (!m_inputManager) {
         qWarning() << "[AppController] No SdlInputManager set";
@@ -763,9 +725,7 @@ bool AppController::eventFilter(QObject* /*watched*/, QEvent* event) {
         //   - QML settings overlay (QML sets m_libretroHotkeysSuppressed)
         //   - In-game menu panel (Esc/etc should close it via normal routing)
         const bool suppressed = m_libretroHotkeysSuppressed
-                                || QApplication::activeModalWidget() != nullptr
-                                || (m_inGameMenu && m_inGameMenu->isMenuOpen()
-                                    && !m_inGameMenu->currentBackendIsLibretro());
+                                || QApplication::activeModalWidget() != nullptr;
         if (!k->isAutoRepeat() && m_hotkeyMatcher && !suppressed) {
             const int combined = int(k->key()) | int(k->modifiers());
             if (m_hotkeyMatcher->onKeyEvent(combined, t == QEvent::KeyPress)) {
@@ -908,21 +868,13 @@ QVariantMap AppController::currentGameInfo() const {
             info["emuId"] = game.emulator_id;
             auto* adapter = AdapterRegistry::instance().adapterFor(game.emulator_id);
             info["supportsSaveOnExit"] = adapter ? adapter->supportsSaveOnExit() : false;
-            // External-emulator path uses synthesized hotkeys; libretro
-            // path uses direct CoreRuntime calls. Libretro cores always
-            // support save/load state via retro_serialize/unserialize and
-            // fast-forward via setSpeedMultiplier — no per-core opt-in
-            // needed.
+            // Libretro cores always support save/load state via
+            // retro_serialize/unserialize and fast-forward via
+            // setSpeedMultiplier — no per-core opt-in needed.
             const bool isLibretro = dynamic_cast<LibretroAdapter*>(adapter) != nullptr;
-            const bool synthSave = adapter
-                && adapter->hotkeyVirtualKeyCode(EmulatorAdapter::HotkeyAction::SaveState) != 0;
-            const bool synthLoad = adapter
-                && adapter->hotkeyVirtualKeyCode(EmulatorAdapter::HotkeyAction::LoadState) != 0;
-            const bool synthFf = adapter
-                && adapter->hotkeyVirtualKeyCode(EmulatorAdapter::HotkeyAction::ToggleFastForward) != 0;
-            info["supportsSaveState"] = isLibretro || synthSave;
-            info["supportsLoadState"] = isLibretro || synthLoad;
-            info["supportsFastForward"] = isLibretro || synthFf;
+            info["supportsSaveState"] = isLibretro;
+            info["supportsLoadState"] = isLibretro;
+            info["supportsFastForward"] = isLibretro;
             return info;
         }
     }
@@ -1041,33 +993,6 @@ void AppController::setSdlInputManager(SdlInputManager* mgr) {
     }
 }
 
-namespace {
-using HotkeyAction = EmulatorAdapter::HotkeyAction;
-
-// Ask the running adapter for the kVK_* it has bound to the given
-// action and synthesize it to the emulator process. Returns true if
-// a key was sent. Pause/resume falls back to SIGSTOP/SIGCONT when no
-// key is available; in-game menu actions just no-op.
-bool synthesizeHotkey(GameSession* sess, int64_t pid, HotkeyAction action) {
-    if (!sess) return false;
-    auto* adapter = sess->adapter();
-    const int vk = adapter ? adapter->hotkeyVirtualKeyCode(action) : 0;
-    if (vk == 0) return false;
-    MacFullscreen::sendKeyToProcess(pid, vk);
-    return true;
-}
-
-void emulatorPause(GameSession* sess, int64_t pid) {
-    if (!synthesizeHotkey(sess, pid, HotkeyAction::TogglePause))
-        MacFullscreen::pauseProcess(pid);
-}
-
-void emulatorResume(GameSession* sess, int64_t pid) {
-    if (!synthesizeHotkey(sess, pid, HotkeyAction::TogglePause))
-        MacFullscreen::resumeProcess(pid);
-}
-} // namespace
-
 void AppController::setQmlEngine(QQmlEngine* engine) {
     m_qmlEngine = engine;
 
@@ -1086,98 +1011,44 @@ void AppController::setQmlEngine(QQmlEngine* engine) {
 
     connect(m_inGameMenu, &InGameMenuController::resumeRequested,
             this, [this] {
-                if (m_inGameMenu->currentBackendIsLibretro()) {
-                    if (auto* s = gameSession()) s->resumeEmulation();
-                }
+                if (auto* s = gameSession()) s->resumeEmulation();
                 closeInGameMenu();
             });
     connect(m_inGameMenu, &InGameMenuController::exitWithSaveRequested,
             this, [this] {
-                if (m_inGameMenu->currentBackendIsLibretro()) {
-                    if (auto* s = gameSession()) s->resumeEmulation();
-                    m_inGameMenu->closeMenu();
-                    saveAndStopGame(1);
-                    return;
-                }
-                // External path: unpause first so the SIGTERM save thread
-                // can run, drop input suppression, then save+stop.
+                if (auto* s = gameSession()) s->resumeEmulation();
                 m_inGameMenu->closeMenu();
-                if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
-                if (auto* sess = gameSession()) {
-                    const int64_t pid = sess->pid();
-                    if (pid > 0 && m_emulatorSuspended) {
-                        emulatorResume(sess, pid);
-                        m_emulatorSuspended = false;
-                    }
-                }
                 saveAndStopGame(1);
             });
     connect(m_inGameMenu, &InGameMenuController::exitWithoutSaveRequested,
             this, [this] {
-                if (m_inGameMenu->currentBackendIsLibretro()) {
-                    if (auto* s = gameSession()) s->resumeEmulation();
-                    m_inGameMenu->closeMenu();
-                    stopGame();
-                    return;
-                }
+                if (auto* s = gameSession()) s->resumeEmulation();
                 m_inGameMenu->closeMenu();
-                if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
-                if (auto* sess = gameSession()) {
-                    const int64_t pid = sess->pid();
-                    if (pid > 0 && m_emulatorSuspended) {
-                        emulatorResume(sess, pid);
-                        m_emulatorSuspended = false;
-                    }
-                }
                 stopGame();
             });
     connect(m_inGameMenu, &InGameMenuController::saveStateRequested,
             this, [this] {
-                if (m_inGameMenu->currentBackendIsLibretro()) {
-                    if (auto* s = gameSession()) {
-                        s->saveStateLibretro(s->currentSaveSlot());
-                        s->resumeEmulation();
-                    }
-                    m_inGameMenu->closeMenu();
-                    return;
+                if (auto* s = gameSession()) {
+                    s->saveStateLibretro(s->currentSaveSlot());
+                    s->resumeEmulation();
                 }
-                if (auto* sess = gameSession()) {
-                    const int64_t pid = sess->pid();
-                    if (pid > 0) synthesizeHotkey(sess, pid, EmulatorAdapter::HotkeyAction::SaveState);
-                }
-                closeInGameMenu();
+                m_inGameMenu->closeMenu();
             });
     connect(m_inGameMenu, &InGameMenuController::loadStateRequested,
             this, [this] {
-                if (m_inGameMenu->currentBackendIsLibretro()) {
-                    if (auto* s = gameSession()) {
-                        s->loadStateLibretro(s->currentSaveSlot());
-                        s->resumeEmulation();
-                    }
-                    m_inGameMenu->closeMenu();
-                    return;
+                if (auto* s = gameSession()) {
+                    s->loadStateLibretro(s->currentSaveSlot());
+                    s->resumeEmulation();
                 }
-                if (auto* sess = gameSession()) {
-                    const int64_t pid = sess->pid();
-                    if (pid > 0) synthesizeHotkey(sess, pid, EmulatorAdapter::HotkeyAction::LoadState);
-                }
-                closeInGameMenu();
+                m_inGameMenu->closeMenu();
             });
     connect(m_inGameMenu, &InGameMenuController::toggleFastForwardRequested,
             this, [this] {
-                if (m_inGameMenu->currentBackendIsLibretro()) {
-                    if (auto* s = gameSession()) s->toggleFastForwardLibretro();
-                    // Leave the menu open — FF is a state toggle.
-                    // QML LibretroOverlayPanel listens to
-                    // GameSession::libretroFastForwardChanged and shows/
-                    // hides its ffToast pill from that signal.
-                    return;
-                }
-                if (auto* sess = gameSession()) {
-                    const int64_t pid = sess->pid();
-                    if (pid > 0) synthesizeHotkey(sess, pid, EmulatorAdapter::HotkeyAction::ToggleFastForward);
-                }
-                closeInGameMenu();
+                if (auto* s = gameSession()) s->toggleFastForwardLibretro();
+                // Leave the menu open — FF is a state toggle.
+                // QML LibretroOverlayPanel listens to
+                // GameSession::libretroFastForwardChanged and shows/
+                // hides its ffToast pill from that signal.
             });
 }
 
@@ -1188,36 +1059,18 @@ void AppController::openInGameMenu() {
         return;
     }
 
-    // HW-render libretro path: pause the in-process core directly and let
-    // the controller open the overlay menu. No emulator-process state to
-    // manage (no pid, no input-suppression — both are inside this app).
-    if (gameUsesHardwareRender()) {
-        if (auto* s = gameSession()) s->pauseEmulation();
-        m_inGameMenu->openMenu();
-        return;
-    }
-
-    // External-emulator path: pause via the adapter's TogglePause hotkey
-    // (kVK_*) synthesized to the emulator pid, then suppress SDL's main-
-    // window signals (Start in the menu must not open the main settings
-    // overlay), then position the floating NSPanel over the emulator's
-    // screen.
-    int64_t pid = 0;
-    GameSession* sess = gameSession();
-    if (sess) pid = sess->pid();
-    if (pid > 0 && !m_emulatorSuspended) {
-        emulatorPause(sess, pid);
-        m_emulatorSuspended = true;
-    }
-    if (m_inputManager) m_inputManager->setSuppressMainInputs(true);
-    m_inGameMenu->openMenu(pid);
+    // Libretro-only: pause the in-process core directly and let the
+    // controller open the overlay menu. (The external-emulator branch —
+    // keystroke-synthesized pause, SIGSTOP fallback, NSPanel positioned
+    // over another process's screen — died with the process era.)
+    if (auto* s = gameSession()) s->pauseEmulation();
+    m_inGameMenu->openMenu();
 }
 
 void AppController::closeInGameMenu() {
     if (!m_inGameMenu) return;
-    const bool wasLibretro = m_inGameMenu->currentBackendIsLibretro();
     m_inGameMenu->closeMenu();
-    if (wasLibretro) {
+    {
         // Symmetric counterpart to openInGameMenu's pauseEmulation. The
         // toggle-hotkey close path (Esc / touchpad bound to ToggleMenu)
         // reaches us via QML's onLibretroMenuToggleRequested without
@@ -1229,52 +1082,7 @@ void AppController::closeInGameMenu() {
         // a second retronest_set_paused(false) is safely a no-op inside
         // the libretro core (ResumeVm guards on prev_state == Running).
         if (auto* s = gameSession()) s->resumeEmulation();
-        return;
     }
-
-    // External path cleanup follows.
-    if (m_inputManager) m_inputManager->setSuppressMainInputs(false);
-
-    // If a previous close is still polling, tear it down. Captures
-    // are held by std::shared_ptr below, so disconnecting + dropping
-    // the lambda releases them deterministically (no leak even if the
-    // user fast-toggles the menu).
-    if (m_resumeWhenButtonsReleasedTimer) {
-        m_resumeWhenButtonsReleasedTimer->stop();
-        m_resumeWhenButtonsReleasedTimer->disconnect();
-    }
-
-    GameSession* sess = gameSession();
-    int64_t pid = sess ? sess->pid() : 0;
-    if (pid <= 0 || !m_emulatorSuspended) {
-        m_emulatorSuspended = false;
-        return;
-    }
-    MacFullscreen::activateProcess(pid);
-
-    // Poll SDL state at 16 ms; resume only once all action buttons
-    // (A/B/X/Y) are released. Variable delay (~50–150 ms typical) so
-    // the close-trigger button can never leak as in-game input.
-    // Safety timeout at 500 ms (~30 ticks).
-    if (!m_resumeWhenButtonsReleasedTimer) {
-        m_resumeWhenButtonsReleasedTimer = new QTimer(this);
-        m_resumeWhenButtonsReleasedTimer->setInterval(16);
-    }
-    auto tickCount = std::make_shared<int>(0);
-    connect(m_resumeWhenButtonsReleasedTimer, &QTimer::timeout, this,
-        [this, sess, pid, tickCount]() {
-            const bool buttonsHeld =
-                m_inputManager && m_inputManager->isAnyActionButtonPressed();
-            if (!buttonsHeld || ++(*tickCount) > 30) {
-                if (m_emulatorSuspended) {
-                    emulatorResume(sess, pid);
-                    m_emulatorSuspended = false;
-                }
-                m_resumeWhenButtonsReleasedTimer->stop();
-                m_resumeWhenButtonsReleasedTimer->disconnect();
-            }
-        });
-    m_resumeWhenButtonsReleasedTimer->start();
 }
 
 bool AppController::inGameMenuOpen() const {

@@ -565,8 +565,8 @@ void SdlInputManager::pollEvents() {
                 // Select + Start combo — universal across all
                 // controllers. Start is rarely action-mapped in retro
                 // games (typically "Pause" or unbound), so the brief
-                // press before our SIGSTOP arrives is unlikely to
-                // trigger an in-game action.
+                // press before the pause lands is unlikely to trigger
+                // an in-game action.
                 if (m_selectHeld && btn == SDL_CONTROLLER_BUTTON_START) {
                     qDebug() << "[SdlInput] Select+Start combo — emitting inGameMenuRequested";
                     emit inGameMenuRequested();

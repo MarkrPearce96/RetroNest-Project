@@ -631,12 +631,6 @@ QString GameSession::detectedGameSerial() const {
     return {};
 }
 
-qint64 GameSession::pid() const {
-    // Process-era stub: libretro cores run in-process. Deleted together
-    // with its last consumers (AppController keystroke synthesis).
-    return -1;
-}
-
 QString GameSession::libretroAspectMode() const {
     if (!m_libretroAdapter) return QStringLiteral("native");
     if (auto* store = m_libretroAdapter->frontendSettingsStore()) {

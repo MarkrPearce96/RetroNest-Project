@@ -18,16 +18,12 @@ public:
 
 signals:
     void categoryActivated(QString category);
-    void openNativeRequested();
 
 protected:
     // Build root layout: title label, content area, native-settings button.
     // Subclass adds its grid(s) into contentLayout() after calling this.
-    // showNativeButton=false hides the "Open Native Settings" button for
-    // libretro-backed emulators that have no native UI to open.
-    void setupChrome(const QString& title, bool showNativeButton = true);
+    void setupChrome(const QString& title);
     QVBoxLayout* contentLayout() { return m_contentLayout; }
-    QPushButton* nativeBtn() const { return m_nativeBtn; }
 
     // Standard category card. Wires SettingsCard::activated → categoryActivated(categoryKey).
     SettingsCard* makeCard(const QString& icon, const QString& title,
@@ -41,5 +37,4 @@ protected:
 
 private:
     QVBoxLayout* m_contentLayout = nullptr;
-    QPushButton* m_nativeBtn = nullptr;
 };

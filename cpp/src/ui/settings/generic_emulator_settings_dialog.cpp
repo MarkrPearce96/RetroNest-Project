@@ -11,7 +11,7 @@ GenericCategoryHub::GenericCategoryHub(const QString& title,
                                        const EmulatorAdapter* adapter,
                                        QWidget* parent)
     : EmulatorCategoryHubBase(parent) {
-    setupChrome(title, adapter && adapter->hasNativeSettingsUI());
+    setupChrome(title);
 
     // Build per-category setting counts in one pass — cheaper than calling
     // settingsSchema() once per card on a 200+ entry schema (PCSX2/DuckStation).
@@ -26,35 +26,14 @@ GenericCategoryHub::GenericCategoryHub(const QString& title,
     auto* grid = new QGridLayout();
     grid->setSpacing(14);
 
-    int maxRow = -1;
-    QVector<SettingsCard*> bottomRowCards;
     for (const auto& spec : cards) {
         auto* card = makeCard(spec.icon, spec.title, spec.descriptor,
                               counts.value(spec.categoryKey, 0), spec.categoryKey);
         grid->addWidget(card, spec.row, spec.col, spec.rowSpan, spec.colSpan);
-
-        const int bottom = spec.row + spec.rowSpan - 1;
-        if (bottom > maxRow) {
-            maxRow = bottom;
-            bottomRowCards.clear();
-            bottomRowCards.append(card);
-        } else if (bottom == maxRow) {
-            bottomRowCards.append(card);
-        }
     }
 
     contentLayout()->addLayout(grid);
     contentLayout()->addStretch(0);
-
-    // Bottom-row cards forward Down → native button (base eventFilter
-    // handles the redirect). PPSSPP needed this previously because Qt's
-    // default focus-next from a card lands on the next card, not on the
-    // button below the grid; installing the filter on bottom-row cards
-    // fixes that. Skip when there's no native button (libretro adapters).
-    if (nativeBtn()) {
-        for (auto* card : bottomRowCards)
-            card->installEventFilter(this);
-    }
 }
 
 GenericEmulatorSettingsDialog::GenericEmulatorSettingsDialog(
@@ -76,8 +55,6 @@ GenericEmulatorSettingsDialog::GenericEmulatorSettingsDialog(
     auto* hub = new GenericCategoryHub(displayName + " Settings", adapter, this);
     connect(hub, &GenericCategoryHub::categoryActivated,
             this, &GenericEmulatorSettingsDialog::onCategoryActivated);
-    connect(hub, &GenericCategoryHub::openNativeRequested, this,
-            [this]{ m_app->openNativeEmulatorSettings(m_emuId); });
     setHub(hub);
 }
 

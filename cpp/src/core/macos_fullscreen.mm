@@ -47,17 +47,6 @@ void activateOurApp() {
     }
 }
 
-void activateProcess(int64_t pid) {
-    @autoreleasepool {
-        NSRunningApplication* app =
-            [NSRunningApplication runningApplicationWithProcessIdentifier:(pid_t)pid];
-        if (app) {
-            [app activateWithOptions:NSApplicationActivateAllWindows |
-                                     NSApplicationActivateIgnoringOtherApps];
-        }
-    }
-}
-
 void registerGlobalHotkey(HotkeyCallback callback) {
     if (s_hotkeyRef) return; // Already registered
 
@@ -291,32 +280,6 @@ void setIgnoresMouseEvents(void* nsViewPtr, bool ignore) {
         if (!window) return;
         [window setIgnoresMouseEvents:(ignore ? YES : NO)];
     }
-}
-
-void sendKeyToProcess(int64_t pid, int virtualKeyCode) {
-    if (pid <= 0) return;
-    @autoreleasepool {
-        CGEventRef keyDown = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)virtualKeyCode, true);
-        if (keyDown) {
-            CGEventPostToPid((pid_t)pid, keyDown);
-            CFRelease(keyDown);
-        }
-        CGEventRef keyUp = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)virtualKeyCode, false);
-        if (keyUp) {
-            CGEventPostToPid((pid_t)pid, keyUp);
-            CFRelease(keyUp);
-        }
-    }
-}
-
-void pauseProcess(int64_t pid) {
-    if (pid <= 0) return;
-    kill((pid_t)pid, SIGSTOP);
-}
-
-void resumeProcess(int64_t pid) {
-    if (pid <= 0) return;
-    kill((pid_t)pid, SIGCONT);
 }
 
 } // namespace MacFullscreen

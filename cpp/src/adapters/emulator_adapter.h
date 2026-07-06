@@ -186,14 +186,6 @@ public:
     virtual QStringList settingsCategoriesWithSubTabs() const { return {}; }
 
     /**
-     * Whether the hub's "Open Native Settings" button should be shown.
-     * Default: native-process adapters return true (they have a native
-     * UI to open). LibretroAdapter overrides to return false — no
-     * native UI exists, the button would be inert.
-     */
-    virtual bool hasNativeSettingsUI() const { return true; }
-
-    /**
      * Return the preview-widget spec for one (category, subcategory) pair.
      * Default returns empty (no preview). Adapters that want an
      * AspectRatioPreview or OsdPreview shown alongside the settings cards
@@ -365,52 +357,6 @@ public:
      */
     virtual QVector<HotkeyDef> hotkeyBindingDefs() const { return {}; }
 
-    /**
-     * In-game menu actions that AppController synthesizes by posting a
-     * Carbon virtual keycode to the emulator process. Each adapter
-     * returns the kVK_* it has bound to the corresponding hotkey in
-     * its config (createDefaultConfig / patchExistingConfig). Adapters
-     * return 0 when they don't support the action — the menu hides
-     * actions whose key is 0 (and TogglePause specifically falls back
-     * to SIGSTOP/SIGCONT, which works universally but causes a brief
-     * audio click).
-     */
-    enum class HotkeyAction {
-        TogglePause,
-        SaveState,
-        LoadState,
-        ToggleFastForward,
-    };
-
-
-    /**
-     * Carbon kVK_* virtual keycode for the given action. Default
-     * returns the standard external-emulator mapping (Space / F5 /
-     * F7 / F8). The corresponding emulator hotkey must be bound to
-     * this key in createDefaultConfig / patchExistingConfig —
-     * otherwise the synthesized keystroke reaches the emulator but
-     * does nothing.
-     *
-     * Adapters override only to disable an action (return 0) or
-     * remap one. New external-process adapters get the standard
-     * synthesis behavior for free. Libretro adapters inherit these
-     * values but never reach synthesizeHotkey() — every call site
-     * is gated by an isLibretro() check in AppController.
-     */
-    virtual int hotkeyVirtualKeyCode(HotkeyAction action) const {
-        switch (action) {
-        case HotkeyAction::TogglePause:       return 0x31; // kVK_Space
-        case HotkeyAction::SaveState:         return 0x60; // kVK_F5
-        case HotkeyAction::LoadState:         return 0x62; // kVK_F7
-        case HotkeyAction::ToggleFastForward: return 0x64; // kVK_F8
-        }
-        return 0;
-    }
-
-    /** Back-compat alias used by AppController's pause path. */
-    int pauseHotkeyVirtualKeyCode() const {
-        return hotkeyVirtualKeyCode(HotkeyAction::TogglePause);
-    }
 
     /**
      * Return the CLI arguments to resume from a save state.
@@ -636,16 +582,6 @@ public:
         }
     }
 
-    /**
-     * Adapter-specific launch arguments to prepend to every spawn of the
-     * emulator binary, regardless of whether a game is being launched or
-     * the user is opening the native settings UI. Default empty.
-     *
-     * Used by emulators that need a CLI flag to point at a custom config
-     * location — e.g. Dolphin on macOS uses `-u <user-dir>` because
-     * portable.txt-inside-the-bundle would invalidate the code signature.
-     */
-    virtual QStringList additionalLaunchArgs() const { return {}; }
 
 protected:
     /**

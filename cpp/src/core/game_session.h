@@ -74,7 +74,6 @@ public:
     void terminate();
 
     bool isRunning() const;
-    qint64 pid() const;
 
     /** True when the running game uses the libretro (in-process) backend. */
     bool isLibretro() const { return true; }  // every session is libretro (process era retired)

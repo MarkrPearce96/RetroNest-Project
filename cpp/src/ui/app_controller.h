@@ -153,7 +153,6 @@ public slots:
     Q_INVOKABLE void showControllerMapping(const QString& emuId,
                                             const QString& controllerTypeId);
     Q_INVOKABLE void showEmulatorSettings(const QString& emuId);
-    Q_INVOKABLE void openNativeEmulatorSettings(const QString& emuId);
     Q_INVOKABLE void showHotkeySettings(const QString& emuId);
     Q_INVOKABLE void showLibretroHotkeySettings();
 
@@ -374,17 +373,6 @@ private:
     // HW-render libretro overlay). Lazy-created on setQmlEngine(); routes
     // openInGameMenu() to whichever backend matches the running game.
     InGameMenuController* m_inGameMenu = nullptr;
-
-    // True between paired Space-keystroke sends to the emulator
-    // (the TogglePause hotkey is a toggle, so we must track which
-    // half of the toggle we're in to avoid double-pause/double-resume).
-    bool m_emulatorSuspended = false;
-
-    // Polls SDL state at 16ms intervals after closeInGameMenu()
-    // until all action buttons (A/B/X/Y) are released, then sends
-    // the Space keystroke to unpause. Variable delay so the close-
-    // trigger button can never leak as in-game input.
-    QTimer* m_resumeWhenButtonsReleasedTimer = nullptr;
 
     // App-global libretro hotkey routing. AppController owns the matcher
     // (not CoreRuntime) because libretro hotkeys are app-global — the same

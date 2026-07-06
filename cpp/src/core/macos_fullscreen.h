@@ -16,8 +16,6 @@ void restoreMenuBarAndDock();
 // Activate our app (switches macOS to our Space if needed).
 void activateOurApp();
 
-// Activate the process with the given PID (switches to its Space).
-void activateProcess(int64_t pid);
 
 // Register Cmd+Shift+Escape as a system-wide hotkey (no permissions needed).
 // Uses Carbon RegisterEventHotKey — works even when another app has focus.
@@ -84,21 +82,5 @@ void attachChildWindow(void* parentNSView, void* childNSView);
 // LibretroOverlayPanel: YES while only toasts / badges are showing,
 // NO while the in-game menu is open.
 void setIgnoresMouseEvents(void* nsViewPtr, bool ignore);
-
-// Synthesize a keyboard press+release delivered to `pid`'s event
-// stream via CGEventPostToPid. Used to toggle the emulator's own
-// TogglePause hotkey when the in-game menu opens/closes — the
-// emulator pauses itself, suspending its audio thread cleanly
-// (no CoreAudio buffer-cut artifacts).
-void sendKeyToProcess(int64_t pid, int virtualKeyCode);
-
-// Suspend a process at the OS level via SIGSTOP. Universal pause
-// that works for any emulator, but cuts CoreAudio mid-buffer
-// (audible click on each transition). Use sendKeyToProcess to
-// the emulator's own pause hotkey when possible.
-void pauseProcess(int64_t pid);
-
-// Resume a process previously suspended with pauseProcess() (SIGCONT).
-void resumeProcess(int64_t pid);
 
 } // namespace MacFullscreen
