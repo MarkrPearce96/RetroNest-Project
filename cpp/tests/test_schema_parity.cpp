@@ -24,6 +24,7 @@
 #include "adapters/libretro/dolphin_libretro_adapter.h"
 #include "adapters/libretro/duckstation_libretro_adapter.h"
 #include "adapters/libretro/mgba_libretro_adapter.h"
+#include "adapters/libretro/pcsx2_libretro_adapter.h"
 #include "adapters/libretro/ppsspp_libretro_adapter.h"
 #include "core/libretro/core_prober.h"
 
@@ -157,6 +158,10 @@ private slots:
     void dolphinParity() {
         DolphinLibretroAdapter adapter;
         runParity(adapter, "dolphin");
+    }
+    void pcsx2Parity() {
+        Pcsx2LibretroAdapter adapter;
+        runParity(adapter, "pcsx2");
     }
 };
 

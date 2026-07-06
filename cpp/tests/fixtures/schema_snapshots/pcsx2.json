@@ -1,0 +1,1404 @@
+[
+    {
+        "category": "Recommended",
+        "default": "auto",
+        "key": "pcsx2_renderer",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "auto",
+            "metal",
+            "software",
+            "null"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "enabled",
+        "key": "pcsx2_mtvu",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "0",
+        "key": "pcsx2_ee_cycle_rate",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "-3",
+            "-2",
+            "-1",
+            "0",
+            "1",
+            "2",
+            "3"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "2",
+        "key": "pcsx2_upscale_multiplier",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "16:9",
+        "key": "pcsx2_aspect_ratio",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto 4:3/3:2",
+            "4:3",
+            "16:9",
+            "10:7",
+            "Stretch"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "enabled",
+        "key": "pcsx2_enable_widescreen_patches",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "1",
+        "key": "pcsx2_accurate_blending_unit",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "0",
+        "key": "pcsx2_max_anisotropy",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "2",
+            "4",
+            "8",
+            "16"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "2",
+        "key": "pcsx2_filter",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "disabled",
+        "key": "pcsx2_vsync",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "disabled",
+        "key": "pcsx2_sync_to_host_rr",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "100",
+        "key": "pcsx2_audio_volume",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "25",
+            "50",
+            "75",
+            "100",
+            "125",
+            "150",
+            "175",
+            "200"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "1",
+        "key": "pcsx2_normal_speed",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0.02",
+            "0.1",
+            "0.25",
+            "0.5",
+            "0.75",
+            "0.9",
+            "1",
+            "1.1",
+            "1.2",
+            "1.5",
+            "1.75",
+            "2",
+            "3",
+            "4",
+            "5",
+            "10",
+            "0"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "enabled",
+        "key": "pcsx2_fast_boot",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "disabled",
+        "key": "pcsx2_cheats",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "1",
+        "key": "pcsx2_normal_speed",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0.02",
+            "0.1",
+            "0.25",
+            "0.5",
+            "0.75",
+            "0.9",
+            "1",
+            "1.1",
+            "1.2",
+            "1.5",
+            "1.75",
+            "2",
+            "3",
+            "4",
+            "5",
+            "10",
+            "0"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "2",
+        "key": "pcsx2_fast_forward_speed",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0.02",
+            "0.1",
+            "0.25",
+            "0.5",
+            "0.75",
+            "0.9",
+            "1",
+            "1.1",
+            "1.2",
+            "1.5",
+            "1.75",
+            "2",
+            "3",
+            "4",
+            "5",
+            "10",
+            "0"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "0.5",
+        "key": "pcsx2_slow_motion_speed",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0.02",
+            "0.1",
+            "0.25",
+            "0.5",
+            "0.75",
+            "0.9",
+            "1",
+            "1.1",
+            "1.2",
+            "1.5",
+            "1.75",
+            "2",
+            "3",
+            "4",
+            "5",
+            "10",
+            "0"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "0",
+        "key": "pcsx2_ee_cycle_rate",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "-3",
+            "-2",
+            "-1",
+            "0",
+            "1",
+            "2",
+            "3"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "0",
+        "key": "pcsx2_ee_cycle_skip",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "enabled",
+        "key": "pcsx2_mtvu",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "disabled",
+        "key": "pcsx2_thread_pinning",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "disabled",
+        "key": "pcsx2_cheats",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "disabled",
+        "key": "pcsx2_host_fs",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "disabled",
+        "key": "pcsx2_cdvd_precache",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "enabled",
+        "key": "pcsx2_fast_boot",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "disabled",
+        "key": "pcsx2_fast_boot_ff",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "2",
+        "key": "pcsx2_vsync_queue_size",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "disabled",
+        "key": "pcsx2_sync_to_host_rr",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "disabled",
+        "key": "pcsx2_vsync",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "disabled",
+        "key": "pcsx2_use_vsync_timing",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Emulation",
+        "default": "disabled",
+        "key": "pcsx2_skip_duplicate_frames",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "TimeStretch",
+        "key": "pcsx2_audio_sync_mode",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Disabled",
+            "TimeStretch"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "50",
+        "key": "pcsx2_audio_buffer_ms",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "10",
+            "20",
+            "30",
+            "50",
+            "75",
+            "100",
+            "150",
+            "200"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "100",
+        "key": "pcsx2_audio_volume",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "25",
+            "50",
+            "75",
+            "100",
+            "125",
+            "150",
+            "175",
+            "200"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "100",
+        "key": "pcsx2_audio_ff_volume",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "25",
+            "50",
+            "75",
+            "100",
+            "125",
+            "150",
+            "175",
+            "200"
+        ]
+    },
+    {
+        "category": "Audio",
+        "default": "disabled",
+        "key": "pcsx2_audio_muted",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Memory Cards",
+        "default": "enabled",
+        "key": "pcsx2_mc_slot1_enable",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Memory Cards",
+        "default": "enabled",
+        "key": "pcsx2_mc_slot2_enable",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Memory Cards",
+        "default": "disabled",
+        "key": "pcsx2_mc_multitap1_slot2",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Memory Cards",
+        "default": "disabled",
+        "key": "pcsx2_mc_multitap1_slot3",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Memory Cards",
+        "default": "disabled",
+        "key": "pcsx2_mc_multitap1_slot4",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "auto",
+        "key": "pcsx2_renderer",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "auto",
+            "metal",
+            "software",
+            "null"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "16:9",
+        "key": "pcsx2_aspect_ratio",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto 4:3/3:2",
+            "4:3",
+            "16:9",
+            "10:7",
+            "Stretch"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Off",
+        "key": "pcsx2_fmv_aspect_ratio",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Off",
+            "Auto 4:3/3:2",
+            "4:3",
+            "16:9",
+            "10:7"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "0",
+        "key": "pcsx2_deinterlace_mode",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "1",
+        "key": "pcsx2_linear_present_mode",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "100",
+        "key": "pcsx2_stretch_y",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "50",
+            "75",
+            "90",
+            "100",
+            "110",
+            "125",
+            "150",
+            "200",
+            "300"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "0",
+        "key": "pcsx2_crop_left",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "5",
+            "10",
+            "15",
+            "20",
+            "30",
+            "50",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "0",
+        "key": "pcsx2_crop_top",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "5",
+            "10",
+            "15",
+            "20",
+            "30",
+            "50",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "0",
+        "key": "pcsx2_crop_right",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "5",
+            "10",
+            "15",
+            "20",
+            "30",
+            "50",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "0",
+        "key": "pcsx2_crop_bottom",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "5",
+            "10",
+            "15",
+            "20",
+            "30",
+            "50",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "pcsx2_enable_widescreen_patches",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_enable_no_interlacing_patches",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "pcsx2_pcrtc_antiblur",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_integer_scaling",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_pcrtc_offsets",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_disable_interlace_offset",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_pcrtc_overscan",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "2",
+        "key": "pcsx2_upscale_multiplier",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "2",
+        "key": "pcsx2_filter",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "-1",
+        "key": "pcsx2_tri_filter",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "-1",
+            "0",
+            "1",
+            "2"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "0",
+        "key": "pcsx2_max_anisotropy",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "2",
+            "4",
+            "8",
+            "16"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "2",
+        "key": "pcsx2_dithering_ps2",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "1",
+        "key": "pcsx2_accurate_blending_unit",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "pcsx2_hw_mipmap",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_load_texture_replacements",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_dump_replaceable_textures",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "pcsx2_load_texture_replacements_async",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_precache_texture_replacements",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_dump_replaceable_mipmaps",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_dump_textures_with_fmv_active",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "0",
+        "key": "pcsx2_cas_mode",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "50",
+        "key": "pcsx2_cas_sharpness",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "25",
+            "50",
+            "75",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_fxaa",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "0",
+        "key": "pcsx2_tv_shader",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_shade_boost",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "50",
+        "key": "pcsx2_shade_boost_brightness",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "25",
+            "50",
+            "75",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "50",
+        "key": "pcsx2_shade_boost_contrast",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "25",
+            "50",
+            "75",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "50",
+        "key": "pcsx2_shade_boost_saturation",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "25",
+            "50",
+            "75",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "50",
+        "key": "pcsx2_shade_boost_gamma",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "25",
+            "50",
+            "75",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "100",
+        "key": "pcsx2_osd_scale",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "50",
+            "75",
+            "100",
+            "125",
+            "150",
+            "200",
+            "300",
+            "500"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "10",
+        "key": "pcsx2_osd_margin",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "5",
+            "10",
+            "15",
+            "20",
+            "30",
+            "50",
+            "100"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "1",
+        "key": "pcsx2_osd_messages_pos",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "3",
+        "key": "pcsx2_osd_performance_pos",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_bold_text",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_speed",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_fps",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_vps",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_resolution",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_gs_stats",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_cpu",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_gpu",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "pcsx2_osd_show_indicators",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_frame_times",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_settings",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_patches",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_inputs",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "pcsx2_osd_show_video_capture",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "pcsx2_osd_show_input_rec",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_texture_replacements",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_hardware_info",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "disabled",
+        "key": "pcsx2_osd_show_version",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "enabled",
+        "key": "pcsx2_warn_about_unsafe_settings",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "enabled",
+            "disabled"
+        ]
+    }
+]

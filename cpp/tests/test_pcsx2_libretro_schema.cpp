@@ -13,6 +13,7 @@
 // RetroNest-side contract only.
 
 #include <QtTest>
+#include <QFileInfo>
 #include <QSet>
 #include "adapters/libretro/pcsx2_libretro_adapter.h"
 #include "core/setting_def.h"
@@ -59,8 +60,26 @@ class TestPcsx2LibretroSchema : public QObject {
 
 private slots:
     void initTestCase() {
+        // Packet 7 Stage 2: the schema renders from the core's declared
+        // option table — hermetic tests inject the committed fixture
+        // (recorded by test_schema_parity's snapshot mode) instead of
+        // touching the live sidecar / prober.
+        const QString fixture = QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()
+            + "/fixtures/declared/pcsx2_declared_options.json";
+        const auto doc = DeclaredOptionsDoc::load(fixture);
+        QVERIFY2(doc.has_value(), "declared fixture missing");
+        adapter_.setDeclaredDocForTest(*doc);
         schema_ = adapter_.settingsSchema();
         QVERIFY(!schema_.isEmpty());
+    }
+
+    void totalCount_matchesOverlay() {
+        // 89 curated core options (full coverage of the declared table) +
+        // 15 Recommended cross-listings = 104 rows. A key the core stops
+        // declaring is skipped by the merge with only a qWarning — this
+        // count trips loud instead. New upstream options arrive hidden
+        // (uncurated) and don't move this number until curated.
+        QCOMPARE(schema_.size(), 104);
     }
 
     void everyRow_isPcsx2PrefixedLibretroCombo() {

@@ -58,12 +58,12 @@ public:
     // exists on disk. Mirrors MgbaLibretroAdapter::findResumeFile.
     QString findResumeFile(const QString& serial) const override;
 
-    // SP7b: declare libretro core options as user-tweakable rows in the
-    // per-emulator settings dialog. Three knobs (renderer / MTVU / FastBoot)
-    // are exposed; values mirror pcsx2-libretro/CoreOptions.cpp's
-    // kDefinitions[] table exactly so OptionsStore::load's whitelist check
-    // accepts persisted values.
-    QVector<SettingDef> settingsSchema() const override;
+    // Packet 7 Stage 2: schema renders from the core's declared options
+    // (LibretroAdapter::settingsSchema base merge) — this adapter supplies
+    // routing/curation only: placements, 27 dependsOn gates, and the three
+    // deliberate RetroNest default overrides (upscale 2x / 16:9 /
+    // widescreen patches on). All rows are core options; no extraSettings.
+    QVector<OptionOverlay> optionOverlays() const override;
     QVector<SettingsHubCard> settingsHubCards() const override;
     QStringList settingsCategoriesWithSubTabs() const override { return {"Graphics"}; }
 

@@ -1,0 +1,2349 @@
+{
+    "categories": [
+    ],
+    "core_library_version": "video-0.1",
+    "format": 1,
+    "options": [
+        {
+            "category": "",
+            "default": "auto",
+            "info": "PCSX2 graphics backend. Auto picks Metal on macOS. Software runs on CPU only (much slower; useful for debugging rendering bugs or for games with hardware-renderer regressions).",
+            "key": "pcsx2_renderer",
+            "label": "GS Renderer",
+            "values": [
+                {
+                    "label": "Auto",
+                    "value": "auto"
+                },
+                {
+                    "label": "Metal",
+                    "value": "metal"
+                },
+                {
+                    "label": "Software",
+                    "value": "software"
+                },
+                {
+                    "label": "Null",
+                    "value": "null"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Run the VU1 microprogram on its own thread instead of the EE thread. Compatible with the vast majority of games; significantly reduces EE-thread saturation on Apple Silicon's interpreter-only path. Disable only if a specific game shows MTVU-related glitches.",
+            "key": "pcsx2_mtvu",
+            "label": "Multi-Threaded VU1",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Skip the PS2 BIOS Sony intro and region-check screen on launch. Disable if you want to see the BIOS screen (e.g. to verify your BIOS region or to use the BIOS browser).",
+            "key": "pcsx2_fast_boot",
+            "label": "Fast Boot",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Target emulation speed during normal gameplay (relative to PS2's native rate). 100% is real-time. Lower for handheld-style throttling, higher for fast-forwarding through cutscenes.",
+            "key": "pcsx2_normal_speed",
+            "label": "Normal Speed",
+            "values": [
+                {
+                    "label": "2% [1 FPS (NTSC) / 1 FPS (PAL)]",
+                    "value": "0.02"
+                },
+                {
+                    "label": "10% [6 FPS (NTSC) / 5 FPS (PAL)]",
+                    "value": "0.1"
+                },
+                {
+                    "label": "25% [15 FPS (NTSC) / 12 FPS (PAL)]",
+                    "value": "0.25"
+                },
+                {
+                    "label": "50% [30 FPS (NTSC) / 25 FPS (PAL)]",
+                    "value": "0.5"
+                },
+                {
+                    "label": "75% [45 FPS (NTSC) / 37 FPS (PAL)]",
+                    "value": "0.75"
+                },
+                {
+                    "label": "90% [54 FPS (NTSC) / 45 FPS (PAL)]",
+                    "value": "0.9"
+                },
+                {
+                    "label": "100% [60 FPS (NTSC) / 50 FPS (PAL)]",
+                    "value": "1"
+                },
+                {
+                    "label": "110% [66 FPS (NTSC) / 55 FPS (PAL)]",
+                    "value": "1.1"
+                },
+                {
+                    "label": "120% [72 FPS (NTSC) / 60 FPS (PAL)]",
+                    "value": "1.2"
+                },
+                {
+                    "label": "150% [90 FPS (NTSC) / 75 FPS (PAL)]",
+                    "value": "1.5"
+                },
+                {
+                    "label": "175% [105 FPS (NTSC) / 87 FPS (PAL)]",
+                    "value": "1.75"
+                },
+                {
+                    "label": "200% [120 FPS (NTSC) / 100 FPS (PAL)]",
+                    "value": "2"
+                },
+                {
+                    "label": "300% [180 FPS (NTSC) / 150 FPS (PAL)]",
+                    "value": "3"
+                },
+                {
+                    "label": "400% [240 FPS (NTSC) / 200 FPS (PAL)]",
+                    "value": "4"
+                },
+                {
+                    "label": "500% [300 FPS (NTSC) / 250 FPS (PAL)]",
+                    "value": "5"
+                },
+                {
+                    "label": "1000% [600 FPS (NTSC) / 500 FPS (PAL)]",
+                    "value": "10"
+                },
+                {
+                    "label": "Unlimited",
+                    "value": "0"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "2",
+            "info": "Target speed when fast-forward is engaged. The frontend's fast-forward toggle scales emulation by this factor.",
+            "key": "pcsx2_fast_forward_speed",
+            "label": "Fast-Forward Speed",
+            "values": [
+                {
+                    "label": "2% [1 FPS (NTSC) / 1 FPS (PAL)]",
+                    "value": "0.02"
+                },
+                {
+                    "label": "10% [6 FPS (NTSC) / 5 FPS (PAL)]",
+                    "value": "0.1"
+                },
+                {
+                    "label": "25% [15 FPS (NTSC) / 12 FPS (PAL)]",
+                    "value": "0.25"
+                },
+                {
+                    "label": "50% [30 FPS (NTSC) / 25 FPS (PAL)]",
+                    "value": "0.5"
+                },
+                {
+                    "label": "75% [45 FPS (NTSC) / 37 FPS (PAL)]",
+                    "value": "0.75"
+                },
+                {
+                    "label": "90% [54 FPS (NTSC) / 45 FPS (PAL)]",
+                    "value": "0.9"
+                },
+                {
+                    "label": "100% [60 FPS (NTSC) / 50 FPS (PAL)]",
+                    "value": "1"
+                },
+                {
+                    "label": "110% [66 FPS (NTSC) / 55 FPS (PAL)]",
+                    "value": "1.1"
+                },
+                {
+                    "label": "120% [72 FPS (NTSC) / 60 FPS (PAL)]",
+                    "value": "1.2"
+                },
+                {
+                    "label": "150% [90 FPS (NTSC) / 75 FPS (PAL)]",
+                    "value": "1.5"
+                },
+                {
+                    "label": "175% [105 FPS (NTSC) / 87 FPS (PAL)]",
+                    "value": "1.75"
+                },
+                {
+                    "label": "200% [120 FPS (NTSC) / 100 FPS (PAL)]",
+                    "value": "2"
+                },
+                {
+                    "label": "300% [180 FPS (NTSC) / 150 FPS (PAL)]",
+                    "value": "3"
+                },
+                {
+                    "label": "400% [240 FPS (NTSC) / 200 FPS (PAL)]",
+                    "value": "4"
+                },
+                {
+                    "label": "500% [300 FPS (NTSC) / 250 FPS (PAL)]",
+                    "value": "5"
+                },
+                {
+                    "label": "1000% [600 FPS (NTSC) / 500 FPS (PAL)]",
+                    "value": "10"
+                },
+                {
+                    "label": "Unlimited",
+                    "value": "0"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0.5",
+            "info": "Target speed when slow-motion is engaged. The frontend's slow-motion toggle scales emulation by this factor.",
+            "key": "pcsx2_slow_motion_speed",
+            "label": "Slow-Motion Speed",
+            "values": [
+                {
+                    "label": "2% [1 FPS (NTSC) / 1 FPS (PAL)]",
+                    "value": "0.02"
+                },
+                {
+                    "label": "10% [6 FPS (NTSC) / 5 FPS (PAL)]",
+                    "value": "0.1"
+                },
+                {
+                    "label": "25% [15 FPS (NTSC) / 12 FPS (PAL)]",
+                    "value": "0.25"
+                },
+                {
+                    "label": "50% [30 FPS (NTSC) / 25 FPS (PAL)]",
+                    "value": "0.5"
+                },
+                {
+                    "label": "75% [45 FPS (NTSC) / 37 FPS (PAL)]",
+                    "value": "0.75"
+                },
+                {
+                    "label": "90% [54 FPS (NTSC) / 45 FPS (PAL)]",
+                    "value": "0.9"
+                },
+                {
+                    "label": "100% [60 FPS (NTSC) / 50 FPS (PAL)]",
+                    "value": "1"
+                },
+                {
+                    "label": "110% [66 FPS (NTSC) / 55 FPS (PAL)]",
+                    "value": "1.1"
+                },
+                {
+                    "label": "120% [72 FPS (NTSC) / 60 FPS (PAL)]",
+                    "value": "1.2"
+                },
+                {
+                    "label": "150% [90 FPS (NTSC) / 75 FPS (PAL)]",
+                    "value": "1.5"
+                },
+                {
+                    "label": "175% [105 FPS (NTSC) / 87 FPS (PAL)]",
+                    "value": "1.75"
+                },
+                {
+                    "label": "200% [120 FPS (NTSC) / 100 FPS (PAL)]",
+                    "value": "2"
+                },
+                {
+                    "label": "300% [180 FPS (NTSC) / 150 FPS (PAL)]",
+                    "value": "3"
+                },
+                {
+                    "label": "400% [240 FPS (NTSC) / 200 FPS (PAL)]",
+                    "value": "4"
+                },
+                {
+                    "label": "500% [300 FPS (NTSC) / 250 FPS (PAL)]",
+                    "value": "5"
+                },
+                {
+                    "label": "1000% [600 FPS (NTSC) / 500 FPS (PAL)]",
+                    "value": "10"
+                },
+                {
+                    "label": "Unlimited",
+                    "value": "0"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Underclocks or overclocks the emulated Emotion Engine CPU. Negative values reduce work-per-cycle (compatibility/perf tradeoff); positive values speed CPU-bound games at the cost of timing accuracy. Most games should stay at 100%.",
+            "key": "pcsx2_ee_cycle_rate",
+            "label": "EE Cycle Rate",
+            "values": [
+                {
+                    "label": "50% (Underclock)",
+                    "value": "-3"
+                },
+                {
+                    "label": "60% (Underclock)",
+                    "value": "-2"
+                },
+                {
+                    "label": "75% (Underclock)",
+                    "value": "-1"
+                },
+                {
+                    "label": "100% (Normal Speed)",
+                    "value": "0"
+                },
+                {
+                    "label": "130% (Overclock)",
+                    "value": "1"
+                },
+                {
+                    "label": "180% (Overclock)",
+                    "value": "2"
+                },
+                {
+                    "label": "300% (Overclock)",
+                    "value": "3"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Makes the emulated Emotion Engine skip cycles. Stronger underclock than EE Cycle Rate; can recover frame-rate in slow scenes at the cost of visible glitches. Leave Disabled unless a specific game needs it.",
+            "key": "pcsx2_ee_cycle_skip",
+            "label": "EE Cycle Skipping",
+            "values": [
+                {
+                    "label": "Disabled",
+                    "value": "0"
+                },
+                {
+                    "label": "Mild Underclock",
+                    "value": "1"
+                },
+                {
+                    "label": "Moderate Underclock",
+                    "value": "2"
+                },
+                {
+                    "label": "Maximum Underclock",
+                    "value": "3"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Pin emulation threads to specific CPU cores. Can reduce stutter on systems with heterogeneous cores (e.g. Apple Silicon performance/efficiency split). Default off.",
+            "key": "pcsx2_thread_pinning",
+            "label": "Thread Pinning",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Load pnach cheat files from the cheats/ resource directory on game launch. Off by default; the in-game OSD logs each loaded patch line.",
+            "key": "pcsx2_cheats",
+            "label": "Enable Cheats",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Allow the emulated PS2 to read files from the host filesystem (homebrew-only feature; retail games never use it). Off by default.",
+            "key": "pcsx2_host_fs",
+            "label": "Enable Host Filesystem",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Load the entire disc image into RAM before booting. Eliminates in-game disc-read stutter at the cost of extra memory usage and a slower initial boot. Off by default.",
+            "key": "pcsx2_cdvd_precache",
+            "label": "CDVD Precache",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "When Fast Boot is enabled, also auto-fast-forward the brief BIOS boot animation. Has no effect when Fast Boot is disabled.",
+            "key": "pcsx2_fast_boot_ff",
+            "label": "Fast-Forward Through BIOS",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "2",
+            "info": "Frames the GS can queue before the EE must wait. Lower values reduce input latency at the cost of frame-pacing smoothness. 0 is the lowest-latency 'optimal' mode (re-paces every frame).",
+            "key": "pcsx2_vsync_queue_size",
+            "label": "Maximum Frame Latency",
+            "values": [
+                {
+                    "label": "Optimal (Frame Pacing)",
+                    "value": "0"
+                },
+                {
+                    "label": "1 frame",
+                    "value": "1"
+                },
+                {
+                    "label": "2 frames",
+                    "value": "2"
+                },
+                {
+                    "label": "3 frames",
+                    "value": "3"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Adjust emulation speed slightly to align with the host display's refresh rate. Reduces audio drift on non-60Hz monitors. May be cosmetic in libretro mode — the frontend owns presentation timing.",
+            "key": "pcsx2_sync_to_host_rr",
+            "label": "Sync to Host Refresh Rate",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Synchronize frame submission with the host display's vblank. May be cosmetic in libretro mode — the frontend owns presentation.",
+            "key": "pcsx2_vsync",
+            "label": "Vertical Sync (VSync)",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Drive emulation timing from host vsync instead of the emulated console's refresh. Only takes effect when both VSync and Sync to Host Refresh Rate are enabled.",
+            "key": "pcsx2_use_vsync_timing",
+            "label": "Use Host VSync Timing",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Don't re-present a frame if the GS hasn't produced new output. Saves a tiny amount of GPU time. Mostly cosmetic in libretro mode.",
+            "key": "pcsx2_skip_duplicate_frames",
+            "label": "Skip Presenting Duplicate Frames",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "TimeStretch",
+            "info": "How emulated audio is paced against host audio. TimeStretch resamples audio (via SoundTouch) so pitch stays correct when emulation speed differs from 100%. Disabled passes raw samples through — fastest but produces audible artefacts during any speed deviation.",
+            "key": "pcsx2_audio_sync_mode",
+            "label": "Audio Sync Mode",
+            "values": [
+                {
+                    "label": "Disabled (Noisy)",
+                    "value": "Disabled"
+                },
+                {
+                    "label": "TimeStretch (Recommended)",
+                    "value": "TimeStretch"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "50",
+            "info": "Ring-buffer size for emulated audio in milliseconds. Smaller values reduce audio latency at the cost of higher CPU pressure and a greater chance of underruns (crackling). 50 ms is the PCSX2 default; 30 ms is a reasonable low-latency target on a machine that can sustain it.",
+            "key": "pcsx2_audio_buffer_ms",
+            "label": "Audio Buffer Size",
+            "values": [
+                {
+                    "label": "10 ms (lowest latency)",
+                    "value": "10"
+                },
+                {
+                    "label": "20 ms",
+                    "value": "20"
+                },
+                {
+                    "label": "30 ms",
+                    "value": "30"
+                },
+                {
+                    "label": "50 ms (default)",
+                    "value": "50"
+                },
+                {
+                    "label": "75 ms",
+                    "value": "75"
+                },
+                {
+                    "label": "100 ms",
+                    "value": "100"
+                },
+                {
+                    "label": "150 ms",
+                    "value": "150"
+                },
+                {
+                    "label": "200 ms",
+                    "value": "200"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "100",
+            "info": "Normal-play audio volume as a percentage. 100% is the PS2's native output level. Values above 100% boost the signal digitally (may clip on loud passages).",
+            "key": "pcsx2_audio_volume",
+            "label": "Volume",
+            "values": [
+                {
+                    "label": "0% (Muted)",
+                    "value": "0"
+                },
+                {
+                    "label": "25%",
+                    "value": "25"
+                },
+                {
+                    "label": "50%",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "100% (default)",
+                    "value": "100"
+                },
+                {
+                    "label": "125%",
+                    "value": "125"
+                },
+                {
+                    "label": "150%",
+                    "value": "150"
+                },
+                {
+                    "label": "175%",
+                    "value": "175"
+                },
+                {
+                    "label": "200% (max)",
+                    "value": "200"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "100",
+            "info": "Volume during fast-forward as a percentage. Independent from the normal-play volume — useful for muting audio entirely during fast-forward without affecting regular playback.",
+            "key": "pcsx2_audio_ff_volume",
+            "label": "Fast-Forward Volume",
+            "values": [
+                {
+                    "label": "0% (Muted)",
+                    "value": "0"
+                },
+                {
+                    "label": "25%",
+                    "value": "25"
+                },
+                {
+                    "label": "50%",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "100% (default)",
+                    "value": "100"
+                },
+                {
+                    "label": "125%",
+                    "value": "125"
+                },
+                {
+                    "label": "150%",
+                    "value": "150"
+                },
+                {
+                    "label": "175%",
+                    "value": "175"
+                },
+                {
+                    "label": "200% (max)",
+                    "value": "200"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Mute all PS2 audio output. RetroNest's UI sounds and any other non-PS2 audio sources are unaffected.",
+            "key": "pcsx2_audio_muted",
+            "label": "Mute Audio",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Inserts a virtual memory card into Slot 1. The card image is stored as Mcd001.ps2 under the per-game memcards folder. Disabling this prevents games from saving/loading via Slot 1.",
+            "key": "pcsx2_mc_slot1_enable",
+            "label": "Memory Card Slot 1",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Inserts a virtual memory card into Slot 2. The card image is stored as Mcd002.ps2 under the per-game memcards folder. PCSX2 only auto-creates the file the first time a game writes to Slot 2.",
+            "key": "pcsx2_mc_slot2_enable",
+            "label": "Memory Card Slot 2",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Enables the second memory-card slot of Multitap 1. Only useful when a game supports Multitap 1 and you need additional save slots for extra players.",
+            "key": "pcsx2_mc_multitap1_slot2",
+            "label": "Multitap 1 - Slot 2",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Enables the third memory-card slot of Multitap 1.",
+            "key": "pcsx2_mc_multitap1_slot3",
+            "label": "Multitap 1 - Slot 3",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Enables the fourth memory-card slot of Multitap 1.",
+            "key": "pcsx2_mc_multitap1_slot4",
+            "label": "Multitap 1 - Slot 4",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "4:3",
+            "info": "Controls the aspect ratio of the emulated display. Auto picks 4:3 for interlaced games and 3:2 for progressive games. 16:9 stretches the image for widescreen TVs; Stretch fills the whole window.",
+            "key": "pcsx2_aspect_ratio",
+            "label": "Aspect Ratio",
+            "values": [
+                {
+                    "label": "Auto (4:3 Interlaced / 3:2 Progressive)",
+                    "value": "Auto 4:3/3:2"
+                },
+                {
+                    "label": "4:3 (Standard)",
+                    "value": "4:3"
+                },
+                {
+                    "label": "16:9 (Widescreen)",
+                    "value": "16:9"
+                },
+                {
+                    "label": "10:7 (Full/Native)",
+                    "value": "10:7"
+                },
+                {
+                    "label": "Stretch",
+                    "value": "Stretch"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Off",
+            "info": "Overrides the aspect ratio only while full-motion video (FMV) is playing. Useful for games with widescreen cutscenes inside a 4:3 main game.",
+            "key": "pcsx2_fmv_aspect_ratio",
+            "label": "FMV Aspect Ratio Override",
+            "values": [
+                {
+                    "label": "Off (Default)",
+                    "value": "Off"
+                },
+                {
+                    "label": "Auto (4:3 Interlaced / 3:2 Progressive)",
+                    "value": "Auto 4:3/3:2"
+                },
+                {
+                    "label": "4:3 (Standard)",
+                    "value": "4:3"
+                },
+                {
+                    "label": "16:9 (Widescreen)",
+                    "value": "16:9"
+                },
+                {
+                    "label": "10:7 (Full/Native)",
+                    "value": "10:7"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Selects how interlaced frames are combined for progressive display. Automatic picks the best option per game; Weave preserves detail; Bob and Blend smooth motion at the cost of vertical resolution.",
+            "key": "pcsx2_deinterlace_mode",
+            "label": "Deinterlacing",
+            "values": [
+                {
+                    "label": "Automatic (Default)",
+                    "value": "0"
+                },
+                {
+                    "label": "Off",
+                    "value": "1"
+                },
+                {
+                    "label": "Weave (Top)",
+                    "value": "2"
+                },
+                {
+                    "label": "Weave (Bottom)",
+                    "value": "3"
+                },
+                {
+                    "label": "Bob (Top)",
+                    "value": "4"
+                },
+                {
+                    "label": "Bob (Bottom)",
+                    "value": "5"
+                },
+                {
+                    "label": "Blend (Top)",
+                    "value": "6"
+                },
+                {
+                    "label": "Blend (Bottom)",
+                    "value": "7"
+                },
+                {
+                    "label": "Adaptive (Top)",
+                    "value": "8"
+                },
+                {
+                    "label": "Adaptive (Bottom)",
+                    "value": "9"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Applies a bilinear filter when scaling the final image to the window. Smooth is the standard option; Sharp uses a pixel-art-friendly variant that keeps edges crisp.",
+            "key": "pcsx2_linear_present_mode",
+            "label": "Bilinear Filtering",
+            "values": [
+                {
+                    "label": "None",
+                    "value": "0"
+                },
+                {
+                    "label": "Bilinear (Smooth) (Default)",
+                    "value": "1"
+                },
+                {
+                    "label": "Bilinear (Sharp)",
+                    "value": "2"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "100",
+            "info": "Multiplies the display height after aspect-ratio fitting. Values above 100% make the image taller than its letterbox; values below leave extra vertical space. Standalone PCSX2 exposes a 10-300% slider; libretro offers enumerated stops.",
+            "key": "pcsx2_stretch_y",
+            "label": "Vertical Stretch",
+            "values": [
+                {
+                    "label": "50%",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "90%",
+                    "value": "90"
+                },
+                {
+                    "label": "100% (Default)",
+                    "value": "100"
+                },
+                {
+                    "label": "110%",
+                    "value": "110"
+                },
+                {
+                    "label": "125%",
+                    "value": "125"
+                },
+                {
+                    "label": "150%",
+                    "value": "150"
+                },
+                {
+                    "label": "200%",
+                    "value": "200"
+                },
+                {
+                    "label": "300%",
+                    "value": "300"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Trims pixels from the left edge of the source image before it's fit to the display window. Useful for games with garbage pixels at the border.",
+            "key": "pcsx2_crop_left",
+            "label": "Crop - Left",
+            "values": [
+                {
+                    "label": "0 px (Default)",
+                    "value": "0"
+                },
+                {
+                    "label": "1 px",
+                    "value": "1"
+                },
+                {
+                    "label": "2 px",
+                    "value": "2"
+                },
+                {
+                    "label": "3 px",
+                    "value": "3"
+                },
+                {
+                    "label": "5 px",
+                    "value": "5"
+                },
+                {
+                    "label": "10 px",
+                    "value": "10"
+                },
+                {
+                    "label": "15 px",
+                    "value": "15"
+                },
+                {
+                    "label": "20 px",
+                    "value": "20"
+                },
+                {
+                    "label": "30 px",
+                    "value": "30"
+                },
+                {
+                    "label": "50 px",
+                    "value": "50"
+                },
+                {
+                    "label": "100 px",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Trims pixels from the top edge of the source image before it's fit to the display window.",
+            "key": "pcsx2_crop_top",
+            "label": "Crop - Top",
+            "values": [
+                {
+                    "label": "0 px (Default)",
+                    "value": "0"
+                },
+                {
+                    "label": "1 px",
+                    "value": "1"
+                },
+                {
+                    "label": "2 px",
+                    "value": "2"
+                },
+                {
+                    "label": "3 px",
+                    "value": "3"
+                },
+                {
+                    "label": "5 px",
+                    "value": "5"
+                },
+                {
+                    "label": "10 px",
+                    "value": "10"
+                },
+                {
+                    "label": "15 px",
+                    "value": "15"
+                },
+                {
+                    "label": "20 px",
+                    "value": "20"
+                },
+                {
+                    "label": "30 px",
+                    "value": "30"
+                },
+                {
+                    "label": "50 px",
+                    "value": "50"
+                },
+                {
+                    "label": "100 px",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Trims pixels from the right edge of the source image before it's fit to the display window.",
+            "key": "pcsx2_crop_right",
+            "label": "Crop - Right",
+            "values": [
+                {
+                    "label": "0 px (Default)",
+                    "value": "0"
+                },
+                {
+                    "label": "1 px",
+                    "value": "1"
+                },
+                {
+                    "label": "2 px",
+                    "value": "2"
+                },
+                {
+                    "label": "3 px",
+                    "value": "3"
+                },
+                {
+                    "label": "5 px",
+                    "value": "5"
+                },
+                {
+                    "label": "10 px",
+                    "value": "10"
+                },
+                {
+                    "label": "15 px",
+                    "value": "15"
+                },
+                {
+                    "label": "20 px",
+                    "value": "20"
+                },
+                {
+                    "label": "30 px",
+                    "value": "30"
+                },
+                {
+                    "label": "50 px",
+                    "value": "50"
+                },
+                {
+                    "label": "100 px",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Trims pixels from the bottom edge of the source image before it's fit to the display window.",
+            "key": "pcsx2_crop_bottom",
+            "label": "Crop - Bottom",
+            "values": [
+                {
+                    "label": "0 px (Default)",
+                    "value": "0"
+                },
+                {
+                    "label": "1 px",
+                    "value": "1"
+                },
+                {
+                    "label": "2 px",
+                    "value": "2"
+                },
+                {
+                    "label": "3 px",
+                    "value": "3"
+                },
+                {
+                    "label": "5 px",
+                    "value": "5"
+                },
+                {
+                    "label": "10 px",
+                    "value": "10"
+                },
+                {
+                    "label": "15 px",
+                    "value": "15"
+                },
+                {
+                    "label": "20 px",
+                    "value": "20"
+                },
+                {
+                    "label": "30 px",
+                    "value": "30"
+                },
+                {
+                    "label": "50 px",
+                    "value": "50"
+                },
+                {
+                    "label": "100 px",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Automatically applies community widescreen patches to supported games. Reshapes the rendering to true 16:9 instead of stretching the 4:3 picture.",
+            "key": "pcsx2_enable_widescreen_patches",
+            "label": "Apply Widescreen Patches",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Automatically applies community no-interlacing patches to supported games. Removes flicker in games that render in interlaced mode.",
+            "key": "pcsx2_enable_no_interlacing_patches",
+            "label": "Apply No-Interlacing Patches",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Enables internal anti-blur hacks that remove the PS2's GS smear on commonly-affected games. Safe to leave on.",
+            "key": "pcsx2_pcrtc_antiblur",
+            "label": "Anti-Blur",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Snaps the rendered image to an integer multiple of the source pixel size. Produces crisp pixel-art scaling at the cost of leaving letterbox bars.",
+            "key": "pcsx2_integer_scaling",
+            "label": "Integer Scaling",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Enables PCRTC offsets so the screen is positioned exactly where the game requests. Fixes games that deliberately offset the viewport.",
+            "key": "pcsx2_pcrtc_offsets",
+            "label": "Screen Offsets",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Disables the half-pixel interlace offset which can reduce jitter on some games that render at half vertical resolution.",
+            "key": "pcsx2_disable_interlace_offset",
+            "label": "Disable Interlace Offset",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Shows the overscan area of the display that would normally be hidden by a CRT bezel. Exposes any garbage the game draws outside the safe area.",
+            "key": "pcsx2_pcrtc_overscan",
+            "label": "Show Overscan",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Sets the internal rendering resolution. Higher values produce sharper visuals at the cost of GPU performance.",
+            "key": "pcsx2_upscale_multiplier",
+            "label": "Internal Resolution",
+            "values": [
+                {
+                    "label": "1x Native (PS2) (Default)",
+                    "value": "1"
+                },
+                {
+                    "label": "2x Native (~720px/HD)",
+                    "value": "2"
+                },
+                {
+                    "label": "3x Native (~1080px/FHD)",
+                    "value": "3"
+                },
+                {
+                    "label": "4x Native (~1440px/QHD)",
+                    "value": "4"
+                },
+                {
+                    "label": "5x Native (~1800px/QHD+)",
+                    "value": "5"
+                },
+                {
+                    "label": "6x Native (~2160px/4K UHD)",
+                    "value": "6"
+                },
+                {
+                    "label": "7x Native (~2520px)",
+                    "value": "7"
+                },
+                {
+                    "label": "8x Native (~2880px/5K UHD)",
+                    "value": "8"
+                },
+                {
+                    "label": "9x Native (~3240px)",
+                    "value": "9"
+                },
+                {
+                    "label": "10x Native (~3600px/6K UHD)",
+                    "value": "10"
+                },
+                {
+                    "label": "11x Native (~3960px)",
+                    "value": "11"
+                },
+                {
+                    "label": "12x Native (~4320px/8K UHD)",
+                    "value": "12"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "2",
+            "info": "Controls how textures are sampled when rendered. Bilinear (PS2) matches the original hardware behavior; Forced options ignore the game's preference.",
+            "key": "pcsx2_filter",
+            "label": "Texture Filtering",
+            "values": [
+                {
+                    "label": "Nearest",
+                    "value": "0"
+                },
+                {
+                    "label": "Bilinear (Forced)",
+                    "value": "1"
+                },
+                {
+                    "label": "Bilinear (PS2) (Default)",
+                    "value": "2"
+                },
+                {
+                    "label": "Bilinear (Forced excluding sprite)",
+                    "value": "3"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "-1",
+            "info": "Enables trilinear filtering for smoother transitions between mipmap levels. Auto leaves this decision to each game.",
+            "key": "pcsx2_tri_filter",
+            "label": "Trilinear Filtering",
+            "values": [
+                {
+                    "label": "Auto (Default)",
+                    "value": "-1"
+                },
+                {
+                    "label": "Off",
+                    "value": "0"
+                },
+                {
+                    "label": "Trilinear (PS2)",
+                    "value": "1"
+                },
+                {
+                    "label": "Trilinear (Forced)",
+                    "value": "2"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Improves texture clarity at oblique viewing angles. Low cost on modern GPUs and generally safe to raise.",
+            "key": "pcsx2_max_anisotropy",
+            "label": "Anisotropic Filtering",
+            "values": [
+                {
+                    "label": "Off (Default)",
+                    "value": "0"
+                },
+                {
+                    "label": "2x",
+                    "value": "2"
+                },
+                {
+                    "label": "4x",
+                    "value": "4"
+                },
+                {
+                    "label": "8x",
+                    "value": "8"
+                },
+                {
+                    "label": "16x",
+                    "value": "16"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "2",
+            "info": "Controls how PS2 dithering patterns are applied to upscaled rendering. Unscaled matches the original appearance.",
+            "key": "pcsx2_dithering_ps2",
+            "label": "Dithering",
+            "values": [
+                {
+                    "label": "Off",
+                    "value": "0"
+                },
+                {
+                    "label": "Scaled",
+                    "value": "1"
+                },
+                {
+                    "label": "Unscaled (Default)",
+                    "value": "2"
+                },
+                {
+                    "label": "Force 32bit",
+                    "value": "3"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Controls how accurately PS2 blending operations are emulated. Higher levels improve compatibility with heavy effects at a performance cost.",
+            "key": "pcsx2_accurate_blending_unit",
+            "label": "Blending Accuracy",
+            "values": [
+                {
+                    "label": "Minimum",
+                    "value": "0"
+                },
+                {
+                    "label": "Basic (Default)",
+                    "value": "1"
+                },
+                {
+                    "label": "Medium",
+                    "value": "2"
+                },
+                {
+                    "label": "High",
+                    "value": "3"
+                },
+                {
+                    "label": "Full",
+                    "value": "4"
+                },
+                {
+                    "label": "Maximum",
+                    "value": "5"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Emulates PS2 mipmapping when the hardware renderer is active. Fixes texture aliasing at distance in supported games.",
+            "key": "pcsx2_hw_mipmap",
+            "label": "Hardware Mipmapping",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Loads replacement textures from the texture-replacement folder (per-game subdirectory keyed by disc serial). Only effective with a hardware renderer.",
+            "key": "pcsx2_load_texture_replacements",
+            "label": "Load Textures",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Dumps the game's textures to disk so they can be edited and loaded back as replacements. Writes to the per-game texture-replacement subdirectory. Only effective with a hardware renderer.",
+            "key": "pcsx2_dump_replaceable_textures",
+            "label": "Dump Textures",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Loads replacement textures on a background thread to avoid stutter at first sight of each texture. Disable only for deterministic capture or debugging.",
+            "key": "pcsx2_load_texture_replacements_async",
+            "label": "Asynchronous Texture Loading",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Loads every replacement texture for the current game at boot instead of on-demand. Uses more memory but eliminates load stutter mid-game.",
+            "key": "pcsx2_precache_texture_replacements",
+            "label": "Precache Replacements",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "When dumping textures, also writes each mipmap level. Useful for replacing distance LODs explicitly. Only meaningful with Dump Textures enabled.",
+            "key": "pcsx2_dump_replaceable_mipmaps",
+            "label": "Dump Mipmaps",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Includes textures used during full-motion video in dumps. Off by default because FMV frames produce a large volume of one-off textures.",
+            "key": "pcsx2_dump_textures_with_fmv_active",
+            "label": "Dump Textures During FMV",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "AMD's Contrast Adaptive Sharpening pass on the final image. Sharpen Only sharpens at the internal render resolution; Sharpen and Resize sharpens at the display resolution.",
+            "key": "pcsx2_cas_mode",
+            "label": "Contrast Adaptive Sharpening (CAS)",
+            "values": [
+                {
+                    "label": "Disabled (Default)",
+                    "value": "0"
+                },
+                {
+                    "label": "Sharpen Only (Internal Resolution)",
+                    "value": "1"
+                },
+                {
+                    "label": "Sharpen and Resize (Display Resolution)",
+                    "value": "2"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "50",
+            "info": "Strength of the CAS sharpening pass. Higher values produce a sharper image with more visible noise. Standalone PCSX2 exposes a 1–100% slider; libretro offers enumerated stops.",
+            "key": "pcsx2_cas_sharpness",
+            "label": "CAS Sharpness",
+            "values": [
+                {
+                    "label": "0%",
+                    "value": "0"
+                },
+                {
+                    "label": "25%",
+                    "value": "25"
+                },
+                {
+                    "label": "50% (Default)",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "100%",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Fast Approximate Anti-Aliasing. A single-pass shader that softens jagged edges with low GPU cost.",
+            "key": "pcsx2_fxaa",
+            "label": "FXAA",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Applies a CRT-style filter to the final output for an authentic retro look. None disables the filter.",
+            "key": "pcsx2_tv_shader",
+            "label": "TV Shader",
+            "values": [
+                {
+                    "label": "None (Default)",
+                    "value": "0"
+                },
+                {
+                    "label": "Scanline Filter",
+                    "value": "1"
+                },
+                {
+                    "label": "Diagonal Filter",
+                    "value": "2"
+                },
+                {
+                    "label": "Triangular Filter",
+                    "value": "3"
+                },
+                {
+                    "label": "Wave Filter",
+                    "value": "4"
+                },
+                {
+                    "label": "Lottes CRT",
+                    "value": "5"
+                },
+                {
+                    "label": "4xRGSS Downsampling",
+                    "value": "6"
+                },
+                {
+                    "label": "NxAGSS Downsampling",
+                    "value": "7"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Master toggle for manual brightness, contrast, saturation, and gamma adjustment via the Shade Boost shader.",
+            "key": "pcsx2_shade_boost",
+            "label": "Shade Boost",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "50",
+            "info": "Brightness multiplier when Shade Boost is enabled. 50% is neutral (no change); 0% blacks out the image; 100% is double brightness. Standalone PCSX2 exposes a 1–100% slider; libretro offers enumerated stops.",
+            "key": "pcsx2_shade_boost_brightness",
+            "label": "Shade Boost — Brightness",
+            "values": [
+                {
+                    "label": "0%",
+                    "value": "0"
+                },
+                {
+                    "label": "25%",
+                    "value": "25"
+                },
+                {
+                    "label": "50% (Default — Neutral)",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "100%",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "50",
+            "info": "Contrast multiplier when Shade Boost is enabled. 50% is neutral (no change). Standalone PCSX2 exposes a 1–100% slider; libretro offers enumerated stops.",
+            "key": "pcsx2_shade_boost_contrast",
+            "label": "Shade Boost — Contrast",
+            "values": [
+                {
+                    "label": "0%",
+                    "value": "0"
+                },
+                {
+                    "label": "25%",
+                    "value": "25"
+                },
+                {
+                    "label": "50% (Default — Neutral)",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "100%",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "50",
+            "info": "Color-saturation multiplier when Shade Boost is enabled. 50% is neutral (no change); 0% produces grayscale. Standalone PCSX2 exposes a 1–100% slider; libretro offers enumerated stops.",
+            "key": "pcsx2_shade_boost_saturation",
+            "label": "Shade Boost — Saturation",
+            "values": [
+                {
+                    "label": "0%",
+                    "value": "0"
+                },
+                {
+                    "label": "25%",
+                    "value": "25"
+                },
+                {
+                    "label": "50% (Default — Neutral)",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "100%",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "50",
+            "info": "Gamma-correction multiplier when Shade Boost is enabled. 50% is neutral (no change); lower values darken midtones, higher values brighten midtones. Standalone PCSX2 exposes a 1–100% slider; libretro offers enumerated stops.",
+            "key": "pcsx2_shade_boost_gamma",
+            "label": "Shade Boost — Gamma",
+            "values": [
+                {
+                    "label": "0%",
+                    "value": "0"
+                },
+                {
+                    "label": "25%",
+                    "value": "25"
+                },
+                {
+                    "label": "50% (Default — Neutral)",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "100%",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "100",
+            "info": "Global multiplier applied to every OSD overlay. 100% matches standalone PCSX2's default size. Standalone exposes a 25-500% slider; libretro offers enumerated stops.",
+            "key": "pcsx2_osd_scale",
+            "label": "OSD Scale",
+            "values": [
+                {
+                    "label": "50%",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "100% (Default)",
+                    "value": "100"
+                },
+                {
+                    "label": "125%",
+                    "value": "125"
+                },
+                {
+                    "label": "150%",
+                    "value": "150"
+                },
+                {
+                    "label": "200%",
+                    "value": "200"
+                },
+                {
+                    "label": "300%",
+                    "value": "300"
+                },
+                {
+                    "label": "500%",
+                    "value": "500"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "10",
+            "info": "Pixel offset between the OSD elements and the screen edge. Standalone exposes a 0-100px slider; libretro offers enumerated stops.",
+            "key": "pcsx2_osd_margin",
+            "label": "OSD Margin",
+            "values": [
+                {
+                    "label": "0px",
+                    "value": "0"
+                },
+                {
+                    "label": "5px",
+                    "value": "5"
+                },
+                {
+                    "label": "10px (Default)",
+                    "value": "10"
+                },
+                {
+                    "label": "15px",
+                    "value": "15"
+                },
+                {
+                    "label": "20px",
+                    "value": "20"
+                },
+                {
+                    "label": "30px",
+                    "value": "30"
+                },
+                {
+                    "label": "50px",
+                    "value": "50"
+                },
+                {
+                    "label": "100px",
+                    "value": "100"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Corner where transient messages (save-state loaded, shader reload, etc.) are drawn. Set to None to hide them entirely.",
+            "key": "pcsx2_osd_messages_pos",
+            "label": "OSD Messages Position",
+            "values": [
+                {
+                    "label": "None",
+                    "value": "0"
+                },
+                {
+                    "label": "Top Left (Default)",
+                    "value": "1"
+                },
+                {
+                    "label": "Top Center",
+                    "value": "2"
+                },
+                {
+                    "label": "Top Right",
+                    "value": "3"
+                },
+                {
+                    "label": "Center Left",
+                    "value": "4"
+                },
+                {
+                    "label": "Center",
+                    "value": "5"
+                },
+                {
+                    "label": "Center Right",
+                    "value": "6"
+                },
+                {
+                    "label": "Bottom Left",
+                    "value": "7"
+                },
+                {
+                    "label": "Bottom Center",
+                    "value": "8"
+                },
+                {
+                    "label": "Bottom Right",
+                    "value": "9"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "3",
+            "info": "Corner where the performance stats column (FPS/Speed/CPU/GPU/etc.) is drawn. Set to None to hide the column and grey out every Performance Stats / System Information toggle.",
+            "key": "pcsx2_osd_performance_pos",
+            "label": "OSD Performance Position",
+            "values": [
+                {
+                    "label": "None",
+                    "value": "0"
+                },
+                {
+                    "label": "Top Left",
+                    "value": "1"
+                },
+                {
+                    "label": "Top Center",
+                    "value": "2"
+                },
+                {
+                    "label": "Top Right (Default)",
+                    "value": "3"
+                },
+                {
+                    "label": "Center Left",
+                    "value": "4"
+                },
+                {
+                    "label": "Center",
+                    "value": "5"
+                },
+                {
+                    "label": "Center Right",
+                    "value": "6"
+                },
+                {
+                    "label": "Bottom Left",
+                    "value": "7"
+                },
+                {
+                    "label": "Bottom Center",
+                    "value": "8"
+                },
+                {
+                    "label": "Bottom Right",
+                    "value": "9"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Renders OSD text in bold. Easier to read on bright scenes.",
+            "key": "pcsx2_osd_bold_text",
+            "label": "OSD Text Style (Bold)",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays the emulation speed as a percentage. Red below 95%, green above 105%.",
+            "key": "pcsx2_osd_show_speed",
+            "label": "Show Speed Percentages",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays the current frame rate reported by the GS. Useful for spotting performance issues.",
+            "key": "pcsx2_osd_show_fps",
+            "label": "Show FPS",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays vertical syncs per second — the PS2 display refresh reported by the GS.",
+            "key": "pcsx2_osd_show_vps",
+            "label": "Show VPS",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays the PS2 internal render resolution and interlacing mode.",
+            "key": "pcsx2_osd_show_resolution",
+            "label": "Show Resolution",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays per-frame GS statistics: draw-call count, VRAM use, and a frame-time summary.",
+            "key": "pcsx2_osd_show_gs_stats",
+            "label": "Show GS Statistics",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays per-component CPU usage (EE, GS, VU).",
+            "key": "pcsx2_osd_show_cpu",
+            "label": "Show CPU Usage",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays GPU usage percentage and frame time in milliseconds.",
+            "key": "pcsx2_osd_show_gpu",
+            "label": "Show GPU Usage",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Displays icons for pause, fast-forward, slow-motion, and turbo modes in the top-right corner.",
+            "key": "pcsx2_osd_show_indicators",
+            "label": "Show Status Indicators",
+            "values": [
+                {
+                    "label": "Enabled (Default)",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays a rolling graph of recent frame times to visualise stutter.",
+            "key": "pcsx2_osd_show_frame_times",
+            "label": "Show Frame Times",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays the CPU and GPU model names as two lines in the performance column.",
+            "key": "pcsx2_osd_show_hardware_info",
+            "label": "Show Hardware Info",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays the PCSX2 version string in the performance column.",
+            "key": "pcsx2_osd_show_version",
+            "label": "Show PCSX2 Version",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays a compact summary of active emulation settings in the bottom-right corner.",
+            "key": "pcsx2_osd_show_settings",
+            "label": "Show Settings",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Appends active patches (widescreen, no-interlacing, etc.) to the settings line. Requires Show Settings to be enabled.",
+            "key": "pcsx2_osd_show_patches",
+            "label": "Show Patches",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays the current controller input state at the bottom-left corner.",
+            "key": "pcsx2_osd_show_inputs",
+            "label": "Show Inputs",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Displays a recording indicator while video capture is active. (Inert in the libretro variant — no FFmpeg capture is driven from this build.)",
+            "key": "pcsx2_osd_show_video_capture",
+            "label": "Show Video Capture Status",
+            "values": [
+                {
+                    "label": "Enabled (Default)",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Displays an indicator while input recording is active. (Inert in the libretro variant — input recording UI is not driven from this build.)",
+            "key": "pcsx2_osd_show_input_rec",
+            "label": "Show Input Recording Status",
+            "values": [
+                {
+                    "label": "Enabled (Default)",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "disabled",
+            "info": "Displays an indicator when replacement textures are loaded for the current game. Requires Texture Replacement → Load Textures to be enabled.",
+            "key": "pcsx2_osd_show_texture_replacements",
+            "label": "Show Texture Replacement Status",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled (Default)",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "enabled",
+            "info": "Shows a startup warning if any unsafe settings are enabled.",
+            "key": "pcsx2_warn_about_unsafe_settings",
+            "label": "Warn About Unsafe Settings",
+            "values": [
+                {
+                    "label": "Enabled (Default)",
+                    "value": "enabled"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "disabled"
+                }
+            ]
+        }
+    ]
+}
