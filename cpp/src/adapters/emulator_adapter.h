@@ -546,63 +546,15 @@ public:
     virtual bool supportsRetroAchievements() const { return false; }
 
     /**
-     * Per-emulator INI key names used for RetroAchievements settings.
-     * Each adapter declares its section + key names + bool formatting; the
-     * base patchRetroAchievements() does the read/patch/write dance.
-     *
-     * An empty key (empty QString) means "this emulator doesn't expose this
-     * setting" — the patch is skipped for that field.
-     */
-    struct RetroAchievementsKeyMap {
-        QString section;             // e.g. "Achievements" or "Cheevos"
-        QString enabledKey;          // e.g. "Enabled" or "AchievementsEnable"
-        QString hardcoreKey;         // e.g. "HardcoreMode" or "ChallengeMode"
-        QString notificationsKey;    // empty → skip
-        QString soundEffectsKey;     // e.g. "SoundEffects"
-        QString trueValue = "true";  // some emulators want "True" (title case)
-        QString falseValue = "false";
-        QString configTag;           // "PCSX2"/"DuckStation"/"PPSSPP" — for log messages
-    };
-
-    /**
-     * Override to declare the RA key map. Default returns an empty map,
-     * which causes patchRetroAchievements() to be a no-op.
-     */
-    virtual RetroAchievementsKeyMap retroAchievementsKeyMap() const { return {}; }
-
-    /**
-     * Patch RA credentials and settings into the emulator's config.
-     * Default implementation uses retroAchievementsKeyMap() and configFilePath()
-     * to do the read/patch/write. Override only for emulator-specific quirks
-     * (e.g. credentials living in a separate file).
+     * Push RA login/preferences into the emulator. The base is a no-op —
+     * the INI-patching default died with the process era (2026-07);
+     * LibretroAdapter overrides this to persist RA prefs its own way.
      */
     virtual void patchRetroAchievements(const QString& username, const QString& token,
                                          bool enabled, bool hardcore,
                                          bool notifications, bool sounds) {
-        Q_UNUSED(username); Q_UNUSED(token);
-
-        const auto map = retroAchievementsKeyMap();
-        if (map.section.isEmpty()) return;
-
-        const QString path = configFilePath();
-        QString content;
-        if (!readConfigFile(path, content, map.configTag.isEmpty() ? "Adapter" : map.configTag))
-            return;
-
-        const QString trueVal = map.trueValue;
-        const QString falseVal = map.falseValue;
-        QVector<IniKeyPatch> patches;
-        if (!map.enabledKey.isEmpty())
-            patches.append({map.section, map.enabledKey, enabled ? trueVal : falseVal});
-        if (!map.hardcoreKey.isEmpty())
-            patches.append({map.section, map.hardcoreKey, hardcore ? trueVal : falseVal});
-        if (!map.notificationsKey.isEmpty())
-            patches.append({map.section, map.notificationsKey, notifications ? trueVal : falseVal});
-        if (!map.soundEffectsKey.isEmpty())
-            patches.append({map.section, map.soundEffectsKey, sounds ? trueVal : falseVal});
-
-        if (patchIniKeys(content, patches))
-            writeConfigFile(path, content, map.configTag.isEmpty() ? "Adapter" : map.configTag);
+        Q_UNUSED(username); Q_UNUSED(token); Q_UNUSED(enabled);
+        Q_UNUSED(hardcore); Q_UNUSED(notifications); Q_UNUSED(sounds);
     }
 
     /**
@@ -695,23 +647,6 @@ public:
      */
     virtual QStringList additionalLaunchArgs() const { return {}; }
 
-    /**
-     * Build the final command-line arguments for launching a game.
-     * Default implementation prepends additionalLaunchArgs(), then
-     * substitutes {rom_path} in manifest launch_args.
-     * Adapters can override for special logic.
-     */
-    virtual QStringList buildLaunchArgs(const EmulatorManifest& manifest,
-                                        const QString& romPath) {
-        QStringList args = additionalLaunchArgs();
-        for (const auto& arg : manifest.launch_args) {
-            QString resolved = arg;
-            resolved.replace("{rom_path}", romPath);
-            args.append(resolved);
-        }
-        return args;
-    }
-
 protected:
     /**
      * Helper: map a Qt::Key code to the PCSX2/DuckStation INI key name used
@@ -764,18 +699,6 @@ protected:
     }
 
     /**
-     * Helper: convert SYSTEM.CNF serial format to emulator filename format.
-     * "SLUS_200.62" → "SLUS-20062" (underscore → hyphen, remove dot).
-     * Both PCSX2 and DuckStation use this format in save state filenames.
-     */
-    static QString serialToFilenameFormat(const QString& serial) {
-        QString result = serial;
-        result.replace('_', '-');
-        result.remove('.');
-        return result;
-    }
-
-    /**
      * Helper: resolve a platform-specific executable inside an install directory.
      * Searches for .app bundles on macOS, appends .exe on Windows, and falls back
      * to the manifest executable name. @param fallbackName is the hardcoded binary
@@ -807,157 +730,5 @@ protected:
 #endif
     }
 
-    /**
-     * Helper: ensure a portable.txt marker exists in the given directory.
-     * Creates the directory if needed. Returns true if marker exists or was created.
-     */
-    static bool ensurePortableMarker(const QString& dir, const QString& adapterName) {
-        const QString portableMarker = dir + "/portable.txt";
-        if (QFileInfo::exists(portableMarker))
-            return true;
-        if (!QDir().mkpath(dir)) {
-            qWarning() << "[" + adapterName + "] Failed to create directory:" << dir;
-            return false;
-        }
-        QFile marker(portableMarker);
-        if (marker.open(QIODevice::WriteOnly)) {
-            marker.close();
-            qInfo() << "[" + adapterName + "] Created portable.txt at" << portableMarker;
-            return true;
-        }
-        qWarning() << "[" + adapterName + "] Failed to create portable.txt at" << portableMarker;
-        return false;
-    }
 
-    /**
-     * Helper: read a config file into a QString.
-     * Returns true on success, false on failure (logs warning).
-     */
-    static bool readConfigFile(const QString& path, QString& outContent, const QString& adapterName) {
-        QFile file(path);
-        if (!file.open(QIODevice::ReadOnly)) {
-            qWarning() << "[" + adapterName + "] Cannot read config:" << path;
-            return false;
-        }
-        outContent = QString::fromUtf8(file.readAll());
-        file.close();
-        return true;
-    }
-
-    /**
-     * Helper: write config content to a file.
-     * Creates parent directories if needed. Returns true on success.
-     */
-    static bool writeConfigFile(const QString& path, const QString& content, const QString& adapterName) {
-        if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
-            qWarning() << "[" + adapterName + "] Failed to create directory for:" << path;
-            return false;
-        }
-        QFile outFile(path);
-        if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            qWarning() << "[" + adapterName + "] Failed to write config:" << path;
-            return false;
-        }
-        outFile.write(content.toUtf8());
-        qInfo() << "[" + adapterName + "] Wrote config at" << path;
-        return true;
-    }
-
-    /**
-     * Helper: suppress the emulator's first-run wizard in INI content.
-     * Handles SetupWizardComplete and SetupWizardIncomplete keys.
-     * @param section The INI section containing wizard keys (e.g. "UI", "Main")
-     */
-    static bool suppressSetupWizard(QString& content, const QString& section) {
-        bool changed = false;
-        if (content.contains("SetupWizardComplete = false")) {
-            content.replace("SetupWizardComplete = false", "SetupWizardComplete = true");
-            changed = true;
-        }
-        if (content.contains("SetupWizardIncomplete = true")) {
-            content.replace("SetupWizardIncomplete = true", "SetupWizardIncomplete = false");
-            changed = true;
-        }
-        if (!content.contains("SetupWizardComplete")) {
-            const QString header = "[" + section + "]";
-            if (content.contains(header))
-                content.replace(header, header + "\nSetupWizardComplete = true");
-            else
-                content.prepend(header + "\nSetupWizardComplete = true\n");
-            changed = true;
-        }
-        return changed;
-    }
-
-    /**
-     * Helper: patch INI keys within their respective sections.
-     * If the key exists, updates its value. If missing, appends to the section.
-     * If the section is missing, appends both section and key.
-     */
-    struct IniKeyPatch {
-        QString section;
-        QString key;
-        QString value;
-    };
-
-    /**
-     * One-shot: read an INI file (or start empty if missing), apply the
-     * given patch list, and write back when content changed or the file
-     * didn't exist. Returns true on success, false if read/write failed.
-     *
-     * Replaces the read → patchIniKeys → writeConfigFile dance that every
-     * adapter's createDefaultConfig + patchExistingConfig used to do
-     * twice. Adapters now express their managed keys as a single
-     * declarative QVector<IniKeyPatch> per file and call this once from
-     * ensureConfig.
-     *
-     * On first-launch the file doesn't exist; we still write so the
-     * emulator boots against our keys instead of its own defaults. On
-     * subsequent launches the file exists; we only re-write if a patch
-     * actually changed a value.
-     */
-    static bool patchOrCreateConfigFile(const QString& path,
-                                        const QVector<IniKeyPatch>& patches,
-                                        const QString& adapterName) {
-        QString content;
-        const bool exists = QFileInfo::exists(path);
-        if (exists && !readConfigFile(path, content, adapterName))
-            return false;
-        const bool changed = patchIniKeys(content, patches);
-        if (changed || !exists)
-            return writeConfigFile(path, content, adapterName);
-        return true;
-    }
-
-    static bool patchIniKeys(QString& content, const QVector<IniKeyPatch>& patches) {
-        bool changed = false;
-        for (const auto& p : patches) {
-            const QString sectionHeader = "[" + p.section + "]";
-            // [ \t] (not \s) so the regex cannot cross a newline. With \s the
-            // post-= class greedily consumed the trailing newline and `.*`
-            // picked up the FOLLOWING line — so for any empty-value patch,
-            // the line after it got swallowed by the replace. This silently
-            // dropped real settings on patch passes #2+ (when our own zeroed
-            // keys were already in the file). Found by tracing Dolphin's
-            // Hotkeys.ini going from 5 keys to 3 after a single patch run.
-            QRegularExpression keyRe("^" + QRegularExpression::escape(p.key) + "[ \\t]*=[ \\t]*.*$",
-                                     QRegularExpression::MultilineOption);
-            const QString newLine = p.key + " = " + p.value;
-
-            auto match = keyRe.match(content);
-            if (match.hasMatch()) {
-                if (match.captured() != newLine) {
-                    content.replace(keyRe, newLine);
-                    changed = true;
-                }
-            } else if (content.contains(sectionHeader)) {
-                content.replace(sectionHeader, sectionHeader + "\n" + newLine);
-                changed = true;
-            } else {
-                content.append("\n" + sectionHeader + "\n" + newLine + "\n");
-                changed = true;
-            }
-        }
-        return changed;
-    }
 };

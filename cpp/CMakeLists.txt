@@ -540,10 +540,6 @@ add_executable(test_database_migrations tests/test_database_migrations.cpp)
 target_link_libraries(test_database_migrations PRIVATE retronest_core Qt6::Test)
 add_test(NAME DatabaseMigrations COMMAND test_database_migrations)
 
-add_executable(test_patch_ini_keys tests/test_patch_ini_keys.cpp)
-target_link_libraries(test_patch_ini_keys PRIVATE retronest_core Qt6::Test)
-add_test(NAME PatchIniKeys COMMAND test_patch_ini_keys)
-
 add_executable(test_libretro_hotkey_defs tests/test_libretro_hotkey_defs.cpp)
 target_link_libraries(test_libretro_hotkey_defs PRIVATE retronest_core Qt6::Test)
 add_test(NAME LibretroHotkeyDefs COMMAND test_libretro_hotkey_defs)
