@@ -9,7 +9,7 @@
 //
 // Rules (LibretroAdapter::settingsSchema() merge):
 //  - Overlay order = row order. One overlay entry per curated key; listing
-//    N categories yields N rows sharing the key (the "Recommended"
+//    N placements yields N rows sharing the key (the "Recommended"
 //    cross-listing pattern) — edits persist to the same OptionsStore key.
 //  - Declared options with no overlay entry are NOT rendered (still valid
 //    in OptionsStore; new upstream options arrive hidden until curated).
@@ -19,15 +19,22 @@
 //    (Packet 7 decision 4).
 
 #include <QString>
-#include <QStringList>
+#include <QVector>
 
 #include "setting_def.h"
 
+/** One UI location for a curated option. Cross-listed rows (e.g. the
+ *  "Recommended" card) may carry a different group/subcategory per
+ *  location, so routing is per-placement, not per-key. */
+struct OverlayPlacement {
+    QString category;
+    QString subcategory;
+    QString group;
+};
+
 struct OptionOverlay {
-    QString key;              // core option key this entry curates
-    QStringList categories;   // UI categories to list under (>=1)
-    QString subcategory;      // optional sub-tab routing
-    QString group;            // optional group-box title
+    QString key;                          // core option key this entry curates
+    QVector<OverlayPlacement> placements; // UI locations (>=1); one row each
 
     QString labelOverride;    // empty = core's desc
     QString tooltipOverride;  // empty = core's info

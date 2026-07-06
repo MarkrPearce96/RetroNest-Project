@@ -21,6 +21,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include "adapters/libretro/duckstation_libretro_adapter.h"
 #include "adapters/libretro/mgba_libretro_adapter.h"
 #include "core/libretro/core_prober.h"
 
@@ -72,6 +73,14 @@ class TestSchemaParity : public QObject {
 private:
     void runParity(LibretroAdapter& adapter, const QString& core) {
         if (qEnvironmentVariableIsSet("SCHEMA_SNAPSHOT_WRITE")) {
+            if (QFile::exists(snapshotPath(core))) {
+                // Never overwrite a committed snapshot — it records the
+                // PRE-conversion hand schema, which no longer exists once
+                // the adapter converts. Delete the file deliberately if a
+                // regeneration is truly intended.
+                qInfo() << core << "snapshot already exists — skipped";
+                return;
+            }
             QVERIFY2(writeJson(snapshotPath(core), schemaToJson(adapter.settingsSchema())),
                      "failed to write schema snapshot");
             const auto probed = CoreProber::probe(installedCorePath(core));
@@ -134,6 +143,10 @@ private slots:
     void mgbaParity() {
         MgbaLibretroAdapter adapter;
         runParity(adapter, "mgba");
+    }
+    void duckstationParity() {
+        DuckStationLibretroAdapter adapter;
+        runParity(adapter, "duckstation");
     }
 };
 

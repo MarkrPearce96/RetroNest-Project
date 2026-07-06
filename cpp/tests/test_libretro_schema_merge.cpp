@@ -51,7 +51,7 @@ private slots:
         a.setDeclaredDocForTest(fixtureDoc());
         OptionOverlay ov;
         ov.key = "fake_speed";
-        ov.categories = { "Emulation" };
+        ov.placements = { { "Emulation", {}, {} } };
         a.m_overlays = { ov };
 
         const auto rows = a.settingsSchema();
@@ -74,7 +74,7 @@ private slots:
         a.setDeclaredDocForTest(fixtureDoc());
         OptionOverlay ov;
         ov.key = "fake_speed";
-        ov.categories = { "Emulation" };
+        ov.placements = { { "Emulation", {}, {} } };
         ov.labelOverride = "Speed (curated)";
         ov.tooltipOverride = "Curated tooltip.";
         ov.defaultOverride = "2";
@@ -104,7 +104,7 @@ private slots:
         a.setDeclaredDocForTest(fixtureDoc());
         OptionOverlay ov;
         ov.key = "fake_bool";
-        ov.categories = { "Recommended", "System" };
+        ov.placements = { { "Recommended", {}, {} }, { "System", {}, {} } };
         a.m_overlays = { ov };
 
         const auto rows = a.settingsSchema();
@@ -121,10 +121,10 @@ private slots:
         a.setDeclaredDocForTest(fixtureDoc());
         OptionOverlay good;
         good.key = "fake_speed";
-        good.categories = { "Emulation" };
+        good.placements = { { "Emulation", {}, {} } };
         OptionOverlay stale;
         stale.key = "fake_removed_upstream";   // not in the declared table
-        stale.categories = { "Emulation" };
+        stale.placements = { { "Emulation", {}, {} } };
         a.m_overlays = { good, stale };
 
         const auto rows = a.settingsSchema();
@@ -137,7 +137,7 @@ private slots:
         a.setDeclaredDocForTest(fixtureDoc());
         OptionOverlay ov;
         ov.key = "fake_speed";
-        ov.categories = { "Emulation" };
+        ov.placements = { { "Emulation", {}, {} } };
         a.m_overlays = { ov };
         SettingDef extra;
         extra.storage = SettingDef::Storage::FrontendSetting;
@@ -167,7 +167,7 @@ private slots:
         a.setDeclaredDocForTest(fixtureDoc());
         OptionOverlay ov;
         ov.key = "fake_speed";           // only ONE key curated...
-        ov.categories = { "Emulation" };
+        ov.placements = { { "Emulation", {}, {} } };
         a.m_overlays = { ov };
 
         OptionsStore* store = a.libretroOptionsStore();

@@ -1,0 +1,1468 @@
+{
+    "categories": [
+    ],
+    "core_library_version": "0.1-skeleton",
+    "format": 1,
+    "options": [
+        {
+            "category": "",
+            "default": "Auto",
+            "info": "Console region. Auto detects from the disc.",
+            "key": "duckstation_console_region",
+            "label": "Region",
+            "values": [
+                {
+                    "label": "Auto-Detect",
+                    "value": "Auto"
+                },
+                {
+                    "label": "NTSC-J (Japan)",
+                    "value": "NTSC-J"
+                },
+                {
+                    "label": "NTSC-U/C (US, Canada)",
+                    "value": "NTSC-U"
+                },
+                {
+                    "label": "PAL (Europe, Australia)",
+                    "value": "PAL"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Recompiler",
+            "info": "How the PSX CPU is emulated. Recompiler is fastest.",
+            "key": "duckstation_cpu_execution_mode",
+            "label": "CPU Execution Mode",
+            "values": [
+                {
+                    "label": "Interpreter (Slowest)",
+                    "value": "Interpreter"
+                },
+                {
+                    "label": "Cached Interpreter (Faster)",
+                    "value": "CachedInterpreter"
+                },
+                {
+                    "label": "Recompiler (Fastest)",
+                    "value": "Recompiler"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Skips the BIOS boot animation and Sony intro.",
+            "key": "duckstation_bios_fast_boot",
+            "label": "Fast Boot",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Disabled",
+            "info": "Forces a video timing mode, overriding auto-detection.",
+            "key": "duckstation_gpu_force_video_timing",
+            "label": "Frame Rate",
+            "values": [
+                {
+                    "label": "Auto-Detect",
+                    "value": "Disabled"
+                },
+                {
+                    "label": "NTSC (60hz)",
+                    "value": "NTSC"
+                },
+                {
+                    "label": "PAL (50hz)",
+                    "value": "PAL"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Expands RAM to 8MB, as found in dev units.",
+            "key": "duckstation_console_8mb_ram",
+            "label": "Enable 8MB RAM (Dev Console)",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Enables CPU overclocking or underclocking.",
+            "key": "duckstation_cpu_overclock_enable",
+            "label": "Enable Clock Speed Control (Overclocking/Underclocking)",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "100",
+            "info": "Sets the CPU clock speed. 100% matches the original PSX CPU (33.87 MHz).",
+            "key": "duckstation_cpu_overclock_percent",
+            "label": "Overclocking Percentage",
+            "values": [
+                {
+                    "label": "50%",
+                    "value": "50"
+                },
+                {
+                    "label": "75%",
+                    "value": "75"
+                },
+                {
+                    "label": "100%",
+                    "value": "100"
+                },
+                {
+                    "label": "150%",
+                    "value": "150"
+                },
+                {
+                    "label": "200%",
+                    "value": "200"
+                },
+                {
+                    "label": "300%",
+                    "value": "300"
+                },
+                {
+                    "label": "400%",
+                    "value": "400"
+                },
+                {
+                    "label": "500%",
+                    "value": "500"
+                },
+                {
+                    "label": "750%",
+                    "value": "750"
+                },
+                {
+                    "label": "1000%",
+                    "value": "1000"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Simulates the instruction cache in the recompiler. Slower but more accurate.",
+            "key": "duckstation_cpu_recompiler_icache",
+            "label": "Enable Recompiler ICache",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Speeds up CD-ROM reads beyond hardware limits.",
+            "key": "duckstation_cdrom_read_speedup",
+            "label": "CD-ROM Read Speedup",
+            "values": [
+                {
+                    "label": "None (Double Speed)",
+                    "value": "1"
+                },
+                {
+                    "label": "2x (Quad Speed)",
+                    "value": "2"
+                },
+                {
+                    "label": "3x (6x Speed)",
+                    "value": "3"
+                },
+                {
+                    "label": "4x (8x Speed)",
+                    "value": "4"
+                },
+                {
+                    "label": "5x (10x Speed)",
+                    "value": "5"
+                },
+                {
+                    "label": "6x (12x Speed)",
+                    "value": "6"
+                },
+                {
+                    "label": "Maximum (Safer)",
+                    "value": "0"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Reduces seek time beyond hardware limits.",
+            "key": "duckstation_cdrom_seek_speedup",
+            "label": "CD-ROM Seek Speedup",
+            "values": [
+                {
+                    "label": "None (Normal Speed)",
+                    "value": "1"
+                },
+                {
+                    "label": "2x",
+                    "value": "2"
+                },
+                {
+                    "label": "3x",
+                    "value": "3"
+                },
+                {
+                    "label": "4x",
+                    "value": "4"
+                },
+                {
+                    "label": "5x",
+                    "value": "5"
+                },
+                {
+                    "label": "6x",
+                    "value": "6"
+                },
+                {
+                    "label": "Maximum (Safer)",
+                    "value": "0"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Loads the disc image into RAM to reduce I/O stutter.",
+            "key": "duckstation_cdrom_preload",
+            "label": "Preload Image To RAM",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Applies PPF patches found alongside the disc image.",
+            "key": "duckstation_cdrom_image_patches",
+            "label": "Apply Image Patches",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Automatically switches to the next queued disc when the current one stops.",
+            "key": "duckstation_cdrom_auto_disc_change",
+            "label": "Switch to Next Disc on Stop",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Ignores subcode errors on physical drives.",
+            "key": "duckstation_cdrom_ignore_subcode",
+            "label": "Ignore Drive Subcode",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Runs at fast forward speed during boot until the game starts.",
+            "key": "duckstation_bios_fast_forward_boot",
+            "label": "Fast Forward Boot",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "AnalogController",
+            "info": "Controller type for Player 1. Analog Controller is a DualShock with sticks and rumble.",
+            "key": "duckstation_pad1_type",
+            "label": "Controller Type (Pad 1)",
+            "values": [
+                {
+                    "label": "Analog Controller (DualShock)",
+                    "value": "AnalogController"
+                },
+                {
+                    "label": "Digital Controller",
+                    "value": "DigitalController"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "AnalogController",
+            "info": "Controller type for Player 2, used when a second controller is connected. Analog Controller is a DualShock with sticks and rumble.",
+            "key": "duckstation_pad2_type",
+            "label": "Controller Type (Pad 2)",
+            "values": [
+                {
+                    "label": "Analog Controller (DualShock)",
+                    "value": "AnalogController"
+                },
+                {
+                    "label": "Digital Controller",
+                    "value": "DigitalController"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "PerGameTitle",
+            "info": "Memory card type for slot 1.",
+            "key": "duckstation_memcard_1_type",
+            "label": "Memory Card 1 Type",
+            "values": [
+                {
+                    "label": "No Memory Card",
+                    "value": "None"
+                },
+                {
+                    "label": "Shared Between All Games",
+                    "value": "Shared"
+                },
+                {
+                    "label": "Separate Card Per Game (Serial)",
+                    "value": "PerGame"
+                },
+                {
+                    "label": "Separate Card Per Game (Title)",
+                    "value": "PerGameTitle"
+                },
+                {
+                    "label": "Separate Card Per Game (File Title)",
+                    "value": "PerGameFileTitle"
+                },
+                {
+                    "label": "Non-Persistent Card (Do Not Save)",
+                    "value": "NonPersistent"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "None",
+            "info": "Memory card type for slot 2.",
+            "key": "duckstation_memcard_2_type",
+            "label": "Memory Card 2 Type",
+            "values": [
+                {
+                    "label": "No Memory Card",
+                    "value": "None"
+                },
+                {
+                    "label": "Shared Between All Games",
+                    "value": "Shared"
+                },
+                {
+                    "label": "Separate Card Per Game (Serial)",
+                    "value": "PerGame"
+                },
+                {
+                    "label": "Separate Card Per Game (Title)",
+                    "value": "PerGameTitle"
+                },
+                {
+                    "label": "Separate Card Per Game (File Title)",
+                    "value": "PerGameFileTitle"
+                },
+                {
+                    "label": "Non-Persistent Card (Do Not Save)",
+                    "value": "NonPersistent"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Automatic",
+            "info": "GPU backend used for rendering.",
+            "key": "duckstation_gpu_renderer",
+            "label": "Renderer",
+            "values": [
+                {
+                    "label": "Auto",
+                    "value": "Automatic"
+                },
+                {
+                    "label": "Metal",
+                    "value": "Metal"
+                },
+                {
+                    "label": "Software",
+                    "value": "Software"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "4",
+            "info": "Renders the PS1 GPU at a higher resolution.",
+            "key": "duckstation_gpu_resolution_scale",
+            "label": "Internal Resolution",
+            "values": [
+                {
+                    "label": "1x Native",
+                    "value": "1"
+                },
+                {
+                    "label": "2x",
+                    "value": "2"
+                },
+                {
+                    "label": "3x",
+                    "value": "3"
+                },
+                {
+                    "label": "4x Native (1440p)",
+                    "value": "4"
+                },
+                {
+                    "label": "5x",
+                    "value": "5"
+                },
+                {
+                    "label": "6x",
+                    "value": "6"
+                },
+                {
+                    "label": "7x",
+                    "value": "7"
+                },
+                {
+                    "label": "8x Native (4K)",
+                    "value": "8"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Disabled",
+            "info": "Downsamples the rendered image back to native resolution.",
+            "key": "duckstation_gpu_downsample_mode",
+            "label": "Down-Sampling",
+            "values": [
+                {
+                    "label": "Disabled",
+                    "value": "Disabled"
+                },
+                {
+                    "label": "Box (Downsample 3D/Smooth All)",
+                    "value": "Box"
+                },
+                {
+                    "label": "Adaptive (Preserve 3D/Smooth 2D)",
+                    "value": "Adaptive"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Nearest",
+            "info": "Texture filter applied to 3D geometry.",
+            "key": "duckstation_gpu_texture_filter",
+            "label": "Texture Filtering",
+            "values": [
+                {
+                    "label": "Nearest-Neighbor",
+                    "value": "Nearest"
+                },
+                {
+                    "label": "Bilinear",
+                    "value": "Bilinear"
+                },
+                {
+                    "label": "Bilinear (No Edge Blending)",
+                    "value": "BilinearBinAlpha"
+                },
+                {
+                    "label": "JINC2 (Slow)",
+                    "value": "JINC2"
+                },
+                {
+                    "label": "JINC2 (Slow, No Edge Blending)",
+                    "value": "JINC2BinAlpha"
+                },
+                {
+                    "label": "xBR (Very Slow)",
+                    "value": "xBR"
+                },
+                {
+                    "label": "xBR (Very Slow, No Edge Blending)",
+                    "value": "xBRBinAlpha"
+                },
+                {
+                    "label": "Scale2x (EPX)",
+                    "value": "Scale2x"
+                },
+                {
+                    "label": "Scale3x (Slow)",
+                    "value": "Scale3x"
+                },
+                {
+                    "label": "MMPX (Slow)",
+                    "value": "MMPX"
+                },
+                {
+                    "label": "MMPX Enhanced (Slow)",
+                    "value": "MMPXEnhanced"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Nearest",
+            "info": "Texture filtering applied only to 2D sprites.",
+            "key": "duckstation_gpu_sprite_texture_filter",
+            "label": "Sprite Texture Filtering",
+            "values": [
+                {
+                    "label": "Nearest-Neighbor",
+                    "value": "Nearest"
+                },
+                {
+                    "label": "Bilinear",
+                    "value": "Bilinear"
+                },
+                {
+                    "label": "Bilinear (No Edge Blending)",
+                    "value": "BilinearBinAlpha"
+                },
+                {
+                    "label": "JINC2 (Slow)",
+                    "value": "JINC2"
+                },
+                {
+                    "label": "JINC2 (Slow, No Edge Blending)",
+                    "value": "JINC2BinAlpha"
+                },
+                {
+                    "label": "xBR (Very Slow)",
+                    "value": "xBR"
+                },
+                {
+                    "label": "xBR (Very Slow, No Edge Blending)",
+                    "value": "xBRBinAlpha"
+                },
+                {
+                    "label": "Scale2x (EPX)",
+                    "value": "Scale2x"
+                },
+                {
+                    "label": "Scale3x (Slow)",
+                    "value": "Scale3x"
+                },
+                {
+                    "label": "MMPX (Slow)",
+                    "value": "MMPX"
+                },
+                {
+                    "label": "MMPX Enhanced (Slow)",
+                    "value": "MMPXEnhanced"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "TrueColor",
+            "info": "Controls dithering applied to the rendered image.",
+            "key": "duckstation_gpu_dithering",
+            "label": "Dithering",
+            "values": [
+                {
+                    "label": "Unscaled",
+                    "value": "Unscaled"
+                },
+                {
+                    "label": "Unscaled (Shader Blending)",
+                    "value": "UnscaledShaderBlend"
+                },
+                {
+                    "label": "Scaled",
+                    "value": "Scaled"
+                },
+                {
+                    "label": "Scaled (Shader Blending)",
+                    "value": "ScaledShaderBlend"
+                },
+                {
+                    "label": "True Color",
+                    "value": "TrueColor"
+                },
+                {
+                    "label": "True Color (Full)",
+                    "value": "TrueColorFull"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Progressive",
+            "info": "Controls deinterlacing mode for interlaced content.",
+            "key": "duckstation_gpu_deinterlacing",
+            "label": "Deinterlacing",
+            "values": [
+                {
+                    "label": "Progressive (Optimal)",
+                    "value": "Progressive"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "Disabled"
+                },
+                {
+                    "label": "Weave",
+                    "value": "Weave"
+                },
+                {
+                    "label": "Blend",
+                    "value": "Blend"
+                },
+                {
+                    "label": "Adaptive",
+                    "value": "Adaptive"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Auto (Game Native)",
+            "info": "Aspect ratio used when displaying the image.",
+            "key": "duckstation_display_aspect_ratio",
+            "label": "Aspect Ratio",
+            "values": [
+                {
+                    "label": "Auto (Game Native)",
+                    "value": "Auto (Game Native)"
+                },
+                {
+                    "label": "Stretch To Fill",
+                    "value": "Stretch To Fill"
+                },
+                {
+                    "label": "4:3",
+                    "value": "4:3"
+                },
+                {
+                    "label": "16:9",
+                    "value": "16:9"
+                },
+                {
+                    "label": "19:9",
+                    "value": "19:9"
+                },
+                {
+                    "label": "20:9",
+                    "value": "20:9"
+                },
+                {
+                    "label": "21:9",
+                    "value": "21:9"
+                },
+                {
+                    "label": "16:10",
+                    "value": "16:10"
+                },
+                {
+                    "label": "PAR 1:1",
+                    "value": "PAR 1:1"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Overscan",
+            "info": "Controls how much of the image border is cropped.",
+            "key": "duckstation_display_crop",
+            "label": "Crop",
+            "values": [
+                {
+                    "label": "None",
+                    "value": "None"
+                },
+                {
+                    "label": "Only Overscan Area",
+                    "value": "Overscan"
+                },
+                {
+                    "label": "Only Overscan Area (Aspect Uncorrected)",
+                    "value": "OverscanUncorrected"
+                },
+                {
+                    "label": "All Borders",
+                    "value": "Borders"
+                },
+                {
+                    "label": "All Borders (Aspect Uncorrected)",
+                    "value": "BordersUncorrected"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "BilinearSmooth",
+            "info": "Scaling filter applied to the final output.",
+            "key": "duckstation_display_scaling",
+            "label": "Scaling",
+            "values": [
+                {
+                    "label": "Nearest-Neighbor",
+                    "value": "Nearest"
+                },
+                {
+                    "label": "Nearest-Neighbor (Integer)",
+                    "value": "NearestInteger"
+                },
+                {
+                    "label": "Bilinear (Smooth)",
+                    "value": "BilinearSmooth"
+                },
+                {
+                    "label": "Bilinear (Hybrid)",
+                    "value": "BilinearHybrid"
+                },
+                {
+                    "label": "Bilinear (Sharp)",
+                    "value": "BilinearSharp"
+                },
+                {
+                    "label": "Bilinear (Integer)",
+                    "value": "BilinearInteger"
+                },
+                {
+                    "label": "Lanczos (Sharp)",
+                    "value": "Lanczos"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "BilinearSmooth",
+            "info": "Scaling filter applied during FMV playback.",
+            "key": "duckstation_display_scaling_24bit",
+            "label": "FMV Scaling",
+            "values": [
+                {
+                    "label": "Nearest-Neighbor",
+                    "value": "Nearest"
+                },
+                {
+                    "label": "Nearest-Neighbor (Integer)",
+                    "value": "NearestInteger"
+                },
+                {
+                    "label": "Bilinear (Smooth)",
+                    "value": "BilinearSmooth"
+                },
+                {
+                    "label": "Bilinear (Hybrid)",
+                    "value": "BilinearHybrid"
+                },
+                {
+                    "label": "Bilinear (Sharp)",
+                    "value": "BilinearSharp"
+                },
+                {
+                    "label": "Bilinear (Integer)",
+                    "value": "BilinearInteger"
+                },
+                {
+                    "label": "Lanczos (Sharp)",
+                    "value": "Lanczos"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "true",
+            "info": "Fixes polygon wobble by using a sub-pixel geometry buffer.",
+            "key": "duckstation_gpu_pgxp_enable",
+            "label": "PGXP Geometry Correction",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "true",
+            "info": "Corrects polygon culling when PGXP is enabled.",
+            "key": "duckstation_gpu_pgxp_culling",
+            "label": "PGXP Culling Correction",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "true",
+            "info": "Applies perspective-correct texturing when PGXP is enabled.",
+            "key": "duckstation_gpu_pgxp_texture_correction",
+            "label": "PGXP Texture Correction",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Switches to 4:3 aspect ratio during FMV sequences.",
+            "key": "duckstation_display_force_4_3_for_24bit",
+            "label": "Force 4:3 For FMVs",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Applies chroma smoothing to FMV playback.",
+            "key": "duckstation_gpu_chroma_smoothing_24bit",
+            "label": "FMV Chroma Smoothing",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Stretches 3D geometry to fill a widescreen display.",
+            "key": "duckstation_gpu_widescreen_hack",
+            "label": "Widescreen Rendering",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Reduces texture seams at high resolutions.",
+            "key": "duckstation_gpu_force_round_texcoords",
+            "label": "Round Upscaled Texture Coordinates",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Center",
+            "info": "Controls horizontal/vertical alignment of the display within the window.",
+            "key": "duckstation_display_alignment",
+            "label": "Position",
+            "values": [
+                {
+                    "label": "Left/Top",
+                    "value": "LeftOrTop"
+                },
+                {
+                    "label": "Center",
+                    "value": "Center"
+                },
+                {
+                    "label": "Right/Bottom",
+                    "value": "RightOrBottom"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Normal",
+            "info": "Rotates the display output.",
+            "key": "duckstation_display_rotation",
+            "label": "Rotation",
+            "values": [
+                {
+                    "label": "No Rotation",
+                    "value": "Normal"
+                },
+                {
+                    "label": "90 Degrees",
+                    "value": "Rotate90"
+                },
+                {
+                    "label": "180 Degrees",
+                    "value": "Rotate180"
+                },
+                {
+                    "label": "270 Degrees",
+                    "value": "Rotate270"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "None",
+            "info": "Controls the fine crop mode for precise border trimming.",
+            "key": "duckstation_display_fine_crop",
+            "label": "Fine Crop Mode",
+            "values": [
+                {
+                    "label": "None",
+                    "value": "None"
+                },
+                {
+                    "label": "Video Resolution",
+                    "value": "VideoResolution"
+                },
+                {
+                    "label": "Internal Resolution",
+                    "value": "InternalResolution"
+                },
+                {
+                    "label": "Window Resolution",
+                    "value": "WindowResolution"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Forces FIFO presentation instead of mailbox.",
+            "key": "duckstation_display_disable_mailbox",
+            "label": "Disable Mailbox Presentation",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "1",
+            "info": "Anti-aliasing via multi-sampling.",
+            "key": "duckstation_gpu_multisamples",
+            "label": "Multi-Sampling",
+            "values": [
+                {
+                    "label": "Disabled",
+                    "value": "1"
+                },
+                {
+                    "label": "2x MSAA",
+                    "value": "2"
+                },
+                {
+                    "label": "4x MSAA",
+                    "value": "4"
+                },
+                {
+                    "label": "8x MSAA",
+                    "value": "8"
+                },
+                {
+                    "label": "16x MSAA",
+                    "value": "16"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Disabled",
+            "info": "Detects and renders single-pixel lines correctly at higher resolutions.",
+            "key": "duckstation_gpu_line_detect",
+            "label": "Line Detection",
+            "values": [
+                {
+                    "label": "Disabled",
+                    "value": "Disabled"
+                },
+                {
+                    "label": "Quads",
+                    "value": "Quads"
+                },
+                {
+                    "label": "Basic Triangles",
+                    "value": "BasicTriangles"
+                },
+                {
+                    "label": "Aggressive Triangles",
+                    "value": "AggressiveTriangles"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Uses legacy texture modulation cropping behaviour.",
+            "key": "duckstation_gpu_modulation_crop",
+            "label": "Texture Modulation Cropping (\"Old/v0 GPU\")",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "true",
+            "info": "Scales interlaced content to full resolution.",
+            "key": "duckstation_gpu_scaled_interlacing",
+            "label": "Scaled Interlacing",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Uses the software renderer for GPU readbacks.",
+            "key": "duckstation_gpu_sw_readbacks",
+            "label": "Software Renderer Readbacks",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Enables the texture cache required for texture replacement.",
+            "key": "duckstation_gpu_texture_cache",
+            "label": "Enable Texture Cache",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Enables loading of replacement textures.",
+            "key": "duckstation_texrepl_enable_replacements",
+            "label": "Enable Texture Replacement",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Dumps textures to disk for use as replacement templates.",
+            "key": "duckstation_texrepl_dump_textures",
+            "label": "Enable Texture Dumping",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Always tracks texture uploads even when dumping is disabled.",
+            "key": "duckstation_texrepl_always_track_uploads",
+            "label": "Always Track Uploads",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "true",
+            "info": "Dumps textures that have been replaced.",
+            "key": "duckstation_texrepl_dump_replaced_textures",
+            "label": "Dump Replaced Textures",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Enables replacement of VRAM writes (background/FMV textures).",
+            "key": "duckstation_texrepl_enable_vram_write_replacements",
+            "label": "Enable VRAM Write Replacement",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Dumps VRAM writes to disk for use as replacement templates.",
+            "key": "duckstation_texrepl_dump_vram_writes",
+            "label": "Enable VRAM Write Dumping",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Uses older MDEC decode routines for VRAM write compatibility.",
+            "key": "duckstation_texrepl_use_old_mdec_routines",
+            "label": "Use Old MDEC Routines",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows the internal frame rate of the game in the top-right corner of the display.",
+            "key": "duckstation_osd_show_fps",
+            "label": "Show FPS",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows the current emulation speed of the system as a percentage.",
+            "key": "duckstation_osd_show_speed",
+            "label": "Show Emulation Speed",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows the host CPU usage based on threads used by the system.",
+            "key": "duckstation_osd_show_cpu",
+            "label": "Show CPU Usage",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows the host GPU usage in the top-right corner of the display.",
+            "key": "duckstation_osd_show_gpu",
+            "label": "Show GPU Usage",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows the resolution the game is rendering at in the top-right corner of the display.",
+            "key": "duckstation_osd_show_resolution",
+            "label": "Show Resolution",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows information about emulated GPU activity in the top-right corner of the display.",
+            "key": "duckstation_osd_show_gpu_stats",
+            "label": "Show GPU Statistics",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows a visual history of frame times in the top-right corner of the display.",
+            "key": "duckstation_osd_show_frame_times",
+            "label": "Show Frame Times",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows input and audio latency information in the top-right corner of the display.",
+            "key": "duckstation_osd_show_latency_stats",
+            "label": "Show Latency Statistics",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows the current controller state of the system in the bottom-left corner of the display.",
+            "key": "duckstation_osd_show_inputs",
+            "label": "Show Controller Input",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "false",
+            "info": "Shows enhancement settings in the bottom-right corner when starting/resuming the system.",
+            "key": "duckstation_osd_show_enhancements",
+            "label": "Show Enhancements",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "true"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "false"
+                }
+            ]
+        }
+    ]
+}

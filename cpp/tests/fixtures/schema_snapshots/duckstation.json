@@ -1,0 +1,954 @@
+[
+    {
+        "category": "Recommended",
+        "default": "Automatic",
+        "key": "duckstation_gpu_renderer",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Automatic",
+            "Metal",
+            "Software"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "Recompiler",
+        "key": "duckstation_cpu_execution_mode",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Interpreter",
+            "CachedInterpreter",
+            "Recompiler"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "1",
+        "key": "duckstation_cdrom_read_speedup",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "0"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "4",
+        "key": "duckstation_gpu_resolution_scale",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "Auto (Game Native)",
+        "key": "duckstation_display_aspect_ratio",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto (Game Native)",
+            "Stretch To Fill",
+            "4:3",
+            "16:9",
+            "19:9",
+            "20:9",
+            "21:9",
+            "16:10",
+            "PAR 1:1"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "false",
+        "key": "duckstation_gpu_widescreen_hack",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "true",
+        "key": "duckstation_gpu_pgxp_enable",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "1",
+        "key": "duckstation_gpu_multisamples",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "4",
+            "8",
+            "16"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "Nearest",
+        "key": "duckstation_gpu_texture_filter",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Nearest",
+            "Bilinear",
+            "BilinearBinAlpha",
+            "JINC2",
+            "JINC2BinAlpha",
+            "xBR",
+            "xBRBinAlpha",
+            "Scale2x",
+            "Scale3x",
+            "MMPX",
+            "MMPXEnhanced"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "Auto",
+        "key": "duckstation_console_region",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto",
+            "NTSC-J",
+            "NTSC-U",
+            "PAL"
+        ]
+    },
+    {
+        "category": "Recommended",
+        "default": "false",
+        "key": "duckstation_bios_fast_boot",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "Auto",
+        "key": "duckstation_console_region",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto",
+            "NTSC-J",
+            "NTSC-U",
+            "PAL"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "Disabled",
+        "key": "duckstation_gpu_force_video_timing",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Disabled",
+            "NTSC",
+            "PAL"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "false",
+        "key": "duckstation_console_8mb_ram",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "false",
+        "key": "duckstation_bios_fast_boot",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "false",
+        "key": "duckstation_bios_fast_forward_boot",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "Recompiler",
+        "key": "duckstation_cpu_execution_mode",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Interpreter",
+            "CachedInterpreter",
+            "Recompiler"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "false",
+        "key": "duckstation_cpu_overclock_enable",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "100",
+        "key": "duckstation_cpu_overclock_percent",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "50",
+            "75",
+            "100",
+            "150",
+            "200",
+            "300",
+            "400",
+            "500",
+            "750",
+            "1000"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "false",
+        "key": "duckstation_cpu_recompiler_icache",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "1",
+        "key": "duckstation_cdrom_read_speedup",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "0"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "1",
+        "key": "duckstation_cdrom_seek_speedup",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "0"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "false",
+        "key": "duckstation_cdrom_preload",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "false",
+        "key": "duckstation_cdrom_image_patches",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "false",
+        "key": "duckstation_cdrom_auto_disc_change",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "false",
+        "key": "duckstation_cdrom_ignore_subcode",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "AnalogController",
+        "key": "duckstation_pad1_type",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "AnalogController",
+            "DigitalController"
+        ]
+    },
+    {
+        "category": "Console",
+        "default": "AnalogController",
+        "key": "duckstation_pad2_type",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "AnalogController",
+            "DigitalController"
+        ]
+    },
+    {
+        "category": "Memory Cards",
+        "default": "PerGameTitle",
+        "key": "duckstation_memcard_1_type",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "None",
+            "Shared",
+            "PerGame",
+            "PerGameTitle",
+            "PerGameFileTitle",
+            "NonPersistent"
+        ]
+    },
+    {
+        "category": "Memory Cards",
+        "default": "None",
+        "key": "duckstation_memcard_2_type",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "None",
+            "Shared",
+            "PerGame",
+            "PerGameTitle",
+            "PerGameFileTitle",
+            "NonPersistent"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Automatic",
+        "key": "duckstation_gpu_renderer",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Automatic",
+            "Metal",
+            "Software"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "4",
+        "key": "duckstation_gpu_resolution_scale",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Disabled",
+        "key": "duckstation_gpu_downsample_mode",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Disabled",
+            "Box",
+            "Adaptive"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Nearest",
+        "key": "duckstation_gpu_texture_filter",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Nearest",
+            "Bilinear",
+            "BilinearBinAlpha",
+            "JINC2",
+            "JINC2BinAlpha",
+            "xBR",
+            "xBRBinAlpha",
+            "Scale2x",
+            "Scale3x",
+            "MMPX",
+            "MMPXEnhanced"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Nearest",
+        "key": "duckstation_gpu_sprite_texture_filter",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Nearest",
+            "Bilinear",
+            "BilinearBinAlpha",
+            "JINC2",
+            "JINC2BinAlpha",
+            "xBR",
+            "xBRBinAlpha",
+            "Scale2x",
+            "Scale3x",
+            "MMPX",
+            "MMPXEnhanced"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "TrueColor",
+        "key": "duckstation_gpu_dithering",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Unscaled",
+            "UnscaledShaderBlend",
+            "Scaled",
+            "ScaledShaderBlend",
+            "TrueColor",
+            "TrueColorFull"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Progressive",
+        "key": "duckstation_gpu_deinterlacing",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Progressive",
+            "Disabled",
+            "Weave",
+            "Blend",
+            "Adaptive"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Auto (Game Native)",
+        "key": "duckstation_display_aspect_ratio",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Auto (Game Native)",
+            "Stretch To Fill",
+            "4:3",
+            "16:9",
+            "19:9",
+            "20:9",
+            "21:9",
+            "16:10",
+            "PAR 1:1"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Overscan",
+        "key": "duckstation_display_crop",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "None",
+            "Overscan",
+            "OverscanUncorrected",
+            "Borders",
+            "BordersUncorrected"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "BilinearSmooth",
+        "key": "duckstation_display_scaling",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Nearest",
+            "NearestInteger",
+            "BilinearSmooth",
+            "BilinearHybrid",
+            "BilinearSharp",
+            "BilinearInteger",
+            "Lanczos"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "BilinearSmooth",
+        "key": "duckstation_display_scaling_24bit",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Nearest",
+            "NearestInteger",
+            "BilinearSmooth",
+            "BilinearHybrid",
+            "BilinearSharp",
+            "BilinearInteger",
+            "Lanczos"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "true",
+        "key": "duckstation_gpu_pgxp_enable",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "true",
+        "key": "duckstation_gpu_pgxp_culling",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "true",
+        "key": "duckstation_gpu_pgxp_texture_correction",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_gpu_widescreen_hack",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_display_force_4_3_for_24bit",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_gpu_chroma_smoothing_24bit",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_gpu_force_round_texcoords",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Center",
+        "key": "duckstation_display_alignment",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "LeftOrTop",
+            "Center",
+            "RightOrBottom"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Normal",
+        "key": "duckstation_display_rotation",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Normal",
+            "Rotate90",
+            "Rotate180",
+            "Rotate270"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "None",
+        "key": "duckstation_display_fine_crop",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "None",
+            "VideoResolution",
+            "InternalResolution",
+            "WindowResolution"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_display_disable_mailbox",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "1",
+        "key": "duckstation_gpu_multisamples",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "1",
+            "2",
+            "4",
+            "8",
+            "16"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "Disabled",
+        "key": "duckstation_gpu_line_detect",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "Disabled",
+            "Quads",
+            "BasicTriangles",
+            "AggressiveTriangles"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_gpu_modulation_crop",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "true",
+        "key": "duckstation_gpu_scaled_interlacing",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_gpu_sw_readbacks",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_gpu_texture_cache",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_texrepl_enable_replacements",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_texrepl_dump_textures",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_texrepl_always_track_uploads",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "true",
+        "key": "duckstation_texrepl_dump_replaced_textures",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_texrepl_enable_vram_write_replacements",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_texrepl_dump_vram_writes",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_texrepl_use_old_mdec_routines",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_fps",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_speed",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_cpu",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_gpu",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_resolution",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_gpu_stats",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_frame_times",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_latency_stats",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_inputs",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    },
+    {
+        "category": "Graphics",
+        "default": "false",
+        "key": "duckstation_osd_show_enhancements",
+        "storage": 1,
+        "type": 4,
+        "values": [
+            "true",
+            "false"
+        ]
+    }
+]

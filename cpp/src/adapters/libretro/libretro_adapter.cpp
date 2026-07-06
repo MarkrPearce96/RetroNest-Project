@@ -96,13 +96,13 @@ QVector<SettingDef> LibretroAdapter::settingsSchema() const {
                 qWarning() << "[LibretroAdapter]" << coreId() << "overlay key not declared by core (skipped):" << ov.key;
                 continue;
             }
-            for (const QString& cat : ov.categories) {
+            for (const OverlayPlacement& place : ov.placements) {
                 SettingDef def;
                 def.storage = SettingDef::Storage::LibretroOption;
                 def.key = ov.key;
-                def.category = cat;
-                def.subcategory = ov.subcategory;
-                def.group = ov.group;
+                def.category = place.category;
+                def.subcategory = place.subcategory;
+                def.group = place.group;
                 def.label = ov.labelOverride.isEmpty() ? d->label : ov.labelOverride;
                 def.tooltip = ov.tooltipOverride.isEmpty() ? d->info : ov.tooltipOverride;
                 def.defaultValue = ov.defaultOverride.isEmpty() ? d->defaultValue : ov.defaultOverride;

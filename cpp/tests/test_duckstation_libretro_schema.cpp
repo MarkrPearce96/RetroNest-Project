@@ -6,6 +6,7 @@
 // producing a silently-wrong UI.
 
 #include <QtTest>
+#include <QFileInfo>
 #include <QSet>
 #include "adapters/libretro/duckstation_libretro_adapter.h"
 #include "core/setting_def.h"
@@ -16,6 +17,15 @@ class TestDuckStationLibretroSchema : public QObject {
 private slots:
     void initTestCase() {
         DuckStationLibretroAdapter adapter;
+        // Packet 7 Stage 2: the schema renders from the core's declared
+        // option table — hermetic tests inject the committed fixture
+        // (recorded by test_schema_parity's snapshot mode) instead of
+        // touching the live sidecar / prober.
+        const QString fixture = QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()
+            + "/fixtures/declared/duckstation_declared_options.json";
+        const auto doc = DeclaredOptionsDoc::load(fixture);
+        QVERIFY2(doc.has_value(), "declared fixture missing");
+        adapter.setDeclaredDocForTest(*doc);
         schema_ = adapter.settingsSchema();
         QVERIFY(!schema_.isEmpty());
     }

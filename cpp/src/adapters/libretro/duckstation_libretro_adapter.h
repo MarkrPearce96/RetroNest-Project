@@ -45,11 +45,10 @@ public:
     // the game cold-boots. Mirrors Pcsx2LibretroAdapter::findResumeFile.
     QString findResumeFile(const QString& serial) const override;
 
-    // Phase 3: libretro core-option-backed rows for the per-emulator settings
-    // dialog. Keys + values + defaults mirror
-    // duckstation-libretro/src/duckstation-libretro/libretro_core_options.cpp
-    // exactly (enforced by tools/check_schema_fidelity.py).
-    QVector<SettingDef> settingsSchema() const override;
+    // Packet 7 Stage 2: schema rendered from the core's declared options
+    // (LibretroAdapter::settingsSchema base merge) — this adapter supplies
+    // only the curation overlay (UI routing + dependency gates).
+    QVector<OptionOverlay> optionOverlays() const override;
     QVector<SettingsHubCard> settingsHubCards() const override;
     QStringList settingsCategoriesWithSubTabs() const override { return {"Graphics"}; }
 

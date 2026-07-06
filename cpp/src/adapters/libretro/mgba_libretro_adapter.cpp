@@ -89,7 +89,8 @@ QVector<OptionOverlay> MgbaLibretroAdapter::optionOverlays() const {
     auto ov = [](const QString& key, const QStringList& categories) {
         OptionOverlay o;
         o.key = key;
-        o.categories = categories;
+        for (const auto& c : categories)
+            o.placements.append({ c, {}, {} });
         return o;
     };
     // NOTE (Packet 7 Stage 2 conversion finding): the hand-written schema
