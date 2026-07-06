@@ -26,12 +26,7 @@
 GameSession::GameSession(QObject* parent)
     : QObject(parent) {}
 
-GameSession::~GameSession() {
-    if (m_process && m_process->state() != QProcess::NotRunning) {
-        m_process->kill();
-        m_process->waitForFinished(3000);
-    }
-}
+GameSession::~GameSession() = default;
 
 bool GameSession::start(const EmulatorManifest& manifest,
                         EmulatorAdapter* adapter,
@@ -59,78 +54,16 @@ bool GameSession::start(const EmulatorManifest& manifest,
     m_emuId = manifest.id;
     m_currentRomPath = romPath;
 
-    if (manifest.backend == "libretro") {
-        m_backend = Backend::Libretro;
-        return startLibretro(manifest, adapter, romPath);
-    }
-    m_backend = Backend::Process;
-    return startProcess(manifest, adapter, romPath, extraArgs);
-}
-
-bool GameSession::startProcess(const EmulatorManifest& manifest,
-                               EmulatorAdapter* adapter,
-                               const QString& romPath,
-                               const QStringList& extraArgs) {
-    // Resolve executable
-    const QString installPath = Paths::emulatorsDir(manifest.install_folder);
-    const QString execPath = QFileInfo(adapter->resolveExecutable(manifest, installPath)).absoluteFilePath();
-
-    if (!QFileInfo::exists(execPath)) {
-        emit errorOccurred(manifest.name + " is not installed. Executable not found: " + execPath);
+    // Process-era retirement (2026-07): every emulator is an in-process
+    // libretro core. The loader already rejects non-libretro manifests;
+    // this is the belt to that suspender.
+    if (manifest.backend != QLatin1String("libretro")) {
+        emit errorOccurred(manifest.name + " has a non-libretro backend; "
+                           "process-backend launching was retired.");
         return false;
     }
-
-    // Build arguments
-    QStringList args = adapter->buildLaunchArgs(manifest, romPath);
-    if (!extraArgs.isEmpty()) {
-        // Insert extra args before "--" separator (if present) so they're
-        // treated as flags, not positional arguments / filenames
-        int sepIdx = args.indexOf("--");
-        if (sepIdx >= 0) {
-            for (int i = extraArgs.size() - 1; i >= 0; --i)
-                args.insert(sepIdx, extraArgs[i]);
-        } else {
-            args.append(extraArgs);
-        }
-    }
-
-    // Resolve working directory
-    QString cwd;
-#if defined(Q_OS_MACOS)
-    static const QRegularExpression appRe("^(.+\\.app)/");
-    auto match = appRe.match(execPath);
-    if (match.hasMatch()) {
-        cwd = QFileInfo(match.captured(1)).absolutePath();
-    }
-#endif
-    if (cwd.isEmpty()) {
-        cwd = QFileInfo(execPath).absolutePath();
-    }
-
-    // Create and configure process
-    delete m_process;
-    m_process = new QProcess(this);
-    m_process->setWorkingDirectory(cwd);
-    m_process->setProcessChannelMode(QProcess::MergedChannels);
-
-    connect(m_process, &QProcess::finished, this, &GameSession::onProcessFinished);
-    connect(m_process, &QProcess::errorOccurred, this, &GameSession::onProcessError);
-    connect(m_process, &QProcess::readyRead, this, &GameSession::onReadyRead);
-
-    qInfo().noquote() << "[GameSession]" << manifest.name << ":" << execPath << args.join(" ");
-    qInfo().noquote() << "[GameSession] CWD:" << cwd;
-
-    m_process->start(execPath, args);
-
-    if (!m_process->waitForStarted(5000)) {
-        emit errorOccurred("Failed to start process: " + m_process->errorString());
-        return false;
-    }
-
-    qInfo() << "[GameSession] PID:" << m_process->processId();
-    emit runningChanged();
-    emit started();
-    return true;
+    Q_UNUSED(extraArgs);
+    return startLibretro(manifest, adapter, romPath);
 }
 
 bool GameSession::startLibretro(const EmulatorManifest& manifest,
@@ -506,17 +439,13 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
 
 void GameSession::kill() {
     preShutdownRenderFence();   // no-op for non-GL paths
-    if (m_backend == Backend::Libretro && m_libretroAdapter && m_libretroAdapter->runtime())
+    if (m_libretroAdapter && m_libretroAdapter->runtime())
         m_libretroAdapter->runtime()->stop();
-    else if (m_process && m_process->state() != QProcess::NotRunning) {
-        qInfo() << "[GameSession] Killing emulator process";
-        m_process->kill();
-    }
 }
 
 void GameSession::terminate() {
     preShutdownRenderFence();   // no-op for non-GL paths
-    if (m_backend == Backend::Libretro && m_libretroAdapter && m_libretroAdapter->runtime()) {
+    if (m_libretroAdapter && m_libretroAdapter->runtime()) {
         // Save-on-quit: pause the runtime, write resume file, then stop
         const auto* mf = m_manifest;
         if (mf) {
@@ -539,14 +468,10 @@ void GameSession::terminate() {
             m_libretroAdapter->runtime()->requestSaveState(resumePath);
         }
         m_libretroAdapter->runtime()->stop();
-    } else if (m_process && m_process->state() != QProcess::NotRunning) {
-        qInfo() << "[GameSession] Terminating emulator process (SIGTERM)";
-        m_process->terminate();
     }
 }
 
 void GameSession::pauseEmulation() {
-    if (m_backend != Backend::Libretro) return;
     if (m_libretroAdapter && m_libretroAdapter->runtime())
         m_libretroAdapter->runtime()->pause();
     if (m_sdlInputManager)
@@ -554,7 +479,6 @@ void GameSession::pauseEmulation() {
 }
 
 void GameSession::resumeEmulation() {
-    if (m_backend != Backend::Libretro) return;
     if (m_libretroAdapter && m_libretroAdapter->runtime()) {
         if (m_sdlInputManager) {
             m_libretroAdapter->runtime()->setSdlInputManager(m_sdlInputManager);
@@ -583,7 +507,6 @@ QString GameSession::libretroSlotPath(int slot) const {
 }
 
 void GameSession::saveStateLibretro(int slot) {
-    if (m_backend != Backend::Libretro) return;
     if (!m_libretroAdapter || !m_libretroAdapter->runtime()) return;
     const QString path = libretroSlotPath(slot);
     if (path.isEmpty()) return;
@@ -591,7 +514,6 @@ void GameSession::saveStateLibretro(int slot) {
 }
 
 void GameSession::loadStateLibretro(int slot) {
-    if (m_backend != Backend::Libretro) return;
     if (!m_libretroAdapter || !m_libretroAdapter->runtime()) return;
     const QString path = libretroSlotPath(slot);
     if (path.isEmpty()) return;
@@ -607,7 +529,6 @@ void GameSession::setCurrentSaveSlot(int slot) {
 }
 
 bool GameSession::toggleFastForwardLibretro() {
-    if (m_backend != Backend::Libretro) return false;
     if (!m_libretroAdapter || !m_libretroAdapter->runtime()) return false;
     m_libretroFastForward = !m_libretroFastForward;
     m_libretroAdapter->runtime()->setSpeedMultiplier(m_libretroFastForward ? 2.0 : 1.0);
@@ -701,9 +622,7 @@ QObject* GameSession::videoHardware() const {
 }
 
 bool GameSession::isRunning() const {
-    if (m_backend == Backend::Libretro)
-        return m_libretroAdapter && m_libretroAdapter->runtime();
-    return m_process && m_process->state() != QProcess::NotRunning;
+    return m_libretroAdapter && m_libretroAdapter->runtime();
 }
 
 QString GameSession::detectedGameSerial() const {
@@ -713,7 +632,9 @@ QString GameSession::detectedGameSerial() const {
 }
 
 qint64 GameSession::pid() const {
-    return m_process ? m_process->processId() : -1;
+    // Process-era stub: libretro cores run in-process. Deleted together
+    // with its last consumers (AppController keystroke synthesis).
+    return -1;
 }
 
 QString GameSession::libretroAspectMode() const {
@@ -747,35 +668,4 @@ void GameSession::setLibretroAspectRatio(qreal ratio) {
     if (qFuzzyCompare(m_libretroAspectRatio, ratio)) return;
     m_libretroAspectRatio = ratio;
     emit libretroAspectRatioChanged();
-}
-
-void GameSession::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
-    bool crashed = (exitStatus == QProcess::CrashExit);
-    if (crashed) {
-        qWarning() << "[GameSession]" << m_emuId << "crashed.";
-    } else {
-        qInfo() << "[GameSession]" << m_emuId << "exited with code" << exitCode;
-    }
-    m_adapter = nullptr;
-    m_manifest = nullptr;
-    emit runningChanged();
-    emit finished(exitCode, crashed);
-}
-
-void GameSession::onProcessError(QProcess::ProcessError error) {
-    if (error == QProcess::FailedToStart) {
-        emit errorOccurred("Process failed to start: " + m_process->errorString());
-        m_adapter = nullptr;
-        m_manifest = nullptr;
-        emit runningChanged();
-    }
-}
-
-void GameSession::onReadyRead() {
-    QByteArray output = m_process->readAll();
-    for (const auto& line : output.split('\n')) {
-        if (!line.trimmed().isEmpty()) {
-            qInfo().noquote() << "  [" + m_emuId + "]" << line.trimmed();
-        }
-    }
 }

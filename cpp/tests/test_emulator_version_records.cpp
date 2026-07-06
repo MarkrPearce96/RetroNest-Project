@@ -51,8 +51,9 @@ private slots:
         QVERIFY(m_manifests.isValid());
         QVERIFY(Paths::setRoot(m_root.path()));
 
-        // Two libretro cores sharing install_folder "libretro" + one
-        // process-backend emulator with a private install folder.
+        // Two libretro cores sharing install_folder "libretro".
+        // (The process-backend fixture died with the process era — the
+        // loader rejects non-libretro manifests now.)
         writeFile(m_manifests.path() + "/corea.json", R"({
             "id":"corea","name":"Core A","systems":["sa"],"github_repo":"o/a",
             "backend":"libretro","core_dylib":"corea_libretro.dylib",
@@ -64,11 +65,6 @@ private slots:
             "backend":"libretro","core_dylib":"coreb_libretro.dylib",
             "executable":"coreb_libretro.dylib","install_folder":"libretro",
             "rom_extensions":["bin"],"launch_args":[]
-        })");
-        writeFile(m_manifests.path() + "/proc.json", R"({
-            "id":"proc","name":"Proc","systems":["sp"],"github_repo":"o/p",
-            "backend":"process","executable":"Proc.app",
-            "install_folder":"proc","rom_extensions":["bin"],"launch_args":[]
         })");
         QVERIFY(m_loader.loadAll(m_manifests.path()));
     }
@@ -150,17 +146,6 @@ private slots:
         QVERIFY(svc.installedAt("coreb").isEmpty());
     }
 
-    void testProcessBackendKeepsSharedVersionJson() {
-        EmulatorService svc(&m_loader);
-        svc.saveVersion("proc", "p1.2", "2026-05-05T00:00:00Z");
-
-        const QString path = m_root.path() + "/emulators/proc/.version.json";
-        QVERIFY(QFile::exists(path));
-        QCOMPARE(readJson(path).value("version").toString(), QString("p1.2"));
-        QCOMPARE(svc.installedVersion("proc"), QString("p1.2"));
-        // No sidecar concept for process emulators.
-        QVERIFY(!QFile::exists(m_root.path() + "/emulators/proc/cores"));
-    }
 };
 
 QTEST_MAIN(TestEmulatorVersionRecords)

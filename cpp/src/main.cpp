@@ -53,8 +53,8 @@ int main(int argc, char* argv[]) {
     QCommandLineParser parser;
     parser.addHelpOption();
     parser.addOption({"install", "Install an emulator by manifest id", "id"});
-    parser.addOption({"launch", "Launch an emulator by manifest id", "id"});
-    parser.addOption({"rom", "ROM path for --launch", "path"});
+    parser.addOption({"launch", "(retired) emulators launch from the GUI app", "id"});
+    parser.addOption({"rom", "(retired) was the ROM path for --launch", "path"});
     parser.addOption({"root", "Root directory for managed data", "path"});
     parser.addOption({"cli", "Run in CLI mode (no window)"});
     parser.process(app);
@@ -368,78 +368,13 @@ static int runCli(QCoreApplication& /*app*/, QCommandLineParser& parser, Manifes
     }
 
     if (parser.isSet("launch")) {
-        const QString emuId = parser.value("launch");
-        const QString romPath = parser.value("rom");
-
-        if (romPath.isEmpty()) { qCritical() << "Usage: --launch <id> --rom <path>"; return 1; }
-
-        const EmulatorManifest* manifest = loader.emulatorById(emuId);
-        if (!manifest) { qCritical() << "Unknown emulator id:" << emuId; return 1; }
-
-        auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-        if (!adapter) { qCritical() << "No adapter for:" << emuId; return 1; }
-
-        if (!QFileInfo::exists(romPath)) { qCritical() << "ROM not found:" << romPath; return 1; }
-
-        const QString installPath = Paths::emulatorsDir(manifest->install_folder);
-        const QString execPath = QFileInfo(adapter->resolveExecutable(*manifest, installPath)).absoluteFilePath();
-        if (!QFileInfo::exists(execPath)) {
-            qCritical() << manifest->name << "not installed. Executable not found:" << execPath;
-            return 1;
-        }
-
-        const QString systemId = Paths::systemIdFor(manifest->id, manifest->systems);
-        const QString biosPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
-        const QString dataPath = QFileInfo(Paths::emulatorDataDir(emuId, systemId)).absoluteFilePath();
-        QDir().mkpath(dataPath);
-        if (!adapter->ensureConfig(*manifest, biosPath, dataPath))
-            qWarning() << "[CLI] Config creation/patching failed for" << manifest->name;
-
-        QStringList args = adapter->buildLaunchArgs(*manifest, romPath);
-
-        QString cwd;
-#if defined(Q_OS_MACOS)
-        static const QRegularExpression appRe("^(.+\\.app)/");
-        auto match = appRe.match(execPath);
-        if (match.hasMatch())
-            cwd = QFileInfo(match.captured(1)).absolutePath();
-#endif
-        if (cwd.isEmpty())
-            cwd = QFileInfo(execPath).absolutePath();
-
-        qInfo() << "\n=== Launching" << manifest->name << "===";
-        qInfo().noquote() << execPath << args.join(" ");
-
-        QProcess proc;
-        proc.setWorkingDirectory(cwd);
-        proc.setProcessChannelMode(QProcess::MergedChannels);
-        proc.start(execPath, args);
-
-        if (!proc.waitForStarted(5000)) {
-            qCritical() << "Failed to start process:" << proc.errorString();
-            return 1;
-        }
-        qInfo() << "[CLI] PID:" << proc.processId();
-
-        while (proc.state() != QProcess::NotRunning) {
-            proc.waitForReadyRead(1000);
-            QByteArray out = proc.readAll();
-            if (!out.isEmpty()) {
-                for (const auto& line : out.split('\n'))
-                    if (!line.trimmed().isEmpty())
-                        qInfo().noquote() << "  [" + emuId + "]" << line.trimmed();
-            }
-        }
-        QByteArray remaining = proc.readAll();
-        for (const auto& line : remaining.split('\n'))
-            if (!line.trimmed().isEmpty())
-                qInfo().noquote() << "  [" + emuId + "]" << line.trimmed();
-
-        if (proc.exitStatus() == QProcess::CrashExit) {
-            qCritical() << manifest->name << "crashed.";
-            return 1;
-        }
-        return proc.exitCode();
+        // Process-era retirement (2026-07): direct-launching an emulator
+        // binary from the CLI is gone — every emulator is an in-process
+        // libretro core that needs the GUI app's render/input/session
+        // plumbing. Launch games from the app.
+        qCritical() << "--launch was retired: all emulators are in-process libretro"
+                       " cores; launch games from the RetroNest app.";
+        return 1;
     }
 
     return 0;

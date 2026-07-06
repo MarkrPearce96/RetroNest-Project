@@ -4,7 +4,6 @@
 #include <QImage>
 #include <QObject>
 #include <QPointer>
-#include <QProcess>
 #include <QString>
 #include <QVariantMap>
 
@@ -78,7 +77,7 @@ public:
     qint64 pid() const;
 
     /** True when the running game uses the libretro (in-process) backend. */
-    bool isLibretro() const { return m_backend == Backend::Libretro; }
+    bool isLibretro() const { return true; }  // every session is libretro (process era retired)
 
     /** Current aspect mode from the libretro frontend settings store.
      *  Returns "native" when no libretro game is running or no store. */
@@ -200,19 +199,7 @@ signals:
      *  contract. */
     void raIndicator(int kind, const QVariantMap& data);
 
-private slots:
-    void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
-    void onProcessError(QProcess::ProcessError error);
-    void onReadyRead();
-
 private:
-    enum class Backend { Process, Libretro };
-    Backend m_backend = Backend::Process;
-
-    bool startProcess(const EmulatorManifest& manifest,
-                      EmulatorAdapter* adapter,
-                      const QString& romPath,
-                      const QStringList& extraArgs);
     bool startLibretro(const EmulatorManifest& manifest,
                        EmulatorAdapter* adapter,
                        const QString& romPath);
@@ -228,7 +215,6 @@ private:
      *  backends or when no glItem is registered. */
     void preShutdownRenderFence();
 
-    QProcess* m_process = nullptr;
     EmulatorAdapter* m_adapter = nullptr;
     const EmulatorManifest* m_manifest = nullptr;
     QString m_emuId;
