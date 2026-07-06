@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import "EmulatorLogos.js" as EmulatorLogos
 
 FocusScope {
     id: root
@@ -51,7 +50,7 @@ FocusScope {
                     Image {
                         id: logoImg
                         anchors.fill: parent
-                        source: EmulatorLogos.logoForEmu(modelData.id)
+                        source: modelData.logo || ""
                         fillMode: Image.PreserveAspectCrop
                         smooth: true
                         mipmap: true
@@ -69,14 +68,14 @@ FocusScope {
                         anchors.fill: parent
                         source: logoImg
                         maskSource: logoMask
-                        visible: EmulatorLogos.logoForEmu(modelData.id) !== ""
+                        visible: (modelData.logo || "") !== ""
                     }
 
                     Text {
                         anchors.centerIn: parent
                         text: "\uD83C\uDFAE"
                         font.pixelSize: 32
-                        visible: EmulatorLogos.logoForEmu(modelData.id) === ""
+                        visible: (modelData.logo || "") === ""
                     }
                 }
 

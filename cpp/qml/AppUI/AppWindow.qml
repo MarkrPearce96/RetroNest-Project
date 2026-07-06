@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtMultimedia
-import "EmulatorLogos.js" as EmulatorLogos
 
 ApplicationWindow {
     id: window
@@ -602,7 +601,7 @@ ApplicationWindow {
             updateProgressPopup.progressValue = -1
             updateProgressPopup.progressText = "Please wait..."
             updateProgressPopup.accentColor = Theme.accent
-            updateProgressPopup.logoSource = EmulatorLogos.logoForEmu(emuId)
+            updateProgressPopup.logoSource = app.emulatorLogo(emuId)
             updateProgressPopup.showCloseButton = false
             updateProgressPopup.emuId = emuId
             updateProgressPopup.open()

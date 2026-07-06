@@ -73,6 +73,7 @@ add_library(retronest_core STATIC
     src/core/manifest_loader.cpp
     src/core/paths.cpp
     src/core/system_registry.cpp
+    src/core/detail_actions.cpp
     src/core/sfo_parser.cpp
     src/core/ini_file.cpp
     src/core/path_overrides_store.cpp
@@ -476,7 +477,6 @@ qt_add_qml_module(appui_backing
         qml/AppUI/AllGamesPage.qml
         qml/AppUI/RecentlyPlayedPage.qml
         qml/AppUI/EmulationView.qml
-        qml/AppUI/EmulatorLogos.js
     SOURCES
         src/ui/libretro/libretro_video_item.h
         src/ui/libretro/libretro_metal_item.h
@@ -661,6 +661,11 @@ add_test(NAME DeclaredOptions COMMAND test_declared_options)
 add_executable(test_system_registry tests/test_system_registry.cpp)
 target_link_libraries(test_system_registry PRIVATE retronest_core Qt6::Test)
 add_test(NAME SystemRegistry COMMAND test_system_registry)
+
+# Packet 7 Stage 3: manifest-driven detail-page ACTIONS row model.
+add_executable(test_detail_actions tests/test_detail_actions.cpp)
+target_link_libraries(test_detail_actions PRIVATE retronest_core Qt6::Test)
+add_test(NAME DetailActions COMMAND test_detail_actions)
 
 # Packet 7 Stage 2: offline sidecar seeding (probes the fake core dylib).
 add_executable(test_core_prober tests/test_core_prober.cpp)

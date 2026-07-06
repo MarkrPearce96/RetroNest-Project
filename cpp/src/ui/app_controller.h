@@ -179,6 +179,10 @@ public slots:
     // Cursor visibility (for settings overlay)
     Q_INVOKABLE void setCursorVisible(bool visible);
 
+    /** Manifest logo (qrc path) for popups that only carry an emuId
+     *  (e.g. AppWindow's update popup). Empty when unknown/absent. */
+    Q_INVOKABLE QString emulatorLogo(const QString& emuId) const;
+
     // Hotkeys (per-emulator)
     Q_INVOKABLE QVariantList hotkeyBindings(const QString& emuId) const;
     Q_INVOKABLE bool hasHotkeys(const QString& emuId) const;

@@ -2,6 +2,7 @@
 #include "services/patches_installer.h"
 #include "adapters/adapter_registry.h"
 #include "adapters/libretro/libretro_adapter.h"
+#include "core/detail_actions.h"
 #include "core/macos_fullscreen.h"
 #include "core/paths.h"
 #include "core/scraper.h"
@@ -506,6 +507,11 @@ QVariantList AppController::allEmulatorStatus() const {
         item["biosDetected"] = biosDetected;
         item["version"] = m_emuService.installedVersion(emu.id);
 
+        // Packet 7 stage 3: manifest-driven UI capabilities.
+        item["logo"] = emu.logo;
+        item["detailActions"] = detailActionRows(emu, item["installed"].toBool(),
+                                                 hasHotkeys(emu.id));
+
         list.append(item);
     }
     return list;
@@ -703,6 +709,11 @@ void AppController::setCursorVisible(bool visible) {
     } else {
         QGuiApplication::setOverrideCursor(Qt::BlankCursor);
     }
+}
+
+QString AppController::emulatorLogo(const QString& emuId) const {
+    const EmulatorManifest* m = m_loader->emulatorById(emuId);
+    return m ? m->logo : QString();
 }
 
 QVariantList AppController::hotkeyBindings(const QString& emuId) const { return m_hotkeyService.hotkeyBindings(emuId); }

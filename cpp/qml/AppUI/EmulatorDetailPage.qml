@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import "EmulatorLogos.js" as EmulatorLogos
 
 Item {
     id: root
@@ -25,17 +24,16 @@ Item {
     property bool biosButtonVisible: root.emuInfo.installed && root.emuInfo.biosRequired && !root.emuInfo.biosDetected
     // Action buttons start after BIOS button (if visible)
     property int actionOffset: biosButtonVisible ? 1 : 0
-    // Whether the "Hotkeys" entry point is shown for this emulator
-    property bool hotkeysButtonVisible: app.hasHotkeys(root.emuId)
-    // Whether the PCSX2-specific "Refresh PCSX2 Patches" action is shown.
-    property bool patchesRefreshVisible: root.emuId === "pcsx2"
+    // Manifest-driven ACTIONS row model (packet 7 stage 3) — built by
+    // AppController::allEmulatorStatus via detailActionRows(). Empty when
+    // the emulator is not installed.
+    property var detailActions: root.emuInfo.detailActions !== undefined
+                                ? root.emuInfo.detailActions : []
 
     // ── Keyboard / controller navigation ────────────────────────────────
     Keys.onPressed: function(event) {
-        var baseRows = root.emuId === "dolphin" ? 7 : 6
-        var actionRows = baseRows - (hotkeysButtonVisible ? 0 : 1)
-                                  + (patchesRefreshVisible ? 1 : 0)
-        var maxIndex = root.emuInfo.installed ? (actionOffset + actionRows - 1) : 0
+        var maxIndex = root.emuInfo.installed
+                     ? (actionOffset + detailActions.length - 1) : 0
 
         if (event.key === Qt.Key_Up) {
             root.focusIndex = Math.max(0, root.focusIndex - 1)
@@ -62,37 +60,20 @@ Item {
             app.openBiosFolder()
             return
         }
-        var idx = root.focusIndex - actionOffset
-        // Index of the (possibly hidden) Hotkeys slot in this emulator's chain
-        var hotkeySlot = root.emuId === "dolphin" ? 3 : 2
-        // When the Hotkeys button is hidden, indices >= hotkeySlot shift down by 1
-        if (!hotkeysButtonVisible && idx >= hotkeySlot) idx += 1
-        // PCSX2 patches button slot (after Hotkeys if both shown; after Controller
-        // Mapping if Hotkeys hidden). When the patches button is HIDDEN (any non-PCSX2
-        // emulator), indices >= patchesSlot shift down by 1.
-        var patchesSlot = (root.emuId === "dolphin" ? 4 : 3)
-        if (!patchesRefreshVisible && idx >= patchesSlot) idx += 1
-        if (root.emuId === "dolphin") {
-            switch (idx) {
-            case 0: app.showEmulatorSettings(root.emuId); break
-            case 1: app.showControllerMapping(root.emuId, "GCPad1"); break
-            case 2: app.showControllerMapping(root.emuId, "Wiimote1"); break
-            case 3: if (hotkeysButtonVisible) app.showHotkeySettings(root.emuId); break
-            case 4: /* patches slot — never visible for dolphin */ break
-            case 5: root.beginInstall(); break
-            case 6: resetDialog.open(); break
-            case 7: uninstallDialog.open(); break
-            }
-        } else {
-            switch (idx) {
-            case 0: app.showEmulatorSettings(root.emuId); break
-            case 1: app.showControllerMapping(root.emuId); break
-            case 2: if (hotkeysButtonVisible) app.showHotkeySettings(root.emuId); break
-            case 3: if (patchesRefreshVisible) app.refreshPcsx2Patches(); break
-            case 4: root.beginInstall(); break
-            case 5: resetDialog.open(); break
-            case 6: uninstallDialog.open(); break
-            }
+        runAction(detailActions[root.focusIndex - actionOffset])
+    }
+
+    function runAction(a) {
+        if (!a) return
+        switch (a.action) {
+        case "settings":   app.showEmulatorSettings(root.emuId); break
+        case "controller": if (a.controllerType) app.showControllerMapping(root.emuId, a.controllerType)
+                           else app.showControllerMapping(root.emuId); break
+        case "hotkeys":    app.showHotkeySettings(root.emuId); break
+        case "patches":    app.refreshPcsx2Patches(); break
+        case "reinstall":  root.beginInstall(); break
+        case "reset":      resetDialog.open(); break
+        case "uninstall":  uninstallDialog.open(); break
         }
     }
 
@@ -103,7 +84,7 @@ Item {
         progressPopup.progressValue = -1
         progressPopup.progressText = "Please wait..."
         progressPopup.accentColor = SettingsTheme.accent
-        progressPopup.logoSource = EmulatorLogos.logoForEmu(root.emuId)
+        progressPopup.logoSource = root.emuInfo.logo !== undefined ? root.emuInfo.logo : ""
         progressPopup.showCloseButton = false
         progressPopup.open()
         app.installEmulator(root.emuId)
@@ -245,7 +226,7 @@ Item {
                         anchors.centerIn: parent
                         width: parent.width - 16
                         height: parent.height - 16
-                        source: EmulatorLogos.logoForEmu(root.emuId)
+                        source: root.emuInfo.logo !== undefined ? root.emuInfo.logo : ""
                         fillMode: Image.PreserveAspectFit
                         smooth: true
                         mipmap: true
@@ -369,92 +350,27 @@ Item {
                     Layout.bottomMargin: 20
                     spacing: 6
 
-                    DetailButton {
-                        label: "Emulator Settings"
-                        bgColor: SettingsTheme.accent
-                        textColor: SettingsTheme.background
-                        isFocused: root.focusIndex === root.actionOffset + 0
-                        onClicked: app.showEmulatorSettings(root.emuId)
-                    }
-
-                    DetailButton {
-                        visible: root.emuId !== "dolphin"
-                        label: "Controller Mapping"
-                        bgColor: SettingsTheme.card
-                        textColor: SettingsTheme.text
-                        isFocused: root.focusIndex === root.actionOffset + 1
-                        onClicked: app.showControllerMapping(root.emuId)
-                    }
-
-                    DetailButton {
-                        visible: root.emuId === "dolphin"
-                        label: "GameCube Controller"
-                        bgColor: SettingsTheme.card
-                        textColor: SettingsTheme.text
-                        isFocused: root.focusIndex === root.actionOffset + 1
-                        onClicked: app.showControllerMapping(root.emuId, "GCPad1")
-                    }
-
-                    DetailButton {
-                        visible: root.emuId === "dolphin"
-                        label: "Wii Classic Controller"
-                        bgColor: SettingsTheme.card
-                        textColor: SettingsTheme.text
-                        isFocused: root.focusIndex === root.actionOffset + 2
-                        onClicked: app.showControllerMapping(root.emuId, "Wiimote1")
-                    }
-
-                    DetailButton {
-                        visible: root.hotkeysButtonVisible
-                        label: "Hotkeys"
-                        bgColor: SettingsTheme.card
-                        textColor: SettingsTheme.text
-                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 3 : 2)
-                        onClicked: app.showHotkeySettings(root.emuId)
-                    }
-
-                    DetailButton {
-                        visible: root.patchesRefreshVisible
-                        label: "Refresh PCSX2 Patches"
-                        bgColor: SettingsTheme.card
-                        textColor: SettingsTheme.text
-                        isFocused: root.focusIndex === root.actionOffset + (root.emuId === "dolphin" ? 4 : 3) - (root.hotkeysButtonVisible ? 0 : 1)
-                        onClicked: app.refreshPcsx2Patches()
-                    }
-
-                    // After-Hotkeys buttons shift up by 1 when Hotkeys is hidden;
-                    // shift down by 1 when patchesRefreshVisible.
-                    DetailButton {
-                        label: "Reinstall / Update"
-                        bgColor: SettingsTheme.accentDim
-                        textColor: SettingsTheme.accent
-                        isFocused: root.focusIndex === root.actionOffset
-                                   + (root.emuId === "dolphin" ? 4 : 3)
-                                   - (root.hotkeysButtonVisible ? 0 : 1)
-                                   + (root.patchesRefreshVisible ? 1 : 0)
-                        onClicked: root.beginInstall()
-                    }
-
-                    DetailButton {
-                        label: "Reset Configuration"
-                        bgColor: SettingsTheme.card
-                        textColor: SettingsTheme.text
-                        isFocused: root.focusIndex === root.actionOffset
-                                   + (root.emuId === "dolphin" ? 5 : 4)
-                                   - (root.hotkeysButtonVisible ? 0 : 1)
-                                   + (root.patchesRefreshVisible ? 1 : 0)
-                        onClicked: resetDialog.open()
-                    }
-
-                    DetailButton {
-                        label: "Uninstall"
-                        bgColor: SettingsTheme.errorDim
-                        textColor: SettingsTheme.error
-                        isFocused: root.focusIndex === root.actionOffset
-                                   + (root.emuId === "dolphin" ? 6 : 5)
-                                   - (root.hotkeysButtonVisible ? 0 : 1)
-                                   + (root.patchesRefreshVisible ? 1 : 0)
-                        onClicked: uninstallDialog.open()
+                    // Manifest-driven row model (packet 7 stage 3): one
+                    // Repeater, index-based focus — no per-emulator
+                    // branching or slot arithmetic. Colors switch on the
+                    // action kind (presentation only).
+                    Repeater {
+                        model: root.detailActions
+                        DetailButton {
+                            required property var modelData
+                            required property int index
+                            label: modelData.label
+                            bgColor: modelData.action === "settings"  ? SettingsTheme.accent
+                                   : modelData.action === "reinstall" ? SettingsTheme.accentDim
+                                   : modelData.action === "uninstall" ? SettingsTheme.errorDim
+                                   : SettingsTheme.card
+                            textColor: modelData.action === "settings"  ? SettingsTheme.background
+                                     : modelData.action === "reinstall" ? SettingsTheme.accent
+                                     : modelData.action === "uninstall" ? SettingsTheme.error
+                                     : SettingsTheme.text
+                            isFocused: root.focusIndex === root.actionOffset + index
+                            onClicked: root.runAction(modelData)
+                        }
                     }
                 }
             }
@@ -830,7 +746,7 @@ Item {
                         progressPopup.progressValue = -1
                         progressPopup.progressText = ""
                         progressPopup.accentColor = SettingsTheme.error
-                        progressPopup.logoSource = EmulatorLogos.logoForEmu(root.emuId)
+                        progressPopup.logoSource = root.emuInfo.logo !== undefined ? root.emuInfo.logo : ""
                         progressPopup.showCloseButton = false
                         progressPopup.open()
                         app.uninstallEmulator(root.emuId)
