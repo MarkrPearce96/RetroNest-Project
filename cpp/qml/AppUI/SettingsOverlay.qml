@@ -158,6 +158,10 @@ FocusScope {
         MouseArea {
             anchors.fill: parent
             onClicked: overlay.close()
+            // Swallow scroll too — wheel/two-finger-swipe events fall
+            // through bare MouseAreas and were still driving the system
+            // carousel behind the open overlay.
+            onWheel: (wheel) => { wheel.accepted = true }
         }
     }
 
@@ -210,8 +214,12 @@ FocusScope {
             color: SettingsTheme.border
         }
 
-        // Prevent click-through
-        MouseArea { anchors.fill: parent }
+        // Prevent click-through and scroll-through (unhandled wheel over
+        // the panel would otherwise reach the page beneath the overlay).
+        MouseArea {
+            anchors.fill: parent
+            onWheel: (wheel) => { wheel.accepted = true }
+        }
 
         ColumnLayout {
             anchors.fill: parent

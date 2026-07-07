@@ -24,6 +24,9 @@ Item {
         MouseArea {
             anchors.fill: parent
             onClicked: { if (root.closeOnScrimClick) root.closeRequested() }
+            // Modal scrims must swallow scroll too, or two-finger swipes
+            // keep driving the page beneath the modal.
+            onWheel: (wheel) => { wheel.accepted = true }
         }
     }
 

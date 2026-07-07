@@ -468,7 +468,11 @@ ApplicationWindow {
         Rectangle {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.7)
-            MouseArea { anchors.fill: parent }
+            // Scrim swallows clicks AND scroll (see BaseModalCard).
+            MouseArea {
+                anchors.fill: parent
+                onWheel: (wheel) => { wheel.accepted = true }
+            }
         }
 
         Rectangle {
@@ -652,7 +656,11 @@ ApplicationWindow {
         Rectangle {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.7)
-            MouseArea { anchors.fill: parent }
+            // Scrim swallows clicks AND scroll (see BaseModalCard).
+            MouseArea {
+                anchors.fill: parent
+                onWheel: (wheel) => { wheel.accepted = true }
+            }
         }
 
         Rectangle {
