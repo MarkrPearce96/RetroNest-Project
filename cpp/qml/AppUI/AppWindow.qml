@@ -875,11 +875,10 @@ ApplicationWindow {
     // mainStack.depth > 1 → navigateBack() branch (regression fix).
     function handleBack() {
         if (app.gameRunning) {
-            // Shortcut fires when this app has focus — i.e. the
-            // libretro path. Resume the core when closing the menu;
-            // pause it when opening. (External-emulator path is
-            // handled via the panel + Cmd+Shift+Esc Carbon hotkey,
-            // not this Shortcut.)
+            // Resume the core when closing the menu; pause it when
+            // opening. (This Shortcut serves the in-scene menu path;
+            // HW-render sessions route via the hotkey matcher's
+            // Esc=ToggleMenu → toggleInGameMenu instead.)
             if (inGameMenu.visible) {
                 if (app.gameSession) app.gameSession.resumeEmulation();
                 inGameMenu.close();

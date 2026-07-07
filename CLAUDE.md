@@ -199,6 +199,59 @@ All directories derive from a single user-chosen root:
 
 **Portable mode is inherent for libretro cores:** every shipped emulator is a libretro core that receives its data directories from RetroNest via `retro_environment` callbacks (`GET_SAVE_DIRECTORY`, `GET_SYSTEM_DIRECTORY`, private `GET_*_DIR` overrides) — no on-disk portable-mode marker exists or is needed. The `portable.txt` / `NSUserDefaults` mechanisms described in older notes were for standalone process-backend emulators, none of which ship today.
 
+## App Shell (startup, windows, navigation)
+
+**Startup flow (`main.cpp`):** manifests + `SystemRegistry` load → adapters
+registered → first-run check. On first run (no saved root) a **separate QML
+engine** runs the `SetupWizard` module in a nested event loop; when the
+wizard accepts, that engine is torn down and startup continues. Then
+`Paths::setRoot` + directory creation → patches auto-fetch → Database →
+services/`AppController`/`GameSession`/`ThemeContext` → the main AppUI
+engine loads `AppWindow`.
+
+**Window inventory:**
+- **Main window** (`AppWindow.qml`) — borderless frameless
+  `ApplicationWindow`, manually sized to the screen. Deliberately NOT
+  native macOS fullscreen (keeps the menu bar / traffic lights away).
+- **`LibretroOverlayPanel`** — transparent QQuickWindow above the main
+  window while a HW-render core runs (in-game menu + RA toasts +
+  indicator bar + FF chips); its native window is panel-configured
+  (isa-swizzled NSPanel) so it can take key input over the game view.
+- **Qt Widgets top-levels**: `GenericEmulatorSettingsDialog` (settings
+  hub + pages), `HotkeySettingsDialog`, `ControllerMappingPage` (QDialog).
+- **SetupWizard window** (first run only, own engine).
+
+**Navigation** — one `StackView` (`mainStack`) in AppWindow:
+- `EmptyStatePage` (no games) ↔ theme `systemBrowser` (root) → theme
+  `gameList` (via `ThemeContext.navigateToSystemRequested`) →
+  `EmulationView`.
+- `EmulationView` is pushed on `gameStartingLibretro` **before**
+  `retro_load_game` runs — load-bearing ordering: `LibretroMetalItem`
+  must realize its NSView so `registerHardwareView()` answers the core's
+  `GET_MACOS_NSVIEW` spin-wait. Popped on `gameFinished`.
+- Theme switch clears the stack and re-pushes the theme's root page.
+- **SettingsOverlay** is a slide-over inside the main window (NOT on the
+  stack) with its own sub-page history (`canGoBack`/`goBack`).
+- **Back/Esc contract** = `AppWindow.handleBack()` priority order: game
+  running → toggle the in-scene menu; settings overlay visible →
+  cancel-busy / goBack / close; `mainStack.depth > 1` →
+  `themeContext.navigateBack()`; else open the settings overlay.
+
+**Modal & input gating:** the canonical policy table (which modals
+suppress the libretro hotkey matcher, which gate the Esc shortcut, and
+why) lives as the comment block above the `libretroHotkeysSuppressed`
+Binding in `AppWindow.qml` — extend that table when adding a modal.
+Current modals: GameActionPopup, ResumeStateDialog, RA login prompt,
+update confirm/progress, virtual keyboard.
+
+**QML ↔ Widgets split:** shell, themes, and game surfaces are QML (AppUI
+module); dense settings forms are Qt Widgets (the schema-driven
+`GenericSettingsPage` pipeline). `AppController` is the single QML-facing
+hub (invokables + signals); `ThemeContext` is the only API themes see.
+Known deliberate seams: `AppController` is the app's god object, and
+`game_session.cpp` compiles app-side (not in `retronest_core`) because of
+its `LibretroGLItem` dependency — both on the backlog since packet 5.
+
 ## Theme System
 - Fullscreen UI — themes own the entire window, settings via Escape/Start modal overlay
 - **ThemeContext** is the only API themes use — never access `app` directly
