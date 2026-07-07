@@ -229,7 +229,12 @@ engine loads `AppWindow`.
   `retro_load_game` runs — load-bearing ordering: `LibretroMetalItem`
   must realize its NSView so `registerHardwareView()` answers the core's
   `GET_MACOS_NSVIEW` spin-wait. Popped on `gameFinished`.
-- Theme switch clears the stack and re-pushes the theme's root page.
+- Every stack clear+repush goes through `AppWindow.resetStackToRoot()`
+  (theme switch, empty-state ↔ theme transitions, initial load). It
+  DEFERS while a game runs — clearing would destroy the live
+  EmulationView and yank the NSView from the running core — and falls
+  back to `EmptyStatePage` if the theme fails to resolve. Never call
+  `mainStack.clear()` directly.
 - **SettingsOverlay** is a slide-over inside the main window (NOT on the
   stack) with its own sub-page history (`canGoBack`/`goBack`).
 - **Back/Esc contract** = `AppWindow.handleBack()` priority order:
@@ -238,12 +243,16 @@ engine loads `AppWindow`.
   in-scene menu for SW-render); `mainStack.depth > 1` →
   `themeContext.navigateBack()`; else open the settings overlay.
 
-**Modal & input gating:** the canonical policy table (which modals
-suppress the libretro hotkey matcher, which gate the Esc shortcut, and
-why) lives as the comment block above the `libretroHotkeysSuppressed`
-Binding in `AppWindow.qml` — extend that table when adding a modal.
-Current modals: GameActionPopup, ResumeStateDialog, RA login prompt,
-update confirm/progress, virtual keyboard.
+**Modal & input gating:** single-sourced in `AppWindow.qml` — three
+derived window properties (`anyModalVisible`, `anyEscOwningModalVisible`,
+`cursorNeeded`) own the policy; every gate (matcher Binding, Esc/Back/M
+Shortcuts, ButtonHints, Start-button Connections) and the one cursor
+toggler read them. The canonical policy table lives as the comment block
+above those properties. Adding a modal = add its flag to the matching
+properties + document its table row; never write a private OR list or
+call `setCursorVisible` from a modal. Current modals: GameActionPopup,
+ResumeStateDialog, RA login prompt, update confirm/progress, virtual
+keyboard.
 
 **QML ↔ Widgets split:** shell, themes, and game surfaces are QML (AppUI
 module); dense settings forms are Qt Widgets (the schema-driven
