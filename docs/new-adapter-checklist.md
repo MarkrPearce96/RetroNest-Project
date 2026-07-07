@@ -138,7 +138,12 @@ Everything below predates the libretro migration. It matters when a row
 uses `Storage::Ini` (no shipped adapter today) or when auditing a fork's
 CoreOptions source for round-trip quality; the SettingDef toolbox
 (dependsOn DSL, transforms, bitmask) is still the live mechanism set used
-by overlays and extraSettings.
+by overlays and extraSettings. NOTE: the process-era retirement (2026-07)
+DELETED much of the machinery referenced below (`openNativeEmulatorSettings`,
+the QProcess launch path, `patchIniKeys`/INI-patching helpers,
+`formatBinding` overrides beyond the base) — where this text says a helper
+"exists" or "is used", read it as historical; recover implementations from
+git history, don't expect them in the tree.
 
 ## Investigating an Emulator Before Writing the Adapter
 
