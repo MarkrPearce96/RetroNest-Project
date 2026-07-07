@@ -132,6 +132,8 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     // spin-wait below times out even though QML did its job.
     lr->prepareRuntime();
     auto* rt = lr->runtime();
+    if (rt)
+        rt->setHotkeyMatcher(m_hotkeyMatcher);
 
     // SP3 ordering fix: announce the libretro launch BEFORE we call rt->start
     // (which dlopens the core and runs retro_load_game → AcquireRenderWindow).
@@ -467,6 +469,14 @@ void GameSession::terminate() {
         }
         m_libretroAdapter->runtime()->stop();
     }
+}
+
+void GameSession::setHotkeyMatcher(HotkeyMatcher* matcher) {
+    m_hotkeyMatcher = matcher;
+    // Forward to a live runtime immediately so clearing (nullptr at app
+    // teardown) takes effect without waiting for the next session start.
+    if (m_libretroAdapter && m_libretroAdapter->runtime())
+        m_libretroAdapter->runtime()->setHotkeyMatcher(matcher);
 }
 
 void GameSession::pauseEmulation() {

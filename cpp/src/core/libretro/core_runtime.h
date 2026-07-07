@@ -17,6 +17,7 @@
 #include <memory>
 #include <mutex>
 
+class HotkeyMatcher;
 class SdlInputManager;
 class VideoHardwareGL;
 
@@ -154,6 +155,19 @@ public:
     SdlInputManager* sdlInputManager() const { return m_sdlInput; }
 
     /**
+     * Explicit injection of the host hotkey matcher (may be nullptr).
+     * The input trampoline consults it on the WORKER thread to mask
+     * buttons currently acting as the modifier of a matched hotkey
+     * combo from the core's view of the gamepad. Injected by
+     * GameSession at session start (which gets it from
+     * LibretroHotkeyController via AppController) — replaces the old
+     * hidden HotkeyMatcher::s_active static.
+     */
+    void setHotkeyMatcher(HotkeyMatcher* matcher) {
+        m_hotkeyMatcher.store(matcher, std::memory_order_relaxed);
+    }
+
+    /**
      * Install a libretro hardware render context. Called from the env
      * handler when the core requests RETRO_ENVIRONMENT_SET_HW_RENDER.
      * Returns true if the request was honoured; false if we can't grant
@@ -193,6 +207,7 @@ signals:
 
 private:
     SdlInputManager* m_sdlInput = nullptr;
+    std::atomic<HotkeyMatcher*> m_hotkeyMatcher{nullptr};
 
     static EnvironmentContext* tlsCtx();
     static bool envTrampoline(unsigned cmd, void* data);

@@ -1,4 +1,5 @@
 #include "hotkey_settings_dialog.h"
+#include "core/libretro/libretro_hotkey_controller.h"
 #include "core/libretro/libretro_hotkey_defs.h"
 #include "ui/settings/generic_hotkey_page.h"
 #include "ui/settings/settings_dialog_theme.h"
@@ -10,12 +11,28 @@
 #include <QShowEvent>
 #include <QTimer>
 
+HotkeySettingsDialog::~HotkeySettingsDialog() {
+    if (m_suppressedHotkeys)
+        m_suppressedHotkeys->releaseSuppression();
+}
+
 HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
                                             AppController* appController,
                                             const QString& emuId,
                                             QWidget* parent)
     : EmulatorSettingsDialogBase(appController, emuId, parent),
       m_inputManager(inputManager) {
+    // Hold a suppression refcount on the libretro hotkey engine for this
+    // dialog's whole lifetime: while the user captures a binding here,
+    // the matcher must never fire the very action being bound. This is
+    // structural (review R3) — it no longer relies on the dialog only
+    // ever being opened via the settings overlay keeping the QML
+    // suppression Binding asserted.
+    if (appController && appController->libretroHotkeys()) {
+        m_suppressedHotkeys = appController->libretroHotkeys();
+        m_suppressedHotkeys->acquireSuppression();
+    }
+
     setupChrome(QStringLiteral("Hotkey Settings"),
                 QSize(900, 720),
                 SettingsDialogTheme::windowBg());

@@ -9,9 +9,7 @@
 #include "in_game_menu_controller.h"
 #include "core/sdl_input_manager.h"
 #include "core/libretro/libretro_hotkey_defs.h"
-#include "core/libretro/hotkey_matcher.h"
-#include "core/libretro/hotkey_dispatcher.h"
-#include "core/libretro/audio_sink.h"
+#include "core/libretro/libretro_hotkey_controller.h"
 #include <QCoreApplication>
 #include <QApplication>
 #include <QKeyEvent>
@@ -164,103 +162,27 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     connect(&m_raService, &RAService::indicator,
             this, &AppController::raIndicator);
 
-    // ── Libretro global hotkeys (Task 9) ──────────────────────
-    // Matcher + dispatcher are owned here (not in CoreRuntime) because
-    // libretro hotkeys are app-global. Callbacks route through the
-    // currently-active GameSession, so they harmlessly no-op when no
-    // libretro game is running (gs->adapter() returns nullptr or a
-    // non-LibretroAdapter for process emulators).
-    m_hotkeyMatcher = std::make_unique<HotkeyMatcher>();
-    HotkeyMatcher::s_active.store(m_hotkeyMatcher.get());
+    // ── Libretro global hotkeys ───────────────────────────────
+    // The whole engine (matcher + dispatcher + qApp key filter +
+    // suppression + binding sync) lives in LibretroHotkeyController;
+    // AppController supplies the session provider + the Qt-modal-widget
+    // suppression check, and forwards the controller's signals to QML.
+    m_libretroHotkeys = std::make_unique<LibretroHotkeyController>(
+        [this]() -> GameSession* { return m_gameService.session(); },
+        []() { return QApplication::activeModalWidget() != nullptr; });
+    connect(m_libretroHotkeys.get(), &LibretroHotkeyController::menuToggleRequested,
+            // Dedicated signal (NOT globalHotkeyPressed, the Carbon
+            // Cmd+Shift+Esc hotkey). QML handles it by calling
+            // toggleInGameMenu, which selects the libretro-aware menu
+            // (overlay / in-scene HUD).
+            this, &AppController::libretroMenuToggleRequested);
+    connect(m_libretroHotkeys.get(), &LibretroHotkeyController::infoToastRequested,
+            this, &AppController::infoToast);
 
-    HotkeyDispatcher::Callbacks cb;
-    // Saved/Loaded pill feedback comes from GameSession's
-    // stateSaveRequested/stateLoadRequested signals (fired inside these
-    // calls), so hotkey saves get the same pills as menu ones.
-    cb.saveStateSlot   = [this](int s) {
-        if (auto* gs = m_gameService.session()) gs->saveStateLibretro(s);
-    };
-    cb.loadStateSlot   = [this](int s) {
-        if (auto* gs = m_gameService.session()) gs->loadStateLibretro(s);
-    };
-    cb.getCurrentSlot  = [this]() -> int {
-        if (auto* gs = m_gameService.session()) return gs->currentSaveSlot();
-        return 1;
-    };
-    cb.setCurrentSlot  = [this](int s) {
-        if (auto* gs = m_gameService.session()) {
-            gs->setCurrentSaveSlot(s);  // GameSession clamps to [1,5] internally
-            emit infoToast(QStringLiteral("Save State"),
-                           QStringLiteral("Slot %1").arg(gs->currentSaveSlot()),
-                           QString(), QString(), 1500);
-        }
-    };
-    cb.toggleFastForward = [this]() {
-        if (auto* gs = m_gameService.session()) gs->toggleFastForwardLibretro();
-    };
-    cb.setFastForward = [this](bool on) {
-        // Hold-style action. GameSession only exposes toggleFastForwardLibretro
-        // today; if the requested state differs from the current toggle state,
-        // flip once. Tracked via the matcher's hold semantics — actionReleased
-        // fires on the release edge so this lands at most twice per hold.
-        if (auto* gs = m_gameService.session()) {
-            // GameSession::toggleFastForwardLibretro returns the new state,
-            // and is a no-op for non-libretro sessions. Trust the toggle for
-            // v1; if a future GameSession::setLibretroFastForward(bool) lands
-            // it can be plumbed here directly.
-            Q_UNUSED(on);
-            gs->toggleFastForwardLibretro();
-        }
-    };
-    cb.togglePause = [this]() {
-        if (auto* gs = m_gameService.session()) {
-            auto* la = gs->adapter() ? gs->adapter()->asLibretro() : nullptr;
-            if (la && la->runtime()) {
-                if (la->runtime()->isPaused()) la->runtime()->resume();
-                else la->runtime()->pause();
-            }
-        }
-    };
-    cb.reset = [this]() {
-        if (auto* gs = m_gameService.session()) {
-            auto* la = gs->adapter() ? gs->adapter()->asLibretro() : nullptr;
-            if (la && la->runtime()) la->runtime()->reset();
-        }
-    };
-    cb.openMenu = [this]() {
-    // Dedicated signal (NOT globalHotkeyPressed, which QML reserves for
-    // Cmd+Shift+Esc on standalone emulators). The libretro matcher fires
-    // this when the user's ToggleMenu binding is pressed; QML handles it
-    // by calling toggleInGameMenu, which selects the libretro-aware
-    // menu (overlay / in-scene HUD) and propagates currentSaveSlot.
-    emit libretroMenuToggleRequested();
-};
-    cb.toggleMute = [this]() {
-        if (auto* gs = m_gameService.session()) {
-            auto* la = gs->adapter() ? gs->adapter()->asLibretro() : nullptr;
-            if (la && la->runtime() && la->runtime()->audioSink()) {
-                auto* a = la->runtime()->audioSink();
-                a->setMuted(!a->isMuted());
-            }
-        }
-    };
-    cb.adjustVolume = [this](int dPct) {
-        if (auto* gs = m_gameService.session()) {
-            auto* la = gs->adapter() ? gs->adapter()->asLibretro() : nullptr;
-            if (la && la->runtime() && la->runtime()->audioSink()) {
-                auto* a = la->runtime()->audioSink();
-                a->setVolume(a->volume() + dPct / 100.0f);
-            }
-        }
-    };
-
-    m_hotkeyDispatcher = std::make_unique<HotkeyDispatcher>(std::move(cb));
-    connect(m_hotkeyMatcher.get(), &HotkeyMatcher::actionPressed,
-            m_hotkeyDispatcher.get(), &HotkeyDispatcher::onActionPressed);
-    connect(m_hotkeyMatcher.get(), &HotkeyMatcher::actionReleased,
-            m_hotkeyDispatcher.get(), &HotkeyDispatcher::onActionReleased);
-
-    if (auto* app = qApp) app->installEventFilter(this);
+    // Explicit injection of the matcher for the worker-thread combo-
+    // modifier suppression lookup (GameSession -> CoreRuntime). Cleared
+    // in ~AppController.
+    m_gameService.session()->setHotkeyMatcher(m_libretroHotkeys->matcher());
 
     // SDL stops emitting gamepadButtonChanged into the matcher while an
     // in-game menu / overlay is open (m_emulationTarget is cleared). The
@@ -269,15 +191,17 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     // menu closes so the next press starts fresh. Single edge now —
     // InGameMenuController routes both backends through one signal.
     connect(this, &AppController::inGameMenuOpenChanged, this, [this]{
-        if (m_hotkeyMatcher && !inGameMenuOpen())
-            m_hotkeyMatcher->resetGamepadState();
+        if (!inGameMenuOpen())
+            m_libretroHotkeys->resetGamepadState();
     });
 
     syncLibretroHotkeyBindings();
 }
 
 AppController::~AppController() {
-    HotkeyMatcher::s_active.store(nullptr);
+    // Clear the injected matcher before the controller (and its matcher)
+    // are destroyed — GameSession forwards the nullptr to a live runtime.
+    m_gameService.session()->setHotkeyMatcher(nullptr);
 }
 
 // ── Installer plumbing ─────────────────────────────────────
@@ -699,42 +623,12 @@ void AppController::resetHotkeys(const QString& emuId) {
 void AppController::setLibretroHotkeysSuppressed(bool suppressed) {
     if (suppressed == m_libretroHotkeysSuppressed) return;
     m_libretroHotkeysSuppressed = suppressed;
+    m_libretroHotkeys->setUiSuppressed(suppressed);
     emit libretroHotkeysSuppressedChanged();
 }
 
 void AppController::syncLibretroHotkeyBindings() {
-    if (!m_hotkeyMatcher) return;
-    m_hotkeyMatcher->clearAllBindings();
-    const QVariantList rows = hotkeyBindings(libretro_hotkeys::kSentinelEmuId);
-    for (const QVariant& v : rows) {
-        const QVariantMap m = v.toMap();
-        m_hotkeyMatcher->setBinding(m.value(QStringLiteral("key")).toString(),
-                                    m.value(QStringLiteral("currentValue")).toString());
-    }
-}
-
-bool AppController::eventFilter(QObject* /*watched*/, QEvent* event) {
-    const QEvent::Type t = event->type();
-    if (t == QEvent::KeyPress || t == QEvent::KeyRelease) {
-        auto* k = static_cast<QKeyEvent*>(event);
-        // Suppress hotkey dispatch when a host UI surface owns the key event:
-        //   - Qt modal dialog (e.g. Libretro Hotkey settings dialog itself)
-        //   - QML settings overlay (QML sets m_libretroHotkeysSuppressed)
-        //   - In-game menu panel (Esc/etc should close it via normal routing)
-        const bool suppressed = m_libretroHotkeysSuppressed
-                                || QApplication::activeModalWidget() != nullptr;
-        if (!k->isAutoRepeat() && m_hotkeyMatcher && !suppressed) {
-            const int combined = int(k->key()) | int(k->modifiers());
-            if (m_hotkeyMatcher->onKeyEvent(combined, t == QEvent::KeyPress)) {
-                // A bound action fired. Consume the event so it doesn't
-                // also reach the just-opened menu's own Esc-to-close
-                // handler (or any other downstream widget shortcut).
-                event->accept();
-                return true;
-            }
-        }
-    }
-    return false;  // unbound key — keep Qt's normal routing intact
+    m_libretroHotkeys->setBindings(hotkeyBindings(libretro_hotkeys::kSentinelEmuId));
 }
 
 QVariantList AppController::controllerTypes(const QString& emuId) const { return m_configService.controllerTypes(emuId); }
@@ -971,12 +865,7 @@ void AppController::setSdlInputManager(SdlInputManager* mgr) {
     // is active (i.e. a libretro game is running) — see the m_emulationTarget
     // branch in pollEvents() — so this connection is a no-op outside libretro
     // sessions without needing a runtime gate here.
-    if (mgr) {
-        connect(mgr, &SdlInputManager::gamepadButtonChanged,
-                this, [this](int port, int btn, bool pressed) {
-                    if (m_hotkeyMatcher) m_hotkeyMatcher->onGamepadButton(port, btn, pressed);
-                });
-    }
+    m_libretroHotkeys->attachInputManager(mgr);
 }
 
 void AppController::setQmlEngine(QQmlEngine* engine) {

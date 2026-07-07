@@ -3,8 +3,6 @@
 #include <QMutexLocker>
 #include <QStringList>
 
-std::atomic<HotkeyMatcher*> HotkeyMatcher::s_active{nullptr};
-
 namespace {
 
 // Parse "Keyboard/<KeySequenceText>" → combined Qt key+modifier int.

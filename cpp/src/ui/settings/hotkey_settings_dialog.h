@@ -3,7 +3,10 @@
 #include "ui/settings/emulator_settings_dialog_base.h"
 #include "core/binding_def.h"
 
+#include <QPointer>
+
 class GenericHotkeyPage;
+class LibretroHotkeyController;
 class SdlInputManager;
 class AppController;
 
@@ -19,6 +22,7 @@ public:
                           AppController* appController,
                           const QString& emuId,
                           QWidget* parent = nullptr);
+    ~HotkeySettingsDialog() override;
 
 protected:
     void keyPressEvent(QKeyEvent* e) override;
@@ -31,4 +35,7 @@ private slots:
 private:
     GenericHotkeyPage* m_page = nullptr;
     SdlInputManager* m_inputManager;
+    // Suppression hold released in the destructor (WA_DeleteOnClose).
+    // QPointer: the dialog can outlive AppController at app teardown.
+    QPointer<LibretroHotkeyController> m_suppressedHotkeys;
 };

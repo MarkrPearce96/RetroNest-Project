@@ -106,6 +106,13 @@ add_library(retronest_core STATIC
     src/core/libretro/libretro_hotkey_defs.cpp
     src/core/libretro/hotkey_matcher.cpp
     src/core/libretro/hotkey_dispatcher.cpp
+    # NOTE: libretro_hotkey_controller.cpp is deliberately NOT here even
+    # though it lives under core/ — its action callbacks call GameSession
+    # methods, and game_session.cpp stays out of this lib (see the note
+    # above). If the controller's moc entered this lib's monolithic
+    # mocs_compilation.o, every test linking the archive would need
+    # GameSession (and thus LibretroGLItem/Qt Quick) to resolve. The app
+    # and test_libretro_hotkey_controller compile it directly.
     # services/
     src/services/config_service.cpp
     src/services/hotkey_service.cpp
@@ -213,6 +220,7 @@ target_link_libraries(retronest_ui PUBLIC
 set(SOURCES
     src/main.cpp
     src/core/game_session.cpp
+    src/core/libretro/libretro_hotkey_controller.cpp
     src/core/scraper.cpp
     src/core/ra_client.cpp
     src/core/macos_fullscreen.mm
@@ -549,6 +557,20 @@ add_test(NAME HotkeyServiceLibretro COMMAND test_hotkey_service_libretro)
 add_executable(test_hotkey_matcher tests/test_hotkey_matcher.cpp)
 target_link_libraries(test_hotkey_matcher PRIVATE retronest_core Qt6::Test)
 add_test(NAME HotkeyMatcher COMMAND test_hotkey_matcher)
+
+add_executable(test_libretro_hotkey_controller
+    tests/test_libretro_hotkey_controller.cpp
+    # The controller (and game_session.cpp, which its action callbacks
+    # need) stay out of retronest_core — same recipe as
+    # test_game_session_save_slot; see the notes on the lib's source list.
+    src/core/libretro/libretro_hotkey_controller.cpp
+    src/core/game_session.cpp
+    src/ui/libretro/libretro_gl_item.mm
+)
+target_link_libraries(test_libretro_hotkey_controller PRIVATE
+    retronest_core Qt6::Quick Qt6::Test
+)
+add_test(NAME LibretroHotkeyController COMMAND test_libretro_hotkey_controller)
 
 add_executable(test_hotkey_dispatcher tests/test_hotkey_dispatcher.cpp)
 target_link_libraries(test_hotkey_dispatcher PRIVATE retronest_core Qt6::Test)

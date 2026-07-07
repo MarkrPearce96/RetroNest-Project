@@ -145,7 +145,8 @@ int16_t CoreRuntime::inputStateTrampoline(unsigned port, unsigned device,
         auto slot = static_cast<RetroPadSlot>(id);
         // Combo-modifier suppression: mask buttons currently acting as the
         // modifier of a matched libretro hotkey combo from the core's view.
-        if (auto* hk = HotkeyMatcher::s_active.load(std::memory_order_relaxed)) {
+        // The matcher is injected per session (GameSession::setHotkeyMatcher).
+        if (auto* hk = g_current->m_hotkeyMatcher.load(std::memory_order_relaxed)) {
             if (hk->isSuppressed(static_cast<int>(port), static_cast<int>(slot)))
                 return 0;
         }

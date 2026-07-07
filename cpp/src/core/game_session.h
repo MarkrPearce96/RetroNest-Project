@@ -8,6 +8,7 @@
 #include <QVariantMap>
 
 class EmulatorAdapter;
+class HotkeyMatcher;
 class LibretroAdapter;
 class SdlInputManager;
 class FrontendSettingsStore;
@@ -60,6 +61,13 @@ public:
      *  struct from its RA service; GameSession itself does not depend on
      *  services/. Set `.valid = true` to wire achievements. */
     void setLibretroRaConfig(const LibretroRaConfig& cfg) { m_raConfig = cfg; }
+
+    /** Explicit injection of the host hotkey matcher (nullable). Handed
+     *  down to CoreRuntime at every libretro start for the worker-thread
+     *  combo-modifier suppression lookup; also forwarded to a live
+     *  runtime immediately so clearing (nullptr) takes effect at once.
+     *  Replaces the old hidden HotkeyMatcher::s_active static. */
+    void setHotkeyMatcher(HotkeyMatcher* matcher);
 
     /** Launch the emulator. Returns false if already running or start fails. */
     bool start(const EmulatorManifest& manifest,
@@ -225,6 +233,7 @@ private:
     QString m_emuId;
     QString m_currentRomPath;
     LibretroAdapter* m_libretroAdapter = nullptr;
+    HotkeyMatcher* m_hotkeyMatcher = nullptr;   // injected, not owned
     bool m_libretroFastForward = false;
     qreal m_libretroAspectRatio = 4.0 / 3.0;  // sensible default before av_info is read
     QString m_libretroBackend = QStringLiteral("software"); // "software" | "metal"

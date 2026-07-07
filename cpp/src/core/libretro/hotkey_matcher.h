@@ -36,11 +36,6 @@ class HotkeyMatcher : public QObject {
 public:
     explicit HotkeyMatcher(QObject* parent = nullptr) : QObject(parent) {}
 
-    // Static accessor used by CoreRuntime's input trampoline (worker thread)
-    // to consult the currently-active matcher's suppression set. AppController
-    // sets this in its constructor and clears it in its destructor.
-    static std::atomic<HotkeyMatcher*> s_active;
-
     // Replace ALL bindings for one action. Empty bindingString clears them.
     // Tokens separated by " & " are each parsed as either a keyboard or a
     // gamepad binding; unparseable tokens are silently dropped.
