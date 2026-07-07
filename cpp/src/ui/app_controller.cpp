@@ -385,8 +385,7 @@ void AppController::importRomsFromDir(const QString& dir, const QString& systemF
     emit gamesChanged();
 }
 
-void AppController::launchGame(int /*gameId*/, const QString& romPath, const QString& emuId,
-                               const QStringList& extraArgs) {
+void AppController::launchGame(int /*gameId*/, const QString& romPath, const QString& emuId) {
     // Check if we need to show a one-time RA login prompt BEFORE launching
     if (m_raService.hasCredentials()) {
         auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
@@ -397,7 +396,6 @@ void AppController::launchGame(int /*gameId*/, const QString& romPath, const QSt
                 // Store pending launch info and show prompt — QML will call launchGame again after dismissal
                 m_pendingLaunchRom = romPath;
                 m_pendingLaunchEmu = emuId;
-                m_pendingLaunchArgs = extraArgs;
                 emit raEmulatorLoginPrompt(name);
                 return;  // don't launch yet
             }
@@ -425,7 +423,7 @@ void AppController::launchGame(int /*gameId*/, const QString& romPath, const QSt
     }
     m_gameService.session()->setLibretroRaConfig(raCfg);
 
-    if (!m_gameService.startGame(romPath, emuId, extraArgs)) {
+    if (!m_gameService.startGame(romPath, emuId)) {
         setStatus("Launch failed");
     }
 }
@@ -469,10 +467,6 @@ void AppController::scrapeGame(int gameId) {
     // Delegates to the async single-game path. The scrapeFinished handler
     // in our constructor emits gamesChanged() when the worker completes.
     setStatus("Scraping game...");
-    m_scraperService.startSingleGameScrape(gameId);
-}
-
-void AppController::scrapeGameWithProgress(int gameId) {
     m_scraperService.startSingleGameScrape(gameId);
 }
 
@@ -896,12 +890,10 @@ void AppController::raProceedAfterLoginPrompt() {
     if (m_pendingLaunchRom.isEmpty()) return;
     QString rom = m_pendingLaunchRom;
     QString emu = m_pendingLaunchEmu;
-    QStringList args = m_pendingLaunchArgs;
     m_pendingLaunchRom.clear();
     m_pendingLaunchEmu.clear();
-    m_pendingLaunchArgs.clear();
     // Re-call launchGame — prompt won't show again (already marked)
-    launchGame(0, rom, emu, args);
+    launchGame(0, rom, emu);
 }
 void AppController::raLoginWithPassword(const QString& username, const QString& password) {
     m_raService.loginWithPassword(username, password);

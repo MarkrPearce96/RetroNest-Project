@@ -2,7 +2,6 @@
 #include "app_controller.h"
 #include "game_list_model.h"
 #include "core/database.h"
-#include "adapters/adapter_registry.h"
 
 #include <QHash>
 #include <QDesktopServices>
@@ -102,17 +101,16 @@ void ThemeContext::launchGameDirect(int gameId, const QString& romPath, const QS
 void ThemeContext::launchGameResume(int gameId, const QString& romPath, const QString& emuId) {
     m_db->recordGameLaunch(gameId);
 
+    // Restoration is CoreRuntime's job: startLibretro passes the adapter's
+    // findResumeFile() as cfg.resumeStatePath and the core unserializes it
+    // post-load. A "fresh" launch differs only by QML clearing the resume
+    // file first — no launch args are involved.
     const QString stateFile = m_app->resumeStateFile(romPath, emuId);
-    if (!stateFile.isEmpty() && QFileInfo::exists(stateFile)) {
+    if (!stateFile.isEmpty() && QFileInfo::exists(stateFile))
         qInfo() << "[ThemeContext] Resuming with state file:" << stateFile;
-        auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-        QStringList resumeArgs = adapter ? adapter->resumeLaunchArgs(stateFile)
-                                         : QStringList{"-statefile", stateFile};
-        m_app->launchGame(gameId, romPath, emuId, resumeArgs);
-    } else {
+    else
         qWarning() << "[ThemeContext] Resume state file not found, launching normally";
-        m_app->launchGame(gameId, romPath, emuId);
-    }
+    m_app->launchGame(gameId, romPath, emuId);
 }
 
 bool ThemeContext::isGameRunning() const {
@@ -236,7 +234,7 @@ void ThemeContext::scrapeGameWithProgress(int gameId) {
         return;
     }
     emit scrapeGameRequested(gameId);
-    m_app->scrapeGameWithProgress(gameId);
+    m_app->scrapeGame(gameId);
 }
 
 void ThemeContext::openGameRomFolder(int gameId) {

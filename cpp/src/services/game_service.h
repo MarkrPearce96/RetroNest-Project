@@ -40,8 +40,7 @@ public:
     QStringList importableSystems() const;
 
     /** Start a game asynchronously. Returns false if start fails immediately. */
-    bool startGame(const QString& romPath, const QString& emuId,
-                   const QStringList& extraArgs = {});
+    bool startGame(const QString& romPath, const QString& emuId);
 
     /** Check if a resume save state exists for this ROM via serial-based detection. */
     bool hasResumeState(const QString& romPath, const QString& emuId) const;

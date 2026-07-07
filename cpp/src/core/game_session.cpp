@@ -30,8 +30,7 @@ GameSession::~GameSession() = default;
 
 bool GameSession::start(const EmulatorManifest& manifest,
                         EmulatorAdapter* adapter,
-                        const QString& romPath,
-                        const QStringList& extraArgs) {
+                        const QString& romPath) {
     if (isRunning()) {
         qWarning() << "[GameSession] Already running";
         return false;
@@ -62,7 +61,6 @@ bool GameSession::start(const EmulatorManifest& manifest,
                            "process-backend launching was retired.");
         return false;
     }
-    Q_UNUSED(extraArgs);
     return startLibretro(manifest, adapter, romPath);
 }
 

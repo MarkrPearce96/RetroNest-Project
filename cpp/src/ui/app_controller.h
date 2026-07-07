@@ -76,11 +76,9 @@ public slots:
     void backfillSerials();
     Q_INVOKABLE QStringList importableSystems() const;
     Q_INVOKABLE void importRomsFromDir(const QString& dir, const QString& systemFilter);
-    Q_INVOKABLE void launchGame(int gameId, const QString& romPath, const QString& emuId,
-                                const QStringList& extraArgs = {});
+    Q_INVOKABLE void launchGame(int gameId, const QString& romPath, const QString& emuId);
     Q_INVOKABLE void removeGame(int gameId);
     Q_INVOKABLE void scrapeGame(int gameId);
-    Q_INVOKABLE void scrapeGameWithProgress(int gameId);
 
     // Async game control
     bool isGameRunning() const;
@@ -351,7 +349,6 @@ private:
     // Pending launch (deferred while RA login prompt is shown)
     QString m_pendingLaunchRom;
     QString m_pendingLaunchEmu;
-    QStringList m_pendingLaunchArgs;
 
     QString m_statusMessage;
     QString m_currentSystem;

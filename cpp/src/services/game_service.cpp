@@ -115,8 +115,7 @@ bool GameService::isGameRunning() const {
     return m_session.isRunning();
 }
 
-bool GameService::startGame(const QString& romPath, const QString& emuId,
-                            const QStringList& extraArgs) {
+bool GameService::startGame(const QString& romPath, const QString& emuId) {
     const EmulatorManifest* manifest = m_loader->emulatorById(emuId);
     if (!manifest) {
         emit gameError("No manifest for: " + emuId);
@@ -142,7 +141,7 @@ bool GameService::startGame(const QString& romPath, const QString& emuId,
     m_currentRomPath = romPath;
     emit statusMessage("Launching: " + QFileInfo(romPath).completeBaseName());
 
-    if (!m_session.start(*manifest, adapter, romPath, extraArgs)) {
+    if (!m_session.start(*manifest, adapter, romPath)) {
         m_currentRomPath.clear();
         return false;
     }

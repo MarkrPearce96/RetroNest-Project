@@ -359,15 +359,6 @@ public:
 
 
     /**
-     * Return the CLI arguments to resume from a save state.
-     * Default: {"-statefile", stateFilePath} (PCSX2 convention).
-     * Override for emulators that use a different flag (e.g. DuckStation uses "-resume").
-     */
-    virtual QStringList resumeLaunchArgs(const QString& stateFilePath) const {
-        return {"-statefile", stateFilePath};
-    }
-
-    /**
      * Whether this emulator supports saving a resume state when the game
      * exits. PCSX2 and DuckStation provide this via a native
      * "save state on shutdown" config key. PPSSPP has no such mechanism,

@@ -64,8 +64,7 @@ public:
     /** Launch the emulator. Returns false if already running or start fails. */
     bool start(const EmulatorManifest& manifest,
                EmulatorAdapter* adapter,
-               const QString& romPath,
-               const QStringList& extraArgs = {});
+               const QString& romPath);
 
     /** Kill the emulator process immediately (SIGKILL / runtime stop). */
     void kill();

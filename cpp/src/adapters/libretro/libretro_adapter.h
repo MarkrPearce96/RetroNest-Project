@@ -31,7 +31,6 @@ public:
     QVector<AssetMatchRule> assetMatchRules() const override;
     bool supportsRetroAchievements() const override { return true; }
     bool supportsSaveOnExit() const override { return true; }
-    QStringList resumeLaunchArgs(const QString&) const override { return {}; }
     QString findResumeFile(const QString& serial) const override;
 
     /** Push RA pref changes into the live RcheevosRuntime instead of INI-patching. */
