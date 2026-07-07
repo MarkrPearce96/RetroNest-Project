@@ -7,6 +7,16 @@ Item {
 
     property string selectedEmuId: ""
 
+    // SettingsOverlay.goBack() consults these before popping the stack —
+    // the grid↔detail drill-down is page-internal state on one stack
+    // entry, so keyboard Esc (routed through the app-level Shortcut →
+    // handleBack → goBack) must step detail→grid here instead of popping
+    // straight to the category list. Controller B already worked: the
+    // Back shortcut is gated on panelOpen, so Key_Back reaches
+    // EmulatorDetailPage's own Keys handler → back() → grid.
+    readonly property bool canGoBackInternal: selectedEmuId !== ""
+    function goBackInternal() { selectedEmuId = "" }
+
     StackLayout {
         anchors.fill: parent
         currentIndex: selectedEmuId === "" ? 0 : 1

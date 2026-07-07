@@ -63,10 +63,25 @@ FocusScope {
     }
 
     function canGoBack() {
-        return panelStack.depth > 1 && !isBusy()
+        if (isBusy()) return false
+        var current = panelStack.currentItem
+        if (current && current.canGoBackInternal === true) return true
+        return panelStack.depth > 1
     }
 
     function goBack() {
+        // Page-internal navigation first — a page exposing
+        // canGoBackInternal/goBackInternal() consumes back before the
+        // stack pops (same current-page convention as isBusy). Needed for
+        // EmulatorManagePage, whose grid↔detail drill-down is internal
+        // state on ONE stack entry: popping instead would skip the grid
+        // and land on the category list.
+        var current = panelStack.currentItem
+        if (current && current.canGoBackInternal === true
+                && typeof current.goBackInternal === "function") {
+            current.goBackInternal()
+            return
+        }
         if (panelStack.depth > 1) {
             panelStack.pop()
             if (panelStack.depth <= 1) {
