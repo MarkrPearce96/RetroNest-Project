@@ -232,9 +232,10 @@ engine loads `AppWindow`.
 - Theme switch clears the stack and re-pushes the theme's root page.
 - **SettingsOverlay** is a slide-over inside the main window (NOT on the
   stack) with its own sub-page history (`canGoBack`/`goBack`).
-- **Back/Esc contract** = `AppWindow.handleBack()` priority order: game
-  running → toggle the in-scene menu; settings overlay visible →
-  cancel-busy / goBack / close; `mainStack.depth > 1` →
+- **Back/Esc contract** = `AppWindow.handleBack()` priority order:
+  settings overlay visible → cancel-busy / goBack / close; game running
+  → `toggleInGameMenu()` (routes HW-render through InGameMenuController,
+  in-scene menu for SW-render); `mainStack.depth > 1` →
   `themeContext.navigateBack()`; else open the settings overlay.
 
 **Modal & input gating:** the canonical policy table (which modals

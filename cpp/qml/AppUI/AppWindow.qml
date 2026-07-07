@@ -871,23 +871,11 @@ ApplicationWindow {
     }
 
     // Shared back-navigation handler used by both Shortcuts below.
-    // Preserves all pre-refactor Esc behaviours and adds the missing
-    // mainStack.depth > 1 → navigateBack() branch (regression fix).
+    // Order matters (matches the modal gating table): the settings
+    // overlay owns Esc before the in-game-menu branch, so Esc while
+    // settings are open during a game navigates the overlay instead of
+    // popping a menu behind it.
     function handleBack() {
-        if (app.gameRunning) {
-            // Resume the core when closing the menu; pause it when
-            // opening. (This Shortcut serves the in-scene menu path;
-            // HW-render sessions route via the hotkey matcher's
-            // Esc=ToggleMenu → toggleInGameMenu instead.)
-            if (inGameMenu.visible) {
-                if (app.gameSession) app.gameSession.resumeEmulation();
-                inGameMenu.close();
-            } else {
-                if (app.gameSession) app.gameSession.pauseEmulation();
-                inGameMenu.open();
-            }
-            return
-        }
         if (settingsOverlay.visible) {
             if (settingsOverlay.isBusy()) {
                 // Cancel the running operation
@@ -897,6 +885,15 @@ ApplicationWindow {
             } else {
                 settingsOverlay.close()
             }
+            return
+        }
+        if (app.gameRunning) {
+            // toggleInGameMenu routes HW-render cores through
+            // InGameMenuController (overlay panel) and drives the
+            // in-scene menu + explicit pause/resume for SW-render —
+            // this branch must not open the in-scene menu directly or
+            // HW-render sessions get the wrong menu with a bare pause.
+            toggleInGameMenu()
             return
         }
         if (mainStack.depth > 1) {
