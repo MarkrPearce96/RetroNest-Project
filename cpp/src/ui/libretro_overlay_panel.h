@@ -17,11 +17,11 @@ class QQuickWindow;
  * Lifecycle: the C++ instance lives for AppController's lifetime. The
  * underlying QQuickWindow is created lazily on the first
  * showForCurrentGame() call, hidden + destroyed on hide(), and recreated
- * on the next show. mGBA / software-libretro / external-emulator paths
- * never trigger this panel.
+ * on the next show. mGBA / software-libretro paths never trigger this
+ * panel (they use the in-scene QML overlay).
  *
- * Modelled on InGameMenuPanel; the two coexist (external emulators use
- * the existing one).
+ * (Originally modelled on the process-era InGameMenuPanel — the NSPanel
+ * that floated over external emulator processes — retired 2026-07.)
  */
 class LibretroOverlayPanel : public QObject {
     Q_OBJECT

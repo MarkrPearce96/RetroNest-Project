@@ -33,8 +33,6 @@ void unregisterGlobalHotkey();
 // frontmost large on-screen window owned by `pid`. Returns -1 if the
 // process / window cannot be located. Index form (vs. NSScreen*) keeps
 // this header C++-only and lets callers index QGuiApplication::screens()
-// directly — Qt mirrors NSScreen ordering on macOS.
-int screenIndexForProcess(int64_t pid);
 
 // Apply NSPanel-style configuration to the NSWindow backing a Qt
 // top-level QWindow. The argument is the QWindow's winId() — on

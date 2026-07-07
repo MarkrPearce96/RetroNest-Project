@@ -28,11 +28,10 @@ ApplicationWindow {
     }
 
     function toggleInGameMenu() {
-        // HW-render libretro + external emulators both flow through
-        // InGameMenuController on the C++ side — one open/close pair
-        // picks the right backing window (transparent QQuickWindow vs
-        // floating NSPanel). SW-render libretro (mGBA) stays on the
-        // in-scene branch below since it shares this window's scene.
+        // HW-render libretro flows through InGameMenuController on the
+        // C++ side (transparent overlay QQuickWindow). SW-render libretro
+        // (mGBA) stays on the in-scene branch below since it shares this
+        // window's scene.
         if (app.gameUsesHardwareRender() || !isLibretroGame()) {
             if (app.inGameMenuOpen)
                 app.closeInGameMenu();
@@ -189,8 +188,8 @@ ApplicationWindow {
     InGameMenu {
         id: inGameMenu
 
-        // This in-window InGameMenu instance is the libretro path only
-        // (external emulators get their own InGameMenuPanel). All paths
+        // This in-window InGameMenu instance is the software-render
+        // libretro path (HW-render cores use LibretroOverlayPanel). All paths
         // here resume the libretro core before doing anything else —
         // the core thread was paused on menu open and stays paused
         // until we explicitly call resumeEmulation, otherwise the game

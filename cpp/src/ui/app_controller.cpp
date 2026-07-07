@@ -997,14 +997,9 @@ void AppController::setQmlEngine(QQmlEngine* engine) {
     m_qmlEngine = engine;
 
     // Create the in-game menu controller now that we have the engine.
-    // Action signals fire from whichever inner panel is presenting the
-    // menu; the policy of what each action does (synth a keystroke for
-    // external emulators, call GameSession directly for libretro) lives
-    // here. currentBackendIsLibretro() is the dispatch hinge.
-    m_inGameMenu = new InGameMenuController(
-        m_qmlEngine,
-        [this]{ return gameUsesHardwareRender(); },
-        this);
+    // Action signals fire from the overlay panel; the policy of what each
+    // action does (GameSession calls) lives here.
+    m_inGameMenu = new InGameMenuController(m_qmlEngine, this);
 
     connect(m_inGameMenu, &InGameMenuController::menuOpenChanged,
             this, &AppController::inGameMenuOpenChanged);

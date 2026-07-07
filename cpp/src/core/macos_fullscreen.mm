@@ -81,62 +81,6 @@ void unregisterGlobalHotkey() {
     }
 }
 
-int screenIndexForProcess(int64_t pid) {
-    @autoreleasepool {
-        // Skip menu-bar items, tooltips, and other small windows owned by
-        // the same PID — only the emulator's main render window is large.
-        const CGFloat kMinEmulatorWindowExtent = 200.0;
-
-        CFArrayRef windows = CGWindowListCopyWindowInfo(
-            kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,
-            kCGNullWindowID);
-        if (!windows) return -1;
-
-        NSArray<NSScreen*>* allScreens = [NSScreen screens];
-        CGFloat primaryHeight = [[allScreens firstObject] frame].size.height;
-
-        int result = -1;
-        CFIndex count = CFArrayGetCount(windows);
-        // CGWindowListCopyWindowInfo returns windows in front-to-back order
-        // for kCGWindowListOptionOnScreenOnly, so the first matching window
-        // for `pid` is the topmost.
-        for (CFIndex i = 0; i < count; ++i) {
-            CFDictionaryRef info = (CFDictionaryRef)CFArrayGetValueAtIndex(windows, i);
-            CFNumberRef ownerPidRef = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowOwnerPID);
-            if (!ownerPidRef) continue;
-            int64_t ownerPid = 0;
-            if (!CFNumberGetValue(ownerPidRef, kCFNumberSInt64Type, &ownerPid)) continue;
-            if (ownerPid != pid) continue;
-
-            CFDictionaryRef boundsDict = (CFDictionaryRef)CFDictionaryGetValue(info, kCGWindowBounds);
-            if (!boundsDict) continue;
-            CGRect bounds;
-            if (!CGRectMakeWithDictionaryRepresentation(boundsDict, &bounds)) continue;
-            if (bounds.size.width < kMinEmulatorWindowExtent ||
-                bounds.size.height < kMinEmulatorWindowExtent) continue;
-
-            NSPoint windowCenterCG = NSMakePoint(
-                bounds.origin.x + bounds.size.width / 2.0,
-                bounds.origin.y + bounds.size.height / 2.0);
-            NSPoint windowCenter = NSMakePoint(
-                windowCenterCG.x,
-                primaryHeight - windowCenterCG.y);
-
-            for (NSUInteger si = 0; si < [allScreens count]; ++si) {
-                NSScreen* screen = [allScreens objectAtIndex:si];
-                if (NSPointInRect(windowCenter, [screen frame])) {
-                    result = (int)si;
-                    break;
-                }
-            }
-            if (result >= 0) break;
-        }
-        CFRelease(windows);
-
-        return result;
-    }
-}
-
 // Promote a Qt-created NSWindow to a runtime subclass that returns YES
 // from canBecomeKeyWindow. Frameless NSWindows return NO by default —
 // without this, [window makeKeyWindow] is a no-op and keyboard input
@@ -290,13 +234,8 @@ namespace MacFullscreen {
 void hideMenuBarAndDock() {}
 void restoreMenuBarAndDock() {}
 void activateOurApp() {}
-void activateProcess(int64_t) {}
-void sendKeyToProcess(int64_t, int) {}
-void pauseProcess(int64_t) {}
-void resumeProcess(int64_t) {}
 void registerGlobalHotkey(HotkeyCallback) {}
 void unregisterGlobalHotkey() {}
-int screenIndexForProcess(int64_t) { return -1; }
 void configurePanelWindow(void*) {}
 void makePanelKey(void*) {}
 void attachChildWindow(void*, void*) {}

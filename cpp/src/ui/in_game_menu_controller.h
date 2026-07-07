@@ -1,89 +1,58 @@
 #pragma once
 
 #include <QObject>
-#include <QPointer>
-#include <functional>
 
 class QQmlEngine;
-class InGameMenuPanel;
 class LibretroOverlayPanel;
 
 /**
- * InGameMenuController — single owner + façade for the two backing in-game
- * menu surfaces.
- *
- * The app has two physically different windows that host the in-game HUD:
- *
- *   - InGameMenuPanel       — frameless NSPanel floating over an external
- *                             emulator's fullscreen window
- *                             (PCSX2 / DuckStation / PPSSPP / Dolphin).
- *   - LibretroOverlayPanel  — transparent QQuickWindow above RetroNest's
- *                             main window, hosts the menu + RA toasts +
- *                             FF / save / load chips when a HW-render
- *                             libretro core (PCSX2 libretro) is running.
+ * InGameMenuController — owner + façade for the HW-render in-game menu
+ * surface, `LibretroOverlayPanel`: a transparent QQuickWindow above
+ * RetroNest's main window hosting the menu + RA toasts + FF / save /
+ * load chips while a HW-render libretro core is running.
  *
  * (mGBA + future software libretro cores use an in-scene QML overlay
  * inside AppWindow — that path stays on the QML side and doesn't go
  * through this controller.)
  *
- * Callers (AppController + QML) used to talk to two parallel APIs with
- * separate visibility properties, lazy-create hooks, and action-signal
- * wirings. This controller collapses both behind one open/close pair, one
- * visibility property, and one set of action signals. Routing between the
- * two backends is decided by an `isHardwareRender` predicate supplied at
- * construction — the same one QML uses to pick its menu path, so menu
- * opens land on whichever backend matches the running game.
+ * Process-era retirement (2026-07): this used to route between two
+ * backends — the overlay above vs `InGameMenuPanel`, a frameless NSPanel
+ * floated over an external emulator process's fullscreen window. Every
+ * emulator is an in-process libretro core now, so the NSPanel backend
+ * and its pid-based screen positioning were deleted with the process
+ * era (recover from git history if a standalone emulator ever returns).
  */
 class InGameMenuController : public QObject {
     Q_OBJECT
 public:
-    using IsHardwareRenderFn = std::function<bool()>;
-
-    InGameMenuController(QQmlEngine* engine,
-                         IsHardwareRenderFn isHardwareRender,
-                         QObject* parent = nullptr);
+    explicit InGameMenuController(QQmlEngine* engine, QObject* parent = nullptr);
     ~InGameMenuController() override;
 
-    /**
-     * Open the in-game menu using whichever backend matches the running
-     * game. For external emulators, `emulatorPid` positions the floating
-     * panel over that process's screen; for libretro it's ignored
-     * (the overlay window is already positioned over the main window).
-     */
-    void openMenu(int64_t emulatorPid = 0);
+    /** Open the in-game menu on the overlay window. */
+    void openMenu();
 
-    /** Close the menu (whichever backend is currently presenting it). */
+    /** Close the menu. */
     void closeMenu();
 
-    /** True iff one of the backends is currently presenting the menu. */
+    /** True iff the menu is currently presented. */
     bool isMenuOpen() const;
 
     /**
      * Libretro overlay lifecycle — always-on while a HW-render libretro
      * game is alive, independent of menu open/close (it hosts RA toasts
-     * + indicator bar above the Metal NSView). No-op for external games.
+     * + indicator bar above the Metal NSView).
      */
     void showLibretroOverlayForCurrentGame();
     void hideLibretroOverlay();
 
-    /**
-     * True if the currently-active backend is the HW-render libretro
-     * overlay. Action handlers check this to decide between
-     * GameSession-direct calls (libretro) and process keystroke
-     * synthesis (external). Backend choice is locked in at the moment
-     * openMenu() runs.
-     */
-    bool currentBackendIsLibretro() const;
-
 signals:
-    /** Either backend's visibility changed. Edge-triggered. */
+    /** Overlay visibility changed. Edge-triggered. */
     void menuOpenChanged();
 
     /**
-     * Forwarded action signals — identical set on both inner panels.
-     * AppController owns the policy of what each action does (since it
-     * differs between libretro vs external); the controller just routes
-     * the user's click upward.
+     * Forwarded action signals from the overlay panel. AppController owns
+     * the policy of what each action does; the controller just routes the
+     * user's click upward.
      */
     void resumeRequested();
     void exitWithSaveRequested();
@@ -93,22 +62,12 @@ signals:
     void toggleFastForwardRequested();
 
 private:
-    void ensureExternalPanel();
     void ensureLibretroPanel();
 
     QQmlEngine* m_engine = nullptr;
-    IsHardwareRenderFn m_isHardwareRender;
 
-    // Lazy-instantiated. The C++ instances live for AppController's
+    // Lazy-instantiated. The C++ instance lives for AppController's
     // lifetime once created; the inner QQuickWindow is created/destroyed
-    // per game session by each panel internally.
-    InGameMenuPanel* m_externalPanel = nullptr;
+    // per game session by the panel internally.
     LibretroOverlayPanel* m_libretroPanel = nullptr;
-
-    // Which backend the most recent openMenu() routed to. Sticky until
-    // the next openMenu() — closeMenu() reads this to know which inner
-    // panel to dismiss without re-querying isHardwareRender (which may
-    // have changed if a libretro game just ended).
-    enum class Backend { None, External, LibretroHW };
-    Backend m_activeBackend = Backend::None;
 };

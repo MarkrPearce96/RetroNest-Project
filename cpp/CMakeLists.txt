@@ -228,7 +228,6 @@ set(SOURCES
     src/ui/install_controller.cpp
     src/ui/game_list_model.cpp
     src/ui/app_controller.cpp
-    src/ui/in_game_menu_panel.cpp
     src/ui/libretro_overlay_panel.cpp
     src/ui/in_game_menu_controller.cpp
     src/ui/theme_manager.cpp
@@ -465,7 +464,6 @@ qt_add_qml_module(appui_backing
         qml/AppUI/ProgressPopup.qml
         qml/AppUI/GameActionPopup.qml
         qml/AppUI/InGameMenu.qml
-        qml/AppUI/InGameMenuPanel.qml
         qml/AppUI/LibretroOverlayPanel.qml
         qml/AppUI/InGameAchievementsPopup.qml
         qml/AppUI/ActionToast.qml

@@ -31,9 +31,9 @@ class AppController : public QObject {
     Q_PROPERTY(int currentTab READ currentTab WRITE setCurrentTab NOTIFY currentTabChanged)
     Q_PROPERTY(int settingsCategory READ settingsCategory WRITE setSettingsCategory NOTIFY settingsCategoryChanged)
     Q_PROPERTY(bool gameRunning READ isGameRunning NOTIFY gameRunningChanged)
-    // Single in-game menu visibility — routed by InGameMenuController to
-    // whichever backend (floating NSPanel for external emulators, transparent
-    // QQuickWindow for HW-render libretro) is presenting the menu.
+    // In-game menu visibility — InGameMenuController's overlay window
+    // (transparent QQuickWindow above the main window for HW-render
+    // libretro; software-render cores use the in-scene QML menu).
     Q_PROPERTY(bool inGameMenuOpen READ inGameMenuOpen NOTIFY inGameMenuOpenChanged)
     // Set by QML overlays (e.g. SettingsOverlay) when they're visible. While true,
     // the libretro hotkey matcher ignores keyboard events so Esc / arrows / etc
