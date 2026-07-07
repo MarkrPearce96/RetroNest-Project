@@ -9,7 +9,7 @@ Item {
 
     Component.onCompleted: {
         root.forceActiveFocus()
-        if (gameModel.count > 0) {
+        if (themeContext.gameModel.count > 0) {
             root.listIndex = 0
             root.selectCurrentGame()
         }
@@ -96,7 +96,7 @@ Item {
 
     // ── Keyboard navigation ──
     Keys.onUpPressed:    { if (root.listIndex > 0) { root.listIndex--; root.selectCurrentGame() } }
-    Keys.onDownPressed:  { if (root.listIndex < gameModel.count - 1) { root.listIndex++; root.selectCurrentGame() } }
+    Keys.onDownPressed:  { if (root.listIndex < themeContext.gameModel.count - 1) { root.listIndex++; root.selectCurrentGame() } }
     Keys.onReturnPressed: {
         if (root.selectedDetails && root.selectedDetails.id !== undefined)
             themeContext.launchGame(root.selectedDetails.id, root.selectedDetails.romPath, root.selectedDetails.emulatorId)
@@ -110,11 +110,11 @@ Item {
     Connections {
         target: themeContext
         function onGamesChanged() {
-            if (gameModel.count > 0 && root.listIndex >= gameModel.count)
-                root.listIndex = gameModel.count - 1
+            if (themeContext.gameModel.count > 0 && root.listIndex >= themeContext.gameModel.count)
+                root.listIndex = themeContext.gameModel.count - 1
             if (root.selectedDetails && root.selectedDetails.id !== undefined) {
                 // Track the selected game's new position after re-sort (e.g. favorite toggle)
-                var newIdx = gameModel.indexForGameId(root.selectedDetails.id)
+                var newIdx = themeContext.gameModel.indexForGameId(root.selectedDetails.id)
                 if (newIdx >= 0)
                     root.listIndex = newIdx
                 root.selectedDetails = themeContext.gameDetails(root.selectedDetails.id)
@@ -579,7 +579,10 @@ Item {
             clip: true
             spacing: 5
 
-            model: gameModel
+            // themeContext.gameModel, NEVER the root-context gameModel —
+            // ThemeContext is the only API themes may touch (enforced by
+            // test_theme_contract).
+            model: themeContext.gameModel
             currentIndex: root.listIndex
 
             highlightFollowsCurrentItem: true

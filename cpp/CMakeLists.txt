@@ -790,6 +790,10 @@ target_link_libraries(test_core_runtime PRIVATE retronest_core Qt6::Test)
 add_dependencies(test_core_runtime fake_libretro_core)
 add_test(NAME CoreRuntime COMMAND test_core_runtime)
 
+add_executable(test_theme_contract tests/test_theme_contract.cpp)
+target_link_libraries(test_theme_contract PRIVATE Qt6::Test)
+add_test(NAME ThemeContract COMMAND test_theme_contract)
+
 add_executable(test_theme_manager
     tests/test_theme_manager.cpp
     # theme_manager.cpp is an app-only source (not in retronest_ui), so the

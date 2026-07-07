@@ -567,13 +567,12 @@ void AppController::showHotkeySettings(const QString& emuId) {
 }
 
 void AppController::showLibretroHotkeySettings() {
-    // Suppression of the libretro HotkeyMatcher is driven entirely by the
-    // QML modalRegistry Binding on app.libretroHotkeysSuppressed. Every
-    // path that opens a Widgets settings/hotkey dialog goes through the
-    // SettingsOverlay (panelOpen=true), so the Binding keeps suppression
-    // asserted for the dialog's whole lifetime. Imperative C++ writes
-    // would break the QML Binding (Qt 6 semantics) and leave suppression
-    // stuck false on the next dialog open — see modal-registry-contract.
+    // Don't write app.libretroHotkeysSuppressed from C++ — the QML
+    // modal-policy Binding owns it, and an imperative write would break
+    // the Binding (Qt 6 semantics), leaving suppression stuck on the
+    // next dialog open. The dialog doesn't need it anyway: it holds its
+    // own refcount on LibretroHotkeyController for its whole lifetime
+    // (see HotkeySettingsDialog's constructor).
     showHotkeySettings(libretro_hotkeys::kSentinelEmuId);
 }
 

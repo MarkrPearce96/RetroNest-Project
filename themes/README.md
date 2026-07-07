@@ -8,6 +8,61 @@ hints, modals, overlays) and dispatches universal input.
 > **Adding a new modal?** Skip past the theme contract to
 > [Adding a new modal / overlay](#adding-a-new-modal--overlay) at the bottom.
 
+## theme.json manifest
+
+```json
+{
+  "name": "Modern",
+  "version": "1.0",
+  "author": "Built-in",
+  "description": "Clean carousel and grid layout with detail panel",
+  "preview": "preview.png",
+  "minAppVersion": "0.1.0",
+  "pages": {
+    "systemBrowser": "SystemPage.qml",
+    "gameList": "GameListPage.qml"
+  }
+}
+```
+
+Validated at scan (`ThemeManager::scanThemes`, pinned by
+`test_theme_manager`):
+
+- `pages.systemBrowser` and `pages.gameList` are **required**, and every
+  declared page file must exist on disk — a theme failing either is
+  rejected with a log line instead of dying at first navigation.
+- `minAppVersion` is **enforced**: if it's newer than the running app
+  version the theme is skipped (omit the key to accept any version).
+- Unknown top-level keys log a warning (typo net) but don't reject.
+- The theme's **id** is its directory name; the user themes dir
+  (`{root}/themes/`) is scanned before the bundled dir, and the first
+  directory with a given id wins.
+
+The chosen theme id persists across launches (config.json, written when
+the user picks a theme in Settings → Themes). If a saved theme
+disappears, the first valid theme is used.
+
+If a theme page fails to load at runtime anyway (broken QML), AppWindow
+falls back to the built-in empty-state page for the root — a broken
+theme can't produce a dead black window.
+
+## API boundary — themeContext ONLY (enforced)
+
+Theme pages load in the main QML engine, so the app's root context
+objects (`app`, `gameModel`, `inputManager`, `themeManager`, ...) are
+*technically* resolvable from theme QML. **Using them is forbidden** —
+anything a theme binds silently becomes frozen public API for every
+future theme. The contract:
+
+- `themeContext` is the ONLY app object a theme may touch — navigation,
+  game operations, system/game data, and `themeContext.gameModel` (the
+  game list model for views).
+- `test_theme_contract` lints every `.qml` under `themes/` for bare
+  references to the forbidden globals and fails CI with file:line.
+
+Need something that isn't on `themeContext`? Add it to ThemeContext
+(and its docs here), never bind the global.
+
 ## Universal input contract
 
 The following keys are handled globally by AppWindow. Do not reimplement them
@@ -92,53 +147,50 @@ disables a Shortcut for a focused item.
 This section is for **app developers**, not theme authors. Themes don't
 add modals.
 
-Universal input gating goes through a single `modalRegistry` QtObject at the
-top of `cpp/qml/AppUI/AppWindow.qml`. It exposes three derived booleans:
+Universal input gating is single-sourced in three derived window
+properties near the top of `cpp/qml/AppUI/AppWindow.qml` (the policy
+table lives in the comment block right above them):
 
-- `anyLibretroInhibited` — drives `app.libretroHotkeysSuppressed`. Suppresses
-  the application-level `HotkeyMatcher` event filter so its
-  `Esc = ToggleMenu` (and any other bound libretro hotkey) doesn't preempt
-  the focused modal's `Keys.onPressed`.
-- `anyShortcutInhibited` — disables AppWindow's universal `Esc` Shortcut.
-  Modals that own `Esc` internally must be in this set. `SettingsOverlay`
-  is intentionally NOT in this set so the Shortcut keeps driving
-  `goBack` / `close` through its sub-page history.
-- `anyVisible` — derived as `anyLibretroInhibited || anyShortcutInhibited`,
-  i.e. "any modal-class surface visible." Gates the universal `Backspace` /
-  `Back` Shortcut, the `M` Shortcut, and `mainHints.visible`.
+- `anyModalVisible` — the matcher-inhibiting set. Feeds the
+  `app.libretroHotkeysSuppressed` Binding (together with
+  `settingsOverlay.panelOpen` and `!app.gameRunning`) so bound libretro
+  hotkeys can't preempt a focused modal's `Keys.onPressed`. Also hides
+  the main `ButtonHints` strip.
+- `anyEscOwningModalVisible` — `anyModalVisible || app.inGameMenuOpen`.
+  Disables the universal `Esc` Shortcut (modals that own Esc internally
+  must be here; `SettingsOverlay` deliberately isn't, so Esc keeps
+  driving its sub-page goBack), and gates the `Backspace`/`Back` and
+  `M` Shortcuts and the controller Start button.
+- `cursorNeeded` — mouse-driven overlays. Its change handler is the
+  ONLY `setCursorVisible` caller; never toggle the cursor from a modal.
 
 To add a new modal:
 
 1. Give your modal a stable `id:` and a `visible` (or `panelOpen`-style
    user-intent) property.
-2. Open `cpp/qml/AppUI/AppWindow.qml`, find `QtObject { id: modalRegistry`,
-   and **append your modal to the relevant OR expression(s)** plus add
-   one row to the policy table in the comment above the registry.
-   Default for new modals: both flags `true` (it's a normal modal that
-   owns its own Esc/Back).
+2. Add its flag to the matching derived properties and one row to the
+   policy table comment — nothing else to keep in sync.
 3. Inside your modal, handle `Esc`, `Backspace`, and `Qt.Key_Back` in
    `Keys.onPressed`. **Or** derive from `BaseModalCard.qml` and
    **do not** override `Keys.onPressed` — the base handles all three
    for you (QML attached-property semantics mean a derived
    `Keys.onPressed` fully replaces the base's; re-add the three keys
    yourself if you must override).
-4. If you want a button-hint pill strip rendered with your modal's card,
+4. Full-window scrims must swallow scroll as well as clicks
+   (`onWheel: (wheel) => wheel.accepted = true` — see BaseModalCard),
+   or two-finger swipes keep driving the page beneath the modal.
+5. If you want a button-hint pill strip rendered with your modal's card,
    add a local `ButtonHints { hints: [...] }` inside the card. The main
-   `ButtonHints` strip in AppWindow auto-hides while any registry modal
-   is visible (`mainHints.visible` reads `!modalRegistry.anyVisible`).
+   strip auto-hides while any modal is visible.
 
 ### Modals that need different roles
 
-The policy isn't always "both flags true." See the table in the
-`modalRegistry` comment for the current exceptions. The two recurring
-patterns:
+The policy isn't always "all flags." See the policy table for the
+current exceptions. The two recurring patterns:
 
-- **`SettingsOverlay` style** (`inhibitShortcuts: false`) — you want the
-  universal `Esc` to keep firing so it can walk back through the
-  overlay's own sub-page history. The overlay's outer keypress consumes
-  Backspace/M itself; the universal Esc Shortcut feeds the back action.
-- **Libretro in-game menu style** (`inhibitLibretro: false`) — the libretro
-  `HotkeyMatcher`'s `Esc = ToggleMenu` IS the close mechanism. If you
-  suppress libretro hotkeys, you lock yourself in.
-
-If neither pattern applies, take the default (both true).
+- **`SettingsOverlay` style** (not Esc-owning) — you want the universal
+  `Esc` to keep firing so it can walk back through the overlay's own
+  sub-page history.
+- **Libretro in-game menu style** (not matcher-inhibiting) — the
+  matcher's `Esc = ToggleMenu` IS the close mechanism. If you suppress
+  libretro hotkeys, you lock yourself in.

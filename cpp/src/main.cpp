@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDebug>
+#include <QMessageBox>
 #include <QDir>
 #include <QFileInfo>
 #include <QProcess>
@@ -251,6 +252,12 @@ int main(int argc, char* argv[]) {
 
         if (engine.rootObjects().isEmpty()) {
             qCritical() << "Failed to load QML app";
+            // Under Launch Services there's no terminal — without this the
+            // app just vanishes (or worse, leaves a black frameless window
+            // if the failure happens later). Say something first.
+            QMessageBox::critical(nullptr, QStringLiteral("RetroNest"),
+                QStringLiteral("RetroNest failed to load its interface.\n\n"
+                               "Run it from a terminal to see the QML error output."));
             db.close();
             return 1;
         }

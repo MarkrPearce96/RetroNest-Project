@@ -76,12 +76,17 @@ ApplicationWindow {
         var hasGames = themeContext.systems.length > 0
         var url = hasGames ? themeManager.resolve("systemBrowser").toString() : ""
         mainStack.clear()
-        if (url !== "") {
-            mainStack.push(url)
+        // push() returns null when the QML fails to LOAD (broken theme
+        // file) — distinct from resolve() failing above. Either way the
+        // fallback keeps a live page on the stack instead of a black
+        // frameless window with no cursor (review R4).
+        var pushed = url !== "" ? mainStack.push(url) : null
+        if (pushed) {
             showingEmptyState = false
         } else {
             if (hasGames)
-                console.warn("[AppWindow] systemBrowser failed to resolve — falling back to empty state")
+                console.warn("[AppWindow] theme systemBrowser failed to "
+                             + (url === "" ? "resolve" : "load") + " — falling back to empty state")
             mainStack.push("EmptyStatePage.qml")
             showingEmptyState = true
         }
@@ -125,9 +130,10 @@ ApplicationWindow {
         function onNavigateToSystemRequested(systemId) {
             if (window.showingEmptyState) return
             var pageUrl = themeManager.resolve("gameList").toString()
-            if (pageUrl !== "") {
-                mainStack.push(pageUrl)
-            }
+            // A failed push (broken/missing gameList QML) leaves the user
+            // on the system browser — log it so the theme bug is visible.
+            if (pageUrl === "" || !mainStack.push(pageUrl))
+                console.warn("[AppWindow] theme gameList failed to load — staying on system browser")
         }
         function onNavigateBackRequested() {
             if (mainStack.depth > 1) {
