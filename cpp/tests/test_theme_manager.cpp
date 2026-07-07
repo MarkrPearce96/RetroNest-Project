@@ -11,6 +11,7 @@
 //    the saved theme or vice versa.
 
 #include <QtTest>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include "ui/theme_manager.h"
@@ -22,6 +23,8 @@ class TestThemeManager : public QObject {
 private slots:
     void initTestCase() {
         QStandardPaths::setTestModeEnabled(true);
+        // minAppVersion checks compare against this (main.cpp sets 0.1.0).
+        QCoreApplication::setApplicationVersion("0.1.0");
     }
 
     void init() {
@@ -91,6 +94,50 @@ private slots:
         QCOMPARE(Paths::loadSavedTheme(), QString("beta"));
     }
 
+    // ── theme.json scan-time validation (review R9) ──
+
+    void minAppVersionTooHighRejected() {
+        QTemporaryDir dir;
+        makeTheme(dir.path(), "alpha");
+        makeTheme(dir.path(), "future", "\"minAppVersion\": \"99.0\",\n");
+
+        ThemeManager mgr;
+        mgr.scanThemes(dir.path());
+        QCOMPARE(mgr.availableThemes().size(), 1);
+        QCOMPARE(mgr.currentThemeId(), QString("alpha"));
+    }
+
+    void minAppVersionSatisfiedAccepted() {
+        QTemporaryDir dir;
+        makeTheme(dir.path(), "alpha", "\"minAppVersion\": \"0.1.0\",\n");
+
+        ThemeManager mgr;
+        mgr.scanThemes(dir.path());
+        QCOMPARE(mgr.availableThemes().size(), 1);
+    }
+
+    void missingPageFileRejectedAtScan() {
+        QTemporaryDir dir;
+        makeTheme(dir.path(), "alpha");
+        makeTheme(dir.path(), "broken");
+        QVERIFY(QFile::remove(dir.path() + "/broken/GameList.qml"));
+
+        ThemeManager mgr;
+        mgr.scanThemes(dir.path());
+        QCOMPARE(mgr.availableThemes().size(), 1);
+        QCOMPARE(mgr.currentThemeId(), QString("alpha"));
+    }
+
+    void unknownKeysWarnButAccept() {
+        QTemporaryDir dir;
+        makeTheme(dir.path(), "alpha", "\"typoKey\": true,\n");
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("unknown key.*typoKey"));
+        ThemeManager mgr;
+        mgr.scanThemes(dir.path());
+        QCOMPARE(mgr.availableThemes().size(), 1);
+    }
+
     void saveRootPreservesSavedTheme() {
         Paths::saveTheme("beta");
         Paths::saveRoot("/tmp/retronest-test-root");
@@ -103,8 +150,10 @@ private slots:
 
 private:
     // Creates <base>/<id>/theme.json with the required pages, and the page
-    // files themselves so scan-time validation passes.
-    void makeTheme(const QString& base, const QString& id) {
+    // files themselves so scan-time validation passes. `extraJson` is
+    // spliced in as additional top-level "key": value, lines.
+    void makeTheme(const QString& base, const QString& id,
+                   const QByteArray& extraJson = {}) {
         const QString themeDir = base + "/" + id;
         QVERIFY(QDir().mkpath(themeDir));
 
@@ -121,7 +170,7 @@ private:
             "{\n"
             "  \"name\": \"") + id.toUtf8() + QByteArray("\",\n"
             "  \"version\": \"1.0\",\n"
-            "  \"author\": \"Test\",\n"
+            "  \"author\": \"Test\",\n") + extraJson + QByteArray(
             "  \"pages\": {\n"
             "    \"systemBrowser\": \"SystemBrowser.qml\",\n"
             "    \"gameList\": \"GameList.qml\"\n"

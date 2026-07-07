@@ -1,14 +1,24 @@
 #include "theme_manager.h"
 #include "core/paths.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QSet>
+#include <QVersionNumber>
 #include <QDebug>
 #include <algorithm>
+
+// theme.json contract — validated at scan so a broken theme is rejected
+// with a log line instead of failing at first navigation. Unknown keys
+// warn (forward-compat typo net, same policy as the manifest loader).
+static const QSet<QString> kKnownThemeKeys = {
+    "name", "version", "author", "description", "preview", "pages",
+    "minAppVersion"
+};
 
 ThemeManager::ThemeManager(QObject* parent)
     : QObject(parent)
@@ -44,6 +54,26 @@ void ThemeManager::scanThemes(const QString& themesDir) {
         }
 
         const QJsonObject obj = doc.object();
+
+        for (auto it = obj.begin(); it != obj.end(); ++it) {
+            if (!kKnownThemeKeys.contains(it.key()))
+                qWarning() << "[ThemeManager] Theme" << entry.fileName()
+                           << "theme.json has unknown key" << it.key();
+        }
+
+        const QString minApp = obj["minAppVersion"].toString();
+        if (!minApp.isEmpty()) {
+            const auto required = QVersionNumber::fromString(minApp);
+            const auto current  = QVersionNumber::fromString(
+                QCoreApplication::applicationVersion());
+            if (!required.isNull() && !current.isNull() && current < required) {
+                qWarning() << "[ThemeManager] Theme" << entry.fileName()
+                           << "requires app" << minApp << "but this is"
+                           << current.toString() << "— skipping";
+                continue;
+            }
+        }
+
         ThemeInfo info;
         info.id          = entry.fileName();
         info.name        = obj["name"].toString(info.id);
@@ -64,6 +94,18 @@ void ThemeManager::scanThemes(const QString& themesDir) {
             qWarning() << "[ThemeManager] Theme" << info.id << "missing required pages (systemBrowser, gameList)";
             continue;
         }
+
+        // Every declared page file must exist NOW — resolve() failing at
+        // navigation time would leave dead pages mid-session.
+        bool pagesOk = true;
+        for (auto it = info.pages.cbegin(); it != info.pages.cend(); ++it) {
+            if (!QFile::exists(info.path + "/" + it.value())) {
+                qWarning() << "[ThemeManager] Theme" << info.id << "page"
+                           << it.key() << "file missing:" << it.value();
+                pagesOk = false;
+            }
+        }
+        if (!pagesOk) continue;
 
         if (seenIds.contains(info.id)) continue;  // duplicate theme ID
         seenIds.insert(info.id);
