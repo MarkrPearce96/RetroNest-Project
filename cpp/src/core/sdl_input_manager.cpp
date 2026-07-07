@@ -579,13 +579,6 @@ void SdlInputManager::pollEvents() {
                     emit inGameMenuRequested();
                     break;
                 }
-                // While the in-game menu panel owns input, suppress
-                // signal emits (navigateStart) that fire QML handlers
-                // in the *main* window — those would leak past the
-                // QML enabled-gate due to binding-update timing. Key
-                // injection still goes through (focused window is the
-                // panel, so HUD navigation works).
-                if (m_suppressMainInputs && btn == SDL_CONTROLLER_BUTTON_START) break;
                 // Start emits signal (app-level action, not navigation).
                 // Deferred ~50 ms so the combo-detection has a chance
                 // when the user fires Select+Start but the controller
@@ -595,7 +588,6 @@ void SdlInputManager::pollEvents() {
                 if (btn == SDL_CONTROLLER_BUTTON_START) {
                     QTimer::singleShot(50, this, [this]() {
                         if (m_selectHeld) return;            // combo will fire
-                        if (m_suppressMainInputs) return;     // panel owns input
                         emit navigateStart();
                     });
                 } else {

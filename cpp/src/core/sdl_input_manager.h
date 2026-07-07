@@ -99,22 +99,6 @@ public:
     void setEmulationMode(InputRouter* target);
     void clearEmulationMode();
 
-    /**
-     * While true, suppress the navigateStart emit on Start press —
-     * otherwise it leaks past the QML enabled-gate (binding-update
-     * timing race) and pops the main app's settings overlay open
-     * behind the in-game menu panel. Used by AppController on panel
-     * open/close.
-     *
-     * Asymmetric on purpose: inGameMenuRequested still emits
-     * (Touchpad / Select+Start while the panel is open is how the
-     * user toggles the menu closed), and key injection (face buttons
-     * / D-pad) still flows through to the focused window — that's
-     * the panel, so HUD navigation continues to work. Only the
-     * main-window-bound navigateStart signal is gated.
-     */
-    void setSuppressMainInputs(bool suppress) { m_suppressMainInputs = suppress; }
-
 signals:
     void capturingChanged();
     void controllersChanged();
@@ -155,7 +139,6 @@ private:
     bool m_virtualKeyboardOpen = false;
     bool m_injectingKey = false;  // true while injecting a controller key event
     bool m_selectHeld = false;    // true while Select/Back button is held (combo detection)
-    bool m_suppressMainInputs = false; // true while the in-game menu panel owns input
 
     // Axis threshold-crossing state (shared between above/below threshold checks)
     QMap<QPair<SDL_JoystickID, int>, bool> m_axisActive;
