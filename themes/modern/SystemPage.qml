@@ -144,7 +144,14 @@ Item {
     property real cardHeight: 240
     property real cardSpacing: 20
     property real selectedScale: 1.35
-    property int carouselIndex: 0  // tracks real system index (0..systemList.length-1)
+    // Real system index (0..systemList.length-1), DERIVED from the
+    // PathView's currentIndex so it can never desync — the view is
+    // interactive, and a flick moves currentIndex without going through
+    // carouselNext/Prev (shadow-state copies went stale there, so Enter
+    // launched the pre-flick system).
+    readonly property int carouselIndex: systemList.length > 0
+        ? ((carousel.currentIndex % systemList.length) + systemList.length) % systemList.length
+        : 0
 
     // Multiplied model: repeat systems enough times to fill the screen
     ListModel { id: carouselModel }
@@ -163,20 +170,18 @@ Item {
 
     onSystemListChanged: rebuildCarouselModel()
 
-    // Override keyboard/controller to update carouselIndex
+    // Keyboard/controller navigation; carouselIndex and the background
+    // artwork follow via the currentIndex binding + onCurrentIndexChanged.
     function carouselNext() {
         if (systemList.length === 0) return
         carousel.incrementCurrentIndex()
-        carouselIndex = carousel.currentIndex % systemList.length
-        updateCarouselArtwork()
     }
     function carouselPrev() {
         if (systemList.length === 0) return
         carousel.decrementCurrentIndex()
-        carouselIndex = ((carousel.currentIndex % systemList.length) + systemList.length) % systemList.length
-        updateCarouselArtwork()
     }
     function updateCarouselArtwork() {
+        if (systemList.length === 0) return
         var sysId = systemList[carouselIndex]
         var newSource = "assets/artwork/" + sysId + ".webp"
 
@@ -225,6 +230,10 @@ Item {
             highlightMoveDuration: 300
             clip: false
             interactive: true
+
+            // Single artwork trigger for every navigation source — keys,
+            // clicks, AND interactive flicks (which bypass carouselNext/Prev).
+            onCurrentIndexChanged: root.updateCarouselArtwork()
 
             path: Path {
                 startX: 60 + (root.cardWidth * root.selectedScale) / 2
@@ -310,8 +319,6 @@ Item {
                             themeContext.navigateToSystem(card.sysId)
                         } else {
                             carousel.currentIndex = card.index
-                            root.carouselIndex = card.realIndex
-                            root.updateCarouselArtwork()
                         }
                     }
                     onDoubleClicked: {
