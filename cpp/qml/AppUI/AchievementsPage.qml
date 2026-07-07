@@ -5,6 +5,10 @@ Item {
     id: root
     focus: true
 
+    // Explicit navigation contract — the host (SettingsOverlay) connects
+    // this and owns the pop; the page never touches the host StackView.
+    signal backRequested()
+
     property int raGameId: 0
     property string gameTitle: ""
 
@@ -54,10 +58,7 @@ Item {
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_Back || event.key === Qt.Key_Escape) {
             event.accepted = true
-            if (typeof panelStack !== 'undefined' && panelStack.depth > 1)
-                panelStack.pop()
-            else if (typeof mainStack !== 'undefined' && mainStack.depth > 1)
-                mainStack.pop()
+            root.backRequested()
         }
     }
 

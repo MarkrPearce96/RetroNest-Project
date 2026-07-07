@@ -6,6 +6,12 @@ Item {
     id: root
     focus: true
 
+    // Explicit navigation contract: the page never reaches into its host's
+    // StackView/components via dynamic scoping. SettingsOverlay connects
+    // this signal and owns the actual push. Pages: "achievements",
+    // "allGames", "recentlyPlayed".
+    signal pushRequested(string page, var props)
+
     property string screenState: app.hasRACredentials() ? "dashboard" : "login"
     property int loginFocusIndex: 0
     property string loginError: ""
@@ -505,8 +511,8 @@ Item {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        if (userSummary.lastGameId > 0 && typeof panelStack !== 'undefined')
-                            panelStack.push(achievementsPageComponent, { raGameId: userSummary.lastGameId, gameTitle: userSummary.lastGameTitle })
+                        if (userSummary.lastGameId > 0)
+                            root.pushRequested("achievements", { raGameId: userSummary.lastGameId, gameTitle: userSummary.lastGameTitle })
                     }
                 }
             }
@@ -627,10 +633,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (typeof panelStack !== 'undefined')
-                                panelStack.push(allGamesPageComponent, { allGames: userGames })
-                        }
+                        onClicked: root.pushRequested("allGames", { allGames: userGames })
                     }
                 }
             }
@@ -656,10 +659,7 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (typeof panelStack !== 'undefined')
-                                    panelStack.push(achievementsPageComponent, { raGameId: modelData.raGameId, gameTitle: modelData.title })
-                            }
+                            onClicked: root.pushRequested("achievements", { raGameId: modelData.raGameId, gameTitle: modelData.title })
                         }
 
                         Column {
@@ -750,10 +750,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (typeof panelStack !== 'undefined')
-                                panelStack.push(recentlyPlayedPageComponent, { recentGames: userSummary.recentGames || [] })
-                        }
+                        onClicked: root.pushRequested("recentlyPlayed", { recentGames: userSummary.recentGames || [] })
                     }
                 }
             }
@@ -780,8 +777,8 @@ Item {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                if (modelData.gameId > 0 && typeof panelStack !== 'undefined')
-                                    panelStack.push(achievementsPageComponent, { raGameId: modelData.gameId, gameTitle: modelData.title })
+                                if (modelData.gameId > 0)
+                                    root.pushRequested("achievements", { raGameId: modelData.gameId, gameTitle: modelData.title })
                             }
                         }
 

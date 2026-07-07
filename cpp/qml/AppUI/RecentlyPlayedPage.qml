@@ -5,6 +5,10 @@ import AppUI
 GenericListPage {
     id: listPage
 
+    // Explicit navigation contract — SettingsOverlay connects this and
+    // owns the push; the page never touches the host StackView.
+    signal pushRequested(string page, var props)
+
     property var recentGames: []
 
     model: recentGames
@@ -14,8 +18,8 @@ GenericListPage {
 
     onActivated: (index) => {
         var g = recentGames[index]
-        if (g && g.gameId > 0 && typeof panelStack !== 'undefined')
-            panelStack.push(achievementsPageComponent, { raGameId: g.gameId, gameTitle: g.title })
+        if (g && g.gameId > 0)
+            listPage.pushRequested("achievements", { raGameId: g.gameId, gameTitle: g.title })
     }
 
     delegate: Rectangle {

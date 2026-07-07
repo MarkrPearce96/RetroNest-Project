@@ -476,24 +476,46 @@ FocusScope {
         AspectRatioSettings {}
     }
 
+    // RA pages navigate via explicit signals (pushRequested/backRequested)
+    // — the overlay owns panelStack and the page components; the pages
+    // themselves never reach into these ids by dynamic scoping.
+    function pushRaPage(page, props) {
+        if (page === "achievements")
+            panelStack.push(achievementsPageComponent, props)
+        else if (page === "allGames")
+            panelStack.push(allGamesPageComponent, props)
+        else if (page === "recentlyPlayed")
+            panelStack.push(recentlyPlayedPageComponent, props)
+        else
+            console.warn("[SettingsOverlay] Unknown RA page:", page)
+    }
+
     Component {
         id: raPageComponent
-        RetroAchievementsSettings {}
+        RetroAchievementsSettings {
+            onPushRequested: (page, props) => overlay.pushRaPage(page, props)
+        }
     }
 
     Component {
         id: achievementsPageComponent
-        AchievementsPage {}
+        AchievementsPage {
+            onBackRequested: overlay.goBack()
+        }
     }
 
     Component {
         id: allGamesPageComponent
-        AllGamesPage {}
+        AllGamesPage {
+            onPushRequested: (page, props) => overlay.pushRaPage(page, props)
+        }
     }
 
     Component {
         id: recentlyPlayedPageComponent
-        RecentlyPlayedPage {}
+        RecentlyPlayedPage {
+            onPushRequested: (page, props) => overlay.pushRaPage(page, props)
+        }
     }
 
     // --- Exit confirmation dialog ---
