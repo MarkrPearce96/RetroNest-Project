@@ -49,6 +49,55 @@ Item {
         }
     }
 
+    // Two-finger trackpad swipe (wheel events with pixel deltas on
+    // macOS) drives PathView.offset directly, so the carousel tracks
+    // the fingers continuously — browser-style. Trackpad momentum
+    // arrives as decaying wheel events, so inertia comes free; once the
+    // stream goes quiet, snap the nearest card into the highlight slot.
+    // currentIndex (and thus carouselIndex + artwork) follow the offset
+    // automatically via StrictlyEnforceRange, same as a click-drag.
+    //
+    // Coexists with click-drag: while the PathView is being dragged,
+    // wheel events (including a prior swipe's momentum tail, which can
+    // stream for over a second) are ignored — otherwise the leftover
+    // inertia writes fight the drag and it feels broken.
+    property real swipeSpeed: 2.0   // finger-to-carousel distance multiplier
+    WheelHandler {
+        target: null
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: (event) => {
+            if (carousel.dragging || carouselModel.count === 0) return
+            // Dominant axis, so slightly-diagonal two-finger swipes (and
+            // plain mouse scroll wheels) drive the carousel too.
+            var px = event.pixelDelta.x !== 0 ? event.pixelDelta.x
+                                              : event.angleDelta.x / 8
+            var py = event.pixelDelta.y !== 0 ? event.pixelDelta.y
+                                              : event.angleDelta.y / 8
+            var dx = Math.abs(px) >= Math.abs(py) ? px : py
+            if (dx === 0) return
+            snapAnim.stop()
+            carousel.offset += dx * root.swipeSpeed
+                               / (root.cardWidth + root.cardSpacing)
+            wheelSettle.restart()
+        }
+    }
+    Timer {
+        id: wheelSettle
+        interval: 120
+        onTriggered: {
+            snapAnim.from = carousel.offset
+            snapAnim.to = Math.round(carousel.offset)
+            if (snapAnim.from !== snapAnim.to) snapAnim.start()
+        }
+    }
+    NumberAnimation {
+        id: snapAnim
+        target: carousel
+        property: "offset"
+        duration: 200
+        easing.type: Easing.OutCubic
+    }
+
     // Keyboard navigation
     Keys.onLeftPressed: root.carouselPrev()
     Keys.onRightPressed: root.carouselNext()
@@ -234,6 +283,15 @@ Item {
             // Single artwork trigger for every navigation source — keys,
             // clicks, AND interactive flicks (which bypass carouselNext/Prev).
             onCurrentIndexChanged: root.updateCarouselArtwork()
+
+            // A click-drag takes over from any in-flight wheel gesture:
+            // kill the pending snap so it can't fight the finger.
+            onDraggingChanged: {
+                if (dragging) {
+                    snapAnim.stop()
+                    wheelSettle.stop()
+                }
+            }
 
             path: Path {
                 startX: 60 + (root.cardWidth * root.selectedScale) / 2
