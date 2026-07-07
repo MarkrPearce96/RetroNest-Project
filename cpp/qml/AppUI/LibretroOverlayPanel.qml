@@ -127,10 +127,10 @@ Window {
         }
     }
 
-    // ── RA: launch banner + other info toasts ──
+    // ── RA launch banner + other info toasts ──
     Connections {
         target: app
-        function onRaInfoToast(header, title, description, imageUrl, durationMs) {
+        function onInfoToast(header, title, description, imageUrl, durationMs) {
             if (!app.gameUsesHardwareRender()) return;
             // showWithHeader preserves the C++-supplied header label
             // (e.g. "GAME MASTERED", "HARDCORE MODE", "RA SERVER ERROR",

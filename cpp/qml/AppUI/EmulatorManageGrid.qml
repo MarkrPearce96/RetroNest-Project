@@ -11,7 +11,7 @@ FocusScope {
 
     Connections {
         target: app
-        function onEmulatorInstalled() {
+        function onEmulatorStatusChanged() {
             root.emuList = app.allEmulatorStatus()
         }
     }

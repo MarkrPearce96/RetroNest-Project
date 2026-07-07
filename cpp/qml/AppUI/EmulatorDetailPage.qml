@@ -94,7 +94,7 @@ Item {
 
     Connections {
         target: app
-        function onEmulatorInstalled() {
+        function onEmulatorStatusChanged() {
             root.emuList = app.allEmulatorStatus()
         }
         function onInstallProgress(emuId, progress, phase, detail) {

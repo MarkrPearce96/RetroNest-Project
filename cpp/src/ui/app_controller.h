@@ -275,11 +275,13 @@ signals:
     void gameFinished(int exitCode, bool crashed);
     void globalHotkeyPressed();
     // Fired by the libretro hotkey matcher when the user's ToggleMenu
-    // binding is pressed. Distinguished from globalHotkeyPressed so QML
-    // can keep the macOS Cmd+Shift+Esc hotkey scoped to standalone
-    // emulators while libretro games drive their menu via this signal.
+    // binding is pressed. Distinct from globalHotkeyPressed (the Carbon
+    // Cmd+Shift+Esc hotkey) — both toggle the menu in QML, but this one
+    // only fires while a game has input focus.
     void libretroMenuToggleRequested();
-    void emulatorInstalled(const QString& emuId);
+    /** An emulator's installed-state changed (install OR uninstall
+     *  succeeded). QML listens to refresh allEmulatorStatus() snapshots. */
+    void emulatorStatusChanged(const QString& emuId);
     void installProgress(const QString& emuId, double progress,
                          const QString& phase, const QString& detail);
     void installFinished(const QString& emuId, bool success, const QString& message);
@@ -307,13 +309,13 @@ signals:
     void raAchievementUnlocked(const QString& id, const QString& title,
                                const QString& description,
                                const QString& imageUrl);
-    /** Generic info toast forwarded from RAService — used for the
-     *  game-start banner, game-mastered celebration, hardcore reset
-     *  notice, and server-error notice. QML routes this through the
-     *  same AchievementToast component as the unlock toast. */
-    void raInfoToast(const QString& header, const QString& title,
-                     const QString& description, const QString& imageUrl,
-                     int durationMs);
+    /** Generic info toast — RA banners forwarded from RAService
+     *  (game-start, mastered, hardcore reset, server error) plus
+     *  app-level notices (save-slot change, PCSX2 patches refresh).
+     *  QML routes all of it through the AchievementToast component. */
+    void infoToast(const QString& header, const QString& title,
+                   const QString& description, const QString& imageUrl,
+                   int durationMs);
     /** Indicator-bar update forwarded from RAService — challenge /
      *  progress chips and connection-status banner. `kind` matches
      *  rc_client event-type integers; `data` carries the per-event

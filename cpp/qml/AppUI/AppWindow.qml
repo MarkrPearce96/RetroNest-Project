@@ -390,10 +390,10 @@ ApplicationWindow {
             if (app.raSoundEffects && unlockSound.source.toString().length > 0)
                 unlockSound.play()
         }
-        // Generic info-toast — drives the same component for game-start
-        // banner, game-mastered celebration, hardcore reset notice, and
-        // server-error notice. The C++ side picks the header text.
-        function onRaInfoToast(header, title, description, imageUrl, durationMs) {
+        // Generic info-toast — RA banners (game-start, mastered, hardcore
+        // reset, server error) plus app notices (save slot, patches
+        // refresh). The C++ side picks the header text.
+        function onInfoToast(header, title, description, imageUrl, durationMs) {
             // SP3.5: skip for Pattern B HW-render cores — LibretroOverlayPanel handles it.
             if (app.gameUsesHardwareRender()) return;
             achievementToast.showWithHeader(header, title, description,

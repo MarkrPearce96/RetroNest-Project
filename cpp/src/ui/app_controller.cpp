@@ -131,13 +131,13 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     connect(&m_emuService, &EmulatorService::installFinished, this,
         [this](const QString& emuId, bool success, const QString& message) {
             setStatus(message);
-            if (success) emit emulatorInstalled(emuId);
+            if (success) emit emulatorStatusChanged(emuId);
             emit installFinished(emuId, success, message);
         });
     connect(&m_emuService, &EmulatorService::uninstallFinished, this,
         [this](const QString& emuId, bool success, const QString& message) {
             setStatus(message);
-            if (success) emit emulatorInstalled(emuId);  // reuse to refresh UI
+            if (success) emit emulatorStatusChanged(emuId);
             emit uninstallFinished(emuId, success, message);
         });
     connect(&m_emuService, &EmulatorService::updateAvailable,
@@ -160,7 +160,7 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     connect(&m_raService, &RAService::achievementUnlocked,
             this, &AppController::raAchievementUnlocked);
     connect(&m_raService, &RAService::infoToast,
-            this, &AppController::raInfoToast);
+            this, &AppController::infoToast);
     connect(&m_raService, &RAService::indicator,
             this, &AppController::raIndicator);
 
@@ -187,9 +187,9 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     cb.setCurrentSlot  = [this](int s) {
         if (auto* gs = m_gameService.session()) {
             gs->setCurrentSaveSlot(s);  // GameSession clamps to [1,5] internally
-            emit raInfoToast(QStringLiteral("Save State"),
-                             QStringLiteral("Slot %1").arg(gs->currentSaveSlot()),
-                             QString(), QString(), 1500);
+            emit infoToast(QStringLiteral("Save State"),
+                           QStringLiteral("Slot %1").arg(gs->currentSaveSlot()),
+                           QString(), QString(), 1500);
         }
     };
     cb.toggleFastForward = [this]() {
@@ -302,7 +302,7 @@ void AppController::refreshPcsx2Patches() {
 }
 
 void AppController::emitPatchesToast(bool success, const QString& message) {
-    emit raInfoToast(
+    emit infoToast(
         /*header*/      "PCSX2 Patches",
         /*title*/       success ? "Updated" : "Update failed",
         /*description*/ message,
