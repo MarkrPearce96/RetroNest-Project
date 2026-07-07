@@ -155,35 +155,58 @@ ApplicationWindow {
         id: gameActionPopup
     }
 
-    // Universal-input gating across every modal / overlay.
+    // ── Modal / cursor policy — SINGLE SOURCE (P3) ──────────────────
+    // The three derived properties below own the modal policy. Every
+    // gate (matcher Binding, the three Shortcuts, ButtonHints, the
+    // Start-button Connections) and the cursor derive from them — no
+    // gate carries its own hand-synchronized OR list.
     //
-    // Three gate kinds, all built from the same set of modal visibility
-    // flags, with two role exceptions:
-    //   - settingsOverlay omitted from the Esc-Shortcut gate so Esc keeps
-    //     driving goBack through SettingsOverlay sub-pages.
-    //   - inGameMenu (libretro) omitted from the libretro-matcher
-    //     suppression because the matcher's Esc=ToggleMenu IS the close.
+    // Policy table per modal:
     //
-    // Policy table per modal — keep in sync with the OR expressions
-    // in the Binding + the three Shortcut.enabled gates below:
+    //   modal                  inhibitMatcher  inhibitEsc  needsCursor  notes
+    //   ─────                  ──────────────  ──────────  ───────────  ─────
+    //   gameActionPopup        ✓               ✓           ✗            BaseModalCard; own Esc/Backspace/Back
+    //   resumeStateDialog      ✓               ✓           ✗            BaseModalCard; own Esc/Backspace/Back
+    //   settingsOverlay        ✓               ✗           ✓            Esc Shortcut MUST fire to drive goBack
+    //   raLoginPrompt          ✓               ✓           ✓            own Esc/Return/Back handler
+    //   updateConfirm          ✓               ✓           ✓            own Esc/Backspace/Return handler
+    //   updateProgressPopup    ✓               ✓           ✓            modal blocker
+    //   updateNotification     ✗               ✗           ✓            clickable toast, not a modal
+    //   virtualKeyboard        ✓               ✓           ✗            own handlers; matcher would clobber text input
+    //   inGameMenu (libretro)  ✗               ✓           ✗            HotkeyMatcher's Esc=ToggleMenu IS the close
     //
-    //   modal                  inhibitMatcher  inhibitEsc  notes
-    //   ─────                  ──────────────  ──────────  ─────
-    //   gameActionPopup        ✓               ✓           BaseModalCard; own Esc/Backspace/Back
-    //   resumeStateDialog      ✓               ✓           BaseModalCard; own Esc/Backspace/Back
-    //   settingsOverlay        ✓               ✗           Esc Shortcut MUST fire to drive goBack
-    //   raLoginPrompt          ✓               ✓           own Esc/Return/Back handler
-    //   updateConfirm          ✓               ✓           own Esc/Backspace/Return handler
-    //   updateProgressPopup    ✓               ✓           modal blocker
-    //   virtualKeyboard        ✓               ✓           own handlers; matcher would clobber text input
-    //   inGameMenu (libretro)  ✗               ✓           HotkeyMatcher's Esc=ToggleMenu IS the close
-    //
-    // Adding a new modal: append its visibility flag to the relevant OR
-    // expressions below and document its policy row.
+    // Adding a new modal: add its flag to the matching properties below
+    // and document its row here — nothing else to keep in sync.
     //
     // settingsOverlay uses .panelOpen (user-intent flag) instead of
     // .visible because visible lags the slide-out animation and can race.
-    //
+
+    // Modals that suppress the libretro hotkey matcher (settingsOverlay
+    // joins via the Binding below; inGameMenu deliberately doesn't —
+    // the matcher's Esc=ToggleMenu IS how it closes).
+    readonly property bool anyModalVisible:
+        gameActionPopup.visible
+        || resumeStateDialog.visible
+        || raLoginPrompt.visible
+        || updateConfirm.visible
+        || updateProgressPopup.visible
+        || inputManager.virtualKeyboardOpen
+
+    // Modals that own Esc internally — the Esc Shortcut must not fire.
+    readonly property bool anyEscOwningModalVisible:
+        anyModalVisible || app.inGameMenuOpen
+
+    // Overlays the user drives with the mouse. This handler is the ONLY
+    // cursor toggler — the per-modal show/hide calls with hand-rolled
+    // "unless another overlay still needs it" checks are gone.
+    readonly property bool cursorNeeded:
+        settingsOverlay.panelOpen
+        || raLoginPrompt.visible
+        || updateConfirm.visible
+        || updateProgressPopup.visible
+        || updateNotification.visible
+    onCursorNeededChanged: app.setCursorVisible(cursorNeeded)
+
     // `!app.gameRunning` is in this OR for a separate reason: libretro
     // hotkeys (Esc=ToggleMenu, M=Mute, 1/2=SaveState/LoadState, …) only
     // make sense while a game is playing. Without this gate the matcher
@@ -195,12 +218,7 @@ ApplicationWindow {
         property: "libretroHotkeysSuppressed"
         value: !app.gameRunning
                || settingsOverlay.panelOpen
-               || gameActionPopup.visible
-               || resumeStateDialog.visible
-               || raLoginPrompt.visible
-               || updateConfirm.visible
-               || updateProgressPopup.visible
-               || inputManager.virtualKeyboardOpen
+               || window.anyModalVisible
     }
 
     InGameMenu {
@@ -399,7 +417,6 @@ ApplicationWindow {
         function onRaEmulatorLoginPrompt(emulatorName) {
             raLoginPrompt.emulatorName = emulatorName
             raLoginPrompt.visible = true
-            app.setCursorVisible(true)
             raLoginPrompt.forceActiveFocus()
         }
     }
@@ -510,7 +527,6 @@ ApplicationWindow {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             raLoginPrompt.visible = false
-                            app.setCursorVisible(false)
                             app.raProceedAfterLoginPrompt()
                         }
                     }
@@ -521,7 +537,6 @@ ApplicationWindow {
         Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Return || event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
                 raLoginPrompt.visible = false
-                app.setCursorVisible(false)
                 app.raProceedAfterLoginPrompt()
                 event.accepted = true
             }
@@ -568,23 +583,13 @@ ApplicationWindow {
         }
     }
 
-    // Update notification toast at top
+    // Update notification toast at top. (Cursor while it's up comes from
+    // the window-level cursorNeeded policy.)
     UpdateNotification {
         id: updateNotification
         anchors.top: parent.top
         anchors.topMargin: 16
         anchors.horizontalCenter: parent.horizontalCenter
-
-        // Show the cursor while the notification is up so the user can click
-        // Update/Close. Skip toggling if another overlay still needs it.
-        onVisibleChanged: {
-            if (visible) {
-                app.setCursorVisible(true)
-            } else if (!settingsOverlay.visible && !raLoginPrompt.visible
-                    && !updateConfirm.visible && !updateProgressPopup.visible) {
-                app.setCursorVisible(false)
-            }
-        }
     }
 
     Connections {
@@ -602,7 +607,6 @@ ApplicationWindow {
             updateConfirm.emuName = emuName
             updateConfirm.latestVersion = latestVersion
             updateConfirm.visible = true
-            app.setCursorVisible(true)
             updateConfirm.forceActiveFocus()
         }
     }
@@ -619,9 +623,6 @@ ApplicationWindow {
 
         function cancel() {
             visible = false
-            if (!settingsOverlay.visible && !updateNotification.visible) {
-                app.setCursorVisible(false)
-            }
         }
 
         function confirm() {
@@ -755,7 +756,6 @@ ApplicationWindow {
             if (!updateProgressPopup.visible || emuId !== updateProgressPopup.emuId) return
             if (success) {
                 updateProgressPopup.close()
-                if (!settingsOverlay.visible) app.setCursorVisible(false)
             } else {
                 updateProgressPopup.title = "Update Failed"
                 updateProgressPopup.subtitle = message
@@ -795,12 +795,7 @@ ApplicationWindow {
         // Modals all have their own hint strips, so the main strip yields
         // to any visible modal.
         visible: !settingsOverlay.panelOpen
-                 && !gameActionPopup.visible
-                 && !resumeStateDialog.visible
-                 && !raLoginPrompt.visible
-                 && !updateConfirm.visible
-                 && !updateProgressPopup.visible
-                 && !inputManager.virtualKeyboardOpen
+                 && !window.anyModalVisible
                  && !(mainStack.currentItem && mainStack.currentItem.isEmulationView)
         hints: {
             var page = mainStack.currentItem;
@@ -809,11 +804,13 @@ ApplicationWindow {
         }
     }
 
-    // Controller Start button toggles settings (signal, not key injection)
+    // Controller Start button toggles settings (signal, not key injection).
+    // Gated on the full modal set — the old hand-rolled gate only listed
+    // three modals, so Start could pop the settings overlay open behind
+    // the resume dialog or an update popup.
     Connections {
         target: inputManager
-        enabled: !inputManager.virtualKeyboardOpen && !gameActionPopup.visible
-                 && !app.inGameMenuOpen
+        enabled: !window.anyEscOwningModalVisible
         function onNavigateStart() {
             if (settingsOverlay.visible) {
                 if (settingsOverlay.isBusy()) {
@@ -933,13 +930,7 @@ ApplicationWindow {
     // goBack/close through its sub-page history.
     Shortcut {
         sequence: "Escape"
-        enabled: !gameActionPopup.visible
-                 && !resumeStateDialog.visible
-                 && !raLoginPrompt.visible
-                 && !updateConfirm.visible
-                 && !updateProgressPopup.visible
-                 && !inputManager.virtualKeyboardOpen
-                 && !app.inGameMenuOpen
+        enabled: !window.anyEscOwningModalVisible
         onActivated: handleBack()
     }
 
@@ -949,14 +940,7 @@ ApplicationWindow {
     // clobber them.
     Shortcut {
         sequences: ["Backspace", "Back"]
-        enabled: !settingsOverlay.panelOpen
-                 && !gameActionPopup.visible
-                 && !resumeStateDialog.visible
-                 && !raLoginPrompt.visible
-                 && !updateConfirm.visible
-                 && !updateProgressPopup.visible
-                 && !inputManager.virtualKeyboardOpen
-                 && !app.inGameMenuOpen
+        enabled: !settingsOverlay.panelOpen && !window.anyEscOwningModalVisible
         onActivated: handleBack()
     }
 
@@ -966,13 +950,7 @@ ApplicationWindow {
         sequence: "M"
         enabled: !app.gameRunning
                  && !settingsOverlay.panelOpen
-                 && !gameActionPopup.visible
-                 && !resumeStateDialog.visible
-                 && !raLoginPrompt.visible
-                 && !updateConfirm.visible
-                 && !updateProgressPopup.visible
-                 && !inputManager.virtualKeyboardOpen
-                 && !app.inGameMenuOpen
+                 && !window.anyEscOwningModalVisible
         onActivated: {
             var id = themeContext.currentFocusedGameId
             if (id >= 0) themeContext.openGameActions(id)

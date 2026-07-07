@@ -27,20 +27,20 @@ FocusScope {
         }
     }
 
+    // Cursor visibility while the overlay is open comes from AppWindow's
+    // cursorNeeded policy (bound to panelOpen) — no calls here.
     function open() {
         selectedCategory = -1
         panelStack.clear()
         panelStack.push(categoryListComponent)
         visible = true
         panelOpen = true
-        app.setCursorVisible(true)
         overlay.forceActiveFocus()
         categoryListFocusTimer.start()
     }
 
     function close() {
         panelOpen = false
-        app.setCursorVisible(false)
         // visibility cleared by slide-out animation end
         // Return focus to the main content after slide-out
         focusReturnTimer.start()
@@ -102,7 +102,6 @@ FocusScope {
             panelStack.push(scraperPageComponent)
             visible = true
             panelOpen = true
-            app.setCursorVisible(true)
             overlay.forceActiveFocus()
         } else {
             panelStack.push(scraperPageComponent)
@@ -127,7 +126,6 @@ FocusScope {
             panelStack.push(achievementsPageComponent, { raGameId: raGameId, gameTitle: gameTitle })
             visible = true
             panelOpen = true
-            app.setCursorVisible(true)
             overlay.forceActiveFocus()
         } else {
             panelStack.push(achievementsPageComponent, { raGameId: raGameId, gameTitle: gameTitle })
