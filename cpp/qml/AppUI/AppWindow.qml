@@ -221,7 +221,6 @@ ApplicationWindow {
                 app.gameSession.resumeEmulation();
             }
             inGameMenu.close();
-            saveToast.show();
         }
 
         onLoadStateRequested: {
@@ -230,7 +229,6 @@ ApplicationWindow {
                 app.gameSession.resumeEmulation();
             }
             inGameMenu.close();
-            loadToast.show();
         }
 
         // Fast Forward is a STATE TOGGLE, not a one-shot action — keep
@@ -242,6 +240,21 @@ ApplicationWindow {
             if (!app.gameSession) return;
             var ffOn = app.gameSession.toggleFastForwardLibretro();
             if (ffOn) ffToast.show(); else ffToast.hide();
+        }
+    }
+
+    // Saved/Loaded pills — driven by GameSession so every trigger source
+    // (in-game menu buttons AND hotkeys) pops the same pill. HW-render
+    // sessions get theirs from LibretroOverlayPanel's identical hookup.
+    Connections {
+        target: app.gameSession
+        function onStateSaveRequested() {
+            if (app.gameUsesHardwareRender()) return;
+            saveToast.show();
+        }
+        function onStateLoadRequested() {
+            if (app.gameUsesHardwareRender()) return;
+            loadToast.show();
         }
     }
 

@@ -173,6 +173,13 @@ signals:
     void libretroAspectRatioChanged();
     /** Emitted whenever the fast-forward state flips. */
     void libretroFastForwardChanged();
+    /** Emitted whenever a save/load state request is submitted to the
+     *  runtime, from ANY source (in-game menu buttons or hotkeys). The QML
+     *  surfaces (AppWindow + LibretroOverlayPanel) pop their compact
+     *  Saved/Loaded pills from these — same pattern as the FF pill above,
+     *  so hotkey-triggered saves get the same feedback as menu ones. */
+    void stateSaveRequested();
+    void stateLoadRequested();
     /** Emitted when currentSaveSlot is changed via setCurrentSaveSlot. */
     void currentSaveSlotChanged();
     /** Forwarded from the in-process rcheevos runtime (libretro path only).

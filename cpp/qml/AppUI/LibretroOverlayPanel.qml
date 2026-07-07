@@ -150,13 +150,13 @@ Window {
         }
     }
 
-    // ── Local hookups for menu-triggered toasts ──
-    // Mirrors AppWindow.qml: Save State pops a "Saved" pill, Load State
-    // pops "Loaded".
+    // ── Saved/Loaded pills ──
+    // Driven by GameSession (like the FF pill below) so every trigger
+    // source — menu buttons AND hotkeys — pops the same pill.
     Connections {
-        target: panelWindow
-        function onSaveStateRequested() { saveToast.show(); }
-        function onLoadStateRequested() { loadToast.show(); }
+        target: app.gameSession
+        function onStateSaveRequested() { saveToast.show(); }
+        function onStateLoadRequested() { loadToast.show(); }
     }
 
     // Fast Forward — driven by the GameSession property change signal so

@@ -509,6 +509,7 @@ void GameSession::saveStateLibretro(int slot) {
     const QString path = libretroSlotPath(slot);
     if (path.isEmpty()) return;
     m_libretroAdapter->runtime()->requestSaveState(path);
+    emit stateSaveRequested();
 }
 
 void GameSession::loadStateLibretro(int slot) {
@@ -516,6 +517,7 @@ void GameSession::loadStateLibretro(int slot) {
     const QString path = libretroSlotPath(slot);
     if (path.isEmpty()) return;
     m_libretroAdapter->runtime()->requestLoadState(path);
+    emit stateLoadRequested();
 }
 
 void GameSession::setCurrentSaveSlot(int slot) {

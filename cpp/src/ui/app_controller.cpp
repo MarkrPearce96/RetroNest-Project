@@ -174,6 +174,9 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
     HotkeyMatcher::s_active.store(m_hotkeyMatcher.get());
 
     HotkeyDispatcher::Callbacks cb;
+    // Saved/Loaded pill feedback comes from GameSession's
+    // stateSaveRequested/stateLoadRequested signals (fired inside these
+    // calls), so hotkey saves get the same pills as menu ones.
     cb.saveStateSlot   = [this](int s) {
         if (auto* gs = m_gameService.session()) gs->saveStateLibretro(s);
     };
