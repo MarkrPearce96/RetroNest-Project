@@ -497,15 +497,15 @@ ApplicationWindow {
         }
     }
 
-    // Global Cmd+Shift+Escape hotkey — works even when an external emulator has focus
+    // Global Cmd+Shift+Escape hotkey (Carbon, system-wide)
     Connections {
         target: app
-        // Cmd+Shift+Esc — only acts when a STANDALONE emulator is running.
-        // Libretro games drive their menu from their own bindings via
-        // onLibretroMenuToggleRequested below.
+        // Cmd+Shift+Esc — toggle the in-game menu. The old standalone-
+        // emulator-only guard was process-era dead code: every session is
+        // libretro now, so it made this handler unreachable and the
+        // documented trigger inert.
         function onGlobalHotkeyPressed() {
             if (!app.gameRunning) return;
-            if (isLibretroGame() || app.gameUsesHardwareRender()) return;
             window.toggleInGameMenu();
         }
         // Libretro matcher fires this whenever the user's ToggleMenu
@@ -827,22 +827,9 @@ ApplicationWindow {
     // NSView and immediately calls registerHardwareView() back into
     // CoreRuntime — satisfying RETRONEST_ENVIRONMENT_GET_MACOS_NSVIEW by
     // the time the core's spin-wait inside startLibretro resolves.
-    //
-    // Idempotent vs gameStartedLibretro: we guard so we don't push twice.
     Connections {
         target: app
         function onGameStartingLibretro() {
-            if (mainStack.currentItem && mainStack.currentItem.isEmulationView)
-                return
-            var view = mainStack.push("EmulationView.qml")
-            view.session = app.gameSession
-            view.inGameMenuRequested.connect(window.toggleInGameMenu)
-        }
-        function onGameStartedLibretro() {
-            // After SP3 the view is already pushed by onGameStartingLibretro,
-            // but keep this branch for software-backend launches that don't
-            // need the pre-push (still cheap and idempotent thanks to the
-            // isEmulationView guard).
             if (mainStack.currentItem && mainStack.currentItem.isEmulationView)
                 return
             var view = mainStack.push("EmulationView.qml")
