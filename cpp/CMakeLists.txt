@@ -768,6 +768,15 @@ target_link_libraries(test_core_runtime PRIVATE retronest_core Qt6::Test)
 add_dependencies(test_core_runtime fake_libretro_core)
 add_test(NAME CoreRuntime COMMAND test_core_runtime)
 
+add_executable(test_theme_manager
+    tests/test_theme_manager.cpp
+    # theme_manager.cpp is an app-only source (not in retronest_ui), so the
+    # test compiles it directly; Paths comes from retronest_core.
+    src/ui/theme_manager.cpp
+)
+target_link_libraries(test_theme_manager PRIVATE retronest_core Qt6::Test)
+add_test(NAME ThemeManager COMMAND test_theme_manager)
+
 add_executable(test_patches_sidecar tests/test_patches_sidecar.cpp)
 target_link_libraries(test_patches_sidecar PRIVATE retronest_core)
 add_test(NAME PatchesSidecar COMMAND test_patches_sidecar)

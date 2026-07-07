@@ -63,6 +63,12 @@ public:
     /** Save the root path for next launch. */
     static void saveRoot(const QString& rootPath);
 
+    /** Load previously saved theme id. Returns empty if none saved. */
+    static QString loadSavedTheme();
+
+    /** Save the chosen theme id for next launch. */
+    static void saveTheme(const QString& themeId);
+
 private:
     static QString s_root;
 };

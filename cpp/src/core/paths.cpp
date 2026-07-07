@@ -102,22 +102,37 @@ QString Paths::appConfigPath() {
     return appData + "/config.json";
 }
 
-QString Paths::loadSavedRoot() {
-    QFile f(appConfigPath());
+// config.json holds independent keys (root, theme); every writer must
+// read-modify-write so it can't clobber the others' values.
+static QJsonObject readAppConfig() {
+    QFile f(Paths::appConfigPath());
     if (!f.open(QIODevice::ReadOnly)) return {};
-    QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
-    f.close();
-    return obj["root"].toString();
+    return QJsonDocument::fromJson(f.readAll()).object();
+}
+
+static void writeAppConfig(const QJsonObject& obj) {
+    QFile f(Paths::appConfigPath());
+    if (f.open(QIODevice::WriteOnly))
+        f.write(QJsonDocument(obj).toJson());
+}
+
+QString Paths::loadSavedRoot() {
+    return readAppConfig()["root"].toString();
 }
 
 void Paths::saveRoot(const QString& rootPath) {
-    QJsonObject obj;
+    QJsonObject obj = readAppConfig();
     obj["root"] = rootPath;
-
-    QFile f(appConfigPath());
-    if (f.open(QIODevice::WriteOnly)) {
-        f.write(QJsonDocument(obj).toJson());
-        f.close();
-    }
+    writeAppConfig(obj);
     qInfo() << "[Paths] Saved root to" << appConfigPath();
+}
+
+QString Paths::loadSavedTheme() {
+    return readAppConfig()["theme"].toString();
+}
+
+void Paths::saveTheme(const QString& themeId) {
+    QJsonObject obj = readAppConfig();
+    obj["theme"] = themeId;
+    writeAppConfig(obj);
 }

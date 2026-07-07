@@ -1,4 +1,5 @@
 #include "theme_manager.h"
+#include "core/paths.h"
 
 #include <QDir>
 #include <QFile>
@@ -74,10 +75,23 @@ void ThemeManager::scanThemes(const QString& themesDir) {
     if (m_themes.isEmpty())
         qCritical() << "[ThemeManager] No valid themes found — UI will be blank";
 
-    // Auto-select first theme if none selected
+    const QString previous = m_currentThemeId;
+
+    // Prefer the persisted choice as soon as a scan pass makes it available
+    // (themes arrive in two passes: user dir, then bundled), else fall back
+    // to the first theme found.
+    const QString saved = Paths::loadSavedTheme();
+    if (!saved.isEmpty() && m_currentThemeId != saved) {
+        const bool savedFound = std::any_of(m_themes.cbegin(), m_themes.cend(),
+            [&saved](const ThemeInfo& t) { return t.id == saved; });
+        if (savedFound)
+            m_currentThemeId = saved;
+    }
     if (m_currentThemeId.isEmpty() && !m_themes.isEmpty())
         m_currentThemeId = m_themes.first().id;
 
+    if (m_currentThemeId != previous)
+        emit currentThemeChanged();
     emit themesChanged();
 }
 
@@ -111,6 +125,7 @@ void ThemeManager::setCurrentThemeId(const QString& id) {
     }
 
     m_currentThemeId = id;
+    Paths::saveTheme(id);
     emit currentThemeChanged();
 }
 
