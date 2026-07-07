@@ -52,20 +52,49 @@ ApplicationWindow {
         }
     }
 
-    function updateMainPage() {
+    // ── Guarded stack transitions (P4 / review R1) ──────────────────
+    // resetStackToRoot() is the ONLY place that clears + repushes
+    // mainStack. Guards:
+    //  - While a game runs the reset is DEFERRED, not executed: clearing
+    //    the stack destroys the live EmulationView, whose destructor
+    //    yanks the NSView out from under the running core
+    //    (registerHardwareView(0)). The deferred reset runs from the
+    //    gameFinished handler after EmulationView is popped.
+    //  - If the theme fails to resolve systemBrowser, fall back to
+    //    EmptyStatePage instead of leaving an empty stack (dead nav) or
+    //    a stale page.
+    // showingEmptyState is assigned ONLY here, from what was actually
+    // pushed — no failure branch can leave it lying.
+    property bool _pendingStackReset: false
+
+    function resetStackToRoot() {
+        if (app.gameRunning
+                || (mainStack.currentItem && mainStack.currentItem.isEmulationView)) {
+            _pendingStackReset = true
+            return
+        }
         var hasGames = themeContext.systems.length > 0
-        if (hasGames && showingEmptyState) {
-            // Games appeared — switch to theme
-            mainStack.clear()
-            var url = themeManager.resolve("systemBrowser").toString()
-            if (url !== "") mainStack.push(url)
+        var url = hasGames ? themeManager.resolve("systemBrowser").toString() : ""
+        mainStack.clear()
+        if (url !== "") {
+            mainStack.push(url)
             showingEmptyState = false
-        } else if (!hasGames && !showingEmptyState) {
-            // No games — switch to empty state
-            mainStack.clear()
+        } else {
+            if (hasGames)
+                console.warn("[AppWindow] systemBrowser failed to resolve — falling back to empty state")
             mainStack.push("EmptyStatePage.qml")
             showingEmptyState = true
         }
+        if (mainStack.currentItem)
+            mainStack.currentItem.forceActiveFocus()
+    }
+
+    function updateMainPage() {
+        // Root kind (empty state ↔ theme) only changes when the game
+        // library crosses zero; everything else keeps the current stack.
+        var hasGames = themeContext.systems.length > 0
+        if (hasGames === showingEmptyState)
+            resetStackToRoot()
     }
 
     // Borderless fullscreen: fill the entire screen without using native macOS fullscreen.
@@ -84,17 +113,7 @@ ApplicationWindow {
         anchors.fill: parent
 
         Component.onCompleted: {
-            if (themeContext.systems.length > 0) {
-                var url = themeManager.resolve("systemBrowser").toString()
-                if (url !== "") {
-                    mainStack.push(url)
-                } else {
-                    console.warn("[AppWindow] No systemBrowser URL resolved — is a theme installed?")
-                }
-            } else {
-                mainStack.push("EmptyStatePage.qml")
-                window.showingEmptyState = true
-            }
+            window.resetStackToRoot()
             app.checkForUpdates()
         }
     }
@@ -119,14 +138,13 @@ ApplicationWindow {
         function onGamesChanged() { window.updateMainPage() }
     }
 
-    // Reload theme pages when theme changes
+    // Reload theme pages when theme changes. (While the empty state is
+    // showing there's nothing themed on the stack to rebuild.)
     Connections {
         target: themeManager
         function onCurrentThemeChanged() {
-            if (!window.showingEmptyState) {
-                mainStack.clear()
-                mainStack.push(themeManager.resolve("systemBrowser").toString())
-            }
+            if (!window.showingEmptyState)
+                window.resetStackToRoot()
         }
     }
 
@@ -861,6 +879,13 @@ ApplicationWindow {
             if (mainStack.depth > 1 && mainStack.currentItem
                     && mainStack.currentItem.isEmulationView)
                 mainStack.pop()
+            // A stack reset requested mid-game (library emptied, theme
+            // switched) was deferred to protect the live EmulationView —
+            // run it now that the view is popped.
+            if (window._pendingStackReset) {
+                window._pendingStackReset = false
+                window.resetStackToRoot()
+            }
             // Restore focus to the theme page so controller/keyboard nav works
             if (mainStack.currentItem)
                 mainStack.currentItem.forceActiveFocus();
