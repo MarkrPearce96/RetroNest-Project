@@ -42,5 +42,11 @@ void WizardState::ensureRomDirs(const QStringList& systemIds) {
 }
 
 void WizardState::accept() {
+    // Completing the wizard is what commits the chosen root — not a side
+    // effect of any individual page (InstallController used to save it in
+    // startInstall, so a flow that skipped the install page finished setup
+    // without persisting the root and the wizard reappeared every launch).
+    if (!m_rootPath.isEmpty())
+        Paths::saveRoot(m_rootPath);
     emit wizardAccepted();
 }

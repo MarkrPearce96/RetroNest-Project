@@ -30,7 +30,8 @@ double InstallController::progress() const {
 }
 
 void InstallController::startInstall(const QString& rootPath) {
-    Paths::saveRoot(rootPath);
+    // Runtime-only root setup; persistence happens in WizardState::accept
+    // so it isn't tied to this page being visited.
     Paths::setRoot(rootPath);
     Paths::ensureDirectories();
 
