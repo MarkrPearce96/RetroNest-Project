@@ -100,6 +100,25 @@ void ScraperService::applyResultToDb(int gameId, const Scraper::ScrapeResult& re
         qWarning() << "ScraperService: failed to write metadata for game ID" << gameId;
 }
 
+ScraperService::ScrapeOptions::Filter
+ScraperService::ScrapeOptions::filterFromString(const QString& s) {
+    if (s == "unscraped") return UnscrapedOnly;
+    if (s == "favorites") return FavoritesOnly;
+    return AllGames;
+}
+
+bool ScraperService::matchesFilter(const GameRecord& g, ScrapeOptions::Filter f) {
+    switch (f) {
+    case ScrapeOptions::UnscrapedOnly:
+        return g.cover_path.isEmpty() || !QFileInfo::exists(g.cover_path);
+    case ScrapeOptions::FavoritesOnly:
+        return g.favorite;
+    case ScrapeOptions::AllGames:
+    default:
+        return true;
+    }
+}
+
 void ScraperService::startBatchScrape(const ScrapeOptions& options) {
     m_cancelFlag.storeRelaxed(0);
 
@@ -113,20 +132,8 @@ void ScraperService::startBatchScrape(const ScrapeOptions& options) {
     // Apply game filter on main thread
     QVector<GameRecord> toScrape;
     for (const auto& g : allGames) {
-        switch (options.gameFilter) {
-        case ScrapeOptions::UnscrapedOnly:
-            if (g.cover_path.isEmpty() || !QFileInfo::exists(g.cover_path))
-                toScrape.append(g);
-            break;
-        case ScrapeOptions::FavoritesOnly:
-            if (g.favorite)
-                toScrape.append(g);
-            break;
-        case ScrapeOptions::AllGames:
-        default:
+        if (matchesFilter(g, options.gameFilter))
             toScrape.append(g);
-            break;
-        }
     }
 
     if (toScrape.isEmpty()) {

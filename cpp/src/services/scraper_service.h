@@ -40,7 +40,19 @@ public:
         QStringList systems;
         enum Filter { AllGames, UnscrapedOnly, FavoritesOnly };
         Filter gameFilter = AllGames;
+
+        /** Parse the QML-facing filter string ("unscraped" / "favorites";
+         *  anything else means all games). */
+        static Filter filterFromString(const QString& s);
     };
+
+    /**
+     * The single scrape-set membership predicate. startBatchScrape and any
+     * pre-count shown to the user (AppController::scrapeGameCount) must both
+     * go through this so the confirmation count can't drift from the set
+     * actually scraped.
+     */
+    static bool matchesFilter(const GameRecord& g, ScrapeOptions::Filter f);
 
     /** Start a batch scrape on a background thread. */
     void startBatchScrape(const ScrapeOptions& options);

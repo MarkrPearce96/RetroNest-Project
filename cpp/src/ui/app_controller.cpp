@@ -798,12 +798,7 @@ void AppController::startBatchScrape(const QStringList& mediaTypes,
     options.mediaTypes = mediaTypes;
     options.systems = systems;
 
-    if (gameFilter == "unscraped")
-        options.gameFilter = ScraperService::ScrapeOptions::UnscrapedOnly;
-    else if (gameFilter == "favorites")
-        options.gameFilter = ScraperService::ScrapeOptions::FavoritesOnly;
-    else
-        options.gameFilter = ScraperService::ScrapeOptions::AllGames;
+    options.gameFilter = ScraperService::ScrapeOptions::filterFromString(gameFilter);
 
     m_scraperService.startBatchScrape(options);
 }
@@ -831,19 +826,15 @@ QStringList AppController::allMediaTypes() const {
 }
 
 int AppController::scrapeGameCount(const QStringList& systems, const QString& gameFilter) const {
+    // Shares ScraperService's membership predicate so this confirmation
+    // count can't drift from the set startBatchScrape actually scrapes.
+    const auto filter = ScraperService::ScrapeOptions::filterFromString(gameFilter);
     int count = 0;
     for (const auto& system : systems) {
-        auto games = m_db->gamesBySystem(system);
+        const auto games = m_db->gamesBySystem(system);
         for (const auto& g : games) {
-            if (gameFilter == "unscraped") {
-                if (g.cover_path.isEmpty() || !QFileInfo::exists(g.cover_path))
-                    count++;
-            } else if (gameFilter == "favorites") {
-                if (g.favorite)
-                    count++;
-            } else {
+            if (ScraperService::matchesFilter(g, filter))
                 count++;
-            }
         }
     }
     return count;
