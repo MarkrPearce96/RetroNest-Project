@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <functional>
 
 class QQmlEngine;
 class LibretroOverlayPanel;
@@ -27,6 +28,20 @@ class InGameMenuController : public QObject {
 public:
     explicit InGameMenuController(QQmlEngine* engine, QObject* parent = nullptr);
     ~InGameMenuController() override;
+
+    /**
+     * Pause-policy hook, called with `true` on the menu-open edge and
+     * `false` on the close edge — the "core paused exactly while the
+     * menu is open, resume before every close or the libretro core's
+     * EmuThread watchdog kills the session" invariant lives HERE, on the
+     * state transition, so every close path (action buttons, toggle
+     * hotkey, programmatic closeMenu) resumes for free instead of each
+     * caller remembering to. AppController installs a hook that maps
+     * true/false onto GameSession pause/resumeEmulation; a redundant
+     * resume is a safe no-op in the cores (ResumeVm guards prev_state).
+     */
+    using PauseHook = std::function<void(bool paused)>;
+    void setPauseHook(PauseHook hook) { m_pauseHook = std::move(hook); }
 
     /** Open the in-game menu on the overlay window. */
     void openMenu();
@@ -65,6 +80,8 @@ private:
     void ensureLibretroPanel();
 
     QQmlEngine* m_engine = nullptr;
+    PauseHook m_pauseHook;
+    bool m_lastMenuOpen = false;   // edge detection for the hook
 
     // Lazy-instantiated. The C++ instance lives for AppController's
     // lifetime once created; the inner QQuickWindow is created/destroyed

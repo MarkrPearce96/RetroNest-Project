@@ -278,10 +278,14 @@ its `LibretroGLItem` dependency — both on the backlog since packet 5.
 ## In-Game Menu & Emulator Control
 - **Trigger:** Cmd+Shift+Escape (Carbon global hotkey, system-wide), Select+Start (SDL combo, all controllers), or Touchpad press (DualShock 4 / DualSense single-button)
 - **Overlay mechanism:** for HW-render cores the menu lives on `LibretroOverlayPanel`, a transparent `QQuickWindow` above the main window whose native window is panel-configured (isa-swizzled `NSPanel`: frameless, status-window-level, non-activating) so it can take key input over the borderless-fullscreen game view; software-render cores use an in-scene QML menu. (The process-era `InGameMenuPanel` that floated over external emulator processes was retired 2026-07.)
-- **Pause is a direct call.** Libretro cores run in-process, so opening the
-  menu is `CoreRuntime::pause()` / `resume()` — no keystroke synthesis, no
-  Accessibility permission, no SIGSTOP. (That machinery was deleted with
-  the process era, 2026-07.)
+- **Pause is a direct call, centralized on the menu-open edge.** Libretro
+  cores run in-process, so pausing is `CoreRuntime::pause()`/`resume()` —
+  and the "paused exactly while the menu is open, resume before every
+  close or the core's EmuThread watchdog kills the session" invariant
+  lives in exactly two places: `InGameMenuController`'s pause hook (HW
+  overlay path) and the in-scene menu's `onVisibleChanged` edge in
+  AppWindow.qml (SW path). Menu action handlers never call
+  pause/resumeEmulation themselves.
 - **Save & Quit** serializes the core state (`retro_serialize`) to
   `<serial-or-basename>.resume` under the emulator's savestates dir;
   `findResumeFile()` on the adapter locates it at next launch and

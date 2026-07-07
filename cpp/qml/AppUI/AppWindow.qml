@@ -40,13 +40,13 @@ ApplicationWindow {
             return;
         }
 
-        // SW-render libretro path: in-window HUD. Pause/resume the core
-        // explicitly because we don't get PauseOnFocusLoss.
+        // SW-render libretro path: in-window HUD. Pause/resume rides the
+        // menu's visibility edge (see the onVisibleChanged handler on the
+        // inGameMenu instance) — same invariant as the HW overlay path's
+        // pause hook in InGameMenuController.
         if (inGameMenu.visible) {
             inGameMenu.close();
-            if (app.gameSession) app.gameSession.resumeEmulation();
         } else {
-            if (app.gameSession) app.gameSession.pauseEmulation();
             app.activateApp();
             inGameMenu.open();
         }
@@ -225,45 +225,43 @@ ApplicationWindow {
         id: inGameMenu
 
         // This in-window InGameMenu instance is the software-render
-        // libretro path (HW-render cores use LibretroOverlayPanel). All paths
-        // here resume the libretro core before doing anything else —
-        // the core thread was paused on menu open and stays paused
-        // until we explicitly call resumeEmulation, otherwise the game
-        // (and any save-state work) is frozen.
-        onResumeRequested: {
-            if (app.gameSession) app.gameSession.resumeEmulation();
-            inGameMenu.close();
+        // libretro path (HW-render cores use LibretroOverlayPanel).
+        //
+        // Pause-resume policy is centralized on the visibility EDGE below —
+        // the core is paused exactly while this menu is visible, and every
+        // close() (these handlers, the toggle hotkey, gameFinished cleanup)
+        // resumes it for free. close() flips `visible` synchronously, so
+        // the exit handlers' stop calls run on a resumed core, and a
+        // queued save/load request flushes once the worker resumes. The
+        // libretro core tolerates a redundant resume (ResumeVm guards on
+        // prev_state == Running) and a resume on a dead session no-ops.
+        onVisibleChanged: {
+            if (!app.gameSession) return;
+            if (visible) app.gameSession.pauseEmulation();
+            else app.gameSession.resumeEmulation();
         }
 
+        onResumeRequested: inGameMenu.close()
+
         onExitWithSaveRequested: {
-            if (app.gameSession) app.gameSession.resumeEmulation();
             inGameMenu.close();
             themeContext.saveAndStopGame(1);
         }
 
         onExitWithoutSaveRequested: {
-            if (app.gameSession) app.gameSession.resumeEmulation();
             inGameMenu.close();
             themeContext.stopGame();
         }
 
-        // Libretro save / load drive CoreRuntime directly (external
-        // emulators use synthesized hotkeys; libretro is in-process).
-        // Resume the core first so the worker can flush the
-        // requested action between frames.
         onSaveStateRequested: {
-            if (app.gameSession) {
+            if (app.gameSession)
                 app.gameSession.saveStateLibretro(app.gameSession.currentSaveSlot);
-                app.gameSession.resumeEmulation();
-            }
             inGameMenu.close();
         }
 
         onLoadStateRequested: {
-            if (app.gameSession) {
+            if (app.gameSession)
                 app.gameSession.loadStateLibretro(app.gameSession.currentSaveSlot);
-                app.gameSession.resumeEmulation();
-            }
             inGameMenu.close();
         }
 

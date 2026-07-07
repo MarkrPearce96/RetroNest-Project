@@ -45,6 +45,15 @@ void InGameMenuController::ensureLibretroPanel() {
             this, &InGameMenuController::loadStateRequested);
     connect(m_libretroPanel, &LibretroOverlayPanel::toggleFastForwardRequested,
             this, &InGameMenuController::toggleFastForwardRequested);
+    // The open-state EDGE drives the pause policy (see setPauseHook) —
+    // pausing here rather than in each caller means no close path can
+    // forget to resume.
     connect(m_libretroPanel, &LibretroOverlayPanel::menuVisibleChanged,
-            this, &InGameMenuController::menuOpenChanged);
+            this, [this] {
+                const bool open = isMenuOpen();
+                if (open == m_lastMenuOpen) return;
+                m_lastMenuOpen = open;
+                if (m_pauseHook) m_pauseHook(open);
+                emit menuOpenChanged();
+            });
 }

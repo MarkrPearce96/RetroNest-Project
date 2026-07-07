@@ -876,40 +876,42 @@ void AppController::setQmlEngine(QQmlEngine* engine) {
     // action does (GameSession calls) lives here.
     m_inGameMenu = new InGameMenuController(m_qmlEngine, this);
 
+    // The pause/resume invariant lives on the menu-open EDGE inside the
+    // controller (see InGameMenuController::setPauseHook) — none of the
+    // action handlers below manage it anymore. closeMenu() synchronously
+    // fires the edge, so exits resume the core before stop runs.
+    m_inGameMenu->setPauseHook([this](bool paused) {
+        if (auto* s = gameSession()) {
+            if (paused) s->pauseEmulation();
+            else        s->resumeEmulation();
+        }
+    });
+
     connect(m_inGameMenu, &InGameMenuController::menuOpenChanged,
             this, &AppController::inGameMenuOpenChanged);
 
     connect(m_inGameMenu, &InGameMenuController::resumeRequested,
-            this, [this] {
-                if (auto* s = gameSession()) s->resumeEmulation();
-                closeInGameMenu();
-            });
+            this, [this] { closeInGameMenu(); });
     connect(m_inGameMenu, &InGameMenuController::exitWithSaveRequested,
             this, [this] {
-                if (auto* s = gameSession()) s->resumeEmulation();
                 m_inGameMenu->closeMenu();
                 saveAndStopGame(1);
             });
     connect(m_inGameMenu, &InGameMenuController::exitWithoutSaveRequested,
             this, [this] {
-                if (auto* s = gameSession()) s->resumeEmulation();
                 m_inGameMenu->closeMenu();
                 stopGame();
             });
     connect(m_inGameMenu, &InGameMenuController::saveStateRequested,
             this, [this] {
-                if (auto* s = gameSession()) {
+                if (auto* s = gameSession())
                     s->saveStateLibretro(s->currentSaveSlot());
-                    s->resumeEmulation();
-                }
                 m_inGameMenu->closeMenu();
             });
     connect(m_inGameMenu, &InGameMenuController::loadStateRequested,
             this, [this] {
-                if (auto* s = gameSession()) {
+                if (auto* s = gameSession())
                     s->loadStateLibretro(s->currentSaveSlot());
-                    s->resumeEmulation();
-                }
                 m_inGameMenu->closeMenu();
             });
     connect(m_inGameMenu, &InGameMenuController::toggleFastForwardRequested,
@@ -928,31 +930,18 @@ void AppController::openInGameMenu() {
         qWarning() << "[AppController] openInGameMenu before QML engine set";
         return;
     }
-
-    // Libretro-only: pause the in-process core directly and let the
-    // controller open the overlay menu. (The external-emulator branch —
-    // keystroke-synthesized pause, SIGSTOP fallback, NSPanel positioned
-    // over another process's screen — died with the process era.)
-    if (auto* s = gameSession()) s->pauseEmulation();
+    // Pause happens on the menu-open edge via the controller's pause
+    // hook — see setQmlEngine.
     m_inGameMenu->openMenu();
 }
 
 void AppController::closeInGameMenu() {
     if (!m_inGameMenu) return;
+    // Resume happens on the close edge via the pause hook — every close
+    // path shares it, including the toggle-hotkey close that used to
+    // need its own resume here (the libretro core's EmuThread watchdog
+    // kills a session left paused for 500 ms).
     m_inGameMenu->closeMenu();
-    {
-        // Symmetric counterpart to openInGameMenu's pauseEmulation. The
-        // toggle-hotkey close path (Esc / touchpad bound to ToggleMenu)
-        // reaches us via QML's onLibretroMenuToggleRequested without
-        // first going through resumeRequested, so without this resume
-        // VMManager stays paused and the libretro core's EmuThread
-        // watchdog shuts the session down after 500ms. Action signals
-        // (resumeRequested / saveStateRequested / loadStateRequested)
-        // resume themselves before calling closeMenu / closeInGameMenu;
-        // a second retronest_set_paused(false) is safely a no-op inside
-        // the libretro core (ResumeVm guards on prev_state == Running).
-        if (auto* s = gameSession()) s->resumeEmulation();
-    }
 }
 
 bool AppController::inGameMenuOpen() const {
