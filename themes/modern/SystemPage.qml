@@ -9,8 +9,7 @@ Item {
     Component.onCompleted: {
         themeContext.currentFocusedGameId = -1
         root.forceActiveFocus()
-        if (systemList.length > 0)
-            root.currentArtwork = "assets/artwork/" + systemList[0] + ".webp"
+        reconcileArtwork()
         Qt.callLater(rebuildCarouselModel)
     }
     StackView.onActivated: {
@@ -28,9 +27,47 @@ Item {
     property var systemCounts: themeContext.systemGameCounts
     property var favoriteCounts: themeContext.systemFavoriteCounts
 
+    // ── Background artwork state ──
     // Which background slot is currently "front"
     property bool artSlotA: true
-    property string currentArtwork: ""   // tracks what artwork is currently displayed
+    // Sources that failed to load (missing per-system artwork) → mapped
+    // to the default background instead of retrying forever.
+    property var _artworkFailed: ({})
+
+    // DERIVED from the selection — the reconcile loop below moves the
+    // visible slot toward this and self-corrects on stale or failed
+    // loads. (The old imperative updateCarouselArtwork tracked "what I
+    // asked for" separately from "what's actually visible"; a missing
+    // file like wii.webp desynced them permanently, which is why systems
+    // showed the wrong or default background until re-scrolled.)
+    readonly property string desiredArtwork: systemList.length > 0
+        ? "assets/artwork/" + systemList[carouselIndex] + ".webp"
+        : "assets/artwork/_default.webp"
+    onDesiredArtworkChanged: artworkSettle.restart()
+
+    // Debounce so a fast swipe doesn't decode every card it passes.
+    Timer {
+        id: artworkSettle
+        interval: 120
+        onTriggered: root.reconcileArtwork()
+    }
+
+    function reconcileArtwork() {
+        var target = root._artworkFailed[root.desiredArtwork]
+                   ? "assets/artwork/_default.webp" : root.desiredArtwork
+        if (root._artworkFailed[target])
+            return                            // even the fallback failed — keep what's shown
+        var visibleImg = root.artSlotA ? bgArtA : bgArtB
+        var hiddenImg  = root.artSlotA ? bgArtB : bgArtA
+        if (visibleImg.requested === target)
+            return                            // already showing it
+        if (hiddenImg.requested === target && hiddenImg.status === Image.Ready) {
+            root.artSlotA = !root.artSlotA    // already loaded — just flip
+            return
+        }
+        hiddenImg.requested = target
+        hiddenImg.source = target             // aborts any stale in-flight load
+    }
 
     // Re-read when systems or games change
     Connections {
@@ -104,46 +141,43 @@ Item {
     Keys.onReturnPressed: themeContext.navigateToSystem(systemList[root.carouselIndex])
     Keys.onEnterPressed: themeContext.navigateToSystem(systemList[root.carouselIndex])
 
-    // ─── Background artwork (slot A) ─────────────────────────────────────────
+    // ─── Background artwork (two-slot crossfade) ────────────────────────────
     // artSlotA=true  → A is visible (opacity 1), B is hidden (opacity 0)
     // artSlotA=false → B is visible (opacity 1), A is hidden (opacity 0)
-    // When switching: load into the hidden slot, then flip artSlotA once loaded.
+    // Slots never flip themselves — every completion (Ready OR Error)
+    // reports back to reconcileArtwork(), which alone decides whether to
+    // flip, reload, or fall back. `requested` records what was asked of
+    // the slot (source read-back is a resolved URL, so it can't be
+    // compared against the relative paths we set).
     Image {
         id: bgArtA
         anchors.fill: parent
-        source: systemList.length > 0 ? "assets/artwork/" + systemList[0] + ".webp" : "assets/artwork/_default.webp"
+        property string requested: ""
         fillMode: Image.PreserveAspectCrop
         opacity: root.artSlotA ? 1.0 : 0.0
         Behavior on opacity { NumberAnimation { duration: 500 } }
 
         onStatusChanged: {
-            if (status === Image.Error) {
-                source = "assets/artwork/_default.webp"
-                return
-            }
-            if (status === Image.Ready && !root.artSlotA) {
-                root.artSlotA = true
-            }
+            if (status === Image.Error)
+                root._artworkFailed[requested] = true
+            if (status === Image.Error || status === Image.Ready)
+                root.reconcileArtwork()
         }
     }
 
-    // ─── Background artwork (slot B) ─────────────────────────────────────────
     Image {
         id: bgArtB
         anchors.fill: parent
-        source: ""
+        property string requested: ""
         fillMode: Image.PreserveAspectCrop
         opacity: root.artSlotA ? 0.0 : 1.0
         Behavior on opacity { NumberAnimation { duration: 500 } }
 
         onStatusChanged: {
-            if (status === Image.Error) {
-                source = "assets/artwork/_default.webp"
-                return
-            }
-            if (status === Image.Ready && root.artSlotA) {
-                root.artSlotA = false
-            }
+            if (status === Image.Error)
+                root._artworkFailed[requested] = true
+            if (status === Image.Error || status === Image.Ready)
+                root.reconcileArtwork()
         }
     }
 
@@ -220,7 +254,7 @@ Item {
     onSystemListChanged: rebuildCarouselModel()
 
     // Keyboard/controller navigation; carouselIndex and the background
-    // artwork follow via the currentIndex binding + onCurrentIndexChanged.
+    // artwork follow via the currentIndex binding + desiredArtwork.
     function carouselNext() {
         if (systemList.length === 0) return
         carousel.incrementCurrentIndex()
@@ -228,34 +262,6 @@ Item {
     function carouselPrev() {
         if (systemList.length === 0) return
         carousel.decrementCurrentIndex()
-    }
-    function updateCarouselArtwork() {
-        if (systemList.length === 0) return
-        var sysId = systemList[carouselIndex]
-        var newSource = "assets/artwork/" + sysId + ".webp"
-
-        // Skip if already showing this artwork
-        if (newSource === root.currentArtwork) return
-        root.currentArtwork = newSource
-
-        if (root.artSlotA) {
-            // A is visible, load into B
-            if (bgArtB.source === newSource && bgArtB.status === Image.Ready) {
-                // B already has this image cached — just flip
-                root.artSlotA = false
-            } else {
-                bgArtB.source = ""          // force reset so re-setting triggers onStatusChanged
-                bgArtB.source = newSource
-            }
-        } else {
-            // B is visible, load into A
-            if (bgArtA.source === newSource && bgArtA.status === Image.Ready) {
-                root.artSlotA = true
-            } else {
-                bgArtA.source = ""
-                bgArtA.source = newSource
-            }
-        }
     }
 
     // ─── Bottom carousel ────────────────────────────────────────────────────
@@ -280,9 +286,9 @@ Item {
             clip: false
             interactive: true
 
-            // Single artwork trigger for every navigation source — keys,
-            // clicks, AND interactive flicks (which bypass carouselNext/Prev).
-            onCurrentIndexChanged: root.updateCarouselArtwork()
+            // (Background artwork needs no trigger here — desiredArtwork
+            // derives from carouselIndex, which derives from currentIndex,
+            // so every navigation source updates it automatically.)
 
             // A click-drag takes over from any in-flight wheel gesture:
             // kill the pending snap so it can't fight the finger.
