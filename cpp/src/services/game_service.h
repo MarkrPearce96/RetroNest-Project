@@ -6,6 +6,9 @@
 #include <QObject>
 #include <QString>
 #include <QTimer>
+#include <QVariantMap>
+
+class CoreRuntime;
 
 /**
  * GameService — orchestrates import, remove, and launch workflows.
@@ -39,8 +42,11 @@ public:
     /** Get available system names for import dialog. */
     QStringList importableSystems() const;
 
-    /** Start a game asynchronously. Returns false if start fails immediately. */
-    bool startGame(const QString& romPath, const QString& emuId);
+    /** Start a game asynchronously. Returns false if start fails
+     *  immediately. `gameId` is the DB id — recorded as the session
+     *  identity so currentGameInfo() needn't rescan the DB (0 if
+     *  unknown, e.g. a re-launch after the RA login prompt). */
+    bool startGame(int gameId, const QString& romPath, const QString& emuId);
 
     /** Check if a resume save state exists for this ROM via serial-based detection. */
     bool hasResumeState(const QString& romPath, const QString& emuId) const;
@@ -62,6 +68,14 @@ public:
     /** Return the ROM path of the currently/last running game. */
     QString currentRomPath() const { return m_currentRomPath; }
 
+    /** Identity + capability flags of the running game, built from the
+     *  record cached at launch — no per-call DB scan (review P6).
+     *  Empty when nothing is running. */
+    QVariantMap currentGameInfo() const;
+
+    /** The active libretro core runtime, or nullptr (review P6). */
+    CoreRuntime* libretroRuntime() const { return m_session.libretroRuntime(); }
+
     /** Access the game session (for adapter control). */
     GameSession* session() { return &m_session; }
 
@@ -77,6 +91,7 @@ private:
     Database* m_db;
     GameSession m_session;
     QString m_currentRomPath;       // ROM path of the running game
+    GameRecord m_currentGame;       // DB record cached at launch (identity)
     QString m_pendingSaveRomPath;   // ROM path when save-and-quit is in progress
     QTimer m_terminateTimer;        // Escalates SIGTERM → SIGKILL after timeout
 };

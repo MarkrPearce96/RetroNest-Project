@@ -345,6 +345,7 @@ private:
     ConfigService m_configService;
 
     // Pending launch (deferred while RA login prompt is shown)
+    int m_pendingLaunchGameId = 0;
     QString m_pendingLaunchRom;
     QString m_pendingLaunchEmu;
 

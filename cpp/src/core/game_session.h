@@ -7,6 +7,7 @@
 #include <QString>
 #include <QVariantMap>
 
+class CoreRuntime;
 class EmulatorAdapter;
 class HotkeyMatcher;
 class LibretroAdapter;
@@ -153,6 +154,11 @@ public:
 
     /** The adapter for the currently running emulator. Null if not running. */
     EmulatorAdapter* adapter() const { return m_adapter; }
+
+    /** The active libretro core runtime, or nullptr when no libretro game
+     *  is running. Collapses the session→isRunning→adapter→asLibretro→
+     *  runtime guard chain callers used to repeat (review P6). */
+    CoreRuntime* libretroRuntime() const;
 
     /** The manifest for the currently running emulator. */
     const EmulatorManifest* manifest() const { return m_manifest; }

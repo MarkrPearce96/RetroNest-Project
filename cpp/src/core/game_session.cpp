@@ -471,6 +471,11 @@ void GameSession::terminate() {
     }
 }
 
+CoreRuntime* GameSession::libretroRuntime() const {
+    if (!isRunning() || !m_libretroAdapter) return nullptr;
+    return m_libretroAdapter->runtime();
+}
+
 void GameSession::setHotkeyMatcher(HotkeyMatcher* matcher) {
     m_hotkeyMatcher = matcher;
     // Forward to a live runtime immediately so clearing (nullptr at app

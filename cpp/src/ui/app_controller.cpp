@@ -312,7 +312,7 @@ void AppController::importRomsFromDir(const QString& dir, const QString& systemF
     emit gamesChanged();
 }
 
-void AppController::launchGame(int /*gameId*/, const QString& romPath, const QString& emuId) {
+void AppController::launchGame(int gameId, const QString& romPath, const QString& emuId) {
     // Check if we need to show a one-time RA login prompt BEFORE launching
     if (m_raService.hasCredentials()) {
         auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
@@ -321,6 +321,7 @@ void AppController::launchGame(int /*gameId*/, const QString& romPath, const QSt
                 auto* manifest = m_loader->emulatorById(emuId);
                 QString name = (manifest && !manifest->name.isEmpty()) ? manifest->name : emuId;
                 // Store pending launch info and show prompt — QML will call launchGame again after dismissal
+                m_pendingLaunchGameId = gameId;
                 m_pendingLaunchRom = romPath;
                 m_pendingLaunchEmu = emuId;
                 emit raEmulatorLoginPrompt(name);
@@ -350,7 +351,7 @@ void AppController::launchGame(int /*gameId*/, const QString& romPath, const QSt
     }
     m_gameService.session()->setLibretroRaConfig(raCfg);
 
-    if (!m_gameService.startGame(romPath, emuId)) {
+    if (!m_gameService.startGame(gameId, romPath, emuId)) {
         setStatus("Launch failed");
     }
 }
@@ -737,29 +738,9 @@ void AppController::raLogin(const QString& username, const QString& apiKey) {
 }
 
 QVariantMap AppController::currentGameInfo() const {
-    QString romPath = m_gameService.currentRomPath();
-    if (romPath.isEmpty()) return {};
-    auto games = m_db->allGames();
-    for (const auto& game : games) {
-        if (game.rom_path == romPath) {
-            QVariantMap info;
-            info["title"] = game.title;
-            info["system"] = game.system;
-            info["gameId"] = game.id;
-            info["emuId"] = game.emulator_id;
-            auto* adapter = AdapterRegistry::instance().adapterFor(game.emulator_id);
-            info["supportsSaveOnExit"] = adapter ? adapter->supportsSaveOnExit() : false;
-            // Libretro cores always support save/load state via
-            // retro_serialize/unserialize and fast-forward via
-            // setSpeedMultiplier — no per-core opt-in needed.
-            const bool isLibretro = dynamic_cast<LibretroAdapter*>(adapter) != nullptr;
-            info["supportsSaveState"] = isLibretro;
-            info["supportsLoadState"] = isLibretro;
-            info["supportsFastForward"] = isLibretro;
-            return info;
-        }
-    }
-    return {};
+    // Built from the record GameService cached at launch — no DB scan
+    // per in-game-menu open (review P6).
+    return m_gameService.currentGameInfo();
 }
 
 void AppController::raSignOut() {
@@ -784,12 +765,14 @@ void AppController::raRequestGameIdLookup(const QString& title, const QString& s
 
 void AppController::raProceedAfterLoginPrompt() {
     if (m_pendingLaunchRom.isEmpty()) return;
+    int gameId  = m_pendingLaunchGameId;
     QString rom = m_pendingLaunchRom;
     QString emu = m_pendingLaunchEmu;
+    m_pendingLaunchGameId = 0;
     m_pendingLaunchRom.clear();
     m_pendingLaunchEmu.clear();
     // Re-call launchGame — prompt won't show again (already marked)
-    launchGame(0, rom, emu);
+    launchGame(gameId, rom, emu);
 }
 void AppController::raLoginWithPassword(const QString& username, const QString& password) {
     m_raService.loginWithPassword(username, password);
@@ -806,12 +789,8 @@ void AppController::raSetHardcoreMode(bool enabled) {
     // raises a RC_CLIENT_EVENT_RESET when hardcore flips on with a game
     // already loaded — our event handler invokes retro_reset to wipe
     // any save-state contamination, satisfying RA's hardcore rule.
-    auto* sess = m_gameService.session();
-    if (sess && sess->isRunning() && sess->isLibretro()) {
-        if (auto* lr = dynamic_cast<LibretroAdapter*>(sess->adapter()))
-            if (auto* rt = lr->runtime())
-                rt->rcheevos().setHardcore(enabled);
-    }
+    if (auto* rt = m_gameService.libretroRuntime())
+        rt->rcheevos().setHardcore(enabled);
 }
 bool AppController::raNotifications() const { return m_raService.notifications(); }
 void AppController::raSetNotifications(bool enabled) { m_raService.setNotifications(enabled); }
@@ -832,27 +811,19 @@ void AppController::raSetEncoreMode(bool enabled) {
     // value into the live rc_client so encore takes effect without
     // requiring a relaunch. The persistent setting also gets picked
     // up at next session start via LibretroRaConfig.
-    auto* sess = m_gameService.session();
-    if (sess && sess->isRunning() && sess->isLibretro()) {
-        if (auto* lr = dynamic_cast<LibretroAdapter*>(sess->adapter()))
-            if (auto* rt = lr->runtime())
-                rt->rcheevos().setEncore(enabled);
-    }
+    if (auto* rt = m_gameService.libretroRuntime())
+        rt->rcheevos().setEncore(enabled);
 }
 
 bool AppController::libretroAchievementsReady() {
-    auto* sess = m_gameService.session();
-    if (!sess || !sess->isRunning() || !sess->isLibretro()) return false;
-    auto* lr = dynamic_cast<LibretroAdapter*>(sess->adapter());
-    if (!lr || !lr->runtime()) return false;
-    return lr->runtime()->rcheevos().isInSession();
+    auto* rt = m_gameService.libretroRuntime();
+    return rt && rt->rcheevos().isInSession();
 }
 
 QVariantList AppController::libretroAchievementList() {
-    if (!libretroAchievementsReady()) return {};
-    auto* sess = m_gameService.session();
-    auto* lr = dynamic_cast<LibretroAdapter*>(sess->adapter());
-    return lr->runtime()->rcheevos().achievementListVariants();
+    auto* rt = m_gameService.libretroRuntime();
+    if (!rt || !rt->rcheevos().isInSession()) return {};
+    return rt->rcheevos().achievementListVariants();
 }
 
 void AppController::setSdlInputManager(SdlInputManager* mgr) {

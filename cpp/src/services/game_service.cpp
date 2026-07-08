@@ -36,6 +36,7 @@ GameService::GameService(ManifestLoader* loader, Database* db, QObject* parent)
         }
 
         m_currentRomPath.clear();
+        m_currentGame = {};
         emit gameRunningChanged();
         emit gameFinished(exitCode, crashed);
         if (crashed)
@@ -115,7 +116,7 @@ bool GameService::isGameRunning() const {
     return m_session.isRunning();
 }
 
-bool GameService::startGame(const QString& romPath, const QString& emuId) {
+bool GameService::startGame(int gameId, const QString& romPath, const QString& emuId) {
     const EmulatorManifest* manifest = m_loader->emulatorById(emuId);
     if (!manifest) {
         emit gameError("No manifest for: " + emuId);
@@ -139,14 +140,38 @@ bool GameService::startGame(const QString& romPath, const QString& emuId) {
     }
 
     m_currentRomPath = romPath;
+    // Cache the session identity once, here, instead of rescanning the DB
+    // on every in-game-menu open (review P6). Callers thread the real
+    // gameId through — including the re-launch after the RA login prompt.
+    m_currentGame = m_db->gameById(gameId);
     emit statusMessage("Launching: " + QFileInfo(romPath).completeBaseName());
 
     if (!m_session.start(*manifest, adapter, romPath)) {
         m_currentRomPath.clear();
+        m_currentGame = {};
         return false;
     }
 
     return true;
+}
+
+QVariantMap GameService::currentGameInfo() const {
+    if (m_currentRomPath.isEmpty() || m_currentGame.id == 0) return {};
+    QVariantMap info;
+    info["title"]  = m_currentGame.title;
+    info["system"] = m_currentGame.system;
+    info["gameId"] = m_currentGame.id;
+    info["emuId"]  = m_currentGame.emulator_id;
+    auto* adapter = AdapterRegistry::instance().adapterFor(m_currentGame.emulator_id);
+    info["supportsSaveOnExit"] = adapter ? adapter->supportsSaveOnExit() : false;
+    // Libretro cores always support save/load state (retro_serialize/
+    // unserialize) and fast-forward (setSpeedMultiplier) — no per-core
+    // opt-in. Every shipped adapter is libretro.
+    const bool isLibretro = adapter && adapter->asLibretro();
+    info["supportsSaveState"]   = isLibretro;
+    info["supportsLoadState"]   = isLibretro;
+    info["supportsFastForward"] = isLibretro;
+    return info;
 }
 
 void GameService::stopGame() {
