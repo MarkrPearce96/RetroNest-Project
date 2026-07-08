@@ -7,6 +7,7 @@
 #include <QNetworkRequest>
 #include <QRegularExpression>
 #include <QtConcurrent>
+#include <QCoreApplication>
 #include <QDebug>
 
 RAService::RAService(Database* db, QObject* parent)
@@ -435,6 +436,10 @@ void RAService::preCacheGameLists() {
     QtConcurrent::run([this]() {
         QList<int> consoleIds = RAClient::allConsoleIds();
         for (int cid : consoleIds) {
+            // Stop firing fetches once the app is quitting — this loop of
+            // ~30 sequential HTTP GETs is the classic Cmd+Q-during-precache
+            // exit hang otherwise (~QApplication waits on this task).
+            if (QCoreApplication::closingDown()) return;
             {
                 QMutexLocker lock(&m_cacheMutex);
                 if (m_consoleGames.contains(cid)) continue;
@@ -443,6 +448,7 @@ void RAService::preCacheGameLists() {
             QMutexLocker lock(&m_cacheMutex);
             m_consoleGames[cid] = games;
         }
+        if (QCoreApplication::closingDown()) return;
         bool userGamesNeeded = false;
         {
             QMutexLocker lock(&m_cacheMutex);

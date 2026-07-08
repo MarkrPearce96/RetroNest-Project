@@ -44,27 +44,28 @@ QByteArray RAClient::httpGet(const QString& url, QAtomicInt* cancelFlag) {
     QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
     timer.start(HTTP_TIMEOUT_MS);
 
-    // Without this hook, Cmd+Q hangs the main thread in ~QApplication →
-    // QThreadPool::waitForDone for up to HTTP_TIMEOUT_MS (30s) — or
-    // forever if the server stalls — while this synchronous worker
-    // waits on a network reply that may never arrive. aboutToQuit fires
-    // on the main thread; Qt::DirectConnection runs the lambda there,
-    // and QEventLoop::quit is documented thread-safe (it just flips an
-    // exit flag). storeRelease + loadAcquire give us a happens-before
-    // pair so the post-exec check sees the flag.
-    QAtomicInt shutdownFlag{0};
-    QMetaObject::Connection shutdownConn = QObject::connect(
-        qApp, &QCoreApplication::aboutToQuit,
-        &loop, [&shutdownFlag, &loop]() {
-            shutdownFlag.storeRelease(1);
+    // Shutdown / cancellation wake. On Cmd+Q while this synchronous
+    // worker is parked in loop.exec() waiting on a reply, ~QApplication
+    // blocks in QThreadPool::waitForDone until we return. A cross-thread
+    // QEventLoop::quit() from aboutToQuit does NOT reliably wake a loop
+    // blocked in the worker's own event dispatcher, so instead we poll
+    // from THIS (worker) thread: a repeating timer whose timeout wakes
+    // the loop locally, checking closingDown() (set once ~QCoreApplication
+    // begins — exactly when waitForDone starts blocking) and the caller's
+    // cancelFlag. Bounds any exit hang to one poll interval.
+    QTimer shutdownPoll;
+    shutdownPoll.setInterval(100);
+    QObject::connect(&shutdownPoll, &QTimer::timeout, &loop, [&loop, cancelFlag]() {
+        if (QCoreApplication::closingDown()
+                || (cancelFlag && cancelFlag->loadRelaxed()))
             loop.quit();
-        }, Qt::DirectConnection);
+    });
+    shutdownPoll.start();
 
     loop.exec();
+    shutdownPoll.stop();
 
-    QObject::disconnect(shutdownConn);
-
-    if (shutdownFlag.loadAcquire()) {
+    if (QCoreApplication::closingDown()) {
         reply->abort();
         reply->deleteLater();
         return {};
