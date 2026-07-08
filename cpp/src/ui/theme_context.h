@@ -89,6 +89,11 @@ signals:
 private:
     static QString systemDisplayName(const QString& systemId);
 
+    /** The single "game data changed" fan-out: reload the model, refresh
+     *  the system list, notify QML. Every local mutation and the
+     *  AppController::gamesChanged forward go through here (review P7). */
+    void reloadGamesAndNotify();
+
     AppController* m_app;
     GameListModel* m_gameModel;
     Database* m_db;

@@ -384,8 +384,8 @@ void AppController::activateApp() {
     MacFullscreen::activateOurApp();
 }
 
-void AppController::removeGame(int gameId) {
-    m_gameService.removeGame(gameId);
+void AppController::removeGame(int gameId, bool deleteRomFile) {
+    m_gameService.removeGame(gameId, deleteRomFile);
     setStatus("Game removed.");
     emit systemsChanged();
     emit gamesChanged();

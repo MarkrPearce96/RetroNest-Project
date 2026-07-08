@@ -75,7 +75,10 @@ public slots:
     Q_INVOKABLE QStringList importableSystems() const;
     Q_INVOKABLE void importRomsFromDir(const QString& dir, const QString& systemFilter);
     Q_INVOKABLE void launchGame(int gameId, const QString& romPath, const QString& emuId);
-    Q_INVOKABLE void removeGame(int gameId);
+    // deleteRomFile defaults false so the QML game-card "remove" keeps its
+    // library-only behavior; ThemeContext::removeGame passes true to also
+    // delete the ROM (delegated to GameService's flag — review P7).
+    Q_INVOKABLE void removeGame(int gameId, bool deleteRomFile = false);
     Q_INVOKABLE void scrapeGame(int gameId);
 
     // Async game control

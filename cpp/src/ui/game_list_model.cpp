@@ -8,6 +8,38 @@ GameListModel::GameListModel(Database* db, QObject* parent)
 {
 }
 
+QVariantMap GameListModel::recordToMap(const GameRecord& g) {
+    QVariantMap map;
+    map["id"]          = g.id;
+    map["title"]       = g.title;
+    map["romPath"]     = g.rom_path;
+    map["system"]      = g.system;
+    map["emulatorId"]  = g.emulator_id;
+    map["coverPath"]   = g.cover_path;
+    map["description"] = g.description;
+    map["developer"]   = g.developer;
+    map["publisher"]   = g.publisher;
+    map["releaseDate"] = g.release_date;
+    map["genres"]      = g.genres;
+    map["rating"]      = g.rating;
+    map["players"]     = g.players;
+    map["lastPlayed"]  = g.last_played;
+    map["playCount"]   = g.play_count;
+    map["favorite"]    = g.favorite;
+    map["screenshotPath"]    = g.screenshot_path;
+    map["titlescreenPath"]   = g.titlescreen_path;
+    map["marqueePath"]       = g.marquee_path;
+    map["fanartPath"]        = g.fanart_path;
+    map["box3dPath"]         = g.box3d_path;
+    map["backcoverPath"]     = g.backcover_path;
+    map["miximagePath"]      = g.miximage_path;
+    map["physicalmediaPath"] = g.physicalmedia_path;
+    map["manualPath"]        = g.manual_path;
+    map["videoPath"]         = g.video_path;
+    map["discCount"]         = g.disc_count;
+    return map;
+}
+
 int GameListModel::rowCount(const QModelIndex&) const {
     return m_games.size();
 }

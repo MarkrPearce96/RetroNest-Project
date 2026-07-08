@@ -54,6 +54,12 @@ public:
     Q_INVOKABLE QString coverImagePath(int row) const;
     Q_INVOKABLE int indexForGameId(int gameId) const;
 
+    /** The single GameRecord → QML-facing QVariantMap mapping (camelCase
+     *  keys matching this model's role names). ThemeContext::gameDetails
+     *  returns this instead of hand-listing the ~27 fields a second time
+     *  (review P7). */
+    static QVariantMap recordToMap(const GameRecord& g);
+
     void setMediaDir(const QString& dir);
 
 signals:

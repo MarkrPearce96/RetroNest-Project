@@ -17,8 +17,7 @@ ThemeContext::ThemeContext(AppController* app, GameListModel* model, Database* d
 {
     connect(m_app, &AppController::systemsChanged, this, &ThemeContext::systemsChanged);
     connect(m_app, &AppController::gamesChanged, this, [this]() {
-        refreshSystems();
-        emit gamesChanged();
+        reloadGamesAndNotify();
     });
     connect(m_app, &AppController::gameRunningChanged, this, &ThemeContext::gameRunningChanged);
     connect(m_app, &AppController::gameStarted, this, &ThemeContext::gameStarted);
@@ -134,22 +133,17 @@ void ThemeContext::clearResumeState(const QString& romPath, const QString& emuId
 }
 
 void ThemeContext::scrapeGame(int gameId) {
+    // Async — the reload happens when AppController emits gamesChanged on
+    // scrape completion (constructor connection → reloadGamesAndNotify).
+    // Reloading here would only re-emit stale pre-scrape data.
     m_app->scrapeGame(gameId);
-    m_gameModel->reload();
-    emit gamesChanged();
 }
 
 void ThemeContext::removeGame(int gameId) {
-    // Delete ROM file before removing from database
-    GameRecord g = m_db->gameById(gameId);
-    if (!g.rom_path.isEmpty() && QFile::exists(g.rom_path)) {
-        if (!QFile::remove(g.rom_path))
-            qWarning() << "[ThemeContext] Failed to delete ROM file:" << g.rom_path;
-    }
-    m_app->removeGame(gameId);
-    m_gameModel->reload();
-    refreshSystems();
-    emit gamesChanged();
+    // ROM-file deletion is GameService's job via its deleteRomFile flag;
+    // AppController::removeGame emits gamesChanged, which drives the model
+    // reload + systems refresh through reloadGamesAndNotify().
+    m_app->removeGame(gameId, /*deleteRomFile=*/true);
 }
 
 QVariantMap ThemeContext::gameDetailsByIndex(int index) const {
@@ -160,41 +154,19 @@ QVariantMap ThemeContext::gameDetailsByIndex(int index) const {
 }
 
 QVariantMap ThemeContext::gameDetails(int gameId) const {
-    GameRecord g = m_db->gameById(gameId);
-    QVariantMap map;
-    map["id"]          = g.id;
-    map["title"]       = g.title;
-    map["romPath"]     = g.rom_path;
-    map["system"]      = g.system;
-    map["emulatorId"]  = g.emulator_id;
-    map["coverPath"]   = g.cover_path;
-    map["description"] = g.description;
-    map["developer"]   = g.developer;
-    map["publisher"]   = g.publisher;
-    map["releaseDate"] = g.release_date;
-    map["genres"]      = g.genres;
-    map["rating"]      = g.rating;
-    map["players"]     = g.players;
-    map["lastPlayed"]  = g.last_played;
-    map["playCount"]   = g.play_count;
-    map["favorite"]    = g.favorite;
-    map["screenshotPath"]    = g.screenshot_path;
-    map["titlescreenPath"]   = g.titlescreen_path;
-    map["marqueePath"]       = g.marquee_path;
-    map["fanartPath"]        = g.fanart_path;
-    map["box3dPath"]         = g.box3d_path;
-    map["backcoverPath"]     = g.backcover_path;
-    map["miximagePath"]      = g.miximage_path;
-    map["physicalmediaPath"] = g.physicalmedia_path;
-    map["manualPath"]        = g.manual_path;
-    map["videoPath"]         = g.video_path;
-    map["discCount"]         = g.disc_count;
-    return map;
+    // One GameRecord → QVariantMap mapping, shared with the game-list
+    // model's role keys (review P7).
+    return GameListModel::recordToMap(m_db->gameById(gameId));
 }
 
 void ThemeContext::toggleFavorite(int gameId) {
     m_db->toggleFavorite(gameId);
+    reloadGamesAndNotify();
+}
+
+void ThemeContext::reloadGamesAndNotify() {
     m_gameModel->reload();
+    refreshSystems();
     emit gamesChanged();
 }
 
