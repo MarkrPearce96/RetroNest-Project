@@ -7,14 +7,8 @@ FocusScope {
 
     signal emulatorSelected(string emuId)
 
-    property var emuList: app.allEmulatorStatus()
-
-    Connections {
-        target: app
-        function onEmulatorStatusChanged() {
-            root.emuList = app.allEmulatorStatus()
-        }
-    }
+    // Reactive — re-evaluates when app emits emulatorStatusChanged (P9).
+    property var emuList: app.emulatorStatus
 
     GenericListPage {
         id: listPage

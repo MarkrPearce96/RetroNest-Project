@@ -9,7 +9,7 @@ Item {
     // Emulators like PPSSPP that hardcode their directory layout (no INI
     // overrides) return an empty pathDefs() and are filtered out here so we
     // don't offer UI that can't take effect.
-    property var emuList: app.allEmulatorStatus().filter(function(emu) {
+    property var emuList: app.emulatorStatus.filter(function(emu) {
         return app.pathDefs(emu.id).length > 0
     })
     property int currentEmu: 0

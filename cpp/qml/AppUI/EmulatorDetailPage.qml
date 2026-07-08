@@ -10,7 +10,8 @@ Item {
     property string emuId: ""
     signal back()
 
-    property var emuList: app.allEmulatorStatus()
+    // Reactive — re-evaluates when app emits emulatorStatusChanged (P9).
+    property var emuList: app.emulatorStatus
     property var emuInfo: {
         for (var i = 0; i < emuList.length; i++) {
             if (emuList[i].id === emuId) return emuList[i]
@@ -90,13 +91,8 @@ Item {
         app.installEmulator(root.emuId)
     }
 
-    onEmuIdChanged: root.emuList = app.allEmulatorStatus()
-
     Connections {
         target: app
-        function onEmulatorStatusChanged() {
-            root.emuList = app.allEmulatorStatus()
-        }
         function onInstallProgress(emuId, progress, phase, detail) {
             if (emuId !== root.emuId) return
             progressPopup.progressValue = progress
@@ -843,8 +839,10 @@ Item {
                     }
 
                     onClicked: {
+                        // resetConfiguration doesn't change install/BIOS/
+                        // version status, and emuList is a reactive binding
+                        // now — no manual re-pull (would break the binding).
                         app.resetConfiguration(root.emuId)
-                        root.emuList = app.allEmulatorStatus()
                         resetDialog.close()
                     }
                 }

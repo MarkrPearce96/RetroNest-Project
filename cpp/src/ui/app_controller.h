@@ -29,6 +29,10 @@ class AppController : public QObject {
     Q_PROPERTY(int currentTab READ currentTab WRITE setCurrentTab NOTIFY currentTabChanged)
     Q_PROPERTY(int settingsCategory READ settingsCategory WRITE setSettingsCategory NOTIFY settingsCategoryChanged)
     Q_PROPERTY(bool gameRunning READ isGameRunning NOTIFY gameRunningChanged)
+    // Reactive view of every emulator's install/BIOS/version/capability
+    // status. QML binds this instead of calling allEmulatorStatus() and
+    // wiring its own onEmulatorStatusChanged refresh (review P9).
+    Q_PROPERTY(QVariantList emulatorStatus READ allEmulatorStatus NOTIFY emulatorStatusChanged)
     // In-game menu visibility — InGameMenuController's overlay window
     // (transparent QQuickWindow above the main window for HW-render
     // libretro; software-render cores use the in-scene QML menu).
