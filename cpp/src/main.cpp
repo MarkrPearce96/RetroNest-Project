@@ -2,6 +2,7 @@
 #include <QCommandLineParser>
 #include <QDebug>
 #include <QMessageBox>
+#include <QTimer>
 #include <QDir>
 #include <QFileInfo>
 #include <QProcess>
@@ -41,6 +42,18 @@ Q_IMPORT_QML_PLUGIN(SetupWizardPlugin)
 Q_IMPORT_QML_PLUGIN(AppUIPlugin)
 
 static int runCli(QCoreApplication& app, QCommandLineParser& parser, ManifestLoader& loader);
+
+// Hard exit that SKIPS process static destructors. A wedged core's dylib
+// stays mapped with live detached threads; running its static destructors
+// under them segfaults (observed: ~GSTextureCache in __cxa_finalize after a
+// PCSX2 shutdown deadlock). Everything of ours is flushed by the caller
+// (SQLite is crash-safe anyway); the OS reclaims the rest.
+[[noreturn]] static void guardedHardExit(int ret, const char* reason) {
+    qWarning().noquote() << "[main]" << reason
+                         << "— hard exit (skipping static destructors)";
+    fflush(nullptr);
+    ::_exit(ret);
+}
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
@@ -233,9 +246,6 @@ int main(int argc, char* argv[]) {
         // Backfill serials for games imported before schema v6
         appController.backfillSerials();
 
-        // Auto-scan ROM folders on startup so games appear immediately
-        appController.scanRomFolders();
-
         SettingsTheme settingsTheme;
 
         QQmlApplicationEngine engine;
@@ -273,6 +283,15 @@ int main(int argc, char* argv[]) {
         // Hide macOS menu bar and Dock so they never appear on mouse hover
         MacFullscreen::hideMenuBarAndDock();
 
+        // Auto-scan ROM folders shortly after the window is up. The game
+        // list loads from the DB (populated by prior scans), so the UI
+        // paints immediately; this filesystem re-scan is a background
+        // refresh that picks up added/removed ROMs. Deferring it off the
+        // pre-first-paint path keeps startup snappy (review P8).
+        QTimer::singleShot(0, &appController, [&appController]() {
+            appController.scanRomFolders();
+        });
+
         int ret = app.exec();
 
         // On quit, cleanly stop any still-running game BEFORE the QML engine
@@ -292,30 +311,18 @@ int main(int argc, char* argv[]) {
             while (gs->isRunning() && !deadline.hasExpired())
                 QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
             if (gs->isRunning()) {
-                // A wedged core still owns live threads inside its dylib.
-                // Running static destructors under them segfaults (observed
-                // 2026-07-03: ~GSTextureCache in __cxa_finalize during exit()
-                // after a PCSX2 shutdown deadlock). Skip destructors entirely:
-                // SQLite is crash-safe (journal), and the OS reclaims the rest.
-                qWarning() << "[main] game did not stop within 5s; hard-exiting"
-                              " (skipping static destructors — wedged core)";
-                fflush(nullptr);
-                ::_exit(ret);
+                db.close();  // flush ours before skipping destructors
+                guardedHardExit(ret, "game did not stop within 5s (wedged core)");
             }
         }
 
         db.close();
 
         // A wedged core's dylib stays mapped (see CoreRuntime teardown), so
-        // normal exit() would run ITS static destructors under live detached
-        // threads — the exact ~GSTextureCache segv this replaces. Everything
-        // of ours is already flushed (db closed above); skip the destructors.
-        if (CoreRuntime::anyCoreWedged()) {
-            qWarning() << "[main] a core wedged this session — hard exit"
-                          " (skipping process static destructors)";
-            fflush(nullptr);
-            ::_exit(ret);
-        }
+        // a normal return would run ITS static destructors under live
+        // detached threads. Everything of ours is flushed (db closed above).
+        if (CoreRuntime::anyCoreWedged())
+            guardedHardExit(ret, "a core wedged this session");
         return ret;
     }
 }
