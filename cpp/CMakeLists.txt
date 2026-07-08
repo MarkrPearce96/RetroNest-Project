@@ -65,11 +65,13 @@ include(dev_credentials.cmake OPTIONAL)
 # objects each test actually references.
 add_library(retronest_core STATIC
     # core/
-    # NOTE: game_session.cpp is deliberately NOT here even though the app and
-    # test_game_session_save_slot both compile it: GameSession references
-    # LibretroGLItem (appui QML module). If its moc entered this lib's
-    # monolithic mocs_compilation.o, every test linking the archive would
-    # need LibretroGLItem to resolve.
+    # game_session.cpp lives here as of the P10 render-seam refactor: it
+    # no longer #includes ui/libretro/libretro_gl_item.h — the GL
+    # shutdown fence is driven through the abstract LibretroRenderSurface
+    # interface (core/), so GameSession needs no Qt Quick and moc-ing it
+    # into this archive is safe. VideoHardwareGL (its only other HW dep)
+    # already lives in this lib.
+    src/core/game_session.cpp
     src/core/manifest_loader.cpp
     src/core/paths.cpp
     src/core/system_registry.cpp
@@ -123,6 +125,8 @@ add_library(retronest_core STATIC
     # headers (each header lives in exactly ONE target's source list so
     # AUTOMOC generates its moc output exactly once — listing a moved
     # header in the app too would duplicate staticMetaObject symbols)
+    src/core/game_session.h
+    src/core/libretro/libretro_render_surface.h
     src/core/manifest.h
     src/core/manifest_loader.h
     src/core/paths.h
@@ -219,7 +223,6 @@ target_link_libraries(retronest_ui PUBLIC
 # ── RetroNest app: app-only sources; the shared closure comes from the libs ──
 set(SOURCES
     src/main.cpp
-    src/core/game_session.cpp
     src/core/libretro/libretro_hotkey_controller.cpp
     src/core/scraper.cpp
     src/core/ra_client.cpp
@@ -255,7 +258,9 @@ set(SOURCES
 
 set(HEADERS
     src/services/emulator_installer.h
-    src/core/game_session.h
+    # game_session.h moved to retronest_core's header list (P10) — it must
+    # be moc'd in exactly one target, and game_session.cpp now lives in
+    # that lib.
     src/core/scraper.h
     src/core/setting_def.h
     src/core/cover_resolver.h
@@ -560,15 +565,13 @@ add_test(NAME HotkeyMatcher COMMAND test_hotkey_matcher)
 
 add_executable(test_libretro_hotkey_controller
     tests/test_libretro_hotkey_controller.cpp
-    # The controller (and game_session.cpp, which its action callbacks
-    # need) stay out of retronest_core — same recipe as
-    # test_game_session_save_slot; see the notes on the lib's source list.
+    # The controller stays out of retronest_core (it forwards to
+    # GameSession, but keeping it app-side avoids re-mocing here);
+    # GameSession itself now comes from retronest_core (P10).
     src/core/libretro/libretro_hotkey_controller.cpp
-    src/core/game_session.cpp
-    src/ui/libretro/libretro_gl_item.mm
 )
 target_link_libraries(test_libretro_hotkey_controller PRIVATE
-    retronest_core Qt6::Quick Qt6::Test
+    retronest_core Qt6::Test
 )
 add_test(NAME LibretroHotkeyController COMMAND test_libretro_hotkey_controller)
 
@@ -759,17 +762,11 @@ add_executable(test_audio_sink_mute_volume tests/test_audio_sink_mute_volume.cpp
 target_link_libraries(test_audio_sink_mute_volume PRIVATE retronest_core Qt6::Test)
 add_test(NAME AudioSinkMuteVolume COMMAND test_audio_sink_mute_volume)
 
-add_executable(test_game_session_save_slot
-    tests/test_game_session_save_slot.cpp
-    # game_session.cpp stays out of retronest_core (see note on the lib) —
-    # it references LibretroGLItem (setVideoHardware, window(), update())
-    # inside preShutdownRenderFence, so this test compiles it directly
-    # together with the item's translation unit and links Qt::Quick.
-    src/core/game_session.cpp
-    src/ui/libretro/libretro_gl_item.mm
-)
+add_executable(test_game_session_save_slot tests/test_game_session_save_slot.cpp)
+# GameSession now lives in retronest_core (P10 render-seam refactor) — no
+# more compiling it + the GL item here, no Qt::Quick.
 target_link_libraries(test_game_session_save_slot PRIVATE
-    retronest_core Qt6::Quick Qt6::Test
+    retronest_core Qt6::Test
 )
 add_test(NAME GameSessionSaveSlot COMMAND test_game_session_save_slot)
 

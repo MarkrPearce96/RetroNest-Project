@@ -7,6 +7,8 @@
 #include <QSGSimpleTextureNode>
 #include <QSGTexture>
 #include <QDebug>
+#include <QEventLoop>
+#include <QTimer>
 #include <cmath>
 
 #import <Metal/Metal.h>
@@ -52,6 +54,53 @@ void LibretroGLItem::onFrameReady(int width, int height) {
     Q_UNUSED(width);
     Q_UNUSED(height);
     update();
+}
+
+void LibretroGLItem::fenceForShutdown() {
+    // Render-seam shutdown fence (review P10 — moved here from
+    // GameSession so core/ owns no Qt Quick). Only meaningful for the GL
+    // backend's IOSurface→MTLTexture coupling; GameSession only calls it
+    // on that path.
+    QQuickWindow* w = window();
+    if (!w) {
+        qWarning() << "[LibretroGLItem] fenceForShutdown: no window, "
+                      "skipping fence (degraded — same risk as before the fix)";
+        return;
+    }
+
+    // Drop this item's strong ARC ref to the MTLTexture and disconnect
+    // its VideoHardwareGL signals. After the next sync, updatePaintNode
+    // sees m_hw == nullptr and returns nullptr, deleting the
+    // QSGSimpleTextureNode and its owned QSGTexture — releasing the
+    // QSGMetalTexture wrapper's last strong ARC ref to the MTLTexture.
+    setVideoHardware(nullptr);
+    update();
+
+    // Wait two render passes. Frame 1 covers the sync that processes the
+    // cleared updatePaintNode and deletes the node + texture. Frame 2
+    // covers any GPU command buffer that captured the MTLTexture before
+    // the clear and is still draining on the GPU.
+    QEventLoop loop;
+    int framesSeen = 0;
+    auto conn = QObject::connect(
+        w, &QQuickWindow::afterRendering, &loop,
+        [&framesSeen, &loop]() {
+            if (++framesSeen >= 2) loop.quit();
+        },
+        Qt::QueuedConnection);   // afterRendering fires on QSGRenderThread
+
+    // Hard cap — covers degenerate cases (window hidden, rendering paused,
+    // app already quitting). At worst we're at the same risk as before the
+    // fix; the cap doesn't make anything worse.
+    QTimer::singleShot(500, &loop, &QEventLoop::quit);
+    loop.exec();
+    // Explicit disconnect before scope exit is load-bearing: the queued
+    // lambda captures &loop and &framesSeen by reference. Disconnecting
+    // here ensures no late delivery arrives after the locals are invalid.
+    QObject::disconnect(conn);
+
+    qInfo() << "[LibretroGLItem] fenceForShutdown drained" << framesSeen
+            << "frame(s) before stop";
 }
 
 void LibretroGLItem::setAspectMode(const QString& mode) {

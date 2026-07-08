@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include "core/libretro/libretro_render_surface.h"
+
 #include <QPointer>
 #include <QQuickItem>
 #include <QtQml/qqmlregistration.h>
@@ -27,7 +29,7 @@
 
 class VideoHardwareGL;
 
-class LibretroGLItem : public QQuickItem {
+class LibretroGLItem : public QQuickItem, public LibretroRenderSurface {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QString aspectMode READ aspectMode WRITE setAspectMode
@@ -50,6 +52,15 @@ public:
      * paint updates. Pass nullptr to detach on stop().
      */
     Q_INVOKABLE void setVideoHardware(QObject* hw);
+
+    /**
+     * LibretroRenderSurface — GameSession's pre-stop fence. Drops the
+     * MTLTexture ref (setVideoHardware(nullptr)) and drains two render
+     * passes so QSGRenderThread can't touch the IOSurface while
+     * VideoHardwareGL tears down on the worker thread. Bounded by a 500ms
+     * cap. (Moved here from GameSession so core/ owns no Qt Quick.)
+     */
+    void fenceForShutdown() override;
 
     QString aspectMode() const { return m_aspectMode; }
     void setAspectMode(const QString& mode);

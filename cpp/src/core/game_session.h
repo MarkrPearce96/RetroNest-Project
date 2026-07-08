@@ -11,9 +11,9 @@ class CoreRuntime;
 class EmulatorAdapter;
 class HotkeyMatcher;
 class LibretroAdapter;
+class LibretroRenderSurface;
 class SdlInputManager;
 class FrontendSettingsStore;
-class LibretroGLItem;
 
 /**
  * LibretroRaConfig — RetroAchievements values needed by the libretro start
@@ -137,13 +137,14 @@ public:
      *  clear when the item is destroyed. */
     Q_INVOKABLE void registerHardwareView(qulonglong view_ptr);
 
-    /** Register (or clear) the LibretroGLItem* for the active GL hardware-render
-     *  item. Called from QML via Component.onCompleted; pass nullptr from
-     *  Component.onDestruction. Used by preShutdownRenderFence() on kill() /
-     *  terminate() to synchronize scene graph cleanup with worker-side
-     *  VideoHardwareGL destruction (fixes the PPSSPP Quit crash — see
-     *  docs/superpowers/specs/2026-05-23-ppsspp-quit-render-fence-design.md).
-     */
+    /** Register (or clear) the GL hardware-render surface. Called from QML
+     *  via Component.onCompleted (pass the LibretroGLItem); pass nullptr
+     *  from Component.onDestruction. Used by preShutdownRenderFence() on
+     *  kill() / terminate() to synchronize scene graph cleanup with
+     *  worker-side VideoHardwareGL destruction (fixes the PPSSPP Quit
+     *  crash — see docs/superpowers/specs/2026-05-23-ppsspp-quit-render-
+     *  fence-design.md). The concrete item implements LibretroRenderSurface
+     *  so core/ needs no ui/ include (review P10). */
     Q_INVOKABLE void registerLibretroGLItem(QObject* item);
 
     /** Returns the active VideoHardwareGL pointer (as QObject*) when the
@@ -244,9 +245,11 @@ private:
     qreal m_libretroAspectRatio = 4.0 / 3.0;  // sensible default before av_info is read
     QString m_libretroBackend = QStringLiteral("software"); // "software" | "metal"
     // Set by registerLibretroGLItem from QML. Used only by
-    // preShutdownRenderFence() — QPointer auto-clears if the item is
-    // destroyed before we register null.
-    QPointer<LibretroGLItem> m_libretroGLItem;
+    // preShutdownRenderFence(). QPointer<QObject> auto-clears if the item
+    // is destroyed before we register null; the paired interface pointer
+    // is valid exactly while the QObject is alive.
+    QPointer<QObject> m_renderSurfaceObj;
+    LibretroRenderSurface* m_renderSurface = nullptr;
 
     // SP10: gate the "switch to Rosetta for full speed" notice to one
     // emission per RetroNest session.

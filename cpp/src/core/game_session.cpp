@@ -8,7 +8,7 @@
 #include "core/libretro/input_router.h"
 #include "core/libretro/rcheevos_runtime.h"
 #include "core/libretro/video_hardware_gl.h"
-#include "ui/libretro/libretro_gl_item.h"
+#include "core/libretro/libretro_render_surface.h"
 #include "core/path_overrides_store.h"
 #include "core/platform/host_arch.h"
 #include "core/sdl_input_manager.h"
@@ -19,9 +19,7 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFileInfo>
-#include <QQuickWindow>
 #include <QRegularExpression>
-#include <QTimer>
 
 GameSession::GameSession(QObject* parent)
     : QObject(parent) {}
@@ -563,14 +561,16 @@ void GameSession::registerHardwareView(qulonglong view_ptr) {
 }
 
 void GameSession::registerLibretroGLItem(QObject* item) {
-    // qobject_cast returns nullptr if item is null or not a LibretroGLItem.
-    // QPointer accepts that directly — the field self-clears on destruction
-    // too, so the explicit null call from QML's Component.onDestruction is
-    // belt-and-suspenders.
-    m_libretroGLItem = qobject_cast<LibretroGLItem*>(item);
-    if (item && !m_libretroGLItem) {
+    // dynamic_cast recovers the render-surface interface from the QObject
+    // (LibretroGLItem multiply-inherits QQuickItem + LibretroRenderSurface).
+    // QPointer<QObject> self-clears on destruction, so the explicit null
+    // call from QML's Component.onDestruction is belt-and-suspenders.
+    m_renderSurfaceObj = item;
+    m_renderSurface = dynamic_cast<LibretroRenderSurface*>(item);
+    if (item && !m_renderSurface) {
         qWarning() << "[GameSession] registerLibretroGLItem: object is not a "
-                      "LibretroGLItem, ignoring";
+                      "LibretroRenderSurface, ignoring";
+        m_renderSurfaceObj = nullptr;
     }
 }
 
@@ -578,53 +578,11 @@ void GameSession::preShutdownRenderFence() {
     // Only the libretro GL backend has the IOSurface→MTLTexture coupling
     // that races against worker-side VideoHardwareGL teardown. Software
     // (mGBA) and Metal-direct (PCSX2 libretro) paths skip this entirely.
+    // The Qt Quick / scene-graph specifics live in the surface impl
+    // (LibretroGLItem::fenceForShutdown) so core/ stays Quick-free (P10).
     if (m_libretroBackend != QStringLiteral("gl")) return;
-    if (!m_libretroGLItem) return;
-
-    LibretroGLItem* item = m_libretroGLItem.data();
-    QQuickWindow* w = item->window();
-    if (!w) {
-        qWarning() << "[GameSession] preShutdownRenderFence: glItem has no "
-                      "window, skipping fence (degraded — same risk as before "
-                      "the fix)";
-        return;
-    }
-
-    // Drop the LibretroGLItem's strong ARC ref to the MTLTexture and
-    // disconnect its VideoHardwareGL signals. After the next sync,
-    // updatePaintNode sees m_hw == nullptr and returns nullptr, deleting
-    // the QSGSimpleTextureNode and its owned QSGTexture — releasing the
-    // QSGMetalTexture wrapper's last strong ARC ref to the MTLTexture.
-    item->setVideoHardware(nullptr);
-    item->update();
-
-    // Wait two render passes. Frame 1 covers the sync that processes the
-    // cleared updatePaintNode and deletes the node + texture. Frame 2
-    // covers any GPU command buffer that captured the MTLTexture before
-    // the clear and is still draining on the GPU.
-    QEventLoop loop;
-    int framesSeen = 0;
-    auto conn = QObject::connect(
-        w, &QQuickWindow::afterRendering, &loop,
-        [&framesSeen, &loop]() {
-            if (++framesSeen >= 2) loop.quit();
-        },
-        Qt::QueuedConnection);   // afterRendering fires on QSGRenderThread
-
-    // Hard cap — covers degenerate cases (window hidden, rendering paused,
-    // app already quitting). At worst we're at the same risk as before the
-    // fix; the cap doesn't make anything worse.
-    QTimer::singleShot(500, &loop, &QEventLoop::quit);
-    loop.exec();
-    // Explicit disconnect before scope exit is load-bearing: the queued
-    // lambda captures &loop and &framesSeen by reference. QObject::~QObject
-    // does flush pending queued events for the context object in Qt 6, but
-    // relying on that is an implementation detail. Disconnecting here
-    // ensures no late delivery arrives after the locals are invalid.
-    QObject::disconnect(conn);
-
-    qInfo() << "[GameSession] preShutdownRenderFence drained" << framesSeen
-            << "frame(s) before stop";
+    if (m_renderSurfaceObj && m_renderSurface)
+        m_renderSurface->fenceForShutdown();
 }
 
 QObject* GameSession::videoHardware() const {
