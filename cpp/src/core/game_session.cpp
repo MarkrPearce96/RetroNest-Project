@@ -360,6 +360,24 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         return false;
     }
 
+    // We optimistically picked the GL video backend from the adapter's
+    // declared preference, but the core's SET_HW_RENDER is negotiated
+    // inside rt->start() (retro_load_game). If the core asked for a
+    // context this bridge doesn't grant — e.g. PPSSPP's "OpenGL" (legacy)
+    // backend requests RETRO_HW_CONTEXT_OPENGL, and we only support
+    // OPENGL_CORE — installHwRender declined it and the core silently
+    // fell back to software rendering. rt->videoHW() is non-null exactly
+    // when the GL context was granted; when it's null, reflect reality so
+    // EmulationView swaps the GL item for the software one and shows the
+    // core's software frames instead of a black screen against absent
+    // hardware.
+    if (backend == LibretroAdapter::HardwareRenderBackend::GL && !rt->videoHW()) {
+        qInfo() << "[GameSession] GL hardware render was not granted; core is "
+                   "running software — switching video backend to software";
+        m_libretroBackend = QStringLiteral("software");
+        emit libretroBackendChanged();
+    }
+
     // Populate the InputRouter from persisted bindings in controls.ini so that
     // user remappings are reflected at runtime. ensureConfig() seeds the file
     // with defaults before we ever reach this point.
