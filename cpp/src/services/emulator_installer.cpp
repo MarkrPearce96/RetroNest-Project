@@ -27,12 +27,17 @@
 // Synchronous file download (used by installSync / CLI mode)
 // ============================================================================
 
-static bool downloadSync(const QString& url, const QString& destPath) {
+static bool downloadSync(const QString& url, const QString& destPath,
+                          const QString& authToken = {}) {
     qInfo() << "[Installer] Downloading" << url;
 
     QNetworkAccessManager nam;
     QNetworkRequest req{QUrl(url)};
     req.setHeader(QNetworkRequest::UserAgentHeader, "RetroNest/1.0");
+    if (!authToken.isEmpty()) {
+        req.setRawHeader("Accept", "application/octet-stream");
+        req.setRawHeader("Authorization", QByteArray("Bearer ") + authToken.toUtf8());
+    }
     req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                      QNetworkRequest::NoLessSafeRedirectPolicy);
 
@@ -400,7 +405,9 @@ EmulatorInstaller::InstallResult EmulatorInstaller::installSync(
     QDir().mkpath(installPath);
     const QString tempFile = installPath + "/" + release.assetName;
 
-    if (!downloadSync(release.downloadUrl, tempFile)) {
+    const QString authToken =
+        manifest.is_private ? GitHubCredentials::token() : QString();
+    if (!downloadSync(release.downloadUrl, tempFile, authToken)) {
         result.message = "Download failed";
         return result;
     }
@@ -450,16 +457,20 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
 
     const QString apiUrl = "https://api.github.com/repos/" + manifest.github_repo + "/releases/latest";
     const QString emuId = manifest.id;
+    const QString authToken =
+        manifest.is_private ? GitHubCredentials::token() : QString();
 
     auto* nam = new QNetworkAccessManager(this);
     QNetworkRequest apiReq{QUrl(apiUrl)};
     apiReq.setHeader(QNetworkRequest::UserAgentHeader, "RetroNest/1.0");
     apiReq.setRawHeader("Accept", "application/json");
+    if (!authToken.isEmpty())
+        apiReq.setRawHeader("Authorization", QByteArray("Bearer ") + authToken.toUtf8());
 
     QNetworkReply* apiReply = nam->get(apiReq);
 
     connect(apiReply, &QNetworkReply::finished, this,
-            [this, apiReply, nam, emuId, installPath]() {
+            [this, apiReply, nam, emuId, installPath, authToken]() {
                 apiReply->deleteLater();
 
                 if (apiReply->error() != QNetworkReply::NoError) {
@@ -490,7 +501,7 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
                 for (const auto& a : assets) {
                     QJsonObject asset = a.toObject();
                     QString name = asset["name"].toString();
-                    QString url = asset["browser_download_url"].toString();
+                    QString url = InstallerUtils::chooseAssetDownloadUrl(asset, !authToken.isEmpty());
                     QString digest = asset["digest"].toString();
                     assetNames.append(name);
                     assetUrls.insert(name, url);
@@ -515,7 +526,7 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
                 // Done with the API NAM \u2014 the download phase creates its own.
                 nam->deleteLater();
                 startDirectDownload(assetName, downloadUrl, tagName, publishedAt,
-                                    sha256, installPath);
+                                    sha256, installPath, authToken);
             });
 }
 
@@ -528,7 +539,8 @@ void EmulatorInstaller::startDirectDownload(const QString& assetName,
                                               const QString& tagName,
                                               const QString& publishedAt,
                                               const QString& sha256,
-                                              const QString& installPath) {
+                                              const QString& installPath,
+                                              const QString& authToken) {
     QDir().mkpath(installPath);
     const QString tempFile = installPath + "/" + assetName;
 
@@ -544,6 +556,10 @@ void EmulatorInstaller::startDirectDownload(const QString& assetName,
 
     QNetworkRequest dlReq{QUrl(downloadUrl)};
     dlReq.setHeader(QNetworkRequest::UserAgentHeader, "RetroNest/1.0");
+    if (!authToken.isEmpty()) {
+        dlReq.setRawHeader("Accept", "application/octet-stream");
+        dlReq.setRawHeader("Authorization", QByteArray("Bearer ") + authToken.toUtf8());
+    }
     dlReq.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                        QNetworkRequest::NoLessSafeRedirectPolicy);
 

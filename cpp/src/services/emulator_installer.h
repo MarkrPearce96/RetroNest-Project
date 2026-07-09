@@ -75,5 +75,6 @@ private:
                               const QString& tagName,
                               const QString& publishedAt,
                               const QString& sha256,
-                              const QString& installPath);
+                              const QString& installPath,
+                              const QString& authToken = {});
 };
