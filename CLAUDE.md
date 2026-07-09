@@ -214,7 +214,11 @@ engine** runs the `SetupWizard` module in a nested event loop; when the
 wizard accepts, that engine is torn down and startup continues. Then
 `Paths::setRoot` + directory creation → patches auto-fetch → Database →
 services/`AppController`/`GameSession`/`ThemeContext` → the main AppUI
-engine loads `AppWindow`.
+engine loads `AppWindow`. Fatal/wedge exit paths route through a single
+`guardedHardExit()` (`main.cpp`); the first ROM scan is deferred off the
+pre-first-paint path (app-shell review P8 — the fuller `main()`→AppBootstrap
+class extraction was deliberately left for later, so `main()` is still one
+long function).
 
 **Window inventory:**
 - **Main window** (`AppWindow.qml`) — borderless frameless
@@ -274,12 +278,24 @@ former `LibretroGLItem` dependency was replaced by the abstract
 `LibretroRenderSurface` interface (core/), which `LibretroGLItem`
 implements — so the pre-stop GL render fence runs through the interface
 and `game_session.cpp` carries no Qt Quick. The one remaining core→ui
-seam noted in packet 5 is closed.
+seam noted in packet 5 is closed. Install/uninstall status reaches QML via
+a reactive `AppController::emulatorStatus` `Q_PROPERTY` (backed by
+`allEmulatorStatus()`, `emulatorStatusChanged` NOTIFY) — QML binds it
+instead of manually re-pulling snapshots (app-shell review P9).
 
 ## Theme System
 - Fullscreen UI — themes own the entire window, settings via Escape/Start modal overlay
-- **ThemeContext** is the only API themes use — never access `app` directly
+- **ThemeContext** is the only API themes use — never access `app` directly.
+  This boundary is **test-enforced**: `test_theme_contract.cpp` runs a
+  forbidden-globals lint so theme QML can't bind root context globals
+  (`gameModel`, `app`, `inputManager`, …) directly (app-shell review P5/R2).
 - Themes provide `systemBrowser` and `gameList` pages in `theme.json`
+- **Theme choice persists across launches** (`Paths::saveTheme`/`loadSavedTheme`,
+  wired from `theme_manager.cpp`) — no longer auto-selects the first scanned
+  theme on restart (app-shell review D1).
+- **`theme.json` is validated at scan** — `minAppVersion` enforced, unknown
+  keys warned, page files existence-checked; a broken/missing theme fails
+  loudly instead of silently black-screening (app-shell review R4/R9).
 - Controller support is automatic via unified input system (Keys.on* handlers only)
 
 ## Input System
@@ -292,14 +308,20 @@ seam noted in packet 5 is closed.
 ## In-Game Menu & Emulator Control
 - **Trigger:** Cmd+Shift+Escape (Carbon global hotkey, system-wide), Select+Start (SDL combo, all controllers), or Touchpad press (DualShock 4 / DualSense single-button)
 - **Overlay mechanism:** for HW-render cores the menu lives on `LibretroOverlayPanel`, a transparent `QQuickWindow` above the main window whose native window is panel-configured (isa-swizzled `NSPanel`: frameless, status-window-level, non-activating) so it can take key input over the borderless-fullscreen game view; software-render cores use an in-scene QML menu. (The process-era `InGameMenuPanel` that floated over external emulator processes was retired 2026-07.)
-- **Pause is a direct call, centralized on the menu-open edge.** Libretro
-  cores run in-process, so pausing is `CoreRuntime::pause()`/`resume()` —
-  and the "paused exactly while the menu is open, resume before every
-  close or the core's EmuThread watchdog kills the session" invariant
-  lives in exactly two places: `InGameMenuController`'s pause hook (HW
-  overlay path) and the in-scene menu's `onVisibleChanged` edge in
-  AppWindow.qml (SW path). Menu action handlers never call
-  pause/resumeEmulation themselves.
+- **Pause is a direct call, centralized on the menu-visibility edge.**
+  Libretro cores run in-process, so pausing is
+  `CoreRuntime::pause()`/`resume()`, driven by the "paused exactly while
+  the menu is open, resume before every close or the core's EmuThread
+  watchdog kills the session" invariant. It rides two edges:
+  `InGameMenuController`'s pause hook (HW overlay path) and the in-scene
+  menu's `onVisibleChanged` edge in AppWindow.qml (SW path).
+  **CAVEAT (cleanup pending):** the hotkey-fired
+  `onLibretroMenuToggleRequested` handler (AppWindow.qml) still duplicates
+  the SW open/close block and calls `pause/resumeEmulation()` directly — a
+  redundant third site P2 meant to eliminate. It's harmless (pause/resume
+  set a bool, so the extra call is a no-op given the `onVisibleChanged`
+  edge), but that handler should delegate to `toggleInGameMenu()`. Apart
+  from it, menu action handlers never call pause/resume themselves.
 - **Save & Quit** serializes the core state (`retro_serialize`) to
   `<serial-or-basename>.resume` under the emulator's savestates dir;
   `findResumeFile()` on the adapter locates it at next launch and
