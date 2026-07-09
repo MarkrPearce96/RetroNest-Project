@@ -4,6 +4,7 @@
 #include "adapters/adapter_registry.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -230,25 +231,69 @@ void EmulatorService::uninstallEmulator(const QString& emuId) {
         return;
     }
 
-    const QString installDir = Paths::emulatorsDir(manifest->install_folder);
-    if (!QDir(installDir).exists()) {
-        emit uninstallFinished(emuId, false, manifest->name + " is not installed.");
+    const QString name = manifest->name;
+
+    // Emit the result the same way from every path.
+    auto finish = [this, emuId, name](QFutureWatcher<bool>* w) {
+        connect(w, &QFutureWatcher<bool>::finished, this, [this, emuId, name, w]() {
+            const bool ok = w->result();
+            emit uninstallFinished(emuId, ok,
+                ok ? name + " has been uninstalled."
+                   : "Failed to uninstall " + name + ".");
+            w->deleteLater();
+        });
+    };
+
+    // Libretro cores ALL share one install dir (emulators/libretro/cores/),
+    // so uninstall must delete ONLY this core's files. removeRecursively on
+    // the shared install_folder wiped every emulator's core (data-loss bug).
+    if (manifest->backend == QLatin1String("libretro") && !manifest->core_dylib.isEmpty()) {
+        const QString coreDir = Paths::emulatorsDir(manifest->install_folder) + "/cores";
+        const QString dylib   = manifest->core_dylib;                 // mgba_libretro.dylib
+        const QString base    = dylib.endsWith(QLatin1String(".dylib"))
+                                    ? dylib.chopped(6) : dylib;        // mgba_libretro
+
+        if (!QFileInfo::exists(coreDir + "/" + dylib)) {
+            emit uninstallFinished(emuId, false, name + " is not installed.");
+            return;
+        }
+
+        // The exact set an install creates (see EmulatorInstaller): the
+        // dylib, its version + VERSION sidecars, and the <base>_libs /
+        // <base>_resources sibling dirs. User data under emulators/<emuId>/
+        // (savestates, memcards) is intentionally left alone.
+        const QStringList files{
+            coreDir + "/" + dylib,
+            coreDir + "/" + dylib + ".version",
+            coreDir + "/" + dylib + ".VERSION.txt",
+        };
+        const QStringList dirs{
+            coreDir + "/" + base + "_libs",
+            coreDir + "/" + base + "_resources",
+        };
+
+        auto* watcher = new QFutureWatcher<bool>(this);
+        finish(watcher);
+        watcher->setFuture(QtConcurrent::run([files, dirs]() {
+            bool ok = true;
+            for (const QString& f : files)
+                if (QFileInfo::exists(f) && !QFile::remove(f)) ok = false;
+            for (const QString& d : dirs)
+                if (QDir(d).exists() && !QDir(d).removeRecursively()) ok = false;
+            return ok;
+        }));
         return;
     }
 
-    const QString name = manifest->name;
-
+    // Legacy non-libretro backend (none shipped): its install_folder is
+    // private to the emulator, so removing it whole is correct.
+    const QString installDir = Paths::emulatorsDir(manifest->install_folder);
+    if (!QDir(installDir).exists()) {
+        emit uninstallFinished(emuId, false, name + " is not installed.");
+        return;
+    }
     auto* watcher = new QFutureWatcher<bool>(this);
-    connect(watcher, &QFutureWatcher<bool>::finished, this,
-        [this, emuId, name, watcher]() {
-            bool ok = watcher->result();
-            if (ok)
-                emit uninstallFinished(emuId, true, name + " has been uninstalled.");
-            else
-                emit uninstallFinished(emuId, false, "Failed to uninstall " + name + ".");
-            watcher->deleteLater();
-        });
-
+    finish(watcher);
     watcher->setFuture(QtConcurrent::run([installDir]() {
         return QDir(installDir).removeRecursively();
     }));
