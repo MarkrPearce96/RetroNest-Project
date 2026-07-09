@@ -130,6 +130,15 @@ AppController::AppController(ManifestLoader* loader, Database* db, QObject* pare
         [this](const QString& emuId, bool success, const QString& message) {
             setStatus(message);
             if (success) emit emulatorStatusChanged(emuId);
+            // patches.zip is app-managed (a shared PCSX2 patch DB fetched
+            // separately from the core, normally on app launch). A fresh
+            // install — or a reinstall after uninstall removed the resources
+            // dir — leaves it absent until the next launch, so the core
+            // toasts "Failed to open patches.zip". Fetch it now so a just-
+            // installed PCSX2 is immediately complete. force=false → the
+            // installer no-ops if the zip is already present and current.
+            if (success && emuId == QLatin1String("pcsx2") && m_patchesInstaller)
+                m_patchesInstaller->fetchAsync(Paths::pcsx2ResourcesDir(), /*force*/ false);
             emit installFinished(emuId, success, message);
         });
     connect(&m_emuService, &EmulatorService::uninstallFinished, this,
