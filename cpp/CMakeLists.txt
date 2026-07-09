@@ -54,6 +54,7 @@ target_compile_definitions(rcheevos_static PUBLIC RC_CLIENT_SUPPORTS_HASH)
 set(SCREENSCRAPER_DEV_ID "" CACHE STRING "ScreenScraper dev ID")
 set(SCREENSCRAPER_DEV_PASSWORD "" CACHE STRING "ScreenScraper dev password")
 set(SCREENSCRAPER_SOFTNAME "RetroNest" CACHE STRING "ScreenScraper software name")
+set(RETRONEST_GITHUB_TOKEN "" CACHE STRING "GitHub PAT for private core downloads")
 include(dev_credentials.cmake OPTIONAL)
 
 # ── retronest_core: shared non-UI closure (core/, adapters/, services/) ──
@@ -233,6 +234,7 @@ set(SOURCES
     src/services/scraper_service.cpp
     src/services/emulator_service.cpp
     src/services/scraper_credentials.cpp
+    src/services/github_credentials.cpp
     src/services/ra_service.cpp
     src/ui/wizard_state.cpp
     src/ui/emulator_list_model.cpp
@@ -341,6 +343,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     SCREENSCRAPER_DEV_ID="${SCREENSCRAPER_DEV_ID}"
     SCREENSCRAPER_DEV_PASSWORD="${SCREENSCRAPER_DEV_PASSWORD}"
     SCREENSCRAPER_SOFTNAME="${SCREENSCRAPER_SOFTNAME}"
+    RETRONEST_GITHUB_TOKEN="${RETRONEST_GITHUB_TOKEN}"
 )
 
 # Qt6 Core/Gui/Network/Sql/Concurrent, SDL2, chdr-static, rcheevos_static
@@ -616,6 +619,13 @@ add_executable(test_emulator_version_records
 )
 target_link_libraries(test_emulator_version_records PRIVATE retronest_core Qt6::Test)
 add_test(NAME EmulatorVersionRecords COMMAND test_emulator_version_records)
+
+add_executable(test_github_download_auth
+    tests/test_github_download_auth.cpp
+    src/services/github_credentials.cpp
+)
+target_link_libraries(test_github_download_auth PRIVATE retronest_core Qt6::Test)
+add_test(NAME GitHubDownloadAuth COMMAND test_github_download_auth)
 
 add_executable(test_core_loader tests/test_core_loader.cpp)
 target_link_libraries(test_core_loader PRIVATE retronest_core Qt6::Test)
