@@ -146,7 +146,10 @@ bool GameService::startGame(int gameId, const QString& romPath, const QString& e
     m_currentGame = m_db->gameById(gameId);
     emit statusMessage("Launching: " + QFileInfo(romPath).completeBaseName());
 
-    if (!m_session.start(*manifest, adapter, romPath)) {
+    // Pass the game's ACTUAL system (from its DB record) so a multi-system
+    // core like mGBA runs GB/GBC games as gb/gbc — not lumped under its
+    // first system (gba), which broke their RA console id + save dirs.
+    if (!m_session.start(*manifest, adapter, romPath, m_currentGame.system)) {
         m_currentRomPath.clear();
         m_currentGame = {};
         return false;

@@ -28,7 +28,8 @@ GameSession::~GameSession() = default;
 
 bool GameSession::start(const EmulatorManifest& manifest,
                         EmulatorAdapter* adapter,
-                        const QString& romPath) {
+                        const QString& romPath,
+                        const QString& systemId) {
     if (isRunning()) {
         qWarning() << "[GameSession] Already running";
         return false;
@@ -38,9 +39,13 @@ bool GameSession::start(const EmulatorManifest& manifest,
         return false;
     }
 
-    const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
+    // The game's real system. Falling back to the manifest's first system
+    // (systemIdFor) keeps single-system cores working when the caller
+    // doesn't pass one; multi-system cores (mGBA) rely on the passed value.
+    m_systemId = systemId.isEmpty()
+        ? Paths::systemIdFor(manifest.id, manifest.systems) : systemId;
     const QString biosPath = QFileInfo(Paths::biosDir()).absoluteFilePath();
-    const QString dataPath = QFileInfo(Paths::emulatorDataDir(manifest.id, systemId)).absoluteFilePath();
+    const QString dataPath = QFileInfo(Paths::emulatorDataDir(manifest.id, m_systemId)).absoluteFilePath();
     QDir().mkpath(dataPath);
 
     if (!adapter->ensureConfig(manifest, biosPath, dataPath))
@@ -149,7 +154,7 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         rt->setActiveNSView(nullptr);
     }
 
-    const QString systemId = Paths::systemIdFor(manifest.id, manifest.systems);
+    const QString& systemId = m_systemId;
 
     CoreRuntime::StartConfig cfg;
     cfg.emuId    = manifest.id;
@@ -236,6 +241,7 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         // reports 0 for "no aspect" and positive values for real ones).
         m_libretroAspectRatio = -1.0;
         m_libretroBackend = QStringLiteral("software");
+        m_systemId.clear();
         m_adapter = nullptr; m_manifest = nullptr;
         emit runningChanged();
         emit finished(crashed ? -1 : 0, crashed);
@@ -455,7 +461,7 @@ void GameSession::terminate() {
         // Save-on-quit: pause the runtime, write resume file, then stop
         const auto* mf = m_manifest;
         if (mf) {
-            const QString systemId = Paths::systemIdFor(mf->id, mf->systems);
+            const QString& systemId = m_systemId;
             // Use the serial as the resume filename so findResumeFile can match
             // by serial without a DB lookup.  Fall back to the ROM base name
             // only when serial extraction fails (e.g. unsupported format).
@@ -510,7 +516,7 @@ void GameSession::resumeEmulation() {
 QString GameSession::libretroSlotPath(int slot) const {
     if (!m_libretroAdapter || !m_manifest || m_currentRomPath.isEmpty())
         return {};
-    const QString systemId = Paths::systemIdFor(m_manifest->id, m_manifest->systems);
+    const QString& systemId = m_systemId;
     const QString serial = m_libretroAdapter->extractSerial(m_currentRomPath);
     const QString baseName = serial.isEmpty()
         ? QFileInfo(m_currentRomPath).completeBaseName()

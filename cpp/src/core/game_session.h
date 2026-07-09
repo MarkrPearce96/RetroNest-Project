@@ -70,10 +70,16 @@ public:
      *  Replaces the old hidden HotkeyMatcher::s_active static. */
     void setHotkeyMatcher(HotkeyMatcher* matcher);
 
-    /** Launch the emulator. Returns false if already running or start fails. */
+    /** Launch the emulator. Returns false if already running or start fails.
+     *  `systemId` is the game's ACTUAL system (from its DB record) — needed
+     *  because a multi-system core like mGBA (gba/gbc/gb) must not lump every
+     *  game under its first declared system: that gave GB/GBC games the GBA
+     *  RA console id (5), so rc_libretro_memory_init failed and achievements
+     *  never unlocked. Empty → fall back to the manifest's first system. */
     bool start(const EmulatorManifest& manifest,
                EmulatorAdapter* adapter,
-               const QString& romPath);
+               const QString& romPath,
+               const QString& systemId = {});
 
     /** Kill the emulator process immediately (SIGKILL / runtime stop). */
     void kill();
@@ -239,6 +245,7 @@ private:
     const EmulatorManifest* m_manifest = nullptr;
     QString m_emuId;
     QString m_currentRomPath;
+    QString m_systemId;   // game's actual system (gba/gbc/gb/...), set in start()
     LibretroAdapter* m_libretroAdapter = nullptr;
     HotkeyMatcher* m_hotkeyMatcher = nullptr;   // injected, not owned
     bool m_libretroFastForward = false;
