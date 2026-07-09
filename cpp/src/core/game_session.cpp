@@ -360,23 +360,13 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
         return false;
     }
 
-    // We optimistically picked the GL video backend from the adapter's
-    // declared preference, but the core's SET_HW_RENDER is negotiated
-    // inside rt->start() (retro_load_game). If the core asked for a
-    // context this bridge doesn't grant — e.g. PPSSPP's "OpenGL" (legacy)
-    // backend requests RETRO_HW_CONTEXT_OPENGL, and we only support
-    // OPENGL_CORE — installHwRender declined it and the core silently
-    // fell back to software rendering. rt->videoHW() is non-null exactly
-    // when the GL context was granted; when it's null, reflect reality so
-    // EmulationView swaps the GL item for the software one and shows the
-    // core's software frames instead of a black screen against absent
-    // hardware.
-    if (backend == LibretroAdapter::HardwareRenderBackend::GL && !rt->videoHW()) {
-        qInfo() << "[GameSession] GL hardware render was not granted; core is "
-                   "running software — switching video backend to software";
-        m_libretroBackend = QStringLiteral("software");
-        emit libretroBackendChanged();
-    }
+    // NOTE: the GL software-fallback decision does NOT live here. rt->start()
+    // spawns the worker and returns BEFORE retro_load_game (and thus
+    // installHwRender) runs, so rt->videoHW() is always null at this point —
+    // checking it here wrongly demoted every granted GL session to software
+    // (black screen). The decision is made in setLibretroAspectRatio(),
+    // which fires after retro_get_system_av_info (i.e. after installHwRender),
+    // when videoHW() is definitive.
 
     // Populate the InputRouter from persisted bindings in controls.ini so that
     // user remappings are reflected at runtime. ensureConfig() seeds the file
@@ -639,6 +629,26 @@ bool GameSession::libretroIntegerScale() const {
 }
 
 void GameSession::setLibretroAspectRatio(qreal ratio) {
+    // This fires after retro_get_system_av_info, i.e. AFTER the core's
+    // SET_HW_RENDER / installHwRender has run on the worker — the first
+    // moment rt->videoHW() is definitive. So this is where we reconcile the
+    // optimistic GL backend guess with reality: if we picked GL but the
+    // context wasn't granted (e.g. PPSSPP's legacy "OpenGL" asks for
+    // RETRO_HW_CONTEXT_OPENGL, which this bridge declines — only
+    // OPENGL_CORE), the core silently ran software. Flip the video backend
+    // to software so EmulationView swaps the GL item for the software one
+    // and shows the core's frames instead of black against absent hardware.
+    // (The granted case leaves videoHW() non-null → no switch → the GL item
+    // rewires to it via the libretroAspectRatioChanged emitted below.)
+    if (m_libretroBackend == QStringLiteral("gl")
+            && m_libretroAdapter && m_libretroAdapter->runtime()
+            && !m_libretroAdapter->runtime()->videoHW()) {
+        qInfo() << "[GameSession] GL hardware render was not granted; core is "
+                   "running software — switching video backend to software";
+        m_libretroBackend = QStringLiteral("software");
+        emit libretroBackendChanged();
+    }
+
     // CoreRuntime calls this once per session after retro_get_system_av_info,
     // and again whenever the core re-emits SET_SYSTEM_AV_INFO.
     //
