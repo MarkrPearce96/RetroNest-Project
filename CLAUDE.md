@@ -67,9 +67,16 @@ universal everywhere is the goal, but today's truth is per-source:
   mgba-emu/mgba. The libretro-buildbot download path was removed from
   manifests/mgba.json (2026-07 packet 6): an in-app "update" used to
   overwrite the universal local build with a single-arch nightly.
-- **duckstation is deliberately excluded from update checks** (no
-  github_repo in its manifest — the core never leaves this machine;
-  license). Build + deploy it only via its package.sh.
+- **duckstation ships via a PRIVATE, authenticated CI release** (user
+  decision 2026-07-09): its manifest carries `github_repo` +
+  `"private": true`, and RetroNest downloads the core with a build-time
+  embedded fine-grained PAT (in gitignored `cpp/dev_credentials.cmake`) via
+  the release-assets API. The release lives ONLY on the private origin repo
+  and is fetchable only by the token holder — never public, never
+  distributed (CC BY-NC-ND preserved). A tag push builds it x86_64-only via
+  the fork's `.github/workflows/libretro_release.yml`; local dev still uses
+  its `package.sh` (universal). This replaces the former "no github_repo /
+  core never leaves this machine" stance.
 Consequence: while the daily driver is the x86_64 app this all works; a
 return to native arm64 requires pcsx2/dolphin release pipelines to go
 universal first (tracked in the suite review, packet 6/7).
