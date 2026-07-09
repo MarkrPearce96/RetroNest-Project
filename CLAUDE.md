@@ -258,9 +258,16 @@ keyboard.
 module); dense settings forms are Qt Widgets (the schema-driven
 `GenericSettingsPage` pipeline). `AppController` is the single QML-facing
 hub (invokables + signals); `ThemeContext` is the only API themes see.
-Known deliberate seams: `AppController` is the app's god object, and
-`game_session.cpp` compiles app-side (not in `retronest_core`) because of
-its `LibretroGLItem` dependency — both on the backlog since packet 5.
+`AppController` is the app's central hub; the app-shell review (2026-07)
+extracted the libretro hotkey engine out of it into
+`LibretroHotkeyController` (core/libretro/) and moved session identity +
+the `libretroRuntime()` guard-chain helper into `GameService`.
+`GameSession` now lives in `retronest_core` (and is unit-testable): its
+former `LibretroGLItem` dependency was replaced by the abstract
+`LibretroRenderSurface` interface (core/), which `LibretroGLItem`
+implements — so the pre-stop GL render fence runs through the interface
+and `game_session.cpp` carries no Qt Quick. The one remaining core→ui
+seam noted in packet 5 is closed.
 
 ## Theme System
 - Fullscreen UI — themes own the entire window, settings via Escape/Start modal overlay
