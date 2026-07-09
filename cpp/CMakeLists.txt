@@ -616,6 +616,7 @@ add_executable(test_emulator_version_records
     tests/test_emulator_version_records.cpp
     src/services/emulator_service.cpp
     src/services/emulator_installer.cpp
+    src/services/github_credentials.cpp
 )
 target_link_libraries(test_emulator_version_records PRIVATE retronest_core Qt6::Test)
 add_test(NAME EmulatorVersionRecords COMMAND test_emulator_version_records)

@@ -21,6 +21,7 @@
 #include <QFutureWatcher>
 
 #include "adapters/adapter_registry.h"
+#include "github_credentials.h"
 
 // ============================================================================
 // Synchronous file download (used by installSync / CLI mode)
@@ -158,7 +159,14 @@ EmulatorInstaller::ReleaseInfo EmulatorInstaller::fetchReleaseInfo(const Emulato
     }
 
     const QString apiUrl = "https://api.github.com/repos/" + manifest.github_repo + "/releases/latest";
-    QByteArray releaseJson = InstallerUtils::httpGet(apiUrl, 30000, "[Installer]");
+    const QString authToken =
+        manifest.is_private ? GitHubCredentials::token() : QString();
+    if (manifest.is_private && authToken.isEmpty()) {
+        info.errorMessage = manifest.name +
+            " requires a GitHub token (private build) — not available in this build.";
+        return info;
+    }
+    QByteArray releaseJson = InstallerUtils::httpGet(apiUrl, 30000, "[Installer]", authToken);
     if (releaseJson.isEmpty()) {
         info.errorMessage = "Failed to fetch release info from GitHub";
         return info;
@@ -186,7 +194,7 @@ EmulatorInstaller::ReleaseInfo EmulatorInstaller::fetchReleaseInfo(const Emulato
     for (const auto& a : assets) {
         QJsonObject asset = a.toObject();
         QString name = asset["name"].toString();
-        QString url = asset["browser_download_url"].toString();
+        QString url = InstallerUtils::chooseAssetDownloadUrl(asset, manifest.is_private);
         QString digest = asset["digest"].toString();
         assetNames.append(name);
         assetUrls.insert(name, url);

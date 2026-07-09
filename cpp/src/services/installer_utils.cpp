@@ -11,11 +11,14 @@
 
 namespace InstallerUtils {
 
-QByteArray httpGet(const QString& url, int timeoutMs, const QString& context) {
+QByteArray httpGet(const QString& url, int timeoutMs, const QString& context,
+                   const QString& authToken) {
     QNetworkAccessManager nam;
     QNetworkRequest req{QUrl(url)};
     req.setHeader(QNetworkRequest::UserAgentHeader, "RetroNest/1.0");
     req.setRawHeader("Accept", "application/json");
+    if (!authToken.isEmpty())
+        req.setRawHeader("Authorization", QByteArray("Bearer ") + authToken.toUtf8());
     req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                      QNetworkRequest::NoLessSafeRedirectPolicy);
 
@@ -62,6 +65,11 @@ bool verifySha256(const QString& path, const QString& expected,
     }
     qInfo() << context << "SHA256 verified for" << path;
     return true;
+}
+
+QString chooseAssetDownloadUrl(const QJsonObject& asset, bool isPrivate) {
+    return isPrivate ? asset.value("url").toString()
+                     : asset.value("browser_download_url").toString();
 }
 
 } // namespace InstallerUtils
