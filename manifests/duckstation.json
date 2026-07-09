@@ -20,6 +20,8 @@
   "launch_args": [],
   "backend": "libretro",
   "core_dylib": "duckstation_libretro.dylib",
-  "core_arch": "universal",
+  "core_arch": "x86_64",
+  "github_repo": "MarkrPearce96/duckstation-libretro",
+  "private": true,
   "logo": "qrc:/AppUI/qml/AppUI/images/duckstation_logo.png"
 }
