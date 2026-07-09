@@ -63,7 +63,7 @@ bool ManifestLoader::loadAll(const QString& manifestsDir) {
             "manifest_version", "id", "name", "description", "systems",
             "github_repo", "executable", "install_folder", "rom_extensions",
             "launch_args", "backend", "core_dylib", "core_buildbot_path",
-            "core_arch", "logo", "detail_page",
+            "core_arch", "logo", "detail_page", "private",
         };
         for (const QString& key : obj.keys()) {
             if (!kKnownKeys.contains(key))
@@ -116,6 +116,8 @@ bool ManifestLoader::loadAll(const QString& manifestsDir) {
             if (!page.label.isEmpty())
                 m.controller_pages.append(page);
         }
+
+        m.is_private = obj.value("private").toBool(false);
 
         // Default install_folder to id if not specified
         if (m.install_folder.isEmpty()) {

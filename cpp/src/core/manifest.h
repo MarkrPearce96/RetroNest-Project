@@ -37,4 +37,5 @@ struct EmulatorManifest {
     QString logo;                   // qrc path for tiles/popups ("" = none)
     QVector<ManifestControllerPage> controller_pages;  // empty → one default "Controller Mapping"
     bool has_patches = false;       // detail-page "Refresh <Name> Patches" action
+    bool is_private = false;        // private repo → downloads need a Bearer token
 };

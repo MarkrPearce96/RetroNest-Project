@@ -171,6 +171,38 @@ private slots:
         QVERIFY(m != nullptr);                          // grandfathered, not rejected
         QCOMPARE(m->manifest_version, 0);
     }
+
+    void privateFlagParses() {
+        QTemporaryDir dir;
+        QFile f(dir.path() + "/priv.json");
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write(R"({
+            "manifest_version": 1, "id": "priv", "name": "Priv",
+            "systems": ["psx"], "backend": "libretro",
+            "core_dylib": "priv_libretro.dylib",
+            "github_repo": "owner/priv", "executable": "priv",
+            "rom_extensions": ["bin"], "launch_args": [], "private": true
+        })");
+        f.close();
+
+        ManifestLoader loader;
+        QVERIFY(loader.loadAll(dir.path()));
+        const EmulatorManifest* m = loader.emulatorById("priv");
+        QVERIFY(m != nullptr);
+        QVERIFY(m->is_private);
+
+        // Default is false when the key is absent.
+        QFile f2(dir.path() + "/pub.json");
+        QVERIFY(f2.open(QIODevice::WriteOnly));
+        f2.write(R"({"manifest_version":1,"id":"pub","name":"Pub","systems":["psx"],
+                     "backend":"libretro","core_dylib":"pub_libretro.dylib",
+                     "github_repo":"owner/pub","executable":"pub",
+                     "rom_extensions":["bin"],"launch_args":[]})");
+        f2.close();
+        ManifestLoader loader2;
+        QVERIFY(loader2.loadAll(dir.path()));
+        QVERIFY(!loader2.emulatorById("pub")->is_private);
+    }
 };
 QTEST_MAIN(TestManifestLibretroFields)
 #include "test_manifest_libretro_fields.moc"
