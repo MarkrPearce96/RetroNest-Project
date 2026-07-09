@@ -20,6 +20,7 @@
 
 #include "core/manifest_loader.h"
 #include "core/paths.h"
+#include "services/emulator_installer.h"
 #include "services/emulator_service.h"
 
 class TestEmulatorVersionRecords : public QObject {
@@ -144,6 +145,31 @@ private slots:
         QVERIFY(svc.installedVersion("coreb").isEmpty());
         QVERIFY(svc.installedPublishedAt("coreb").isEmpty());
         QVERIFY(svc.installedAt("coreb").isEmpty());
+    }
+
+    // Final-review finding: the private-manifest/empty-token guard in
+    // EmulatorInstaller::fetchReleaseInfo must fail fast (no network I/O)
+    // rather than let an unauthenticated request hit a private repo. This
+    // exercises the guard through the public installSync entry point,
+    // since fetchReleaseInfo itself is private. In this test binary
+    // GitHubCredentials::token() always returns "" (no dev_credentials.cmake
+    // define), so a private manifest unconditionally hits the guard.
+    void testInstallSyncFailsFastForPrivateManifestWithNoToken() {
+        EmulatorManifest manifest;
+        manifest.id = "privatecore";
+        manifest.name = "Private Core";
+        manifest.github_repo = "acme/private-core";
+        manifest.is_private = true;
+
+        QTemporaryDir installDir;
+        QVERIFY(installDir.isValid());
+
+        EmulatorInstaller::InstallResult result =
+            EmulatorInstaller::installSync(manifest, installDir.path());
+
+        QVERIFY(!result.success);
+        QVERIFY2(result.message.contains("requires a GitHub token"),
+                  qPrintable(result.message));
     }
 
 };

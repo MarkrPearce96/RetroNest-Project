@@ -69,6 +69,7 @@ private:
      * (assetName, downloadUrl, version, publishedAt) tuple. Used by both
      * the GitHub-Releases path (after asset resolution) and the
      * adapter-direct-download path (Dolphin etc.).
+     * @param authToken Bearer token for private release assets; empty = public/no auth.
      */
     void startDirectDownload(const QString& assetName,
                               const QString& downloadUrl,

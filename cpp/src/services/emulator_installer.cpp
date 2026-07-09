@@ -28,7 +28,7 @@
 // ============================================================================
 
 static bool downloadSync(const QString& url, const QString& destPath,
-                          const QString& authToken = {}) {
+                         const QString& authToken = {}) {
     qInfo() << "[Installer] Downloading" << url;
 
     QNetworkAccessManager nam;
@@ -459,6 +459,12 @@ void EmulatorInstaller::installAsync(const EmulatorManifest& manifest, const QSt
     const QString emuId = manifest.id;
     const QString authToken =
         manifest.is_private ? GitHubCredentials::token() : QString();
+
+    if (manifest.is_private && authToken.isEmpty()) {
+        emit finished(InstallResult{false, manifest.name +
+            " requires a GitHub token (private build) — not available in this build.", {}});
+        return;
+    }
 
     auto* nam = new QNetworkAccessManager(this);
     QNetworkRequest apiReq{QUrl(apiUrl)};
