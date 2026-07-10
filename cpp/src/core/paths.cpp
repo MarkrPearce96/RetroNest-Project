@@ -10,15 +10,18 @@
 QString Paths::s_root;
 
 bool Paths::setRoot(const QString& rootPath) {
-    if (rootPath.isEmpty()) {
+    // Normalize so a stray doubled slash (e.g. a legacy wizard save of
+    // ".../Documents//RetroNest") can't propagate into every derived path.
+    const QString clean = QDir::cleanPath(rootPath);
+    if (clean.isEmpty()) {
         qWarning() << "[Paths] setRoot called with empty path";
         return false;
     }
-    if (!QDir::isAbsolutePath(rootPath)) {
+    if (!QDir::isAbsolutePath(clean)) {
         qWarning() << "[Paths] setRoot requires an absolute path, got:" << rootPath;
         return false;
     }
-    s_root = rootPath;
+    s_root = clean;
     return true;
 }
 
@@ -117,12 +120,20 @@ static void writeAppConfig(const QJsonObject& obj) {
 }
 
 QString Paths::loadSavedRoot() {
-    return readAppConfig()["root"].toString();
+    const QString raw = readAppConfig()["root"].toString();
+    if (raw.isEmpty())
+        return raw;
+    const QString clean = QDir::cleanPath(raw);
+    // Heal a legacy dirty value in place so the persisted config stops
+    // carrying the doubled slash forward on every launch.
+    if (clean != raw)
+        saveRoot(clean);
+    return clean;
 }
 
 void Paths::saveRoot(const QString& rootPath) {
     QJsonObject obj = readAppConfig();
-    obj["root"] = rootPath;
+    obj["root"] = QDir::cleanPath(rootPath);
     writeAppConfig(obj);
     qInfo() << "[Paths] Saved root to" << appConfigPath();
 }
