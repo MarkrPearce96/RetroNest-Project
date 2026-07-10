@@ -5,8 +5,8 @@ import QtQuick.Layouts
 Item {
     id: root
 
-    // Optional ROMs/BIOS section starts collapsed — "revealing" per spec.
-    property bool expanded: false
+    // Optional ROMs/BIOS section starts expanded — matches approved mockup.
+    property bool expanded: true
 
     focus: true
 
