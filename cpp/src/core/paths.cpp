@@ -162,3 +162,16 @@ void Paths::saveTheme(const QString& themeId) {
     obj["theme"] = themeId;
     writeAppConfig(obj);
 }
+
+QString Paths::loadSavedRomsRoot() { return readAppConfig()["romsRoot"].toString(); }
+void Paths::saveRomsRoot(const QString& path) {
+    QJsonObject obj = readAppConfig();
+    obj["romsRoot"] = path.isEmpty() ? QString() : QDir::cleanPath(path);
+    writeAppConfig(obj);
+}
+QString Paths::loadSavedBiosRoot() { return readAppConfig()["biosRoot"].toString(); }
+void Paths::saveBiosRoot(const QString& path) {
+    QJsonObject obj = readAppConfig();
+    obj["biosRoot"] = path.isEmpty() ? QString() : QDir::cleanPath(path);
+    writeAppConfig(obj);
+}

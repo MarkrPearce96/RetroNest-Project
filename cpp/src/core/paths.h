@@ -74,6 +74,18 @@ public:
     /** Save the chosen theme id for next launch. */
     static void saveTheme(const QString& themeId);
 
+    /** Load previously saved custom ROM root. Returns empty if none saved. */
+    static QString loadSavedRomsRoot();
+
+    /** Save the custom ROM root for next launch. */
+    static void saveRomsRoot(const QString& path);
+
+    /** Load previously saved custom BIOS root. Returns empty if none saved. */
+    static QString loadSavedBiosRoot();
+
+    /** Save the custom BIOS root for next launch. */
+    static void saveBiosRoot(const QString& path);
+
 private:
     static QString s_root;
     static QString s_romsRoot;   // empty ⇒ derive from s_root

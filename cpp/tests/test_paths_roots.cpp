@@ -24,6 +24,14 @@ private slots:
         Paths::setRomsRoot("");    // back to default
         QCOMPARE(Paths::romsDir(""), QString("/tmp/rn-test/roms"));
     }
+    void persistRoundTrips() {
+        Paths::saveRomsRoot("/Volumes/USB/Games");
+        Paths::saveBiosRoot("/Volumes/USB/bios");
+        QCOMPARE(Paths::loadSavedRomsRoot(), QString("/Volumes/USB/Games"));
+        QCOMPARE(Paths::loadSavedBiosRoot(), QString("/Volumes/USB/bios"));
+        Paths::saveRomsRoot("");   // clearing persists empty ⇒ default on load
+        QVERIFY(Paths::loadSavedRomsRoot().isEmpty());
+    }
 };
 QTEST_APPLESS_MAIN(TestPathsRoots)
 #include "test_paths_roots.moc"
