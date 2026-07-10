@@ -167,6 +167,9 @@ int main(int argc, char* argv[]) {
         qCritical() << "Invalid root path:" << rootPath;
         return 1;
     }
+    // ROM/BIOS roots may live outside the data root (e.g. USB). Empty ⇒ default.
+    Paths::setRomsRoot(Paths::loadSavedRomsRoot());
+    Paths::setBiosRoot(Paths::loadSavedBiosRoot());
     Paths::ensureDirectories();
 
     // Auto-fetch PCSX2 patches.zip on launch — staleness-gated, non-blocking.
