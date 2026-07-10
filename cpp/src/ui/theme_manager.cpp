@@ -114,9 +114,6 @@ void ThemeManager::scanThemes(const QString& themesDir) {
         m_themes.append(info);
     }
 
-    if (m_themes.isEmpty())
-        qCritical() << "[ThemeManager] No valid themes found — UI will be blank";
-
     const QString previous = m_currentThemeId;
 
     // Prefer the persisted choice as soon as a scan pass makes it available
@@ -135,6 +132,11 @@ void ThemeManager::scanThemes(const QString& themesDir) {
     if (m_currentThemeId != previous)
         emit currentThemeChanged();
     emit themesChanged();
+}
+
+void ThemeManager::warnIfEmpty() const {
+    if (m_themes.isEmpty())
+        qCritical() << "[ThemeManager] No valid themes found — UI will be blank";
 }
 
 QVariantList ThemeManager::availableThemes() const {

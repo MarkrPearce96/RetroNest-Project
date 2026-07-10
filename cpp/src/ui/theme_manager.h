@@ -26,6 +26,10 @@ public:
     explicit ThemeManager(QObject* parent = nullptr);
 
     void scanThemes(const QString& themesDir);
+    // Emit the "no themes → blank UI" critical. Call ONCE after all scan
+    // passes — scanThemes itself must not, or an empty user themes dir
+    // false-alarms before the bundled pass loads Modern.
+    void warnIfEmpty() const;
 
     QVariantList availableThemes() const;
 

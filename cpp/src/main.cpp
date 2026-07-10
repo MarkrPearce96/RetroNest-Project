@@ -240,6 +240,9 @@ int main(int argc, char* argv[]) {
         if (QDir(bundledThemes).exists() && bundledThemes != Paths::themesDir()) {
             themeManager.scanThemes(bundledThemes);
         }
+        // Warn only after every pass — an empty user themes dir must not
+        // false-alarm before the bundled pass loads Modern.
+        themeManager.warnIfEmpty();
 
         ThemeContext themeContext(&appController, &gameModel, &db);
 
