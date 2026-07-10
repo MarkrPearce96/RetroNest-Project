@@ -5,125 +5,110 @@ import QtQuick.Layouts
 ApplicationWindow {
     id: root
     visible: true
-    width: 900; height: 650
-    minimumWidth: 720; minimumHeight: 540
+    width: 1180; height: 720
+    minimumWidth: 960; minimumHeight: 620
     title: "RetroNest Setup"
-    color: "#131210"
+    color: WizardTheme.background
 
-    property int pageCount: 7
+    property int pageCount: 6
 
-    // Dark gradient background
+    // B2 "Sunset premium" gradient backdrop — full-bleed, no inner card.
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
-            GradientStop { position: 0.0; color: "#252320" }
-            GradientStop { position: 1.0; color: "#131210" }
+            GradientStop { position: 0.0; color: WizardTheme.gradTop }
+            GradientStop { position: 0.5; color: WizardTheme.gradMid }
+            GradientStop { position: 1.0; color: WizardTheme.gradBottom }
         }
     }
 
-    // Centered card
-    Rectangle {
-        id: wizardCard
-        anchors.centerIn: parent
-        width: Math.min(parent.width * 0.85, 800)
-        height: Math.min(parent.height * 0.85, 550)
-        radius: 14
-        color: WizardTheme.surface
-        border.width: 1
-        border.color: WizardTheme.divider
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 0
 
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 0
+        // Header
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: WizardTheme.pageMargin; Layout.rightMargin: WizardTheme.pageMargin
+            Layout.topMargin: 20; Layout.bottomMargin: 8
 
-            // Header
-            RowLayout {
+            Text {
+                text: pageTitleForIndex(swipeView.currentIndex)
+                font.pixelSize: 18; font.weight: Font.DemiBold
+                color: WizardTheme.textPrimary
                 Layout.fillWidth: true
-                Layout.leftMargin: 24; Layout.rightMargin: 24
-                Layout.topMargin: 20; Layout.bottomMargin: 8
-
-                Text {
-                    text: pageTitleForIndex(swipeView.currentIndex)
-                    font.pixelSize: 18; font.weight: Font.DemiBold
-                    color: WizardTheme.textPrimary
-                    Layout.fillWidth: true
-                }
-
-                Text {
-                    text: (swipeView.currentIndex + 1) + " / " + pageCount
-                    font.pixelSize: 12
-                    color: WizardTheme.textDim
-                }
             }
 
-            // Progress bar (replaces StepIndicator dots)
+            Text {
+                text: (swipeView.currentIndex + 1) + " / " + pageCount
+                font.pixelSize: 12
+                color: WizardTheme.textDim
+            }
+        }
+
+        // Progress bar (replaces StepIndicator dots)
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.leftMargin: WizardTheme.pageMargin; Layout.rightMargin: WizardTheme.pageMargin
+            height: 2; radius: 1
+            color: WizardTheme.divider
+
             Rectangle {
-                Layout.fillWidth: true
-                Layout.leftMargin: 24; Layout.rightMargin: 24
-                height: 2; radius: 1
-                color: WizardTheme.divider
-
-                Rectangle {
-                    width: parent.width * ((swipeView.currentIndex + 1) / root.pageCount)
-                    height: parent.height; radius: 1
-                    color: WizardTheme.accent
-                    Behavior on width { NumberAnimation { duration: WizardTheme.animNormal } }
-                }
+                width: parent.width * ((swipeView.currentIndex + 1) / root.pageCount)
+                height: parent.height; radius: 1
+                color: WizardTheme.accent
+                Behavior on width { NumberAnimation { duration: WizardTheme.animNormal } }
             }
+        }
 
-            // SwipeView — 7 pages
-            SwipeView {
-                id: swipeView
-                Layout.fillWidth: true; Layout.fillHeight: true
-                interactive: false; clip: true
+        // SwipeView — 6 pages
+        SwipeView {
+            id: swipeView
+            Layout.fillWidth: true; Layout.fillHeight: true
+            interactive: false; clip: true
 
-                WelcomePage { isCurrentPage: SwipeView.isCurrentItem }
-                FolderPage {}
-                EmulatorsPage { id: emulatorsPage }
-                ResolutionPage { id: resolutionPage }
-                AspectRatioPage { id: aspectRatioPage }
-                FilesPage { id: filesPage }
-                InstallPage { id: installPage; isCurrentPage: SwipeView.isCurrentItem }
+            WelcomePage { isCurrentPage: SwipeView.isCurrentItem }
+            StorageLocationsPage { id: storagePage }
+            EmulatorsPage { id: emulatorsPage }
+            RetroAchievementsPage { id: raPage }
+            ScreenScraperPage { id: scraperPage }
+            InstallPage { id: installPage; isCurrentPage: SwipeView.isCurrentItem }
+        }
+
+        // NavBar
+        NavBar {
+            Layout.fillWidth: true
+            currentIndex: swipeView.currentIndex
+            pageCount: root.pageCount
+            canContinue: {
+                if (swipeView.currentIndex === 1) return wizard.rootPath !== ""
+                return true
             }
+            onBackClicked: swipeView.currentIndex--
+            onContinueClicked: {
+                var cur = swipeView.currentIndex
+                if (cur === 1 && !wizard.rootPath) return
 
-            // NavBar
-            NavBar {
-                Layout.fillWidth: true
-                currentIndex: swipeView.currentIndex
-                pageCount: root.pageCount
-                canContinue: {
-                    if (swipeView.currentIndex === 1) return wizard.rootPath !== ""
-                    return true
+                // Leaving the Storage step: commit the chosen root now so the
+                // RetroAchievements/ScreenScraper steps can save credentials
+                // into {root}/config/. Idempotent — safe to call again on accept().
+                if (cur === 1) {
+                    wizard.applyStorageLocations()
                 }
-                onBackClicked: swipeView.currentIndex--
-                onContinueClicked: {
-                    var cur = swipeView.currentIndex
-                    if (cur === 1 && !wizard.rootPath) return
 
-                    if (cur === 2) {
-                        resolutionPage.refresh()
-                        aspectRatioPage.refresh()
-                    }
-                    // Refresh Files page when about to enter it
-                    if (cur === 4) {
-                        filesPage.refresh()
-                        wizard.ensureRomDirs(emulators.availableSystems())
-                    }
-
-                    if (cur < pageCount - 1) {
-                        swipeView.currentIndex = cur + 1
-                    }
-                    if (swipeView.currentIndex === pageCount - 1) {
-                        installPage.startInstall()
-                    }
+                if (cur < pageCount - 1) {
+                    swipeView.currentIndex = cur + 1
+                }
+                if (swipeView.currentIndex === pageCount - 1) {
+                    installPage.startInstall()
                 }
             }
         }
     }
 
     function pageTitleForIndex(index) {
-        var titles = ["Welcome", "Choose Data Folder", "Select Emulators",
-                      "Display Resolution", "Aspect Ratio", "Files", "Installing"]
+        var titles = ["Welcome", "Storage Locations", "Select Emulators",
+                      "RetroAchievements", "ScreenScraper", "Install"]
         return titles[index] || ""
     }
 }
