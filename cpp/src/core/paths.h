@@ -39,6 +39,11 @@ public:
      */
     static QString emulatorDataDir(const QString& emuId, const QString& systemId);
 
+    static void setRomsRoot(const QString& path);   // "" ⇒ default {root}/roms
+    static void setBiosRoot(const QString& path);   // "" ⇒ default {root}/bios
+    static QString romsRoot();
+    static QString biosRoot();
+
     static QString biosDir();
     static QString romsDir(const QString& systemId = {});
     /** Media directory for scraped content (ES-DE style). */
@@ -71,4 +76,6 @@ public:
 
 private:
     static QString s_root;
+    static QString s_romsRoot;   // empty ⇒ derive from s_root
+    static QString s_biosRoot;
 };

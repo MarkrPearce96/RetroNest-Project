@@ -550,6 +550,10 @@ add_executable(test_path_overrides_store tests/test_path_overrides_store.cpp)
 target_link_libraries(test_path_overrides_store PRIVATE retronest_core Qt6::Test)
 add_test(NAME PathOverridesStore COMMAND test_path_overrides_store)
 
+add_executable(test_paths_roots tests/test_paths_roots.cpp)
+target_link_libraries(test_paths_roots PRIVATE retronest_core Qt6::Test)
+add_test(NAME PathsRoots COMMAND test_paths_roots)
+
 add_executable(test_database_migrations tests/test_database_migrations.cpp)
 target_link_libraries(test_database_migrations PRIVATE retronest_core Qt6::Test)
 add_test(NAME DatabaseMigrations COMMAND test_database_migrations)
