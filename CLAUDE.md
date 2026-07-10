@@ -314,14 +314,11 @@ instead of manually re-pulling snapshots (app-shell review P9).
   the menu is open, resume before every close or the core's EmuThread
   watchdog kills the session" invariant. It rides two edges:
   `InGameMenuController`'s pause hook (HW overlay path) and the in-scene
-  menu's `onVisibleChanged` edge in AppWindow.qml (SW path).
-  **CAVEAT (cleanup pending):** the hotkey-fired
-  `onLibretroMenuToggleRequested` handler (AppWindow.qml) still duplicates
-  the SW open/close block and calls `pause/resumeEmulation()` directly — a
-  redundant third site P2 meant to eliminate. It's harmless (pause/resume
-  set a bool, so the extra call is a no-op given the `onVisibleChanged`
-  edge), but that handler should delegate to `toggleInGameMenu()`. Apart
-  from it, menu action handlers never call pause/resume themselves.
+  menu's `onVisibleChanged` edge in AppWindow.qml (SW path). Every menu
+  trigger routes through the single `toggleInGameMenu()` — the hotkey-fired
+  `onLibretroMenuToggleRequested` handler just delegates to it and never
+  touches pause/resume itself (the former redundant third site was removed
+  2026-07-10). Menu action handlers never call pause/resume themselves.
 - **Save & Quit** serializes the core state (`retro_serialize`) to
   `<serial-or-basename>.resume` under the emulator's savestates dir;
   `findResumeFile()` on the adapter locates it at next launch and

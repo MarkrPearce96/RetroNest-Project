@@ -567,27 +567,16 @@ ApplicationWindow {
         // mGBA menu can also self-close via its own Keys.onPressed Esc
         // handler (focus tree path), but LibretroOverlayPanel runs in a
         // separate QQuickWindow whose Esc key events flow through the
-        // app-level matcher, so without the close branch here PCSX2's
-        // overlay had no way to dismiss via Esc.
+        // app-level matcher, so this must TOGGLE (open AND close) — the
+        // delegated toggleInGameMenu()'s close branch is what lets PCSX2's
+        // overlay dismiss via Esc.
         function onLibretroMenuToggleRequested() {
+            // Delegate to the single canonical toggle — do NOT duplicate the
+            // open/close block or touch pause/resume here. Pause/resume rides
+            // the menu-visibility edge (SW: inGameMenu.onVisibleChanged; HW:
+            // InGameMenuController), never a menu handler (P2 invariant).
             if (!app.gameRunning) return;
-            if (app.gameUsesHardwareRender()) {
-                if (app.inGameMenuOpen)
-                    app.closeInGameMenu();
-                else
-                    app.openInGameMenu();
-                return;
-            }
-            if (isLibretroGame()) {
-                if (inGameMenu.visible) {
-                    inGameMenu.close();
-                    if (app.gameSession) app.gameSession.resumeEmulation();
-                } else {
-                    if (app.gameSession) app.gameSession.pauseEmulation();
-                    app.activateApp();
-                    inGameMenu.open();
-                }
-            }
+            window.toggleInGameMenu();
         }
     }
 
