@@ -2,32 +2,38 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-    // Colors — warm charcoal + amber
-    readonly property color background:     "#131210"
-    readonly property color surface:        "#201f1c"
-    readonly property color surfaceHover:   "#2e2c28"
-    readonly property color accent:         "#e8a838"
-    readonly property color accentLight:    "#f0b848"
-    readonly property color navBackground:  "#1a1917"
-    readonly property color cardSelected:   "#2a2518"
-    readonly property color textPrimary:    "#e0ddd6"
-    readonly property color textSecondary:  "#c8c4b8"
-    readonly property color textMuted:      "#8a8680"
-    readonly property color textDim:        "#6a6660"
-    readonly property color divider:        "#2e2c28"
-    readonly property color success:        "#6a9b4a"
-    readonly property color error:          "#c85040"
+    // Colors — Sunset premium (B2)
+    readonly property color background:     "#241033"   // gradient tail / fallback
+    readonly property color gradTop:        "#ff5e8a"
+    readonly property color gradMid:        "#7a2b6b"
+    readonly property color gradBottom:     "#241033"
+    readonly property color surface:        "#14ffffff" // glass fill (white ~8%)
+    readonly property color surfaceHover:   "#22ffffff"
+    readonly property color surfaceBorder:  "#2bffffff"
+    readonly property color accent:         "#ff5e8a"
+    readonly property color accentLight:    "#ffb057"
+    readonly property color navBackground:  "transparent"
+    readonly property color cardSelected:   "#26ffffff"
+    readonly property color textPrimary:    "#fff5f0"
+    readonly property color textSecondary:  "#f2c9d8"
+    readonly property color textMuted:      "#e7b7c7"
+    readonly property color textDim:        "#ffd0a6"   // step labels
+    readonly property color divider:        "#1fffffff"
+    readonly property color success:        "#3ec6a0"
+    readonly property color error:          "#ff6b6b"
+    readonly property color ctaBg:          "#fff5f0"
+    readonly property color ctaText:        "#3a1230"
 
     // Sizes
-    readonly property int pageMargin: 48
-    readonly property int pageTopMargin: 40
+    readonly property int pageMargin: 72
+    readonly property int pageTopMargin: 52
     readonly property int cardWidth: 160
     readonly property int cardHeight: 110
     readonly property int cardRadius: 14
     readonly property int cardSpacing: 16
     readonly property int pillWidth: 120
-    readonly property int pillHeight: 50
-    readonly property int pillRadius: 25
+    readonly property int pillHeight: 56
+    readonly property int pillRadius: 28
     readonly property int navHeight: 64
 
     // Animation
