@@ -45,7 +45,7 @@ Item {
         radius: 12
         color: root.selected ? WizardTheme.cardSelected : WizardTheme.surface
         border.width: (root.isFocused || root.selected) ? 2 : 1
-        border.color: (root.isFocused || root.selected) ? WizardTheme.accent : WizardTheme.divider
+        border.color: (root.isFocused || root.selected) ? WizardTheme.accent : WizardTheme.surfaceBorder
         clip: true
 
         Behavior on color { ColorAnimation { duration: WizardTheme.animNormal } }
@@ -88,6 +88,30 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             width: parent.width - 16
+        }
+    }
+
+    // Selected check badge — same badge language as PillButton's selection chips
+    Rectangle {
+        visible: root.selected
+        width: 20
+        height: 20
+        radius: 10
+        color: WizardTheme.accent
+        anchors.right: card.right
+        anchors.top: card.top
+        anchors.rightMargin: -6
+        anchors.topMargin: -6
+
+        opacity: root.selected ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: WizardTheme.animNormal } }
+
+        Text {
+            anchors.centerIn: parent
+            text: "✓"
+            color: WizardTheme.textPrimary
+            font.pixelSize: 12
+            font.weight: Font.Bold
         }
     }
 

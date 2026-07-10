@@ -47,21 +47,37 @@ Item {
         anchors.fill: parent
         anchors.margins: WizardTheme.pageMargin
         anchors.topMargin: WizardTheme.pageTopMargin
-        spacing: 16
+        spacing: 0
 
         Text {
-            text: "Choose Emulators"
-            color: WizardTheme.textPrimary
-            font.pixelSize: 28
-            font.weight: Font.Bold
+            text: "YOUR CONSOLES"
+            color: WizardTheme.textDim
+            font.pixelSize: 13
+            font.letterSpacing: 3
+            font.weight: Font.DemiBold
+            font.capitalization: Font.AllUppercase
         }
 
         Text {
-            text: "Click or use arrow keys + Enter to select. All are selected by default."
-            color: WizardTheme.textMuted
-            font.pixelSize: 15
+            text: "Choose your emulators"
+            color: WizardTheme.textPrimary
+            font.pixelSize: 40
+            font.weight: Font.ExtraBold
+            font.letterSpacing: -1.2
+            Layout.fillWidth: true
+            Layout.topMargin: 14
+            wrapMode: Text.WordWrap
+        }
+
+        Text {
+            text: "Click a tile or use arrow keys + Enter to select. All are selected by default — you can change this later in Settings."
+            color: WizardTheme.textSecondary
+            font.pixelSize: 16
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
+            Layout.maximumWidth: 620
+            Layout.topMargin: 14
+            Layout.bottomMargin: 30
         }
 
         GridView {
