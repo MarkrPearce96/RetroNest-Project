@@ -67,7 +67,10 @@ ApplicationWindow {
             Layout.fillWidth: true; Layout.fillHeight: true
             interactive: false; clip: true
 
-            WelcomePage { isCurrentPage: SwipeView.isCurrentItem }
+            WelcomePage {
+                isCurrentPage: SwipeView.isCurrentItem
+                onGetStartedClicked: swipeView.incrementCurrentIndex()
+            }
             StorageLocationsPage { id: storagePage }
             EmulatorsPage { id: emulatorsPage }
             RetroAchievementsPage { id: raPage }
@@ -78,6 +81,7 @@ ApplicationWindow {
         // NavBar
         NavBar {
             Layout.fillWidth: true
+            visible: swipeView.currentIndex !== 0
             currentIndex: swipeView.currentIndex
             pageCount: root.pageCount
             canContinue: {

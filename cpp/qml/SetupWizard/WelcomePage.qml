@@ -6,6 +6,8 @@ Item {
 
     property bool isCurrentPage: false
 
+    signal getStartedClicked()
+
     focus: true
 
     ColumnLayout {
@@ -58,11 +60,9 @@ Item {
             Behavior on opacity { NumberAnimation { duration: WizardTheme.animSlow; easing.type: Easing.OutCubic } }
         }
 
-        // Hero CTA — mirrors the persistent NavBar "Get Started" pill for a
-        // stronger landing moment. Advancing to the next step is owned by
-        // Main.qml/NavBar's Continue button (same no-op pattern as the Skip
-        // pills on RetroAchievementsPage/ScreenScraperPage) — this pill is
-        // a visual echo, not a second navigation path.
+        // Hero CTA — the sole navigation control on the Welcome screen;
+        // NavBar is hidden here (see Main.qml), so this pill owns advancing
+        // to the next step.
         Rectangle {
             id: getStartedPill
             Layout.preferredWidth: 220
@@ -88,7 +88,7 @@ Item {
                 id: getStartedMa
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: {} // no-op — see comment above
+                onClicked: root.getStartedClicked()
             }
         }
 
