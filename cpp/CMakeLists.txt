@@ -415,14 +415,10 @@ qt_add_qml_module(setupwizard_backing
     QML_FILES
         qml/SetupWizard/Main.qml
         qml/SetupWizard/WelcomePage.qml
-        qml/SetupWizard/FolderPage.qml
         qml/SetupWizard/StorageLocationsPage.qml
         qml/SetupWizard/EmulatorsPage.qml
         qml/SetupWizard/RetroAchievementsPage.qml
         qml/SetupWizard/ScreenScraperPage.qml
-        qml/SetupWizard/ResolutionPage.qml
-        qml/SetupWizard/AspectRatioPage.qml
-        qml/SetupWizard/FilesPage.qml
         qml/SetupWizard/InstallPage.qml
         qml/SetupWizard/NavBar.qml
         qml/SetupWizard/StepIndicator.qml
