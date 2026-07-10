@@ -1,5 +1,6 @@
 #include "wizard_state.h"
 #include "core/paths.h"
+#include "core/system_registry.h"
 #include <QFileDialog>
 #include <QDesktopServices>
 #include <QUrl>
@@ -16,12 +17,38 @@ void WizardState::setRootPath(const QString& path) {
     if (m_rootPath != path) {
         m_rootPath = path;
         emit rootPathChanged();
+        // romsRoot()/biosRoot() derive from m_rootPath when unset, so their
+        // QML-visible defaults must track the data folder live.
+        emit romsRootChanged();
+        emit biosRootChanged();
     }
 }
 
 QString WizardState::romsDir() const {
     if (m_rootPath.isEmpty()) return {};
     return m_rootPath + "/roms";
+}
+
+QString WizardState::romsRoot() const {
+    return m_romsRoot.isEmpty() ? (m_rootPath + "/roms") : m_romsRoot;
+}
+
+void WizardState::setRomsRoot(const QString& p) {
+    const QString v = p.isEmpty() ? QString() : QDir::cleanPath(p);
+    if (v == m_romsRoot) return;
+    m_romsRoot = v;
+    emit romsRootChanged();
+}
+
+QString WizardState::biosRoot() const {
+    return m_biosRoot.isEmpty() ? (m_rootPath + "/bios") : m_biosRoot;
+}
+
+void WizardState::setBiosRoot(const QString& p) {
+    const QString v = p.isEmpty() ? QString() : QDir::cleanPath(p);
+    if (v == m_biosRoot) return;
+    m_biosRoot = v;
+    emit biosRootChanged();
 }
 
 QString WizardState::browseFolder(const QString& title) {
@@ -46,7 +73,17 @@ void WizardState::accept() {
     // effect of any individual page (InstallController used to save it in
     // startInstall, so a flow that skipped the install page finished setup
     // without persisting the root and the wizard reappeared every launch).
-    if (!m_rootPath.isEmpty())
-        Paths::saveRoot(m_rootPath);
+    Paths::setRoot(m_rootPath);
+    Paths::setRomsRoot(m_romsRoot);
+    Paths::setBiosRoot(m_biosRoot);
+    Paths::ensureDirectories();
+    // Scaffold a ROM folder for every registered console, not just the
+    // ones the user interacted with during the wizard.
+    Paths::ensureRomDirectories(SystemRegistry::allSystemIds());
+
+    Paths::saveRoot(m_rootPath);
+    Paths::saveRomsRoot(m_romsRoot);
+    Paths::saveBiosRoot(m_biosRoot);
+
     emit wizardAccepted();
 }

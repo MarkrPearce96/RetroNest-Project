@@ -8,6 +8,8 @@ class WizardState : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString rootPath READ rootPath WRITE setRootPath NOTIFY rootPathChanged)
     Q_PROPERTY(QString romsDir READ romsDir NOTIFY rootPathChanged)
+    Q_PROPERTY(QString romsRoot READ romsRoot WRITE setRomsRoot NOTIFY romsRootChanged)
+    Q_PROPERTY(QString biosRoot READ biosRoot WRITE setBiosRoot NOTIFY biosRootChanged)
 
 public:
     explicit WizardState(QObject* parent = nullptr);
@@ -17,6 +19,11 @@ public:
 
     QString romsDir() const;
 
+    QString romsRoot() const;
+    void setRomsRoot(const QString& p);
+    QString biosRoot() const;
+    void setBiosRoot(const QString& p);
+
     Q_INVOKABLE QString browseFolder(const QString& title);
     Q_INVOKABLE void openFolder(const QString& path);
     Q_INVOKABLE void ensureRomDirs(const QStringList& systemIds);
@@ -25,7 +32,11 @@ public:
 signals:
     void wizardAccepted();
     void rootPathChanged();
+    void romsRootChanged();
+    void biosRootChanged();
 
 private:
     QString m_rootPath;
+    QString m_romsRoot;   // empty ⇒ {rootPath}/roms
+    QString m_biosRoot;   // empty ⇒ {rootPath}/bios
 };
