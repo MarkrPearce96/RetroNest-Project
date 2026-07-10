@@ -12,7 +12,7 @@ Item {
 
     function browseDataFolder() {
         var p = wizard.browseFolder("Choose Data Folder")
-        if (p) wizard.rootPath = p
+        if (p) wizard.rootPath = p + "/RetroNest"
     }
     function browseRomsFolder() {
         var p = wizard.browseFolder("Choose ROMs folder")
