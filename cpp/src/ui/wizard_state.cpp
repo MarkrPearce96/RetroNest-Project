@@ -76,6 +76,8 @@ void WizardState::applyStorageLocations() {
 }
 
 void WizardState::accept() {
+    if (m_rootPath.isEmpty()) return;
+
     // Completing the wizard is what commits the chosen root — not a side
     // effect of any individual page (InstallController used to save it in
     // startInstall, so a flow that skipped the install page finished setup

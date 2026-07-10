@@ -10,6 +10,9 @@ Item {
 
     focus: true
 
+    Keys.onReturnPressed: root.getStartedClicked()
+    Keys.onEnterPressed: root.getStartedClicked()
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: WizardTheme.pageMargin
