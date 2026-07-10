@@ -322,8 +322,8 @@ Item {
             }
         } else if (loginFocusIndex === 2) {
             // Sign In button
-            if (signInBtn.enabled) {
-                signInBtn.enabled = false
+            if (signInBtn._enabled) {
+                signInBtn._enabled = false
                 loginError.visible = false
                 app.validateScraperCredentials(loginUserField.text, loginPassField.text)
             }
@@ -450,7 +450,7 @@ Item {
                 loginError.text = message
                 loginError.visible = true
             }
-            signInBtn.enabled = true
+            signInBtn._enabled = true
         }
         function onScraperSignedOut() {
             root.screenState = "login"
@@ -650,8 +650,8 @@ Item {
                                 rightPadding: 10
 
                                 function _submitLogin() {
-                                    if (signInBtn.enabled) {
-                                        signInBtn.enabled = false
+                                    if (signInBtn._enabled) {
+                                        signInBtn._enabled = false
                                         loginError.visible = false
                                         app.validateScraperCredentials(loginUserField.text, loginPassField.text)
                                     }
@@ -670,18 +670,18 @@ Item {
                     // Connect button
                     Rectangle {
                         id: signInBtn
-                        property bool enabled: true
+                        property bool _enabled: true
                         width: parent.width
                         height: 42
                         radius: 8
                         color: (root.screenState === "login" && root.loginFocusIndex === 2)
                             ? Qt.lighter(SettingsTheme.accent, 1.2)
                             : SettingsTheme.accent
-                        opacity: enabled ? 1.0 : 0.6
+                        opacity: _enabled ? 1.0 : 0.6
 
                         Text {
                             anchors.centerIn: parent
-                            text: signInBtn.enabled ? "Connect" : "Validating..."
+                            text: signInBtn._enabled ? "Connect" : "Validating..."
                             color: SettingsTheme.text
                             font.pixelSize: 15
                             font.weight: Font.DemiBold
@@ -690,9 +690,9 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            enabled: signInBtn.enabled
+                            enabled: signInBtn._enabled
                             onClicked: {
-                                signInBtn.enabled = false
+                                signInBtn._enabled = false
                                 loginError.visible = false
                                 app.validateScraperCredentials(loginUserField.text, loginPassField.text)
                             }
