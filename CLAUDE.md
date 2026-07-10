@@ -63,10 +63,18 @@ universal everywhere is the goal, but today's truth is per-source:
 - **pcsx2** and **dolphin** GitHub releases: **x86_64-only** (pcsx2's CI
   builds under Rosetta; dolphin mirrors it). Local dolphin deploys via
   tools/deploy.sh ARE universal — only the downloadable zips aren't.
-- **mgba**: universal, built locally by scripts/build-universal.sh from
-  mgba-emu/mgba. The libretro-buildbot download path was removed from
-  manifests/mgba.json (2026-07 packet 6): an in-app "update" used to
-  overwrite the universal local build with a single-arch nightly.
+- **mgba**: universal, via a PUBLIC CI release (2026-07-10) — like ppsspp.
+  `manifests/mgba.json` carries `github_repo: MarkrPearce96/mgba-libretro`
+  (public, no `"private"` flag: mGBA is MPL 2.0, redistribution allowed). That
+  repo is a STOCK mirror of upstream mgba-emu/mgba — **zero source patches**;
+  it exists only to run `.github/workflows/libretro_release.yml`, which builds
+  the universal core (one CMake invocation, `-DBUILD_LIBRETRO=ON`
+  `-DBUILD_QT/SDL/GL=OFF -DUSE_LUA=OFF`) and publishes `mgba_libretro.dylib.zip`
+  (just the dylib — mGBA ships no runtime assets). Because our CI is universal,
+  this doesn't reintroduce the single-arch-clobber problem that got the
+  libretro-buildbot download path removed (2026-07 packet 6). `scripts/build-universal.sh`
+  still builds it locally for dev; sync the fork with `git merge upstream/master`
+  (upstream = mgba-emu) + tag a `v*` release to rebuild.
 - **duckstation ships via a PRIVATE, authenticated CI release** (user
   decision 2026-07-09): its manifest carries `github_repo` +
   `"private": true`, and RetroNest downloads the core with a build-time

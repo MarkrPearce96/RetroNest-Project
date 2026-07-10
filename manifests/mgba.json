@@ -8,6 +8,7 @@
     "gbc",
     "gb"
   ],
+  "github_repo": "MarkrPearce96/mgba-libretro",
   "executable": "mgba_libretro.dylib",
   "install_folder": "libretro",
   "rom_extensions": [
