@@ -18,6 +18,7 @@
 #include "core/system_registry.h"
 #include "services/emulator_service.h"
 #include "services/patches_installer.h"
+#include "services/ra_service.h"
 #include "core/database.h"
 #include "adapters/adapter_registry.h"
 #include "ui/wizard_state.h"
@@ -133,6 +134,10 @@ int main(int argc, char* argv[]) {
         WizardState wizardState;
         EmulatorListModel emulatorModel(&loader);
         InstallController installController(&emulatorModel);
+        // Null DB is safe here: loginWithPassword() (the only method the
+        // wizard's RetroAchievements step calls) never touches m_db — it
+        // only touches m_creds + network. Verified by reading ra_service.cpp.
+        RAService raService(nullptr);
 
         QQmlApplicationEngine engine;
         // QML modules are embedded as resources with RESOURCE_PREFIX "/", so
@@ -146,6 +151,7 @@ int main(int argc, char* argv[]) {
         engine.rootContext()->setContextProperty("wizard", &wizardState);
         engine.rootContext()->setContextProperty("emulators", &emulatorModel);
         engine.rootContext()->setContextProperty("installer", &installController);
+        engine.rootContext()->setContextProperty("raService", &raService);
         engine.loadFromModule("SetupWizard", "Main");
 
         if (engine.rootObjects().isEmpty()) {

@@ -68,6 +68,13 @@ void WizardState::ensureRomDirs(const QStringList& systemIds) {
     Paths::ensureRomDirectories(systemIds);
 }
 
+void WizardState::applyStorageLocations() {
+    Paths::setRoot(m_rootPath);
+    Paths::setRomsRoot(m_romsRoot);
+    Paths::setBiosRoot(m_biosRoot);
+    QDir().mkpath(Paths::configDir());   // so RA/scraper cred saves work
+}
+
 void WizardState::accept() {
     // Completing the wizard is what commits the chosen root — not a side
     // effect of any individual page (InstallController used to save it in

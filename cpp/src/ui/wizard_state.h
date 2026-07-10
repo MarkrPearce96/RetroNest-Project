@@ -27,6 +27,11 @@ public:
     Q_INVOKABLE QString browseFolder(const QString& title);
     Q_INVOKABLE void openFolder(const QString& path);
     Q_INVOKABLE void ensureRomDirs(const QStringList& systemIds);
+    /** Applies the chosen storage roots early (before accept()) so later
+     *  wizard steps that persist to {root}/config/ (RA login, scraper
+     *  credentials) have somewhere to write. Idempotent — accept() still
+     *  finalizes everything at the end of the wizard. */
+    Q_INVOKABLE void applyStorageLocations();
     Q_INVOKABLE void accept();
 
 signals:
