@@ -19,6 +19,7 @@
 #include "services/emulator_service.h"
 #include "services/patches_installer.h"
 #include "services/ra_service.h"
+#include "services/scraper_service.h"
 #include "core/database.h"
 #include "adapters/adapter_registry.h"
 #include "ui/wizard_state.h"
@@ -138,6 +139,11 @@ int main(int argc, char* argv[]) {
         // wizard's RetroAchievements step calls) never touches m_db — it
         // only touches m_creds + network. Verified by reading ra_service.cpp.
         RAService raService(nullptr);
+        // Null DB is safe here too: validateAndSaveCredentials() (the only
+        // method the wizard's ScreenScraper step calls) never touches m_db —
+        // it only touches m_scraper/m_creds + network. Verified by reading
+        // scraper_service.cpp.
+        ScraperService scraperService(nullptr);
 
         QQmlApplicationEngine engine;
         // QML modules are embedded as resources with RESOURCE_PREFIX "/", so
@@ -152,6 +158,7 @@ int main(int argc, char* argv[]) {
         engine.rootContext()->setContextProperty("emulators", &emulatorModel);
         engine.rootContext()->setContextProperty("installer", &installController);
         engine.rootContext()->setContextProperty("raService", &raService);
+        engine.rootContext()->setContextProperty("scraperService", &scraperService);
         engine.loadFromModule("SetupWizard", "Main");
 
         if (engine.rootObjects().isEmpty()) {

@@ -23,7 +23,7 @@ public:
      * success. Runs on a worker thread; the result is delivered via the
      * credentialsValidated() signal on the main thread.
      */
-    void validateAndSaveCredentials(const QString& ssId, const QString& ssPassword);
+    Q_INVOKABLE void validateAndSaveCredentials(const QString& ssId, const QString& ssPassword);
 
     /** Clear stored user credentials. */
     void signOut();
