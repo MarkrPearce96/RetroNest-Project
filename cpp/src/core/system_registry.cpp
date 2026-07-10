@@ -67,3 +67,7 @@ QList<int> SystemRegistry::allRaConsoleIds() {
     }
     return QList<int>(ids.begin(), ids.end());
 }
+
+QStringList SystemRegistry::allSystemIds() {
+    return s_entries.keys();
+}

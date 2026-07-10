@@ -4,6 +4,7 @@
 #include <QHash>
 #include <QList>
 #include <QString>
+#include <QStringList>
 
 /**
  * SystemRegistry — single source for per-system facts, loaded once at
@@ -40,6 +41,9 @@ public:
     /** Distinct RA console ids across every system that declares one —
      *  drives RAService's achievement-catalog fetch set. */
     static QList<int> allRaConsoleIds();
+
+    /** Every registered system id (keys of the entry table). */
+    static QStringList allSystemIds();
 
 private:
     struct Entry {

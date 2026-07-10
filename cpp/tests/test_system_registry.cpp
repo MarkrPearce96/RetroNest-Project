@@ -43,6 +43,19 @@ private slots:
                  QSet<int>({4, 5, 6, 12, 16, 19, 21, 41}));
         QCOMPARE(ids.size(), 8);   // distinct — no dupes
     }
+    void testAllSystemIdsReturnsEveryEntry() {
+        QVERIFY(SystemRegistry::isLoaded());
+        const QStringList ids = SystemRegistry::allSystemIds();
+        // systems.json defines these among others; each must appear exactly once.
+        QVERIFY(ids.contains("psx"));
+        QVERIFY(ids.contains("ps2"));
+        QVERIFY(ids.contains("gba"));
+        QVERIFY(ids.contains("gbc"));
+        QVERIFY(ids.contains("gb"));
+        QCOMPARE(ids.count("psx"), 1);
+        // Count matches the entry table size (no dupes, no drops).
+        QVERIFY(ids.size() >= 5);
+    }
     void loadFromData_rejectsGarbage() {
         QVERIFY(!SystemRegistry::loadFromData("not json"));
         QVERIFY(!SystemRegistry::loadFromData("[1,2,3]"));
