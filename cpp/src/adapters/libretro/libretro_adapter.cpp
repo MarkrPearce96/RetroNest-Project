@@ -121,11 +121,17 @@ QVector<SettingDef> LibretroAdapter::settingsSchema() const {
         }
 
         // Uncurated declared options stay valid in OptionsStore but are not
-        // rendered — new upstream options arrive hidden until curated.
+        // rendered — new upstream options arrive hidden until curated. Log a
+        // single summary (a core like PPSSPP declares 100+ options; a line
+        // each flooded every launch).
+        QStringList uncurated;
         for (const auto& o : doc->options) {
             if (!curated.contains(o.key))
-                qDebug() << "[LibretroAdapter]" << coreId() << "declared option not curated (hidden):" << o.key;
+                uncurated.append(o.key);
         }
+        if (!uncurated.isEmpty())
+            qDebug() << "[LibretroAdapter]" << coreId() << uncurated.size()
+                     << "declared options not curated (hidden from UI):" << uncurated;
     } else if (!overlays.isEmpty()) {
         qWarning() << "[LibretroAdapter]" << coreId()
                    << "no declared options available (sidecar missing and probe failed) — "
