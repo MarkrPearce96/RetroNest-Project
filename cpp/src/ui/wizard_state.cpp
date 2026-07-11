@@ -5,6 +5,7 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QDir>
+#include <QFile>
 
 WizardState::WizardState(QObject* parent)
     : QObject(parent)
@@ -69,10 +70,29 @@ void WizardState::ensureRomDirs(const QStringList& systemIds) {
 }
 
 void WizardState::applyStorageLocations() {
+    if (!QDir(m_rootPath).exists())
+        m_createdRoots.insert(m_rootPath);
+
     Paths::setRoot(m_rootPath);
     Paths::setRomsRoot(m_romsRoot);
     Paths::setBiosRoot(m_biosRoot);
     QDir().mkpath(Paths::configDir());   // so RA/scraper cred saves work
+}
+
+void WizardState::discardIncompleteSetup() {
+    // Called only when the wizard is closed WITHOUT finishing. Remove ONLY
+    // folders the wizard created fresh — never a pre-existing folder/its data.
+    for (const QString& r : m_createdRoots) {
+        if (!r.isEmpty())
+            QDir(r).removeRecursively();
+    }
+    // Belt-and-suspenders: if the current root PRE-existed (so it wasn't in
+    // m_createdRoots), still remove the wizard's own credential files it may
+    // have written into it — but nothing else in that folder.
+    if (!m_rootPath.isEmpty()) {
+        QFile::remove(m_rootPath + "/config/retroachievements.json");
+        QFile::remove(m_rootPath + "/config/scraper.json");
+    }
 }
 
 void WizardState::accept() {

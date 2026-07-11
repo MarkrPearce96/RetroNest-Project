@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QProcess>
 #include <QQmlApplicationEngine>
@@ -175,9 +176,22 @@ int main(int argc, char* argv[]) {
         }
 
         QEventLoop loop;
-        QObject::connect(&wizardState, &WizardState::wizardAccepted, &loop, &QEventLoop::quit);
+        bool wizardFinished = false;
+        QObject::connect(&wizardState, &WizardState::wizardAccepted, &loop, [&]() {
+            wizardFinished = true;
+            loop.quit();
+        });
         QObject::connect(&engine, &QQmlApplicationEngine::quit, &loop, &QEventLoop::quit);
         loop.exec();
+
+        if (!wizardFinished) {
+            // User closed the wizard without finishing: remove wizard-created
+            // folders and the app config so the next launch restarts the
+            // wizard, then exit.
+            wizardState.discardIncompleteSetup();
+            QFile::remove(Paths::appConfigPath());
+            return 0;
+        }
 
         rootPath = wizardState.rootPath();
         if (rootPath.isEmpty()) return 0;

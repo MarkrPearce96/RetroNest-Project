@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 
@@ -34,6 +35,13 @@ public:
     Q_INVOKABLE void applyStorageLocations();
     Q_INVOKABLE void accept();
 
+    /** Called only when the wizard is closed WITHOUT finishing. Removes ONLY
+     *  folders the wizard created fresh this run (never a pre-existing
+     *  folder/its data), plus any wizard-written credential files it may
+     *  have dropped into a pre-existing root. Not Q_INVOKABLE — called from
+     *  C++ (main.cpp) only. */
+    void discardIncompleteSetup();
+
 signals:
     void wizardAccepted();
     void rootPathChanged();
@@ -44,4 +52,5 @@ private:
     QString m_rootPath;
     QString m_romsRoot;   // empty ⇒ {rootPath}/roms
     QString m_biosRoot;   // empty ⇒ {rootPath}/bios
+    QSet<QString> m_createdRoots;
 };
