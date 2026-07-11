@@ -27,34 +27,7 @@ Rectangle {
         anchors.rightMargin: WizardTheme.pageMargin
         spacing: 20
 
-        // Controller hints (left side)
-        Row {
-            spacing: 18
-            Text {
-                text: "L1/R1 PAGE"
-                color: WizardTheme.textDim
-                font.pixelSize: 10
-                font.letterSpacing: 1.2
-                font.weight: Font.DemiBold
-                visible: root.currentIndex > 0 && root.currentIndex < root.pageCount - 1
-            }
-            Text {
-                text: "\u{1F170} SELECT"
-                color: WizardTheme.textDim
-                font.pixelSize: 10
-                font.letterSpacing: 1.2
-                font.weight: Font.DemiBold
-            }
-            Text {
-                text: "\u{1F171} BACK"
-                color: WizardTheme.textDim
-                font.pixelSize: 10
-                font.letterSpacing: 1.2
-                font.weight: Font.DemiBold
-                visible: root.currentIndex > 0
-            }
-        }
-
+        // Setup wizard is mouse + keyboard only — no controller hints.
         Item { Layout.fillWidth: true }
 
         // Back — ghost pill (transparent, outline only)
@@ -120,7 +93,7 @@ Rectangle {
         }
     }
 
-    // L1/R1 key handling for page navigation
+    // Page Up / Page Down keyboard navigation
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_PageUp) {
             if (root.currentIndex > 0 && root.currentIndex < root.pageCount - 1)

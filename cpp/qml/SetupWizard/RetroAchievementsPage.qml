@@ -59,10 +59,19 @@ Item {
         }
     }
 
-    ColumnLayout {
+    Flickable {
         anchors.fill: parent
-        anchors.margins: WizardTheme.pageMargin
-        anchors.topMargin: WizardTheme.pageTopMargin
+        contentWidth: width
+        contentHeight: raContent.implicitHeight + WizardTheme.pageTopMargin + WizardTheme.pageMargin
+        boundsBehavior: Flickable.StopAtBounds
+        clip: true
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+        ColumnLayout {
+        id: raContent
+        x: WizardTheme.pageMargin
+        y: WizardTheme.pageTopMargin
+        width: root.width - 2 * WizardTheme.pageMargin
         spacing: 0
 
         Text {
@@ -142,8 +151,6 @@ Item {
             }
         }
 
-        Item { Layout.fillHeight: true }
-
         // ── CTA row: white pill "Log in" + ghost "Skip" ──
         RowLayout {
             Layout.topMargin: 24
@@ -210,6 +217,7 @@ Item {
                     onClicked: {} // no-op — see comment above
                 }
             }
+        }
         }
     }
 
