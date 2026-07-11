@@ -403,6 +403,30 @@ if(APPLE)
             "bundle redeployment after relink is disabled; run macdeployqt "
             "manually after app rebuilds.")
     endif()
+
+    # DuckStation dlopens libspirv-cross-c-shared.0.dylib at RUNTIME (from the
+    # app bundle's Frameworks) to cross-compile its shaders (SPIR-V -> Metal).
+    # Nothing LINKS it, so macdeployqt never bundles it and otool-based
+    # dependency checks miss it entirely — it must be copied in explicitly or
+    # DuckStation's renderer fails to initialize ("Failed to load spirv-cross",
+    # both HW and SW fallback). The vendored dylib is universal (x86_64+arm64).
+    # Runs after the macdeployqt step above so it is never clobbered.
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross/libspirv-cross-c-shared.0.68.0.dylib"
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.0.68.0.dylib"
+        COMMAND ${CMAKE_COMMAND} -E rm -f
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.0.dylib"
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.dylib"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libspirv-cross-c-shared.0.68.0.dylib
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.0.dylib"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libspirv-cross-c-shared.0.dylib
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.dylib"
+        COMMENT "Bundling libspirv-cross-c-shared (DuckStation runtime shader dependency)"
+        VERBATIM
+    )
 endif()
 
 # ── SetupWizard QML module (separate library so types aren't evaluated by app engine) ──
