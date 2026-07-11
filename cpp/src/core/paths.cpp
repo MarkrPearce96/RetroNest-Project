@@ -8,6 +8,8 @@
 #include <QDebug>
 
 QString Paths::s_root;
+QString Paths::s_romsRoot;
+QString Paths::s_biosRoot;
 
 bool Paths::setRoot(const QString& rootPath) {
     // Normalize so a stray doubled slash (e.g. a legacy wizard save of
@@ -46,13 +48,26 @@ QString Paths::emulatorDataDir(const QString& emuId, const QString& systemId) {
     return s_root + "/emulators/" + emuId + "/" + systemId;
 }
 
+void Paths::setRomsRoot(const QString& path) {
+    s_romsRoot = path.isEmpty() ? QString() : QDir::cleanPath(path);
+}
+void Paths::setBiosRoot(const QString& path) {
+    s_biosRoot = path.isEmpty() ? QString() : QDir::cleanPath(path);
+}
+QString Paths::romsRoot() {
+    return s_romsRoot.isEmpty() ? (s_root + "/roms") : s_romsRoot;
+}
+QString Paths::biosRoot() {
+    return s_biosRoot.isEmpty() ? (s_root + "/bios") : s_biosRoot;
+}
+
 QString Paths::biosDir() {
-    return s_root + "/bios";
+    return biosRoot();
 }
 
 QString Paths::romsDir(const QString& systemId) {
-    if (systemId.isEmpty()) return s_root + "/roms";
-    return s_root + "/roms/" + systemId;
+    if (systemId.isEmpty()) return romsRoot();
+    return romsRoot() + "/" + systemId;
 }
 
 QString Paths::mediaDir() {
@@ -145,5 +160,18 @@ QString Paths::loadSavedTheme() {
 void Paths::saveTheme(const QString& themeId) {
     QJsonObject obj = readAppConfig();
     obj["theme"] = themeId;
+    writeAppConfig(obj);
+}
+
+QString Paths::loadSavedRomsRoot() { return readAppConfig()["romsRoot"].toString(); }
+void Paths::saveRomsRoot(const QString& path) {
+    QJsonObject obj = readAppConfig();
+    obj["romsRoot"] = path.isEmpty() ? QString() : QDir::cleanPath(path);
+    writeAppConfig(obj);
+}
+QString Paths::loadSavedBiosRoot() { return readAppConfig()["biosRoot"].toString(); }
+void Paths::saveBiosRoot(const QString& path) {
+    QJsonObject obj = readAppConfig();
+    obj["biosRoot"] = path.isEmpty() ? QString() : QDir::cleanPath(path);
     writeAppConfig(obj);
 }

@@ -23,44 +23,32 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 24
-        anchors.rightMargin: 24
+        anchors.leftMargin: WizardTheme.pageMargin
+        anchors.rightMargin: WizardTheme.pageMargin
+        spacing: 20
 
-        // Controller hints (left side)
-        Row {
-            spacing: 16
-            Text {
-                text: "L1/R1 Page"
-                color: "#4a4640"
-                font.pixelSize: 10
-                visible: root.currentIndex > 0 && root.currentIndex < root.pageCount - 1
-            }
-            Text {
-                text: "\u{1F170} Select"
-                color: "#4a4640"
-                font.pixelSize: 10
-            }
-            Text {
-                text: "\u{1F171} Back"
-                color: "#4a4640"
-                font.pixelSize: 10
-                visible: root.currentIndex > 0
-            }
-        }
-
+        // Setup wizard is mouse + keyboard only — no controller hints.
         Item { Layout.fillWidth: true }
 
-        // Back button
+        // Back — ghost pill (transparent, outline only)
         Rectangle {
+            id: backPill
             visible: root.currentIndex > 0 && root.currentIndex < root.pageCount - 1
-            width: 100; height: 36; radius: 6
-            color: backMa.containsMouse ? WizardTheme.surfaceHover : WizardTheme.surface
+            width: 110
+            height: WizardTheme.pillHeight
+            radius: WizardTheme.pillRadius
+            color: backMa.containsMouse ? WizardTheme.surfaceHover : "transparent"
+            border.width: 1
+            border.color: WizardTheme.surfaceBorder
+
+            Behavior on color { ColorAnimation { duration: WizardTheme.animFast } }
 
             Text {
                 anchors.centerIn: parent
                 text: "Back"
-                color: WizardTheme.textMuted
-                font.pixelSize: 13
+                color: WizardTheme.textSecondary
+                font.pixelSize: 15
+                font.weight: Font.DemiBold
             }
             MouseArea {
                 id: backMa
@@ -69,24 +57,31 @@ Rectangle {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.backClicked()
             }
-
-            Behavior on color { ColorAnimation { duration: WizardTheme.animFast } }
         }
 
-        // Continue button
+        // Continue — white pill CTA (label changes: Get Started / Continue / Finish)
         Rectangle {
+            id: continuePill
             visible: root.currentIndex < root.pageCount - 1
-            width: 140; height: 36; radius: 6
+            width: Math.max(150, continueLabel.implicitWidth + 56)
+            height: WizardTheme.pillHeight
+            radius: WizardTheme.pillRadius
             opacity: root.canContinue ? 1.0 : 0.5
-            color: contMa.containsMouse && root.canContinue ? WizardTheme.accentLight : WizardTheme.accent
+            color: WizardTheme.ctaBg
+
+            Behavior on opacity { NumberAnimation { duration: WizardTheme.animFast } }
+
+            scale: contMa.pressed && root.canContinue ? 0.97 : 1.0
+            Behavior on scale { NumberAnimation { duration: 100 } }
 
             Text {
+                id: continueLabel
                 anchors.centerIn: parent
                 text: root.currentIndex === 0 ? "Get Started"
                     : (root.currentIndex === root.pageCount - 2 ? "Finish" : "Continue")
-                color: WizardTheme.background
-                font.pixelSize: 13
-                font.weight: Font.DemiBold
+                color: WizardTheme.ctaText
+                font.pixelSize: 15
+                font.weight: Font.Bold
             }
             MouseArea {
                 id: contMa
@@ -95,12 +90,10 @@ Rectangle {
                 cursorShape: root.canContinue ? Qt.PointingHandCursor : Qt.ArrowCursor
                 onClicked: if (root.canContinue) root.continueClicked()
             }
-
-            Behavior on color { ColorAnimation { duration: WizardTheme.animFast } }
         }
     }
 
-    // L1/R1 key handling for page navigation
+    // Page Up / Page Down keyboard navigation
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_PageUp) {
             if (root.currentIndex > 0 && root.currentIndex < root.pageCount - 1)

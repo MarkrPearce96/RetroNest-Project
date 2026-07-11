@@ -28,9 +28,9 @@ Item {
         id: bg
         anchors.fill: parent
         radius: WizardTheme.pillRadius
-        color: root.selected ? Qt.lighter(WizardTheme.surface, 1.3) : WizardTheme.surface
+        color: root.selected ? WizardTheme.cardSelected : WizardTheme.surface
         border.width: root.isFocused || root.selected ? 2 : 1
-        border.color: root.isFocused ? WizardTheme.accent : (root.selected ? WizardTheme.accent : WizardTheme.divider)
+        border.color: root.isFocused ? WizardTheme.accent : (root.selected ? WizardTheme.accent : WizardTheme.surfaceBorder)
 
         Behavior on color { ColorAnimation { duration: WizardTheme.animFast } }
         Behavior on border.color { ColorAnimation { duration: WizardTheme.animFast } }

@@ -9,20 +9,11 @@ Item {
     property string emuId: ""
     property string emuName: ""
     property string systems: ""
+    property string logoSource: ""   // manifest logo qrc path ("" ⇒ show name)
     property bool selected: false
     property bool isFocused: false
 
     signal clicked()
-
-    function logoForEmu(id) {
-        var logos = {
-            "pcsx2": "qrc:/SetupWizard/qml/AppUI/images/pcsx2_logo.png",
-            "duckstation": "qrc:/SetupWizard/qml/AppUI/images/duckstation_logo.png",
-            "ppsspp": "qrc:/SetupWizard/qml/AppUI/images/ppsspp_logo.png",
-            "dolphin": "qrc:/SetupWizard/qml/AppUI/images/dolphin_logo.png"
-        }
-        return logos[id] || ""
-    }
 
     // Glow border when selected or focused
     Rectangle {
@@ -45,7 +36,7 @@ Item {
         radius: 12
         color: root.selected ? WizardTheme.cardSelected : WizardTheme.surface
         border.width: (root.isFocused || root.selected) ? 2 : 1
-        border.color: (root.isFocused || root.selected) ? WizardTheme.accent : WizardTheme.divider
+        border.color: (root.isFocused || root.selected) ? WizardTheme.accent : WizardTheme.surfaceBorder
         clip: true
 
         Behavior on color { ColorAnimation { duration: WizardTheme.animNormal } }
@@ -57,7 +48,7 @@ Item {
             anchors.centerIn: parent
             width: parent.width - 24
             height: parent.height - 24
-            source: logoForEmu(root.emuId)
+            source: root.logoSource
             fillMode: Image.PreserveAspectFit
             smooth: true
             mipmap: true
@@ -84,10 +75,34 @@ Item {
             color: WizardTheme.textPrimary
             font.pixelSize: 14
             font.weight: Font.Bold
-            visible: logoForEmu(root.emuId) === ""
+            visible: root.logoSource === ""
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             width: parent.width - 16
+        }
+    }
+
+    // Selected check badge — same badge language as PillButton's selection chips
+    Rectangle {
+        visible: root.selected
+        width: 20
+        height: 20
+        radius: 10
+        color: WizardTheme.accent
+        anchors.right: card.right
+        anchors.top: card.top
+        anchors.rightMargin: -6
+        anchors.topMargin: -6
+
+        opacity: root.selected ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: WizardTheme.animNormal } }
+
+        Text {
+            anchors.centerIn: parent
+            text: "✓"
+            color: WizardTheme.textPrimary
+            font.pixelSize: 12
+            font.weight: Font.Bold
         }
     }
 

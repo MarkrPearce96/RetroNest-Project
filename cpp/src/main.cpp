@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QProcess>
 #include <QQmlApplicationEngine>
@@ -18,6 +19,8 @@
 #include "core/system_registry.h"
 #include "services/emulator_service.h"
 #include "services/patches_installer.h"
+#include "services/ra_service.h"
+#include "services/scraper_service.h"
 #include "core/database.h"
 #include "adapters/adapter_registry.h"
 #include "ui/wizard_state.h"
@@ -133,6 +136,23 @@ int main(int argc, char* argv[]) {
         WizardState wizardState;
         EmulatorListModel emulatorModel(&loader);
         InstallController installController(&emulatorModel);
+        // Null DB is safe here: loginWithPassword() (the only method the
+        // wizard's RetroAchievements step calls) never touches m_db — it
+        // only touches m_creds + network. Verified by reading ra_service.cpp.
+        RAService raService(nullptr);
+        // Null DB is safe here too: validateAndSaveCredentials() (the only
+        // method the wizard's ScreenScraper step calls) never touches m_db —
+        // it only touches m_scraper/m_creds + network. Verified by reading
+        // scraper_service.cpp.
+        ScraperService scraperService(nullptr);
+        // Load credentials (mirrors AppController): seeds the compile-time
+        // ScreenScraper DEV credentials (devid/devpassword/softname) that every
+        // ssuserInfos API call requires — without this the wizard's scraper
+        // login sends empty dev creds and ScreenScraper replies 403. Also loads
+        // any saved RA token. m_creds.load() sets the compiled dev defaults even
+        // when no config file exists yet (first run), so this is safe here.
+        raService.loadCredentials();
+        scraperService.loadCredentials();
 
         QQmlApplicationEngine engine;
         // QML modules are embedded as resources with RESOURCE_PREFIX "/", so
@@ -146,6 +166,8 @@ int main(int argc, char* argv[]) {
         engine.rootContext()->setContextProperty("wizard", &wizardState);
         engine.rootContext()->setContextProperty("emulators", &emulatorModel);
         engine.rootContext()->setContextProperty("installer", &installController);
+        engine.rootContext()->setContextProperty("raService", &raService);
+        engine.rootContext()->setContextProperty("scraperService", &scraperService);
         engine.loadFromModule("SetupWizard", "Main");
 
         if (engine.rootObjects().isEmpty()) {
@@ -154,9 +176,22 @@ int main(int argc, char* argv[]) {
         }
 
         QEventLoop loop;
-        QObject::connect(&wizardState, &WizardState::wizardAccepted, &loop, &QEventLoop::quit);
+        bool wizardFinished = false;
+        QObject::connect(&wizardState, &WizardState::wizardAccepted, &loop, [&]() {
+            wizardFinished = true;
+            loop.quit();
+        });
         QObject::connect(&engine, &QQmlApplicationEngine::quit, &loop, &QEventLoop::quit);
         loop.exec();
+
+        if (!wizardFinished) {
+            // User closed the wizard without finishing: remove wizard-created
+            // folders and the app config so the next launch restarts the
+            // wizard, then exit.
+            wizardState.discardIncompleteSetup();
+            QFile::remove(Paths::appConfigPath());
+            return 0;
+        }
 
         rootPath = wizardState.rootPath();
         if (rootPath.isEmpty()) return 0;
@@ -167,6 +202,9 @@ int main(int argc, char* argv[]) {
         qCritical() << "Invalid root path:" << rootPath;
         return 1;
     }
+    // ROM/BIOS roots may live outside the data root (e.g. USB). Empty ⇒ default.
+    Paths::setRomsRoot(Paths::loadSavedRomsRoot());
+    Paths::setBiosRoot(Paths::loadSavedBiosRoot());
     Paths::ensureDirectories();
 
     // Auto-fetch PCSX2 patches.zip on launch — staleness-gated, non-blocking.

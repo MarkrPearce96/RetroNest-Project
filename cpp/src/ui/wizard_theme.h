@@ -21,6 +21,12 @@ class WizardTheme : public QObject {
     Q_PROPERTY(QColor divider READ divider CONSTANT)
     Q_PROPERTY(QColor success READ success CONSTANT)
     Q_PROPERTY(QColor error READ error CONSTANT)
+    Q_PROPERTY(QColor gradTop READ gradTop CONSTANT)
+    Q_PROPERTY(QColor gradMid READ gradMid CONSTANT)
+    Q_PROPERTY(QColor gradBottom READ gradBottom CONSTANT)
+    Q_PROPERTY(QColor surfaceBorder READ surfaceBorder CONSTANT)
+    Q_PROPERTY(QColor ctaBg READ ctaBg CONSTANT)
+    Q_PROPERTY(QColor ctaText READ ctaText CONSTANT)
 
     // Sizes
     Q_PROPERTY(int pageMargin READ pageMargin CONSTANT)
@@ -42,30 +48,36 @@ class WizardTheme : public QObject {
 public:
     explicit WizardTheme(QObject* parent = nullptr) : QObject(parent) {}
 
-    QColor background() const { return QColor("#131210"); }
-    QColor surface() const { return QColor("#201f1c"); }
-    QColor surfaceHover() const { return QColor("#2e2c28"); }
-    QColor accent() const { return QColor("#e8a838"); }
-    QColor accentLight() const { return QColor("#f0b848"); }
-    QColor navBackground() const { return QColor("#1a1917"); }
-    QColor cardSelected() const { return QColor("#2a2518"); }
-    QColor textPrimary() const { return QColor("#e0ddd6"); }
-    QColor textSecondary() const { return QColor("#c8c4b8"); }
-    QColor textMuted() const { return QColor("#8a8680"); }
-    QColor textDim() const { return QColor("#6a6660"); }
-    QColor divider() const { return QColor("#2e2c28"); }
-    QColor success() const { return QColor("#6a9b4a"); }
-    QColor error() const { return QColor("#c85040"); }
+    QColor background() const { return QColor("#241033"); }
+    QColor surface() const { return QColor("#14ffffff"); }
+    QColor surfaceHover() const { return QColor("#22ffffff"); }
+    QColor accent() const { return QColor("#ff5e8a"); }
+    QColor accentLight() const { return QColor("#ffb057"); }
+    QColor navBackground() const { return QColor(Qt::transparent); }
+    QColor cardSelected() const { return QColor("#26ffffff"); }
+    QColor textPrimary() const { return QColor("#fff5f0"); }
+    QColor textSecondary() const { return QColor("#f2c9d8"); }
+    QColor textMuted() const { return QColor("#e7b7c7"); }
+    QColor textDim() const { return QColor("#ffd0a6"); }
+    QColor divider() const { return QColor("#1fffffff"); }
+    QColor success() const { return QColor("#3ec6a0"); }
+    QColor error() const { return QColor("#ff6b6b"); }
+    QColor gradTop() const { return QColor("#ff5e8a"); }
+    QColor gradMid() const { return QColor("#7a2b6b"); }
+    QColor gradBottom() const { return QColor("#241033"); }
+    QColor surfaceBorder() const { return QColor("#2bffffff"); }
+    QColor ctaBg() const { return QColor("#fff5f0"); }
+    QColor ctaText() const { return QColor("#3a1230"); }
 
-    int pageMargin() const { return 48; }
-    int pageTopMargin() const { return 40; }
+    int pageMargin() const { return 72; }
+    int pageTopMargin() const { return 52; }
     int cardWidth() const { return 160; }
     int cardHeight() const { return 110; }
     int cardRadius() const { return 14; }
     int cardSpacing() const { return 16; }
     int pillWidth() const { return 120; }
-    int pillHeight() const { return 50; }
-    int pillRadius() const { return 25; }
+    int pillHeight() const { return 56; }
+    int pillRadius() const { return 28; }
     int navHeight() const { return 64; }
 
     int animFast() const { return 150; }

@@ -403,6 +403,30 @@ if(APPLE)
             "bundle redeployment after relink is disabled; run macdeployqt "
             "manually after app rebuilds.")
     endif()
+
+    # DuckStation dlopens libspirv-cross-c-shared.0.dylib at RUNTIME (from the
+    # app bundle's Frameworks) to cross-compile its shaders (SPIR-V -> Metal).
+    # Nothing LINKS it, so macdeployqt never bundles it and otool-based
+    # dependency checks miss it entirely — it must be copied in explicitly or
+    # DuckStation's renderer fails to initialize ("Failed to load spirv-cross",
+    # both HW and SW fallback). The vendored dylib is universal (x86_64+arm64).
+    # Runs after the macdeployqt step above so it is never clobbered.
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross/libspirv-cross-c-shared.0.68.0.dylib"
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.0.68.0.dylib"
+        COMMAND ${CMAKE_COMMAND} -E rm -f
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.0.dylib"
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.dylib"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libspirv-cross-c-shared.0.68.0.dylib
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.0.dylib"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libspirv-cross-c-shared.0.dylib
+                "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>/Contents/Frameworks/libspirv-cross-c-shared.dylib"
+        COMMENT "Bundling libspirv-cross-c-shared (DuckStation runtime shader dependency)"
+        VERBATIM
+    )
 endif()
 
 # ── SetupWizard QML module (separate library so types aren't evaluated by app engine) ──
@@ -415,14 +439,12 @@ qt_add_qml_module(setupwizard_backing
     QML_FILES
         qml/SetupWizard/Main.qml
         qml/SetupWizard/WelcomePage.qml
-        qml/SetupWizard/FolderPage.qml
+        qml/SetupWizard/StorageLocationsPage.qml
         qml/SetupWizard/EmulatorsPage.qml
-        qml/SetupWizard/ResolutionPage.qml
-        qml/SetupWizard/AspectRatioPage.qml
-        qml/SetupWizard/FilesPage.qml
+        qml/SetupWizard/RetroAchievementsPage.qml
+        qml/SetupWizard/ScreenScraperPage.qml
         qml/SetupWizard/InstallPage.qml
         qml/SetupWizard/NavBar.qml
-        qml/SetupWizard/StepIndicator.qml
         qml/SetupWizard/PillButton.qml
         qml/SetupWizard/EmulatorCard.qml
     RESOURCES
@@ -549,6 +571,20 @@ add_test(NAME IniFile COMMAND test_ini_file)
 add_executable(test_path_overrides_store tests/test_path_overrides_store.cpp)
 target_link_libraries(test_path_overrides_store PRIVATE retronest_core Qt6::Test)
 add_test(NAME PathOverridesStore COMMAND test_path_overrides_store)
+
+add_executable(test_paths_roots tests/test_paths_roots.cpp)
+target_link_libraries(test_paths_roots PRIVATE retronest_core Qt6::Test)
+add_test(NAME PathsRoots COMMAND test_paths_roots)
+
+add_executable(test_wizard_discard
+    tests/test_wizard_discard.cpp
+    # wizard_state.cpp is app-side (not in retronest_core/retronest_ui), so
+    # it's compiled directly into the test binary, same pattern as
+    # test_libretro_hotkey_controller above.
+    src/ui/wizard_state.cpp
+)
+target_link_libraries(test_wizard_discard PRIVATE retronest_core Qt6::Test Qt6::Widgets)
+add_test(NAME WizardDiscard COMMAND test_wizard_discard)
 
 add_executable(test_database_migrations tests/test_database_migrations.cpp)
 target_link_libraries(test_database_migrations PRIVATE retronest_core Qt6::Test)
