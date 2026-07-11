@@ -159,6 +159,11 @@ cpp/build-x86_64/RetroNest.app/Contents/MacOS/RetroNest > /tmp/rn.log 2>&1
   - `manifests/systems.json` → `SystemRegistry`: per-system display name,
     ScreenScraper platform ID, RA console ID. The ONLY place system facts
     live; `test_system_registry` pins every value.
+  - This applies to UI too (main app AND the setup wizard): pages bind to
+    model-surfaced registry fields (e.g. `EmulatorListModel` exposes each
+    manifest's `id`/`name`/`systems`/`logo`) — never hardcode a per-emulator
+    or per-system `id→value` map in a page. If a page needs a manifest or
+    system fact, surface it through the model; don't re-encode it.
 - **Settings schema pipeline (libretro)** = the core is the single source of
   truth. `SET_CORE_OPTIONS_V2(_INTL)` is captured at session start and
   persisted to `{root}/emulators/libretro/<core>/declared_options.json`
