@@ -19,7 +19,7 @@ public:
     void loadCredentials();
 
     // Login: validate API key
-    void login(const QString& username, const QString& apiKey);
+    Q_INVOKABLE void login(const QString& username, const QString& apiKey);
     void signOut();
 
     /** Exchange username+password for a libretro login token via RA's login2

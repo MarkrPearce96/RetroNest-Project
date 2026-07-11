@@ -5,41 +5,56 @@ import QtQuick.Layouts
 Item {
     id: root
 
-    // "login" — username/password form; "success" — signed-in confirmation.
-    property string screenState: "login"
-    property bool loggingIn: false
     property string errorMessage: ""
+
+    // Each credential is applied independently — a user may set the web API
+    // key, the password, both, or neither. Tri-state result per part:
+    // null = not attempted (or stale from before the field was cleared),
+    // true = last attempt succeeded, false = last attempt failed.
+    property bool apiKeyPending: false
+    property var apiKeyOk: null
+    property bool passwordPending: false
+    property var passwordOk: null
+
+    readonly property bool busy: apiKeyPending || passwordPending
 
     focus: true
 
-    function doLogin() {
-        if (root.loggingIn || root.screenState === "success") return
-        var u = userField.text.trim()
-        var p = passField.text
-        if (u === "" || p === "") {
-            root.errorMessage = "Enter your username and password"
-            return
-        }
+    // "Apply whatever is filled" — the web API key powers the RA Settings
+    // page (raService.login), the password powers in-game achievement
+    // tracking (raService.loginWithPassword). Independent network calls;
+    // either, both, or neither may be filled in. Re-calling either is safe
+    // — each re-validates from scratch.
+    function doApply() {
+        var u = userField.text.trim(), key = keyField.text.trim(), pass = passField.text
+        if (!key && !pass) return // nothing to do — user should just Skip / Continue
+        if (!u) { root.errorMessage = "Enter your username"; return }
+        root.apiKeyPending = key.length > 0
+        root.passwordPending = pass.length > 0
         root.errorMessage = ""
-        root.loggingIn = true
-        raService.loginWithPassword(u, p)
+        if (key) raService.login(u, key)
+        if (pass) raService.loginWithPassword(u, pass)
     }
 
-    // loginWithPassword() is the libretro/rcheevos token flow — on success it
-    // emits loginTokenChanged() (no args), on failure loginFailed(message).
-    // (RAService::loginCompleted(success, message) belongs to the separate
-    // web-API-key login() path, not loginWithPassword() — verified by
-    // reading ra_service.cpp/app_controller.cpp before wiring this up.)
+    // RAService's two credential flows are independent and surface through
+    // three signals: loginCompleted() belongs to the web-API-key login()
+    // path, loginTokenChanged()/loginFailed() belong to the separate
+    // loginWithPassword() (libretro token) path — verified by reading
+    // ra_service.h/ra_service.cpp before wiring this up.
     Connections {
         target: raService
+        function onLoginCompleted(success, message) {
+            root.apiKeyPending = false
+            root.apiKeyOk = success
+            if (!success) root.errorMessage = message || "Web API key sign-in failed."
+        }
         function onLoginTokenChanged() {
-            root.loggingIn = false
-            root.errorMessage = ""
-            root.screenState = "success"
-            passField.text = ""
+            root.passwordPending = false
+            root.passwordOk = true
         }
         function onLoginFailed(message) {
-            root.loggingIn = false
+            root.passwordPending = false
+            root.passwordOk = false
             root.errorMessage = message || "Sign-in failed. Check your username and password."
         }
     }
@@ -71,7 +86,7 @@ Item {
         }
 
         Text {
-            text: "Sign in to sync your achievement unlocks while you play. You can always add this later in Settings."
+            text: "Enter your username and web API key from retroachievements.org/settings to unlock catalogs and dashboards, and your password to sync in-game achievement unlocks. Both are optional — you can always add them later in Settings."
             color: WizardTheme.textSecondary
             font.pixelSize: 16
             wrapMode: Text.WordWrap
@@ -81,39 +96,8 @@ Item {
             Layout.bottomMargin: 36
         }
 
-        // ── Signed-in confirmation ──
-        Rectangle {
-            visible: root.screenState === "success"
-            Layout.preferredWidth: successRow.implicitWidth + 48
-            Layout.preferredHeight: 64
-            radius: 16
-            color: WizardTheme.surface
-            border.width: 1
-            border.color: WizardTheme.surfaceBorder
-
-            RowLayout {
-                id: successRow
-                anchors.centerIn: parent
-                spacing: 12
-
-                Text {
-                    text: "✓"
-                    color: WizardTheme.success
-                    font.pixelSize: 20
-                    font.weight: Font.Bold
-                }
-                Text {
-                    text: "Signed in ✓"
-                    color: WizardTheme.textPrimary
-                    font.pixelSize: 16
-                    font.weight: Font.DemiBold
-                }
-            }
-        }
-
-        // ── Login form ──
+        // ── Credentials form ──
         ColumnLayout {
-            visible: root.screenState === "login"
             Layout.fillWidth: true
             Layout.maximumWidth: 460
             spacing: 22
@@ -123,6 +107,17 @@ Item {
                 Layout.fillWidth: true
                 labelText: "Username"
                 placeholderText: "Your RetroAchievements username"
+                onAccepted: keyField.focusInput()
+            }
+
+            LoginField {
+                id: keyField
+                Layout.fillWidth: true
+                labelText: "Web API Key"
+                placeholderText: "Your RetroAchievements web API key"
+                hintText: "Find your Web API key at retroachievements.org/settings"
+                statusPending: root.apiKeyPending
+                statusOk: root.apiKeyOk
                 onAccepted: passField.focusInput()
             }
 
@@ -132,7 +127,9 @@ Item {
                 labelText: "Password"
                 placeholderText: "Your RetroAchievements password"
                 echoMode: TextInput.Password
-                onAccepted: root.doLogin()
+                statusPending: root.passwordPending
+                statusOk: root.passwordOk
+                onAccepted: root.doApply()
             }
 
             Text {
@@ -149,7 +146,6 @@ Item {
 
         // ── CTA row: white pill "Log in" + ghost "Skip" ──
         RowLayout {
-            visible: root.screenState === "login"
             Layout.topMargin: 24
             spacing: 20
 
@@ -159,13 +155,13 @@ Item {
                 Layout.preferredHeight: WizardTheme.pillHeight
                 radius: WizardTheme.pillRadius
                 color: WizardTheme.ctaBg
-                opacity: root.loggingIn ? 0.75 : 1.0
+                opacity: root.busy ? 0.75 : 1.0
 
                 Behavior on opacity { NumberAnimation { duration: WizardTheme.animFast } }
 
                 Text {
                     anchors.centerIn: parent
-                    text: root.loggingIn ? "Signing in…" : "Log in"
+                    text: root.busy ? "Signing in…" : "Log in"
                     color: WizardTheme.ctaText
                     font.pixelSize: 15
                     font.weight: Font.Bold
@@ -177,15 +173,16 @@ Item {
                 MouseArea {
                     id: loginMa
                     anchors.fill: parent
-                    cursorShape: root.loggingIn ? Qt.ArrowCursor : Qt.PointingHandCursor
-                    onClicked: root.doLogin()
+                    cursorShape: root.busy ? Qt.ArrowCursor : Qt.PointingHandCursor
+                    onClicked: if (!root.busy) root.doApply()
                 }
             }
 
             // Prominent ghost Skip action — same footprint as the pill CTA,
             // outline only. No-op: skipping persists nothing. Advancing past
-            // this page is owned by Main.qml/NavBar's Continue button
-            // (wired in a later task).
+            // this page is owned by Main.qml/NavBar's Continue button — this
+            // page never advances the SwipeView itself, so a partial or
+            // failed sign-in never blocks Continue.
             Rectangle {
                 id: skipPill
                 Layout.preferredWidth: 140
@@ -218,15 +215,25 @@ Item {
 
     // ========== COMPONENTS ==========
 
-    // A labeled glass text field (username/password), styled after
+    // A labeled glass text field (username/API key/password), styled after
     // StorageLocationsPage.qml's GlassField but editable rather than a
-    // read-only path + Browse button.
+    // read-only path + Browse button. Optionally shows a hint line below
+    // the field and a small pending/success/failure indicator beside the
+    // label, so independent async results (API key vs. password) are each
+    // visible without a full-page state swap.
     component LoginField: ColumnLayout {
         id: field
         property string labelText: ""
         property string placeholderText: ""
+        property string hintText: ""
         property alias text: input.text
         property alias echoMode: input.echoMode
+        // Tri-state result of the last attempt for this field: null = none
+        // yet, true = succeeded, false = failed. statusPending overrides
+        // the icon with a neutral "in progress" marker while a request is
+        // in flight.
+        property bool statusPending: false
+        property var statusOk: null
         signal accepted()
 
         // ColumnLayout (a plain Item) isn't a FocusScope, so
@@ -236,13 +243,42 @@ Item {
 
         spacing: 11
 
-        Text {
-            text: field.labelText
-            color: WizardTheme.textDim
-            font.pixelSize: 13
-            font.letterSpacing: 2
-            font.weight: Font.DemiBold
-            font.capitalization: Font.AllUppercase
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: field.labelText
+                color: WizardTheme.textDim
+                font.pixelSize: 13
+                font.letterSpacing: 2
+                font.weight: Font.DemiBold
+                font.capitalization: Font.AllUppercase
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Text {
+                visible: field.statusPending
+                text: "…"
+                color: WizardTheme.textMuted
+                font.pixelSize: 14
+                font.weight: Font.Bold
+            }
+            Text {
+                visible: !field.statusPending && field.statusOk === true
+                text: "✓"
+                color: WizardTheme.success
+                font.pixelSize: 14
+                font.weight: Font.Bold
+            }
+            Text {
+                visible: !field.statusPending && field.statusOk === false
+                text: "✗"
+                color: WizardTheme.error
+                font.pixelSize: 14
+                font.weight: Font.Bold
+            }
         }
 
         Rectangle {
@@ -276,6 +312,16 @@ Item {
                     visible: input.text.length === 0 && !input.activeFocus
                 }
             }
+        }
+
+        Text {
+            visible: field.hintText !== ""
+            text: field.hintText
+            color: WizardTheme.textMuted
+            font.pixelSize: 12
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
+            Layout.topMargin: 2
         }
     }
 }
