@@ -301,6 +301,7 @@ Item {
 
             TextInput {
                 id: input
+                activeFocusOnTab: true
                 anchors.fill: parent
                 anchors.leftMargin: 22
                 anchors.rightMargin: 22
