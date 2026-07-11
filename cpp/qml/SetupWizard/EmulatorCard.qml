@@ -9,21 +9,11 @@ Item {
     property string emuId: ""
     property string emuName: ""
     property string systems: ""
+    property string logoSource: ""   // manifest logo qrc path ("" ⇒ show name)
     property bool selected: false
     property bool isFocused: false
 
     signal clicked()
-
-    function logoForEmu(id) {
-        var logos = {
-            "pcsx2": "qrc:/SetupWizard/qml/AppUI/images/pcsx2_logo.png",
-            "duckstation": "qrc:/SetupWizard/qml/AppUI/images/duckstation_logo.png",
-            "ppsspp": "qrc:/SetupWizard/qml/AppUI/images/ppsspp_logo.png",
-            "dolphin": "qrc:/SetupWizard/qml/AppUI/images/dolphin_logo.png",
-            "mgba": "qrc:/SetupWizard/qml/AppUI/images/mgba_logo.png"
-        }
-        return logos[id] || ""
-    }
 
     // Glow border when selected or focused
     Rectangle {
@@ -58,7 +48,7 @@ Item {
             anchors.centerIn: parent
             width: parent.width - 24
             height: parent.height - 24
-            source: logoForEmu(root.emuId)
+            source: root.logoSource
             fillMode: Image.PreserveAspectFit
             smooth: true
             mipmap: true
@@ -85,7 +75,7 @@ Item {
             color: WizardTheme.textPrimary
             font.pixelSize: 14
             font.weight: Font.Bold
-            visible: logoForEmu(root.emuId) === ""
+            visible: root.logoSource === ""
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
             width: parent.width - 16

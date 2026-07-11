@@ -32,6 +32,7 @@ QVariantList EmulatorListModel::allEmulators() const {
         item["id"] = emu.id;
         item["name"] = emu.name;
         item["systems"] = emu.systems.join(", ");
+        item["logo"] = emu.logo;
         item["selected"] = m_selected.value(emu.id, false);
         list.append(item);
     }

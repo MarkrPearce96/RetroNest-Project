@@ -97,6 +97,7 @@ Item {
                 emuId: modelData.id
                 emuName: modelData.name
                 systems: modelData.systems
+                logoSource: modelData.logo
                 selected: modelData.selected
                 isFocused: index === root.focusIndex && root.activeFocus
 
