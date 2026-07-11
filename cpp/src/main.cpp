@@ -144,6 +144,14 @@ int main(int argc, char* argv[]) {
         // it only touches m_scraper/m_creds + network. Verified by reading
         // scraper_service.cpp.
         ScraperService scraperService(nullptr);
+        // Load credentials (mirrors AppController): seeds the compile-time
+        // ScreenScraper DEV credentials (devid/devpassword/softname) that every
+        // ssuserInfos API call requires — without this the wizard's scraper
+        // login sends empty dev creds and ScreenScraper replies 403. Also loads
+        // any saved RA token. m_creds.load() sets the compiled dev defaults even
+        // when no config file exists yet (first run), so this is safe here.
+        raService.loadCredentials();
+        scraperService.loadCredentials();
 
         QQmlApplicationEngine engine;
         // QML modules are embedded as resources with RESOURCE_PREFIX "/", so
