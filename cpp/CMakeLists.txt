@@ -445,7 +445,6 @@ qt_add_qml_module(setupwizard_backing
         qml/SetupWizard/ScreenScraperPage.qml
         qml/SetupWizard/InstallPage.qml
         qml/SetupWizard/NavBar.qml
-        qml/SetupWizard/StepIndicator.qml
         qml/SetupWizard/PillButton.qml
         qml/SetupWizard/EmulatorCard.qml
     RESOURCES

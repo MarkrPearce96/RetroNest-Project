@@ -25,11 +25,6 @@ void WizardState::setRootPath(const QString& path) {
     }
 }
 
-QString WizardState::romsDir() const {
-    if (m_rootPath.isEmpty()) return {};
-    return m_rootPath + "/roms";
-}
-
 QString WizardState::romsRoot() const {
     return m_romsRoot.isEmpty() ? (m_rootPath + "/roms") : m_romsRoot;
 }
@@ -60,13 +55,6 @@ QString WizardState::browseFolder(const QString& title) {
 void WizardState::openFolder(const QString& path) {
     QDir().mkpath(path);
     QDesktopServices::openUrl(QUrl::fromLocalFile(path));
-}
-
-void WizardState::ensureRomDirs(const QStringList& systemIds) {
-    if (m_rootPath.isEmpty()) return;
-    Paths::setRoot(m_rootPath);
-    Paths::ensureDirectories();
-    Paths::ensureRomDirectories(systemIds);
 }
 
 void WizardState::applyStorageLocations() {

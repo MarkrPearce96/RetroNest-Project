@@ -46,7 +46,7 @@ ApplicationWindow {
             }
         }
 
-        // Progress bar (replaces StepIndicator dots)
+        // Progress bar
         Rectangle {
             Layout.fillWidth: true
             Layout.leftMargin: WizardTheme.pageMargin; Layout.rightMargin: WizardTheme.pageMargin

@@ -8,7 +8,6 @@
 class WizardState : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString rootPath READ rootPath WRITE setRootPath NOTIFY rootPathChanged)
-    Q_PROPERTY(QString romsDir READ romsDir NOTIFY rootPathChanged)
     Q_PROPERTY(QString romsRoot READ romsRoot WRITE setRomsRoot NOTIFY romsRootChanged)
     Q_PROPERTY(QString biosRoot READ biosRoot WRITE setBiosRoot NOTIFY biosRootChanged)
 
@@ -18,8 +17,6 @@ public:
     QString rootPath() const;
     void setRootPath(const QString& path);
 
-    QString romsDir() const;
-
     QString romsRoot() const;
     void setRomsRoot(const QString& p);
     QString biosRoot() const;
@@ -27,7 +24,6 @@ public:
 
     Q_INVOKABLE QString browseFolder(const QString& title);
     Q_INVOKABLE void openFolder(const QString& path);
-    Q_INVOKABLE void ensureRomDirs(const QStringList& systemIds);
     /** Applies the chosen storage roots early (before accept()) so later
      *  wizard steps that persist to {root}/config/ (RA login, scraper
      *  credentials) have somewhere to write. Idempotent — accept() still
