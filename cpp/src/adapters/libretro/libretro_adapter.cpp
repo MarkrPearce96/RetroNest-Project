@@ -153,8 +153,8 @@ bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
     prepareCoreEnvironment();
 
     // Seed controls.ini with default RetroPad bindings, backfilling any default key
-    // that is MISSING from an existing file (e.g. L2/R2, which earlier versions never
-    // seeded — leaving DualSense triggers dead for the digital-button JOYPAD read).
+    // that is MISSING from an existing file (e.g. L2/R2/L3/R3, which earlier versions
+    // never seeded — leaving DualSense triggers + PS2 stick-clicks dead by default).
     // We only ADD absent keys; existing values are never overwritten, so user edits via
     // the Controller mapping page are preserved.
     //
@@ -173,6 +173,8 @@ bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
             { "R",      "SDL-0/RightShoulder"},
             { "L2",     "SDL-0/+LeftTrigger"  },
             { "R2",     "SDL-0/+RightTrigger" },
+            { "L3",     "SDL-0/LeftStick"   },
+            { "R3",     "SDL-0/RightStick"  },
             { "Select", "SDL-0/Back"        },
             { "Start",  "SDL-0/Start"       },
             { "Up",     "SDL-0/DPadUp"      },
