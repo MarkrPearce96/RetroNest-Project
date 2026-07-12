@@ -130,6 +130,15 @@ public:
      */
     virtual QString systemDirOverride() const { return {}; }
 
+    /**
+     * Optional per-core hook to set up process environment (e.g. env vars) a
+     * core reads before its retro_load_game runs. Called once from
+     * ensureConfig() each session start. Default: nothing. Overridden by cores
+     * whose upstream (unpatchable) code would otherwise touch a non-portable
+     * OS location — e.g. mGBA redirects XDG_CONFIG_HOME into {root}.
+     */
+    virtual void prepareCoreEnvironment() const {}
+
     /** Default frontend setting (key, defaultValue) pairs for this core.
      *  Subclasses override to declare their frontend-managed settings.
      *  Default returns empty (no frontend settings). */

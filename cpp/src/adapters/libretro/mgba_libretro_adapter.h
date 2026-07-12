@@ -27,4 +27,5 @@ public:
 
 protected:
     QVector<QPair<QString, QString>> frontendSettingDefaults() const override;
+    void prepareCoreEnvironment() const override;
 };

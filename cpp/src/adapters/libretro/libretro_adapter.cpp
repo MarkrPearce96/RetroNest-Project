@@ -147,6 +147,11 @@ bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
     QDir().mkpath(savesPath);
     QDir().mkpath(QFileInfo(optionsJsonPath()).absolutePath());
 
+    // Let the core set up any process environment it needs before load
+    // (default no-op; mGBA redirects XDG_CONFIG_HOME to keep its config dir
+    // inside {root} instead of ~/.config).
+    prepareCoreEnvironment();
+
     // Seed controls.ini with default RetroPad bindings, backfilling any default key
     // that is MISSING from an existing file (e.g. L2/R2, which earlier versions never
     // seeded — leaving DualSense triggers dead for the digital-button JOYPAD read).

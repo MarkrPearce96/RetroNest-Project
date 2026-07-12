@@ -79,6 +79,18 @@ QVector<QPair<QString, QString>> MgbaLibretroAdapter::frontendSettingDefaults() 
     };
 }
 
+void MgbaLibretroAdapter::prepareCoreEnvironment() const {
+    // mGBA's stock mCoreConfigDirectory() has no macOS branch, so it falls
+    // through to the XDG/Linux path and unconditionally mkdir's ~/.config/mgba
+    // on every load — writing nothing into it, but leaving an empty dir outside
+    // RetroNest's portable {root}. The fork is a zero-patch upstream mirror, so
+    // this must be fixed frontend-side. mCoreConfigDirectory honors an absolute
+    // XDG_CONFIG_HOME first and appends "/mgba"; point it at {root}/emulators so
+    // the config dir resolves to the already-existing {root}/emulators/mgba
+    // (its mkdir becomes a no-op) — nothing lands in ~/.config.
+    qputenv("XDG_CONFIG_HOME", Paths::emulatorsDir().toUtf8());
+}
+
 // Packet 7 Stage 2: the schema is rendered from the core's declared option
 // table (declared_options.json sidecar / CoreProber) merged with this
 // curation overlay — keys, value sets, defaults, labels, and tooltips all
