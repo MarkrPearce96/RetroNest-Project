@@ -190,11 +190,22 @@ bool LibretroAdapter::ensureConfig(const EmulatorManifest& /*manifest*/,
         bool changed = false;
         // Walk binding defs in declared order so new keys append in a stable order.
         for (const auto& def : controllerBindingDefsForType({})) {
-            const auto it = defaults.constFind(def.key);
-            if (it == defaults.constEnd())
-                continue;
+            // Prefer the adapter's own default — it's the single source of truth
+            // and the same value Auto-Map / Restore Defaults use, so a fresh
+            // seed matches them. Fall back to the shared legacy map only when a
+            // def declares no defaultValue (e.g. mGBA's A/B). This corrects the
+            // legacy map's swapped RetroPad face buttons (it used a wrong
+            // "A=south" convention; the real layout is B=south/A=east, matching
+            // every core's defs) without disturbing cores that rely on the map.
+            QString value = def.defaultValue;
+            if (value.isEmpty()) {
+                const auto it = defaults.constFind(def.key);
+                if (it == defaults.constEnd())
+                    continue;
+                value = it.value();
+            }
             if (!ini.containsKey(section, def.key)) {
-                ini.setValue(section, def.key, it.value());
+                ini.setValue(section, def.key, value);
                 changed = true;
             }
         }
