@@ -527,8 +527,11 @@ QString ConfigService::formatCapturedBinding(const QString& emuId, int deviceInd
         // Map canonical SDL element name → libretro RetroPad button index
         // (matches RetroPadSlot ordering, which mirrors RETRO_DEVICE_ID_JOYPAD_*).
         // Returns "Gamepad<port>/<retroIdx>" — the format HotkeyMatcher's
-        // parseGamepadSpec expects. Axes (triggers/sticks) deferred.
-        if (isAxis) return {};
+        // parseGamepadSpec expects. L2/R2 arrive as trigger-axis captures
+        // (isAxis=true, element "LeftTrigger"/"RightTrigger"); map them to the
+        // L2/R2 button indices like any digital button. Analog STICK axes
+        // (LeftX/Y…) aren't usable as digital hotkey triggers — they're not in
+        // the map below, so the lookup rejects them.
         static const QHash<QString, int> kElementToRetroIdx = {
             {QStringLiteral("FaceSouth"),     0},   // B (bottom)
             {QStringLiteral("FaceWest"),      1},   // Y (left)
@@ -542,6 +545,8 @@ QString ConfigService::formatCapturedBinding(const QString& emuId, int deviceInd
             {QStringLiteral("FaceNorth"),     9},   // X (top)
             {QStringLiteral("LeftShoulder"),  10},  // L
             {QStringLiteral("RightShoulder"), 11},  // R
+            {QStringLiteral("LeftTrigger"),   12},  // L2
+            {QStringLiteral("RightTrigger"),  13},  // R2
             {QStringLiteral("LeftStick"),     14},  // L3
             {QStringLiteral("RightStick"),    15},  // R3
         };

@@ -322,6 +322,7 @@ QList<int> SdlInputManager::connectedDeviceIndices() const {
 
 void SdlInputManager::startCapture() {
     m_capturing = true;
+    m_captureAxisHeld.clear();
     emit capturingChanged();
 }
 
@@ -629,17 +630,32 @@ void SdlInputManager::pollEvents() {
 
         case SDL_CONTROLLERAXISMOTION: {
             int value = event.caxis.value;
-            if (m_capturing && std::abs(value) > kAxisDeadzone) {
-                int devIdx = m_deviceIndices.value(event.caxis.which, 0);
-                const char* axisName = SDL_GameControllerGetStringForAxis(
-                    static_cast<SDL_GameControllerAxis>(event.caxis.axis));
-                QString element = canonicalName(axisName);
-                bool positive = value > 0;
-                if (!m_multiCapture) {
-                    m_capturing = false;
-                    emit capturingChanged();
+            if (m_capturing) {
+                // Capture triggers/sticks as press/release EDGES so multi-
+                // capture combos commit on release like digital buttons. A
+                // trigger release is an axis event (never SDL_CONTROLLERBUTTONUP),
+                // so without an explicit release edge the combo stays stuck in
+                // binding mode.
+                const auto axisKey = qMakePair(event.caxis.which,
+                                               static_cast<int>(event.caxis.axis));
+                if (std::abs(value) > kAxisDeadzone) {
+                    if (!m_captureAxisHeld.value(axisKey, false)) {
+                        m_captureAxisHeld[axisKey] = true;
+                        int devIdx = m_deviceIndices.value(event.caxis.which, 0);
+                        const char* axisName = SDL_GameControllerGetStringForAxis(
+                            static_cast<SDL_GameControllerAxis>(event.caxis.axis));
+                        QString element = canonicalName(axisName);
+                        bool positive = value > 0;
+                        if (!m_multiCapture) {
+                            m_capturing = false;
+                            emit capturingChanged();
+                        }
+                        emit bindingCaptured(devIdx, element, true, positive);
+                    }
+                } else if (std::abs(value) <= kAxisDeadzone / 2) {
+                    if (m_captureAxisHeld.remove(axisKey) > 0 && m_multiCapture)
+                        emit captureButtonReleased();
                 }
-                emit bindingCaptured(devIdx, element, true, positive);
             } else if (m_emulationTarget && !m_capturing) {
                 // Two-fold routing on every axis event:
                 //  1. Existing: '+axis'/'-axis' bindings write digital presses
@@ -657,22 +673,28 @@ void SdlInputManager::pollEvents() {
                 const auto posSlot = m_emulationTarget->lookup(devIdx, posEl);
                 const auto negSlot = m_emulationTarget->lookup(devIdx, negEl);
 
-                // (1) Digital emulation, unchanged in behaviour; port fixed.
+                // (1) Digital emulation. Set the router bit AND surface the
+                // press/release EDGE to the hotkey matcher (gamepadButtonChanged),
+                // so triggers (L2/R2, which arrive only as axes) and other
+                // axis→slot bindings can drive hotkeys exactly like digital
+                // buttons. Edge-detected against the router's prior state so
+                // continuous axis motion emits at most one press + one release.
+                auto setSlotEdge = [&](RetroPadSlot slot, bool pressed) {
+                    if (slot == RetroPadSlot::None) return;
+                    const bool was = m_emulationTarget->buttonPressed(devIdx, slot);
+                    m_emulationTarget->setButtonPressed(devIdx, slot, pressed);
+                    if (was != pressed)
+                        emit gamepadButtonChanged(devIdx, static_cast<int>(slot), pressed);
+                };
                 if (value > kAxisDeadzone) {
-                    if (posSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(devIdx, posSlot, true);
-                    if (negSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(devIdx, negSlot, false);
+                    setSlotEdge(posSlot, true);
+                    setSlotEdge(negSlot, false);
                 } else if (value < -kAxisDeadzone) {
-                    if (negSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(devIdx, negSlot, true);
-                    if (posSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(devIdx, posSlot, false);
+                    setSlotEdge(negSlot, true);
+                    setSlotEdge(posSlot, false);
                 } else if (std::abs(value) <= kAxisDeadzone / 2) {
-                    if (posSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(devIdx, posSlot, false);
-                    if (negSlot != RetroPadSlot::None)
-                        m_emulationTarget->setButtonPressed(devIdx, negSlot, false);
+                    setSlotEdge(posSlot, false);
+                    setSlotEdge(negSlot, false);
                 }
 
                 // (2) Analog magnitude — raw int16, deadzone applied at read time.

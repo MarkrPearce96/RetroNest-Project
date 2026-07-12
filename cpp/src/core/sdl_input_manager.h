@@ -142,6 +142,12 @@ private:
 
     // Axis threshold-crossing state (shared between above/below threshold checks)
     QMap<QPair<SDL_JoystickID, int>, bool> m_axisActive;
+    // Axes past threshold during an active capture (triggers/sticks), keyed by
+    // (joystick, axis). Lets multi-capture emit a release edge for triggers so
+    // combos commit on release just like digital buttons (which fire
+    // captureButtonReleased on SDL_CONTROLLERBUTTONUP — an event triggers,
+    // being axes, never produce).
+    QMap<QPair<SDL_JoystickID, int>, bool> m_captureAxisHeld;
 
     // instance ID -> controller
     QMap<SDL_JoystickID, SDL_GameController*> m_controllers;
