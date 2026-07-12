@@ -656,7 +656,7 @@ void SdlInputManager::pollEvents() {
                     if (m_captureAxisHeld.remove(axisKey) > 0 && m_multiCapture)
                         emit captureButtonReleased();
                 }
-            } else if (m_emulationTarget && !m_capturing) {
+            } else if (m_emulationTarget) {
                 // Two-fold routing on every axis event:
                 //  1. Existing: '+axis'/'-axis' bindings write digital presses
                 //     into the InputRouter bitmask. Keeps D-Pad-bound-to-stick
@@ -707,7 +707,7 @@ void SdlInputManager::pollEvents() {
                                static_cast<int>(rpAxis), value);
                     }
                 }
-            } else if (!m_capturing && std::abs(value) > kAxisDeadzone) {
+            } else if (std::abs(value) > kAxisDeadzone) {
                 auto axis = static_cast<SDL_GameControllerAxis>(event.caxis.axis);
                 SDL_JoystickID jid = event.caxis.which;
                 auto key = qMakePair(jid, static_cast<int>(axis));
@@ -732,7 +732,7 @@ void SdlInputManager::pollEvents() {
                         emit navigateShift();
                     }
                 }
-            } else if (!m_capturing && std::abs(value) <= kAxisDeadzone / 2) {
+            } else if (std::abs(value) <= kAxisDeadzone / 2) {
                 auto axis = static_cast<SDL_GameControllerAxis>(event.caxis.axis);
                 SDL_JoystickID jid = event.caxis.which;
                 auto key = qMakePair(jid, static_cast<int>(axis));
