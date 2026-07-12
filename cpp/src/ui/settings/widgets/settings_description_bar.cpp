@@ -121,7 +121,7 @@ SettingsDescriptionBar::GlyphStyle SettingsDescriptionBar::glyphFor(const QStrin
         // across two actions or the hint will lie.
         if (action == "confirm")     return { QStringLiteral("\u21B5"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };  // \u21B5
         if (action == "back")        return { QStringLiteral("Esc"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
-        if (action == "clear")       return { QStringLiteral("⌫"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 16 };
+        if (action == "clear")       return { QStringLiteral("Del"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
         if (action == "close")       return { QStringLiteral("Esc"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
         if (action == "auto_map")    return { QStringLiteral("M"), QColor("#333333"), QColor("#cccccc"), QColor("#555555") };
         if (action == "navigate_ud") return { QStringLiteral("\u2191\u2193"), QColor("#333333"), QColor("#cccccc"), QColor("#555555"), 18 };

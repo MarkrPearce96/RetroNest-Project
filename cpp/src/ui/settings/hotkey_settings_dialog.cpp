@@ -52,19 +52,21 @@ HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
     //
     //   action     keyboard          Xbox    PS         binding
     //   ────────── ───────────────── ─────── ────────── ─────────────────────────────────────────────
-    //   confirm    ↵ (Enter)         A       Cross      Key_Return                       → Rebind focused
-    //   clear      ⌫ (Backspace)     B       Circle     Key_Backspace / Key_Delete / Key_Back → Restore Default
-    //   auto_map   M                 Y       Triangle   Key_M                            → Reset All
+    //   confirm    ↵ (Enter)         A       Cross      Key_Return                → Rebind focused
+    //   clear      Del               B       Circle     Key_Delete / Key_Back     → Restore Default
+    //   auto_map   M                 Y       Triangle   Key_M                     → Reset All
+    //   close      Esc               X       Square     Key_Backspace / Key_Escape → close dialog
     //
-    // Esc closes the dialog (no hint pill — would force a lying X/Square
-    // glyph since SDL routes X-button to Key_Backspace, which is bound to
-    // "clear" here). Three hint pills shown; close is keyboard-only.
+    // Close is on X/Square (Key_Backspace via SDL's X-button synthesis) — the
+    // same button the Controller Mapping page uses — plus Esc. Restore Default
+    // stays on B/Circle + Del, so nothing is lost by moving Backspace off it.
     if (m_descBar) {
         m_descBar->setInputManager(inputManager);
         m_descBar->setHints({
             { QStringLiteral("confirm"),  QStringLiteral("Rebind") },
             { QStringLiteral("clear"),    QStringLiteral("Restore Default") },
             { QStringLiteral("auto_map"), QStringLiteral("Reset All") },
+            { QStringLiteral("close"),    QStringLiteral("Exit") },
         });
     }
 
@@ -91,10 +93,13 @@ HotkeySettingsDialog::HotkeySettingsDialog(SdlInputManager* inputManager,
         if (m_page && !m_page->isCapturing()) m_page->restoreFocusedToDefault();
     });
 
+    // Backspace = X/Square face button (SDL synth) → close, matching the
+    // Controller Mapping page. Gated on !isCapturing so the user can still
+    // bind Backspace itself as a native hotkey.
     auto* backspaceShortcut = new QShortcut(QKeySequence(Qt::Key_Backspace), this);
     backspaceShortcut->setContext(Qt::WindowShortcut);
     connect(backspaceShortcut, &QShortcut::activated, this, [this]{
-        if (m_page && !m_page->isCapturing()) m_page->restoreFocusedToDefault();
+        if (m_page && !m_page->isCapturing()) accept();
     });
 }
 
@@ -124,14 +129,14 @@ void HotkeySettingsDialog::keyPressEvent(QKeyEvent* e) {
             return;
         case Qt::Key_Back:                              // B button (controller)
         case Qt::Key_Delete:                            // Del (keyboard)
-        case Qt::Key_Backspace:                         // ⌫ (keyboard) — also X button via SDL synth
             m_page->restoreFocusedToDefault();
             return;
         case Qt::Key_M:                                 // M / Y button
             m_page->restoreDefaults();
             return;
-        case Qt::Key_Escape:                            // keyboard Esc — closes (no hint pill)
-            accept();
+        case Qt::Key_Backspace:                         // ⌫ / X / Square (SDL synth)
+        case Qt::Key_Escape:                            // keyboard Esc
+            accept();                                   // close dialog
             return;
         default:
             break;
