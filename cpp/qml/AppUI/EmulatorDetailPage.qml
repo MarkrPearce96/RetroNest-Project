@@ -649,205 +649,37 @@ Item {
 
     // ========== DIALOGS ==========
 
-    // Uninstall confirmation dialog
-    Popup {
+    // Uninstall confirmation dialog — shared ConfirmDialog (keyboard-navigable,
+    // Cancel focused by default; destructive → red Confirm).
+    ConfirmDialog {
         id: uninstallDialog
-        anchors.centerIn: parent
-        width: 360
-        height: confirmCol.height + 48
-        modal: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-        background: Rectangle {
-            radius: 12
-            color: SettingsTheme.surface
-            border.width: 1
-            border.color: SettingsTheme.border
-        }
-
-        ColumnLayout {
-            id: confirmCol
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: 24
-            spacing: 16
-
-            Text {
-                text: "Uninstall " + root.emuInfo.name + "?"
-                color: SettingsTheme.text
-                font.pixelSize: 16
-                font.weight: Font.Bold
-                Layout.fillWidth: true
-            }
-
-            Text {
-                text: "This will remove the emulator files. Your games, saves, and BIOS files will not be affected."
-                color: SettingsTheme.textMuted
-                font.pixelSize: 13
-                wrapMode: Text.WordWrap
-                Layout.fillWidth: true
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
-
-                Item { Layout.fillWidth: true }
-
-                Button {
-                    id: cancelBtn
-                    implicitWidth: 100
-                    implicitHeight: 36
-
-                    background: Rectangle {
-                        radius: 6
-                        color: cancelBtn.hovered ? Qt.lighter(SettingsTheme.card, 1.15) : SettingsTheme.card
-                    }
-
-                    contentItem: Text {
-                        text: "Cancel"
-                        color: SettingsTheme.text
-                        font.pixelSize: 13
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    onClicked: uninstallDialog.close()
-                }
-
-                Button {
-                    id: confirmBtn
-                    implicitWidth: 120
-                    implicitHeight: 36
-
-                    background: Rectangle {
-                        radius: 6
-                        color: confirmBtn.hovered ? Qt.lighter(SettingsTheme.error, 1.15) : SettingsTheme.error
-                    }
-
-                    contentItem: Text {
-                        text: "Uninstall"
-                        color: SettingsTheme.text
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    onClicked: {
-                        uninstallDialog.close()
-                        progressPopup.title = "Uninstalling " + root.emuInfo.name
-                        progressPopup.subtitle = "Removing files..."
-                        progressPopup.progressValue = -1
-                        progressPopup.progressText = ""
-                        progressPopup.accentColor = SettingsTheme.error
-                        progressPopup.logoSource = root.emuInfo.logo !== undefined ? root.emuInfo.logo : ""
-                        progressPopup.showCloseButton = false
-                        progressPopup.open()
-                        app.uninstallEmulator(root.emuId)
-                    }
-                }
-            }
+        title: "Uninstall " + root.emuInfo.name + "?"
+        message: "This will remove the emulator files. Your games, saves, and BIOS files will not be affected."
+        confirmText: "Uninstall"
+        destructive: true
+        onConfirmed: {
+            progressPopup.title = "Uninstalling " + root.emuInfo.name
+            progressPopup.subtitle = "Removing files..."
+            progressPopup.progressValue = -1
+            progressPopup.progressText = ""
+            progressPopup.accentColor = SettingsTheme.error
+            progressPopup.logoSource = root.emuInfo.logo !== undefined ? root.emuInfo.logo : ""
+            progressPopup.showCloseButton = false
+            progressPopup.open()
+            app.uninstallEmulator(root.emuId)
         }
     }
 
-    // Reset confirmation dialog
-    Popup {
+    // Reset-configuration confirmation dialog — shared ConfirmDialog.
+    ConfirmDialog {
         id: resetDialog
-        anchors.centerIn: parent
-        width: 360
-        height: resetCol.height + 48
-        modal: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-        background: Rectangle {
-            radius: 12
-            color: SettingsTheme.surface
-            border.width: 1
-            border.color: SettingsTheme.border
-        }
-
-        ColumnLayout {
-            id: resetCol
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: 24
-            spacing: 16
-
-            Text {
-                text: "Reset " + root.emuInfo.name + " Configuration?"
-                color: SettingsTheme.text
-                font.pixelSize: 16
-                font.weight: Font.Bold
-                Layout.fillWidth: true
-            }
-
-            Text {
-                text: "This will reset all emulator settings, controller mappings, and hotkeys to their install defaults."
-                color: SettingsTheme.textMuted
-                font.pixelSize: 13
-                wrapMode: Text.WordWrap
-                Layout.fillWidth: true
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
-
-                Item { Layout.fillWidth: true }
-
-                Button {
-                    id: resetCancelBtn
-                    implicitWidth: 100
-                    implicitHeight: 36
-
-                    background: Rectangle {
-                        radius: 6
-                        color: resetCancelBtn.hovered ? Qt.lighter(SettingsTheme.card, 1.15) : SettingsTheme.card
-                    }
-
-                    contentItem: Text {
-                        text: "Cancel"
-                        color: SettingsTheme.text
-                        font.pixelSize: 13
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    onClicked: resetDialog.close()
-                }
-
-                Button {
-                    id: resetConfirmBtn
-                    implicitWidth: 120
-                    implicitHeight: 36
-
-                    background: Rectangle {
-                        radius: 6
-                        color: resetConfirmBtn.hovered ? Qt.lighter(SettingsTheme.accent, 1.1) : SettingsTheme.accent
-                    }
-
-                    contentItem: Text {
-                        text: "Reset"
-                        color: SettingsTheme.background
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    onClicked: {
-                        // resetConfiguration doesn't change install/BIOS/
-                        // version status, and emuList is a reactive binding
-                        // now — no manual re-pull (would break the binding).
-                        app.resetConfiguration(root.emuId)
-                        resetDialog.close()
-                    }
-                }
-            }
-        }
+        title: "Reset " + root.emuInfo.name + " Configuration?"
+        message: "This will reset all emulator settings, controller mappings, and hotkeys to their install defaults."
+        confirmText: "Reset"
+        // resetConfiguration doesn't change install/BIOS/version status, and
+        // emuList is a reactive binding now — no manual re-pull (would break
+        // the binding).
+        onConfirmed: app.resetConfiguration(root.emuId)
     }
 
 }

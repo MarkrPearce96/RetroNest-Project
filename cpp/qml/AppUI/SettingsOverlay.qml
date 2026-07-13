@@ -11,21 +11,12 @@ FocusScope {
     property int selectedCategory: -1   // -1 = category list, 0+ = category page
     property int _savedFocusIndex: 0
     readonly property int categoryCount: 9
-    property bool exitDialogVisible: false
 
     // Category titles shown in the sub-page header (index matches selectedCategory)
     readonly property var _categoryTitles: [
         "Emulators", "Paths", "Scraper", "Themes",
         "Resolution", "Aspect Ratio", "Achievements", "Libretro Hotkeys", "Settings"
     ]
-
-    onExitDialogVisibleChanged: {
-        if (exitDialogVisible) {
-            exitDialogFocus.forceActiveFocus()
-        } else {
-            categoryListFocusTimer.start()
-        }
-    }
 
     // Cursor visibility while the overlay is open comes from AppWindow's
     // cursorNeeded policy (bound to panelOpen) — no calls here.
@@ -370,7 +361,7 @@ FocusScope {
                     return
                 }
                 if (idx === 8) {
-                    overlay.exitDialogVisible = true
+                    exitConfirm.open()
                     return
                 }
                 var pages = [emuPageComponent, pathsPageComponent, scraperPageComponent,
@@ -539,112 +530,15 @@ FocusScope {
         }
     }
 
-    // --- Exit confirmation dialog ---
-    Rectangle {
-        id: exitDialog
-        anchors.fill: parent
-        color: "#000000"
-        opacity: overlay.exitDialogVisible ? 0.7 : 0
-        visible: opacity > 0
-        z: 200
-
-        Behavior on opacity { NumberAnimation { duration: SettingsTheme.animFast } }
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: overlay.exitDialogVisible = false
-        }
-
-        FocusScope {
-            id: exitDialogFocus
-            anchors.centerIn: parent
-            width: 320
-            height: dialogCol.height + 48
-            focus: overlay.exitDialogVisible
-            z: 201
-
-            Keys.onPressed: function(event) {
-                if (event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
-                    overlay.exitDialogVisible = false
-                    event.accepted = true
-                }
-                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    Qt.quit()
-                    event.accepted = true
-                }
-            }
-
-            Rectangle {
-                anchors.fill: parent
-                radius: 12
-                color: SettingsTheme.surface
-                border.width: 1
-                border.color: SettingsTheme.border
-
-                Column {
-                    id: dialogCol
-                    anchors.centerIn: parent
-                    spacing: 24
-
-                    Text {
-                        text: "Exit Application?"
-                        color: SettingsTheme.text
-                        font.pixelSize: 18
-                        font.weight: Font.Bold
-                        anchors.horizontalCenter: parent.horizontalCenter
-                    }
-
-                    Row {
-                        spacing: 12
-                        anchors.horizontalCenter: parent.horizontalCenter
-
-                        // Cancel button
-                        Rectangle {
-                            width: 100
-                            height: 36
-                            radius: SettingsTheme.buttonRadius
-                            color: SettingsTheme.card
-                            border.width: 1
-                            border.color: SettingsTheme.border
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "Cancel"
-                                color: SettingsTheme.text
-                                font.pixelSize: 14
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: overlay.exitDialogVisible = false
-                            }
-                        }
-
-                        // Exit button
-                        Rectangle {
-                            width: 100
-                            height: 36
-                            radius: SettingsTheme.buttonRadius
-                            color: SettingsTheme.accent
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "Exit"
-                                color: "#ffffff"
-                                font.pixelSize: 14
-                                font.weight: Font.DemiBold
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: Qt.quit()
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    // --- Exit confirmation dialog (shared ConfirmDialog) ---
+    // Opened from the "Settings"/Exit category row (selectCategory idx 8).
+    // On cancel, focus returns to the category list (matches the old
+    // exitDialogVisible→false focus hand-off).
+    ConfirmDialog {
+        id: exitConfirm
+        title: "Exit Application?"
+        confirmText: "Exit"
+        onConfirmed: Qt.quit()
+        onCancelled: categoryListFocusTimer.start()
     }
 }

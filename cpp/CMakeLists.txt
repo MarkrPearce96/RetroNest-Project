@@ -479,6 +479,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/GenericListPage.qml
         qml/AppUI/GenericMultiCardPicker.qml
         qml/AppUI/FocusableItem.qml
+        qml/AppUI/ConfirmDialog.qml
         qml/AppUI/AppWindow.qml
         qml/AppUI/EmptyStatePage.qml
         qml/AppUI/TopBar.qml

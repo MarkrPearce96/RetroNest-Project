@@ -15,7 +15,40 @@ Item {
     property int currentEmu: 0
     property string currentEmuId: emuList.length > 0 ? emuList[currentEmu].id : ""
 
+    // Focus ring: indices 0..pathRepeater.count-1 are the path cards, and one
+    // past the last card (== pathRepeater.count) is the Reset button, so the
+    // keyboard can reach Reset too.
     property int focusIndex: 0
+    property int resetIndex: pathRepeater.count
+    property bool resetFocused: focusIndex === resetIndex
+
+    // Reset every path for the current emulator back to its default location.
+    // Shared by the Reset button's mouse click and the keyboard (Enter on the
+    // focused Reset button). resetPaths() clears the overrides; we then walk the
+    // delegates and set each field.text to its default, because the Browse
+    // callback broke the original text binding (see the note below).
+    function performReset() {
+        app.resetPaths(root.currentEmuId)
+
+        function findField(parent) {
+            for (var i = 0; i < parent.children.length; i++) {
+                var c = parent.children[i]
+                if (c.section !== undefined && c.key !== undefined)
+                    return c
+                var f = findField(c)
+                if (f) return f
+            }
+            return null
+        }
+
+        var defs = app.pathDefs(root.currentEmuId)
+        for (var i = 0; i < pathRepeater.count; i++) {
+            var item = pathRepeater.itemAt(i)
+            if (!item || i >= defs.length) continue
+            var field = findField(item)
+            if (field) field.text = defs[i].defaultPath
+        }
+    }
 
     // ── Keyboard navigation ──────────────────────────────────────────────
     Keys.onPressed: function(event) {
@@ -37,13 +70,18 @@ Item {
             if (root.focusIndex > 0) root.focusIndex--
             event.accepted = true
         } else if (event.key === Qt.Key_Down) {
-            var maxIdx = pathRepeater.count - 1
-            if (root.focusIndex < maxIdx) root.focusIndex++
+            // Down walks the cards and then onto the Reset button (resetIndex).
+            if (root.focusIndex < root.resetIndex) root.focusIndex++
             event.accepted = true
         } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Space) {
-            // Open browse for focused card
-            var card = pathRepeater.itemAt(root.focusIndex)
-            if (card) card.triggerBrowse()
+            if (root.focusIndex === root.resetIndex) {
+                // Reset button focused — reset to defaults.
+                root.performReset()
+            } else {
+                // Open browse for the focused card.
+                var card = pathRepeater.itemAt(root.focusIndex)
+                if (card) card.triggerBrowse()
+            }
             event.accepted = true
         }
     }
@@ -149,10 +187,39 @@ Item {
 
                         property bool cardFocused: root.focusIndex === index
 
-                        // Expose browse action so keyboard handler can call it
+                        // Expose browse action so keyboard handler can call it.
+                        // Auto-save the moment a folder is chosen — no Save button.
                         function triggerBrowse() {
                             var dir = app.browsePath("Choose " + modelData.label + " folder")
-                            if (dir) pathField.text = dir
+                            if (dir) {
+                                pathField.text = dir
+                                commitField()
+                            }
+                        }
+
+                        // Auto-save this one field, then re-sync the visible text
+                        // from the store (the source of truth). If the save was
+                        // rejected — e.g. a pathological folder tripped the guard
+                        // in ConfigService::savePaths — pathValue() returns the
+                        // previous value and the field snaps back, while that
+                        // rejection message surfaces as a toast (StatusBar binds
+                        // app.statusMessage). On success it shows the committed
+                        // path and savePaths emits the "Paths saved." toast.
+                        function commitField() {
+                            // Skip when nothing changed — a focus-out can re-fire
+                            // editingFinished with the same value, and we don't
+                            // want a redundant save or a spurious "saved" toast.
+                            var stored = app.pathValue(root.currentEmuId,
+                                                       modelData.section, modelData.key)
+                                         || modelData.defaultPath
+                            if (pathField.text === stored)
+                                return
+                            var values = {}
+                            values[modelData.section + "/" + modelData.key] = pathField.text
+                            app.savePaths(root.currentEmuId, values)
+                            pathField.text = app.pathValue(root.currentEmuId,
+                                                           modelData.section, modelData.key)
+                                             || modelData.defaultPath
                         }
 
                         // Glow layer (behind card)
@@ -238,6 +305,10 @@ Item {
                                             // Custom properties for save logic
                                             property string section: modelData.section
                                             property string key: modelData.key
+
+                                            // Auto-save on Enter / focus-out when
+                                            // the path is typed rather than browsed.
+                                            onEditingFinished: cardItem.commitField()
                                         }
                                     }
 
@@ -309,70 +380,30 @@ Item {
                 anchors.rightMargin: 16
                 spacing: 8
 
-                // Save button
-                Rectangle {
-                    id: saveRect
-                    width: saveLabel.implicitWidth + 24
-                    height: 34
-                    radius: SettingsTheme.buttonRadius
-                    color: SettingsTheme.accent
+                // No Save button — each field auto-saves on change (Browse
+                // returns / Enter / focus-out) via cardItem.commitField(), and
+                // savePaths emits the "Paths saved." toast. Reset stays: it's the
+                // one-click way back to the default location.
 
-                    Text {
-                        id: saveLabel
-                        anchors.centerIn: parent
-                        text: "Save"
-                        color: SettingsTheme.background
-                        font.pixelSize: 11
-                        font.weight: Font.DemiBold
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            var values = {}
-                            for (var i = 0; i < pathRepeater.count; i++) {
-                                var item = pathRepeater.itemAt(i)
-                                if (item) {
-                                    // Navigate: item (delegate Item) → cardRect (FocusableItem)
-                                    // → cardInner (ColumnLayout) → row (RowLayout) → TextField rect → TextInput
-                                    // Easier: walk children to find the TextInput with .section property
-                                    var found = findField(item)
-                                    if (found && found.section)
-                                        values[found.section + "/" + found.key] = found.text
-                                }
-                            }
-                            app.savePaths(root.currentEmuId, values)
-                        }
-
-                        function findField(parent) {
-                            for (var i = 0; i < parent.children.length; i++) {
-                                var c = parent.children[i]
-                                if (c.section !== undefined && c.key !== undefined)
-                                    return c
-                                var f = findField(c)
-                                if (f) return f
-                            }
-                            return null
-                        }
-                    }
-                }
-
-                // Reset button
+                // Reset button — keyboard-focusable (root.resetFocused, the last
+                // stop in the focus ring) as well as clickable.
                 Rectangle {
                     id: resetRect
                     width: resetLabel.implicitWidth + 24
                     height: 34
                     radius: SettingsTheme.buttonRadius
-                    color: SettingsTheme.card
-                    border.width: 1
-                    border.color: SettingsTheme.border
+                    color: root.resetFocused ? SettingsTheme.base : SettingsTheme.card
+                    border.width: root.resetFocused ? 2 : 1
+                    border.color: root.resetFocused ? SettingsTheme.focusBorder
+                                                    : SettingsTheme.border
+
+                    Behavior on border.color { ColorAnimation { duration: SettingsTheme.animFast } }
 
                     Text {
                         id: resetLabel
                         anchors.centerIn: parent
                         text: "Reset"
-                        color: SettingsTheme.textMuted
+                        color: root.resetFocused ? SettingsTheme.text : SettingsTheme.textMuted
                         font.pixelSize: 11
                     }
 
@@ -380,39 +411,12 @@ Item {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            // Clear overrides (libretro) or write defaults to
-                            // INI (native) — backend picks the right one based
-                            // on adapter->configFilePath().isEmpty().
-                            app.resetPaths(root.currentEmuId)
-
-                            // After resetPaths, pathValue() returns the cleared
-                            // state for libretro / the default for native. But
-                            // the visible TextInput.text was imperatively set
-                            // by the Browse callback, which broke the original
-                            // binding. The currentEmu = -1 / = tmp trick that
-                            // used to live here gets coalesced by Qt when both
-                            // assignments happen in one tick, so the Repeater
-                            // delegates aren't always recreated. Walk the
-                            // delegates and reset each field.text to its
-                            // current default path — guaranteed visible refresh.
-                            var defs = app.pathDefs(root.currentEmuId)
-                            for (var i = 0; i < pathRepeater.count; i++) {
-                                var item = pathRepeater.itemAt(i)
-                                if (!item || i >= defs.length) continue
-                                var field = findField(item)
-                                if (field) field.text = defs[i].defaultPath
-                            }
-                        }
-
-                        function findField(parent) {
-                            for (var i = 0; i < parent.children.length; i++) {
-                                var c = parent.children[i]
-                                if (c.section !== undefined && c.key !== undefined)
-                                    return c
-                                var f = findField(c)
-                                if (f) return f
-                            }
-                            return null
+                            // Focus Reset (so keyboard + mouse stay in sync) and
+                            // reset all paths to their defaults via the shared
+                            // root.performReset().
+                            root.focusIndex = root.resetIndex
+                            root.forceActiveFocus()
+                            root.performReset()
                         }
                     }
                 }
