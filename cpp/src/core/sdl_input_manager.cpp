@@ -514,20 +514,17 @@ void SdlInputManager::pollEvents() {
                 }
                 emit bindingCaptured(devIdx, element, false, true);
             } else if (m_emulationTarget) {
-                // Emulation mode (libretro): route to InputRouter,
-                // except for the in-game menu trigger. Select+B and
-                // Touchpad both open the menu. The "pre-emptive pause"
-                // signals are NOT emitted here — libretro's pause is
-                // in-process (no SIGSTOP), and Select itself is a
-                // valid in-game button for the libretro core.
+                // Emulation mode (libretro): route to InputRouter + hotkey
+                // matcher. Select+Start is NOT hardcoded here — for in-process
+                // libretro the frontend owns all input, so the in-game menu is
+                // a normal configurable hotkey (defaults to Select+Start),
+                // routed through the matcher below and reclaimable by the user.
+                // The hardcoded Select+Start escape hatch lives only in the
+                // non-emulation branch, preserved for a future standalone-
+                // process backend where RetroNest wouldn't own the emulator's
+                // input. Touchpad stays as a hardcoded bonus (not a configurable
+                // RetroPad button).
                 auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);
-                if (btn == SDL_CONTROLLER_BUTTON_BACK)
-                    m_selectHeld = true;
-                if (m_selectHeld && btn == SDL_CONTROLLER_BUTTON_START) {
-                    qDebug() << "[SdlInput] Select+Start combo — emitting inGameMenuRequested (libretro)";
-                    emit inGameMenuRequested();
-                    break;
-                }
                 if (btn == SDL_CONTROLLER_BUTTON_TOUCHPAD) {
                     qDebug() << "[SdlInput] Touchpad press — emitting inGameMenuRequested (libretro)";
                     emit inGameMenuRequested();
@@ -537,15 +534,18 @@ void SdlInputManager::pollEvents() {
                     const int devIdx = m_deviceIndices.value(event.cbutton.which, 0);
                     const char* btnName = SDL_GameControllerGetStringForButton(btn);
                     const QString canonical = canonicalName(btnName);
-                    const RetroPadSlot slot = m_emulationTarget->lookup(devIdx, canonical);
-                    if (slot != RetroPadSlot::None) {
-                        m_emulationTarget->setButtonPressed(devIdx, slot, true);
-                        // Surface the libretro-index edge to the hotkey matcher
-                        // (AppController). Single emission per real SDL edge —
-                        // m_emulationTarget gating + the m_capturing branch
-                        // above keep this from firing during rebinding UI.
-                        emit gamepadButtonChanged(devIdx, static_cast<int>(slot), true);
-                    }
+                    // Game input: route through the core's controls.ini binding.
+                    const RetroPadSlot gameSlot = m_emulationTarget->lookup(devIdx, canonical);
+                    if (gameSlot != RetroPadSlot::None)
+                        m_emulationTarget->setButtonPressed(devIdx, gameSlot, true);
+                    // Hotkey matcher: use the PHYSICAL button's standard RetroPad
+                    // slot, independent of the core's game bindings — so a button
+                    // the core doesn't map (X/Y/L2/R2/… on GBA) can still drive a
+                    // hotkey. Single emission per real SDL edge (m_emulationTarget
+                    // gating + the m_capturing branch keep it out of rebind UI).
+                    const RetroPadSlot hkSlot = retroPadSlotFromElement(canonical);
+                    if (hkSlot != RetroPadSlot::None)
+                        emit gamepadButtonChanged(devIdx, static_cast<int>(hkSlot), true);
                 }
             } else {
                 auto type = m_controllerTypes.value(event.cbutton.which, Xbox);
@@ -610,11 +610,12 @@ void SdlInputManager::pollEvents() {
                     const int devIdx = m_deviceIndices.value(event.cbutton.which, 0);
                     const char* btnName = SDL_GameControllerGetStringForButton(btn);
                     const QString canonical = canonicalName(btnName);
-                    const RetroPadSlot slot = m_emulationTarget->lookup(devIdx, canonical);
-                    if (slot != RetroPadSlot::None) {
-                        m_emulationTarget->setButtonPressed(devIdx, slot, false);
-                        emit gamepadButtonChanged(devIdx, static_cast<int>(slot), false);
-                    }
+                    const RetroPadSlot gameSlot = m_emulationTarget->lookup(devIdx, canonical);
+                    if (gameSlot != RetroPadSlot::None)
+                        m_emulationTarget->setButtonPressed(devIdx, gameSlot, false);
+                    const RetroPadSlot hkSlot = retroPadSlotFromElement(canonical);
+                    if (hkSlot != RetroPadSlot::None)
+                        emit gamepadButtonChanged(devIdx, static_cast<int>(hkSlot), false);
                 }
             } else if (!m_capturing) {
                 auto btn = static_cast<SDL_GameControllerButton>(event.cbutton.button);
@@ -673,28 +674,43 @@ void SdlInputManager::pollEvents() {
                 const auto posSlot = m_emulationTarget->lookup(devIdx, posEl);
                 const auto negSlot = m_emulationTarget->lookup(devIdx, negEl);
 
-                // (1) Digital emulation. Set the router bit AND surface the
-                // press/release EDGE to the hotkey matcher (gamepadButtonChanged),
-                // so triggers (L2/R2, which arrive only as axes) and other
-                // axis→slot bindings can drive hotkeys exactly like digital
-                // buttons. Edge-detected against the router's prior state so
-                // continuous axis motion emits at most one press + one release.
-                auto setSlotEdge = [&](RetroPadSlot slot, bool pressed) {
-                    if (slot == RetroPadSlot::None) return;
-                    const bool was = m_emulationTarget->buttonPressed(devIdx, slot);
-                    m_emulationTarget->setButtonPressed(devIdx, slot, pressed);
-                    if (was != pressed)
-                        emit gamepadButtonChanged(devIdx, static_cast<int>(slot), pressed);
+                // (1) Game digital emulation: set the router bit from the core's
+                // controls.ini binding (+axis/-axis). Game input only.
+                auto setGameSlot = [&](RetroPadSlot slot, bool pressed) {
+                    if (slot != RetroPadSlot::None)
+                        m_emulationTarget->setButtonPressed(devIdx, slot, pressed);
                 };
                 if (value > kAxisDeadzone) {
-                    setSlotEdge(posSlot, true);
-                    setSlotEdge(negSlot, false);
+                    setGameSlot(posSlot, true);
+                    setGameSlot(negSlot, false);
                 } else if (value < -kAxisDeadzone) {
-                    setSlotEdge(negSlot, true);
-                    setSlotEdge(posSlot, false);
+                    setGameSlot(negSlot, true);
+                    setGameSlot(posSlot, false);
                 } else if (std::abs(value) <= kAxisDeadzone / 2) {
-                    setSlotEdge(posSlot, false);
-                    setSlotEdge(negSlot, false);
+                    setGameSlot(posSlot, false);
+                    setGameSlot(negSlot, false);
+                }
+
+                // (1b) Hotkey matcher: surface the PHYSICAL axis (triggers
+                // L2/R2) as its standard RetroPad slot on the press/release
+                // edge — independent of the core's game bindings, so triggers
+                // drive hotkeys even on cores that don't map them (e.g. GBA).
+                // Analog sticks map to None here and are skipped. Edge-detected
+                // via m_hotkeyAxisHeld so continuous motion emits one press +
+                // one release.
+                const RetroPadSlot hkAxisSlot = retroPadSlotFromElement(axis);
+                if (hkAxisSlot != RetroPadSlot::None) {
+                    const auto hkKey = qMakePair(event.caxis.which,
+                                                 static_cast<int>(sdlAxis));
+                    if (value > kAxisDeadzone) {
+                        if (!m_hotkeyAxisHeld.value(hkKey, false)) {
+                            m_hotkeyAxisHeld[hkKey] = true;
+                            emit gamepadButtonChanged(devIdx, static_cast<int>(hkAxisSlot), true);
+                        }
+                    } else if (std::abs(value) <= kAxisDeadzone / 2) {
+                        if (m_hotkeyAxisHeld.remove(hkKey) > 0)
+                            emit gamepadButtonChanged(devIdx, static_cast<int>(hkAxisSlot), false);
+                    }
                 }
 
                 // (2) Analog magnitude — raw int16, deadzone applied at read time.

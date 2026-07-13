@@ -12,9 +12,12 @@ namespace {
 // 22-row action table.
 // 9 base + 5 SaveStateSlot + 5 LoadStateSlot + 3 audio = 22 total.
 const QVector<HotkeyDef> kLibretroHotkeys = {
-    // Navigation
+    // Navigation. Controller default = Select(2)+Start(3): the familiar menu
+    // combo, now a normal reclaimable hotkey (the hardcoded Select+Start
+    // intercept was removed from the libretro input path — see
+    // sdl_input_manager.cpp). Keyboard default = Escape.
     make(QStringLiteral("Toggle In-Game Menu"), QStringLiteral("Navigation"),
-         ids::ToggleMenu, QStringLiteral("Keyboard/Escape")),
+         ids::ToggleMenu, QStringLiteral("Keyboard/Escape & Gamepad0/2+3")),
 
     // Speed
     make(QStringLiteral("Fast Forward (Toggle)"), QStringLiteral("Speed"),

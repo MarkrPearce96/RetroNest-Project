@@ -66,6 +66,32 @@ inline RetroPadSlot retroPadSlotFromKey(const QString& key) {
     return RetroPadSlot::None;
 }
 
+// Maps a canonical SDL element name (as produced by SdlInputManager's
+// canonicalName) to the STANDARD RetroPad slot for that physical button —
+// independent of any core's controls.ini game bindings. Used for the global
+// hotkey path so every controller button drives hotkeys even on cores that
+// don't map it (e.g. R2/L2/X/Y on GBA). Mirrors config_service's capture-side
+// mapping so a captured "Gamepad<port>/<slot>" hotkey matches at runtime.
+inline RetroPadSlot retroPadSlotFromElement(const QString& element) {
+    if (element == QStringLiteral("FaceSouth"))     return RetroPadSlot::B;
+    if (element == QStringLiteral("FaceWest"))      return RetroPadSlot::Y;
+    if (element == QStringLiteral("Back"))          return RetroPadSlot::Select;
+    if (element == QStringLiteral("Start"))         return RetroPadSlot::Start;
+    if (element == QStringLiteral("DPadUp"))        return RetroPadSlot::Up;
+    if (element == QStringLiteral("DPadDown"))      return RetroPadSlot::Down;
+    if (element == QStringLiteral("DPadLeft"))      return RetroPadSlot::Left;
+    if (element == QStringLiteral("DPadRight"))     return RetroPadSlot::Right;
+    if (element == QStringLiteral("FaceEast"))      return RetroPadSlot::A;
+    if (element == QStringLiteral("FaceNorth"))     return RetroPadSlot::X;
+    if (element == QStringLiteral("LeftShoulder"))  return RetroPadSlot::L;
+    if (element == QStringLiteral("RightShoulder")) return RetroPadSlot::R;
+    if (element == QStringLiteral("LeftTrigger"))   return RetroPadSlot::L2;
+    if (element == QStringLiteral("RightTrigger"))  return RetroPadSlot::R2;
+    if (element == QStringLiteral("LeftStick"))     return RetroPadSlot::L3;
+    if (element == QStringLiteral("RightStick"))    return RetroPadSlot::R3;
+    return RetroPadSlot::None;
+}
+
 class InputRouter {
 public:
     static constexpr int NUM_PORTS = 4;

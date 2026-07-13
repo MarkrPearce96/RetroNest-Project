@@ -5,6 +5,7 @@
 #include "adapters/libretro/libretro_adapter.h"
 #include "core/ini_file.h"
 #include "core/libretro/libretro_hotkey_defs.h"
+#include "core/libretro/input_router.h"
 #include "core/path_overrides_store.h"
 #include "core/paths.h"
 #include "core/setting_def.h"
@@ -527,32 +528,14 @@ QString ConfigService::formatCapturedBinding(const QString& emuId, int deviceInd
         // Map canonical SDL element name → libretro RetroPad button index
         // (matches RetroPadSlot ordering, which mirrors RETRO_DEVICE_ID_JOYPAD_*).
         // Returns "Gamepad<port>/<retroIdx>" — the format HotkeyMatcher's
-        // parseGamepadSpec expects. L2/R2 arrive as trigger-axis captures
-        // (isAxis=true, element "LeftTrigger"/"RightTrigger"); map them to the
-        // L2/R2 button indices like any digital button. Analog STICK axes
-        // (LeftX/Y…) aren't usable as digital hotkey triggers — they're not in
-        // the map below, so the lookup rejects them.
-        static const QHash<QString, int> kElementToRetroIdx = {
-            {QStringLiteral("FaceSouth"),     0},   // B (bottom)
-            {QStringLiteral("FaceWest"),      1},   // Y (left)
-            {QStringLiteral("Back"),          2},   // Select
-            {QStringLiteral("Start"),         3},
-            {QStringLiteral("DPadUp"),        4},
-            {QStringLiteral("DPadDown"),      5},
-            {QStringLiteral("DPadLeft"),      6},
-            {QStringLiteral("DPadRight"),     7},
-            {QStringLiteral("FaceEast"),      8},   // A (right)
-            {QStringLiteral("FaceNorth"),     9},   // X (top)
-            {QStringLiteral("LeftShoulder"),  10},  // L
-            {QStringLiteral("RightShoulder"), 11},  // R
-            {QStringLiteral("LeftTrigger"),   12},  // L2
-            {QStringLiteral("RightTrigger"),  13},  // R2
-            {QStringLiteral("LeftStick"),     14},  // L3
-            {QStringLiteral("RightStick"),    15},  // R3
-        };
-        const auto it = kElementToRetroIdx.constFind(element);
-        if (it == kElementToRetroIdx.constEnd()) return {};
-        return QStringLiteral("Gamepad%1/%2").arg(deviceIndex).arg(it.value());
+        // parseGamepadSpec expects. retroPadSlotFromElement maps the physical
+        // element to its standard RetroPad index (L2/R2 arrive as trigger-axis
+        // captures; analog STICK axes map to None and are rejected). The SAME
+        // function feeds the runtime hotkey path in SdlInputManager, so a
+        // captured "Gamepad<port>/<slot>" matches the physical button at play.
+        const RetroPadSlot slot = retroPadSlotFromElement(element);
+        if (slot == RetroPadSlot::None) return {};
+        return QStringLiteral("Gamepad%1/%2").arg(deviceIndex).arg(static_cast<int>(slot));
     }
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return {};

@@ -148,6 +148,11 @@ private:
     // captureButtonReleased on SDL_CONTROLLERBUTTONUP — an event triggers,
     // being axes, never produce).
     QMap<QPair<SDL_JoystickID, int>, bool> m_captureAxisHeld;
+    // Triggers past threshold during gameplay, keyed by (joystick, axis) —
+    // edge-detects trigger press/release for the hotkey matcher independent of
+    // the core's game bindings (so L2/R2 hotkeys work even on cores like GBA
+    // that never map them).
+    QMap<QPair<SDL_JoystickID, int>, bool> m_hotkeyAxisHeld;
 
     // instance ID -> controller
     QMap<SDL_JoystickID, SDL_GameController*> m_controllers;
