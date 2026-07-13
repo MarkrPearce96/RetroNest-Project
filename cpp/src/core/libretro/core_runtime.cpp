@@ -384,6 +384,7 @@ void CoreRuntime::runLoop() {
         }
     }
     m_envCtx.saveDirectory   = saveDir.toUtf8();
+    m_envCtx.emuId           = m_cfg.emuId.toUtf8();
     m_envCtx.options         = &m_options;
     m_envCtx.runtime         = static_cast<void*>(this);
     // SP6.5 Task 4.5: one-shot delivery to the libretro core via

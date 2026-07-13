@@ -26,6 +26,10 @@ public:
     // Save & Quit -> Resume silently no-ops (file written, never read back).
     QString findResumeFile(const QString& key) const override;
 
+    // Paths settings: expose the Save States override, applied generically via
+    // GameSession + findResumeFile above. Mirrors the other libretro adapters.
+    QVector<PathDef> pathsDefs() const override;
+
     // GameCube/Wii discs store a 6-char game ID (e.g. "GZ2P01") at disc offset 0.
     // The base extractSerial() reads PlayStation's SYSTEM.CNF, so it fails on GC
     // discs and can't read Dolphin's compressed .rvz/.wia at all. Read the game

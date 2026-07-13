@@ -193,13 +193,15 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             return true;
         }
         case RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR: {
-            // PCSX2 memory-cards path override. PathOverridesStore is the
-            // source of truth; cached buffer lives thread_local so the
-            // returned pointer remains valid past this env call. Separate
-            // cache from GET_TEXTURES_DIR so back-to-back calls don't
-            // alias (Settings::InitializeDefaults queries both).
+            // Memory-cards path override for the calling core (PCSX2,
+            // DuckStation, …), keyed by ctx->emuId so each core reads its own
+            // PathOverridesStore entry. Cached buffer lives thread_local so the
+            // returned pointer remains valid past this env call. Separate cache
+            // from GET_TEXTURES_DIR so back-to-back calls don't alias
+            // (Settings::InitializeDefaults queries both).
             if (!data) return false;
-            const QString path = PathOverridesStore::instance().read("pcsx2", "MemoryCards");
+            const QString path = PathOverridesStore::instance().read(
+                QString::fromUtf8(ctx->emuId), "MemoryCards");
             if (path.isEmpty()) return false;
             thread_local QByteArray cachedMemcards;
             cachedMemcards = path.toUtf8();
@@ -208,10 +210,11 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             return true;
         }
         case RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR: {
-            // PCSX2 replacement-textures path override. Separate
-            // thread_local from GET_MEMCARDS_DIR — see note above.
+            // Replacement-textures path override for the calling core, keyed by
+            // ctx->emuId. Separate thread_local from GET_MEMCARDS_DIR — see above.
             if (!data) return false;
-            const QString path = PathOverridesStore::instance().read("pcsx2", "Textures");
+            const QString path = PathOverridesStore::instance().read(
+                QString::fromUtf8(ctx->emuId), "Textures");
             if (path.isEmpty()) return false;
             thread_local QByteArray cachedTextures;
             cachedTextures = path.toUtf8();

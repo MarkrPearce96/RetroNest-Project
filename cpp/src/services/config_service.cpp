@@ -433,9 +433,40 @@ QString ConfigService::pathDefault(const QString& emuId, const QString& section,
     return {};
 }
 
+// A path override is "pathological" when it points at a huge shared location —
+// the user's home dir, a bare standard user folder (Documents/Desktop/…), or a
+// system/top-level root. Handing such a dir to an emulator core as its
+// save/memcard folder can crash the core on boot (e.g. DuckStation enumerating
+// hundreds of unrelated files there). Require a dedicated subfolder instead.
+static bool isPathologicalOverride(const QString& raw) {
+    if (raw.isEmpty()) return false;  // empty = use the default location
+    const QString path = QDir::cleanPath(raw);
+    const QString home = QDir::cleanPath(QDir::homePath());
+    if (path == home) return true;
+    for (const QString& f : { QStringLiteral("Documents"), QStringLiteral("Desktop"),
+                              QStringLiteral("Downloads"), QStringLiteral("Pictures"),
+                              QStringLiteral("Music"),     QStringLiteral("Movies"),
+                              QStringLiteral("Public"),    QStringLiteral("Library"),
+                              QStringLiteral("Applications") })
+        if (path == home + QLatin1Char('/') + f) return true;
+    if (path.count(QLatin1Char('/')) <= 1) return true;  // "/", "/Users", "/Volumes", …
+    return false;
+}
+
 void ConfigService::savePaths(const QString& emuId, const QVariantMap& values) {
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return;
+
+    // Guard: refuse a pathological override dir so a bad choice can't crash the
+    // core — a dedicated folder is required. Reject the whole save so nothing
+    // half-applies.
+    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
+        if (isPathologicalOverride(it.value().toString())) {
+            emit statusMessage("Pick a dedicated folder — not your Home, "
+                               "Documents/Desktop, or a system folder.");
+            return;
+        }
+    }
 
     QString configPath = adapter->configFilePath();
     if (configPath.isEmpty()) {
@@ -448,7 +479,8 @@ void ConfigService::savePaths(const QString& emuId, const QVariantMap& values) {
                 continue;
             }
             const QString key = it.key().mid(lastSlash + 1);
-            store.write(emuId, key, it.value().toString());
+            const QString v = it.value().toString();
+            store.write(emuId, key, v.isEmpty() ? v : QDir::cleanPath(v));
         }
         // PathOverridesStore::write logs qWarning on disk failure but returns void;
         // we optimistically report success here. A future improvement could surface
@@ -467,7 +499,8 @@ void ConfigService::savePaths(const QString& emuId, const QVariantMap& values) {
         }
         const QString section = it.key().left(lastSlash);
         const QString key     = it.key().mid(lastSlash + 1);
-        ini.setValue(section, key, it.value().toString());
+        const QString v = it.value().toString();
+        ini.setValue(section, key, v.isEmpty() ? v : QDir::cleanPath(v));
     }
 
     if (ini.save(configPath))

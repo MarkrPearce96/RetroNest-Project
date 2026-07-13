@@ -9,6 +9,19 @@
 #include <QFileInfo>
 
 
+QVector<PathDef> DolphinLibretroAdapter::pathsDefs() const {
+    // Memory Cards → the GC memory-card dir, redirected fork-side via the private
+    // GET_MEMCARDS_DIR env (File::SetUserPath(D_GCUSER_IDX)); the generalized
+    // env handler reads the "dolphin"/"MemoryCards" override. Save States → the
+    // "dolphin"/"SaveStates" override, applied generically (GameSession +
+    // findResumeFile below). (Wii NAND saves stay under the User dir — not split
+    // out here.)
+    return {
+        { "Memory Cards", "libretro", "MemoryCards", "memcards",   PathBase::EmulatorData },
+        { "Save States",  "libretro", "SaveStates",  "savestates", PathBase::EmulatorData },
+    };
+}
+
 QString DolphinLibretroAdapter::findResumeFile(const QString& key) const {
     if (key.isEmpty())
         return {};

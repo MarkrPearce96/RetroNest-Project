@@ -17,6 +17,10 @@ class OptionsStore;
 struct EnvironmentContext {
     QByteArray systemDirectory;
     QByteArray saveDirectory;
+    // The calling core's RetroNest emu id (e.g. "pcsx2", "duckstation") so the
+    // per-core private path overrides (memcards/textures dirs) read the right
+    // PathOverridesStore entry instead of a hardcoded id.
+    QByteArray emuId;
     // SP6.5 Task 4.5: resume-state path the libretro core consumes
     // synchronously during retro_load_game via
     // RETRONEST_ENVIRONMENT_GET_BOOT_STATE_PATH. Set by CoreRuntime::runLoop
