@@ -59,6 +59,16 @@ Item {
         if (event.key === Qt.Key_Back || event.key === Qt.Key_Escape) {
             event.accepted = true
             root.backRequested()
+        } else if (event.key === Qt.Key_Up) {
+            // Scroll the achievements list up (rows aren't actionable — this is
+            // a reading aid so a controller can move through the list).
+            if (achList.count > 0)
+                achList.currentIndex = Math.max(0, achList.currentIndex - 1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Down) {
+            if (achList.count > 0)
+                achList.currentIndex = Math.min(achList.count - 1, achList.currentIndex + 1)
+            event.accepted = true
         }
     }
 
@@ -151,12 +161,17 @@ Item {
 
         // Achievements list
         ListView {
+            id: achList
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
             spacing: 2
             model: achievements
+            currentIndex: 0
             boundsBehavior: Flickable.StopAtBounds
+
+            // Keep the keyboard-selected row in view (driven from root Keys).
+            onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
 
             delegate: Rectangle {
                 required property var modelData
@@ -167,6 +182,9 @@ Item {
                 radius: 6
                 color: Qt.rgba(0.09, 0.09, 0.12, 1)
                 opacity: modelData.earned ? 1.0 : 0.5
+                // Indigo highlight on the keyboard-current row (this page's accent).
+                border.width: ListView.isCurrentItem ? 2 : 0
+                border.color: "#6366f1"
 
                 RowLayout {
                     anchors.fill: parent
