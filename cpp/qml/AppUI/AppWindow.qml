@@ -277,14 +277,15 @@ ApplicationWindow {
         // the worker's next iteration after resume; toggling while
         // paused stages the speed without unpausing.
         onToggleFastForwardRequested: {
-            if (!app.gameSession) return;
-            var ffOn = app.gameSession.toggleFastForwardLibretro();
-            if (ffOn) ffToast.show(); else ffToast.hide();
+            // Toggle only — the ffToast pill is driven by GameSession's
+            // libretroFastForwardChanged below, so the menu button AND hotkeys
+            // pop the same pill (matches the save/load pattern + the HW overlay).
+            if (app.gameSession) app.gameSession.toggleFastForwardLibretro();
         }
     }
 
-    // Saved/Loaded pills — driven by GameSession so every trigger source
-    // (in-game menu buttons AND hotkeys) pops the same pill. HW-render
+    // Saved/Loaded/Fast-Forward pills — driven by GameSession so every trigger
+    // source (in-game menu buttons AND hotkeys) pops the same pill. HW-render
     // sessions get theirs from LibretroOverlayPanel's identical hookup.
     Connections {
         target: app.gameSession
@@ -295,6 +296,11 @@ ApplicationWindow {
         function onStateLoadRequested() {
             if (app.gameUsesHardwareRender()) return;
             loadToast.show();
+        }
+        function onLibretroFastForwardChanged() {
+            if (app.gameUsesHardwareRender()) return;
+            if (app.gameSession.libretroFastForward) ffToast.show();
+            else ffToast.hide();
         }
     }
 
@@ -825,10 +831,13 @@ ApplicationWindow {
         }
         function onInGameMenuRequested() {
             if (app.gameRunning) {
-                // Select+Start / Touchpad combo: reserved for STANDALONE
-                // emulators. Libretro games drive their menu from the
-                // user's own binding in the Libretro Hotkeys page.
-                if (isLibretroGame() || app.gameUsesHardwareRender()) return;
+                // Hardware Touchpad shortcut (and, for a future standalone
+                // backend, Select+Start) → toggle the in-game menu.
+                // toggleInGameMenu() routes HW-overlay vs SW-in-scene vs
+                // standalone itself, so there's nothing to gate here. Note
+                // Select+Start no longer reaches this signal for libretro — it's
+                // a configurable hotkey now (menuToggleRequested); only the
+                // hardcoded Touchpad convenience arrives here during libretro.
                 window.toggleInGameMenu();
                 return;
             }
