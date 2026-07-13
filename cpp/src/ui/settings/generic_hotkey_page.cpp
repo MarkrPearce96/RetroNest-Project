@@ -483,9 +483,12 @@ void GenericHotkeyPage::onBindingCaptured(int deviceIndex, const QString& elemen
     // cleared only on SDL's all-released), fuse them into a single combo
     // binding ("Gamepad<P>/<mod>+<btn>") rather than recording two
     // independent bindings. Without this, pressing the modifier alone
-    // later would fire the hotkey on its own.
+    // later would fire the hotkey on its own. Triggers (L2/R2) fuse too —
+    // "Select+R2" must become one combo, not a Select-alone + R2-alone pair
+    // (the only axis bindings that reach here are triggers; analog sticks are
+    // filtered out upstream by formatCapturedBinding).
     bool fused = false;
-    if (m_controllerHeld && !isAxis && formatted.startsWith(QStringLiteral("Gamepad"))) {
+    if (m_controllerHeld && formatted.startsWith(QStringLiteral("Gamepad"))) {
         for (int i = m_capturedBindings.size() - 1; i >= 0; --i) {
             const QString& prev = m_capturedBindings[i];
             if (!prev.startsWith(QStringLiteral("Gamepad"))) continue;
