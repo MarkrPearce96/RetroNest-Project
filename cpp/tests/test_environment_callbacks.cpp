@@ -168,13 +168,15 @@ private slots:
     }
 
     // PathOverridesStore-backed env enums (path-overrides feature).
-    // The handlers consult PathOverridesStore directly, so tests need
-    // to seed the store via its singleton. Test order assumes no
-    // bleed-through across cases (each writes then clears).
+    // The handlers consult PathOverridesStore keyed by the calling core's
+    // ctx.emuId (generalized from a hardcoded "pcsx2" so every core's Paths
+    // overrides apply), so tests seed the store under the same id they set
+    // on the context. Test order assumes no bleed-through across cases
+    // (each writes then clears).
 
     void testGetMemcardsDirReturnsOverrideWhenSet() {
         PathOverridesStore::instance().write("pcsx2", "MemoryCards", "/tmp/mc");
-        EnvironmentContext ctx;
+        EnvironmentContext ctx; ctx.emuId = "pcsx2";
         const char* out = nullptr;
         QVERIFY(environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR, &out));
         QCOMPARE(QString(out), QString("/tmp/mc"));
@@ -182,13 +184,13 @@ private slots:
     }
     void testGetMemcardsDirReturnsFalseWhenUnset() {
         PathOverridesStore::instance().clear("pcsx2", "MemoryCards");
-        EnvironmentContext ctx;
+        EnvironmentContext ctx; ctx.emuId = "pcsx2";
         const char* out = nullptr;
         QVERIFY(!environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_GET_MEMCARDS_DIR, &out));
     }
     void testGetTexturesDirReturnsOverrideWhenSet() {
         PathOverridesStore::instance().write("pcsx2", "Textures", "/tmp/tex");
-        EnvironmentContext ctx;
+        EnvironmentContext ctx; ctx.emuId = "pcsx2";
         const char* out = nullptr;
         QVERIFY(environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR, &out));
         QCOMPARE(QString(out), QString("/tmp/tex"));
@@ -196,7 +198,7 @@ private slots:
     }
     void testGetTexturesDirReturnsFalseWhenUnset() {
         PathOverridesStore::instance().clear("pcsx2", "Textures");
-        EnvironmentContext ctx;
+        EnvironmentContext ctx; ctx.emuId = "pcsx2";
         const char* out = nullptr;
         QVERIFY(!environmentDispatch(&ctx, RETRONEST_ENVIRONMENT_GET_TEXTURES_DIR, &out));
     }
