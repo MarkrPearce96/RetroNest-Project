@@ -1209,10 +1209,13 @@ Item {
                             width: parent.width
                         }
 
-                        // Password field
+                        // Password field — only while NOT signed in (once a
+                        // token is present the field + button are just noise;
+                        // the "✓ Signed in" status below stays visible).
                         Column {
                             width: parent.width
                             spacing: 4
+                            visible: !libretroTokenPresent
 
                             Text {
                                 text: "Password"
@@ -1264,9 +1267,10 @@ Item {
                             }
                         }
 
-                        // Sign-in button
+                        // Sign-in button — hidden once signed in.
                         Rectangle {
                             id: libretroSignInBtn
+                            visible: !libretroTokenPresent
                             width: parent.width
                             height: 38
                             radius: 8
