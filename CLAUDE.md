@@ -217,7 +217,7 @@ All directories derive from a single user-chosen root:
 
 **No emulator binaries are launched.** Every emulator is an in-process libretro core (dlopen via `CoreRuntime`); the process-era launch machinery — direct-exec rules, `openNativeEmulatorSettings`, keystroke-synthesized pause — was retired 2026-07. If a standalone-process emulator is ever reintroduced, recover that machinery deliberately from git history rather than rebuilding it from scratch.
 
-**Portable mode is inherent for libretro cores:** every shipped emulator is a libretro core that receives its data directories from RetroNest via `retro_environment` callbacks (`GET_SAVE_DIRECTORY`, `GET_SYSTEM_DIRECTORY`, private `GET_*_DIR` overrides) — no on-disk portable-mode marker exists or is needed. The `portable.txt` / `NSUserDefaults` mechanisms described in older notes were for standalone process-backend emulators, none of which ship today.
+**Portable mode is inherent for libretro cores:** every shipped emulator is a libretro core that receives its data directories from RetroNest via `retro_environment` callbacks (`GET_SAVE_DIRECTORY`, `GET_SYSTEM_DIRECTORY`, private `GET_*_DIR` overrides) — no on-disk portable-mode marker exists or is needed. The `portable.txt` / `NSUserDefaults` mechanisms described in older notes were for standalone process-backend emulators, none of which ship today. The private `GET_MEMCARDS_DIR` / `GET_TEXTURES_DIR` overrides (the Paths settings page → `PathOverridesStore`) are keyed **per-core by the calling core's emu id** (`EnvironmentContext::emuId`, set from `CoreRuntime`) — not a hardcoded id — so each emulator's Paths override applies; the pcsx2, duckstation, and dolphin forks call `GET_MEMCARDS_DIR` (dolphin routes it to `File::SetUserPath(D_GCUSER_IDX)`). Guard: `ConfigService::savePaths` rejects a pathological override dir (home / bare Documents-Desktop / system root) so a huge shared folder can't crash a core on boot.
 
 ## App Shell (startup, windows, navigation)
 
@@ -317,6 +317,22 @@ instead of manually re-pulling snapshots (app-shell review P9).
 - **Key_Back not Key_Escape for B-button** — prevents Qt Shortcut interception
 - Start and R2 are **signals** (`navigateStart()`, `navigateShift()`), not key injections
 - Binding capture mode: `startCapture()` emits raw `bindingCaptured()` signals instead of key injection
+
+### Settings-page focus navigation (QML)
+Controllers inject **arrow keys, not Tab**, so Qt's built-in focus chain
+(`KeyNavigation` / `activeFocusOnTab`) doesn't apply — every settings page must
+handle arrows itself. To stop each page hand-rolling a private `focusIndex`
+(which repeatedly left controls mouse-only / unreachable), reuse the shared QML
+components in `qml/AppUI/`, chosen by shape:
+- **`GenericListPage`** — a flat vertical list (Themes, Emulator grid, All / Recently-played games).
+- **`GenericMultiCardPicker`** — a card + pill 2-D grid with a trailing action button (Resolution, Aspect Ratio).
+- **`ConfirmDialog`** — a modal Cancel/Confirm prompt; **Cancel focused by default** (so a controller can't confirm by mashing Enter), `destructive: true` for a red Confirm. Used by uninstall / reset-config / exit. Owns its own key nav; caller sets copy + `onConfirmed`.
+- **`FocusRing`** — a registration-based, **row-aware** ring for heterogeneous scrollable pages that fit none of the above (the RetroAchievements dashboard). Controls call `register(this)` / `unregister(this)` (Component.onCompleted/onDestruction), expose an `activate()` method, and bind their highlight to `<ring>.currentItem === this`. The ring groups controls into on-screen rows by top edge (**Up/Down** move between rows, **Left/Right** within a row, preserving column by nearest centre) and owns Enter/Space + scroll-into-view. An unregistered or hidden control simply isn't in the ring — you can't silently orphan one, which was the recurring bug with hand-rolled `focusIndex` pages.
+
+New settings surfaces should adopt one of these rather than hand-roll. Pages
+that predate this and have **no** reachability gap are deliberately left as-is
+(the Scraper 2-D grid + edit sub-mode, the category list, the RA login screen,
+Paths) — don't refactor working nav for its own sake.
 
 ## In-Game Menu & Emulator Control
 - **Trigger:** Cmd+Shift+Escape (Carbon global hotkey, system-wide), Select+Start (SDL combo, all controllers), or Touchpad press (DualShock 4 / DualSense single-button)
