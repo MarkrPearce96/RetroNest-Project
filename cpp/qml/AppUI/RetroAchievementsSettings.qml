@@ -39,6 +39,9 @@ Item {
     }
 
     Component.onCompleted: {
+        // Wire the dashboard focus ring's scroll context once ids resolve.
+        dashRing.scroller = dashFlickable
+        dashRing.originItem = dashboardCol
         if (screenState === "dashboard") refreshTimer.start()
     }
 
@@ -96,19 +99,42 @@ Item {
         }
     }
 
+    // Keyboard/controller focus ring for the (heterogeneous, scrollable)
+    // dashboard. Controls register themselves; see FocusRing.qml. scroller /
+    // originItem are set in Component.onCompleted once the ids resolve.
+    FocusRing { id: dashRing }
+
     Keys.onPressed: function(event) {
-        if (screenState !== "login") return
-        if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) {
-            loginFocusIndex = (loginFocusIndex + 1) % 3
-            event.accepted = true
+        if (screenState === "login") {
+            if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) {
+                loginFocusIndex = (loginFocusIndex + 1) % 3
+                event.accepted = true
+            } else if (event.key === Qt.Key_Up) {
+                loginFocusIndex = (loginFocusIndex - 1 + 3) % 3
+                event.accepted = true
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                if (loginFocusIndex === 0) raUserField.forceActiveFocus()
+                else if (loginFocusIndex === 1) raKeyField.forceActiveFocus()
+                else doLogin()
+                event.accepted = true
+            }
+            return
+        }
+
+        // Dashboard: drive the focus ring. Up/Down move between rows, Left/Right
+        // within a row (e.g. across the 3 game cards). Back/Escape is left
+        // unaccepted so the settings overlay handles it (pops the page).
+        if (event.key === Qt.Key_Down) {
+            dashRing.down(); event.accepted = true
         } else if (event.key === Qt.Key_Up) {
-            loginFocusIndex = (loginFocusIndex - 1 + 3) % 3
-            event.accepted = true
-        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            if (loginFocusIndex === 0) raUserField.forceActiveFocus()
-            else if (loginFocusIndex === 1) raKeyField.forceActiveFocus()
-            else doLogin()
-            event.accepted = true
+            dashRing.up(); event.accepted = true
+        } else if (event.key === Qt.Key_Left) {
+            dashRing.left(); event.accepted = true
+        } else if (event.key === Qt.Key_Right) {
+            dashRing.right(); event.accepted = true
+        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                   || event.key === Qt.Key_Space) {
+            dashRing.activate(); event.accepted = true
         }
     }
 
@@ -285,6 +311,7 @@ Item {
 
     // ── Dashboard State ──
     Flickable {
+        id: dashFlickable
         anchors.fill: parent
         anchors.margins: 20
         contentHeight: dashboardCol.height
@@ -372,10 +399,17 @@ Item {
 
                     // Sign out
                     Rectangle {
+                        id: signOutBtn
                         width: 80
                         height: 32
                         radius: 6
                         color: SettingsTheme.border
+                        border.width: dashRing.currentItem === signOutBtn ? 2 : 0
+                        border.color: SettingsTheme.focusBorder
+
+                        function activate() { app.raSignOut() }
+                        Component.onCompleted: dashRing.register(signOutBtn)
+                        Component.onDestruction: dashRing.unregister(signOutBtn)
 
                         Text {
                             anchors.centerIn: parent
@@ -386,8 +420,10 @@ Item {
 
                         MouseArea {
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: app.raSignOut()
+                            onEntered: dashRing.currentItem = signOutBtn
+                            onClicked: signOutBtn.activate()
                         }
                     }
                 }
@@ -456,13 +492,22 @@ Item {
             }
 
             Rectangle {
+                id: lastPlayedCard
                 width: parent.width
                 height: 64
                 radius: 12
                 color: SettingsTheme.card
-                border.width: 1
-                border.color: SettingsTheme.border
+                border.width: dashRing.currentItem === lastPlayedCard ? 2 : 1
+                border.color: dashRing.currentItem === lastPlayedCard
+                              ? SettingsTheme.focusBorder : SettingsTheme.border
                 visible: (userSummary.lastGameTitle || "") !== ""
+
+                function activate() {
+                    if (userSummary.lastGameId > 0)
+                        root.pushRequested("achievements", { raGameId: userSummary.lastGameId, gameTitle: userSummary.lastGameTitle })
+                }
+                Component.onCompleted: dashRing.register(lastPlayedCard)
+                Component.onDestruction: dashRing.unregister(lastPlayedCard)
 
                 RowLayout {
                     anchors.fill: parent
@@ -509,11 +554,10 @@ Item {
 
                 MouseArea {
                     anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (userSummary.lastGameId > 0)
-                            root.pushRequested("achievements", { raGameId: userSummary.lastGameId, gameTitle: userSummary.lastGameTitle })
-                    }
+                    onEntered: dashRing.currentItem = lastPlayedCard
+                    onClicked: lastPlayedCard.activate()
                 }
             }
 
@@ -625,15 +669,23 @@ Item {
                 }
 
                 Text {
+                    id: viewAllGamesLink
                     text: "View All (" + userGames.length + ") \u203A"
                     color: SettingsTheme.accent
                     font.pixelSize: 13
+                    font.underline: dashRing.currentItem === viewAllGamesLink
                     visible: userGames.length > 0
+
+                    function activate() { root.pushRequested("allGames", { allGames: userGames }) }
+                    Component.onCompleted: dashRing.register(viewAllGamesLink)
+                    Component.onDestruction: dashRing.unregister(viewAllGamesLink)
 
                     MouseArea {
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.pushRequested("allGames", { allGames: userGames })
+                        onEntered: dashRing.currentItem = viewAllGamesLink
+                        onClicked: viewAllGamesLink.activate()
                     }
                 }
             }
@@ -649,17 +701,25 @@ Item {
                     model: userGames.slice(0, Math.min(userGames.length, 3))
 
                     Rectangle {
+                        id: gameProgressCard
                         Layout.fillWidth: true
                         Layout.preferredHeight: 140
                         radius: 8
                         color: SettingsTheme.card
-                        border.width: 1
-                        border.color: SettingsTheme.border
+                        border.width: dashRing.currentItem === gameProgressCard ? 2 : 1
+                        border.color: dashRing.currentItem === gameProgressCard
+                                      ? SettingsTheme.focusBorder : SettingsTheme.border
+
+                        function activate() { root.pushRequested("achievements", { raGameId: modelData.raGameId, gameTitle: modelData.title }) }
+                        Component.onCompleted: dashRing.register(gameProgressCard)
+                        Component.onDestruction: dashRing.unregister(gameProgressCard)
 
                         MouseArea {
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.pushRequested("achievements", { raGameId: modelData.raGameId, gameTitle: modelData.title })
+                            onEntered: dashRing.currentItem = gameProgressCard
+                            onClicked: gameProgressCard.activate()
                         }
 
                         Column {
@@ -743,14 +803,25 @@ Item {
                 }
 
                 Text {
+                    id: viewAllRecentLink
                     text: "View All \u203A"
                     color: SettingsTheme.accent
                     font.pixelSize: 13
+                    // Own visibility (parent RowLayout is conditionally hidden) so
+                    // the focus ring skips this link when there are no recent games.
+                    visible: (userSummary.recentGames || []).length > 0
+                    font.underline: dashRing.currentItem === viewAllRecentLink
+
+                    function activate() { root.pushRequested("recentlyPlayed", { recentGames: userSummary.recentGames || [] }) }
+                    Component.onCompleted: dashRing.register(viewAllRecentLink)
+                    Component.onDestruction: dashRing.unregister(viewAllRecentLink)
 
                     MouseArea {
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.pushRequested("recentlyPlayed", { recentGames: userSummary.recentGames || [] })
+                        onEntered: dashRing.currentItem = viewAllRecentLink
+                        onClicked: viewAllRecentLink.activate()
                     }
                 }
             }
@@ -766,20 +837,28 @@ Item {
                     model: (userSummary.recentGames || []).slice(0, 3)
 
                     Rectangle {
+                        id: recentGameCard
                         Layout.fillWidth: true
                         Layout.preferredHeight: 140
                         radius: 8
                         color: SettingsTheme.card
-                        border.width: 1
-                        border.color: SettingsTheme.border
+                        border.width: dashRing.currentItem === recentGameCard ? 2 : 1
+                        border.color: dashRing.currentItem === recentGameCard
+                                      ? SettingsTheme.focusBorder : SettingsTheme.border
+
+                        function activate() {
+                            if (modelData.gameId > 0)
+                                root.pushRequested("achievements", { raGameId: modelData.gameId, gameTitle: modelData.title })
+                        }
+                        Component.onCompleted: dashRing.register(recentGameCard)
+                        Component.onDestruction: dashRing.unregister(recentGameCard)
 
                         MouseArea {
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (modelData.gameId > 0)
-                                    root.pushRequested("achievements", { raGameId: modelData.gameId, gameTitle: modelData.title })
-                            }
+                            onEntered: dashRing.currentItem = recentGameCard
+                            onClicked: recentGameCard.activate()
                         }
 
                         Column {
@@ -880,10 +959,20 @@ Item {
                         }
 
                         Rectangle {
+                            id: hardcoreToggle
                             width: 44
                             height: 24
                             radius: 12
                             color: hardcoreMode ? SettingsTheme.accent : SettingsTheme.border
+                            border.width: dashRing.currentItem === hardcoreToggle ? 2 : 0
+                            border.color: SettingsTheme.focusBorder
+
+                            function activate() {
+                                hardcoreMode = !hardcoreMode
+                                app.raSetHardcoreMode(hardcoreMode)
+                            }
+                            Component.onCompleted: dashRing.register(hardcoreToggle)
+                            Component.onDestruction: dashRing.unregister(hardcoreToggle)
 
                             Rectangle {
                                 x: hardcoreMode ? parent.width - width - 3 : 3
@@ -898,11 +987,10 @@ Item {
 
                             MouseArea {
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    hardcoreMode = !hardcoreMode
-                                    app.raSetHardcoreMode(hardcoreMode)
-                                }
+                                onEntered: dashRing.currentItem = hardcoreToggle
+                                onClicked: hardcoreToggle.activate()
                             }
                         }
                     }
@@ -935,10 +1023,20 @@ Item {
                         }
 
                         Rectangle {
+                            id: encoreToggle
                             width: 44
                             height: 24
                             radius: 12
                             color: encoreMode ? SettingsTheme.accent : SettingsTheme.border
+                            border.width: dashRing.currentItem === encoreToggle ? 2 : 0
+                            border.color: SettingsTheme.focusBorder
+
+                            function activate() {
+                                encoreMode = !encoreMode
+                                app.raSetEncoreMode(encoreMode)
+                            }
+                            Component.onCompleted: dashRing.register(encoreToggle)
+                            Component.onDestruction: dashRing.unregister(encoreToggle)
 
                             Rectangle {
                                 x: encoreMode ? parent.width - width - 3 : 3
@@ -953,11 +1051,10 @@ Item {
 
                             MouseArea {
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    encoreMode = !encoreMode
-                                    app.raSetEncoreMode(encoreMode)
-                                }
+                                onEntered: dashRing.currentItem = encoreToggle
+                                onClicked: encoreToggle.activate()
                             }
                         }
                     }
@@ -990,10 +1087,20 @@ Item {
                         }
 
                         Rectangle {
+                            id: notificationsToggle
                             width: 44
                             height: 24
                             radius: 12
                             color: notificationsEnabled ? SettingsTheme.accent : SettingsTheme.border
+                            border.width: dashRing.currentItem === notificationsToggle ? 2 : 0
+                            border.color: SettingsTheme.focusBorder
+
+                            function activate() {
+                                notificationsEnabled = !notificationsEnabled
+                                app.raSetNotifications(notificationsEnabled)
+                            }
+                            Component.onCompleted: dashRing.register(notificationsToggle)
+                            Component.onDestruction: dashRing.unregister(notificationsToggle)
 
                             Rectangle {
                                 x: notificationsEnabled ? parent.width - width - 3 : 3
@@ -1008,11 +1115,10 @@ Item {
 
                             MouseArea {
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    notificationsEnabled = !notificationsEnabled
-                                    app.raSetNotifications(notificationsEnabled)
-                                }
+                                onEntered: dashRing.currentItem = notificationsToggle
+                                onClicked: notificationsToggle.activate()
                             }
                         }
                     }
@@ -1045,10 +1151,20 @@ Item {
                         }
 
                         Rectangle {
+                            id: soundsToggle
                             width: 44
                             height: 24
                             radius: 12
                             color: soundsEnabled ? SettingsTheme.accent : SettingsTheme.border
+                            border.width: dashRing.currentItem === soundsToggle ? 2 : 0
+                            border.color: SettingsTheme.focusBorder
+
+                            function activate() {
+                                soundsEnabled = !soundsEnabled
+                                app.raSetSoundEffects(soundsEnabled)
+                            }
+                            Component.onCompleted: dashRing.register(soundsToggle)
+                            Component.onDestruction: dashRing.unregister(soundsToggle)
 
                             Rectangle {
                                 x: soundsEnabled ? parent.width - width - 3 : 3
@@ -1063,11 +1179,10 @@ Item {
 
                             MouseArea {
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    soundsEnabled = !soundsEnabled
-                                    app.raSetSoundEffects(soundsEnabled)
-                                }
+                                onEntered: dashRing.currentItem = soundsToggle
+                                onClicked: soundsToggle.activate()
                             }
                         }
                     }
@@ -1106,13 +1221,21 @@ Item {
                             }
 
                             Rectangle {
+                                id: passwordFieldBox
                                 width: parent.width
                                 height: 40
                                 radius: 8
                                 color: SettingsTheme.base
-                                border.width: 1
-                                border.color: libretroPasswordField.activeFocus
+                                border.width: (dashRing.currentItem === passwordFieldBox
+                                               || libretroPasswordField.activeFocus) ? 2 : 1
+                                border.color: (dashRing.currentItem === passwordFieldBox
+                                               || libretroPasswordField.activeFocus)
                                     ? SettingsTheme.accent : SettingsTheme.border
+
+                                // Ring activation focuses the field for typing.
+                                function activate() { libretroPasswordField.forceActiveFocus() }
+                                Component.onCompleted: dashRing.register(passwordFieldBox)
+                                Component.onDestruction: dashRing.unregister(passwordFieldBox)
 
                                 TextInput {
                                     id: libretroPasswordField
@@ -1143,6 +1266,7 @@ Item {
 
                         // Sign-in button
                         Rectangle {
+                            id: libretroSignInBtn
                             width: parent.width
                             height: 38
                             radius: 8
@@ -1150,6 +1274,17 @@ Item {
                             opacity: (libretroLoggingIn
                                       || libretroPasswordField.text === ""
                                       || app.raUsername() === "") ? 0.4 : 1
+                            border.width: dashRing.currentItem === libretroSignInBtn ? 2 : 0
+                            border.color: SettingsTheme.focusBorder
+
+                            function activate() {
+                                if (!libretroLoggingIn
+                                        && libretroPasswordField.text !== ""
+                                        && app.raUsername() !== "")
+                                    doLibretroLogin()
+                            }
+                            Component.onCompleted: dashRing.register(libretroSignInBtn)
+                            Component.onDestruction: dashRing.unregister(libretroSignInBtn)
 
                             Text {
                                 anchors.centerIn: parent
@@ -1161,13 +1296,10 @@ Item {
 
                             MouseArea {
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (!libretroLoggingIn
-                                            && libretroPasswordField.text !== ""
-                                            && app.raUsername() !== "")
-                                        doLibretroLogin()
-                                }
+                                onEntered: dashRing.currentItem = libretroSignInBtn
+                                onClicked: libretroSignInBtn.activate()
                             }
                         }
 
@@ -1200,11 +1332,18 @@ Item {
 
             // Refresh button
             Rectangle {
+                id: refreshBtn
                 width: parent.width
                 height: 48
                 radius: 8
                 color: SettingsTheme.accent
                 opacity: loading ? 0.6 : 1
+                border.width: dashRing.currentItem === refreshBtn ? 2 : 0
+                border.color: SettingsTheme.focusBorder
+
+                function activate() { if (!loading) refreshDashboard() }
+                Component.onCompleted: dashRing.register(refreshBtn)
+                Component.onDestruction: dashRing.unregister(refreshBtn)
 
                 Text {
                     anchors.centerIn: parent
@@ -1216,8 +1355,10 @@ Item {
 
                 MouseArea {
                     anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: if (!loading) refreshDashboard()
+                    onEntered: dashRing.currentItem = refreshBtn
+                    onClicked: refreshBtn.activate()
                 }
             }
 
