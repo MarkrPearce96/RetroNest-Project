@@ -153,6 +153,7 @@ FocusScope {
                     model: root.emuCards
 
                     delegate: Item {
+                        id: cardDelegate
                         width: root.cardWidth
                         height: cardCol.height
 
@@ -205,51 +206,18 @@ FocusScope {
                                 }
                             }
 
-                            Row {
+                            PillRow {
                                 width: parent.width
-                                spacing: 6
                                 topPadding: 10
-
-                                Repeater {
-                                    model: cardData.options
-
-                                    delegate: Rectangle {
-                                        width: (parent.width - (cardData.options.length - 1) * 6) / cardData.options.length
-                                        height: 32
-                                        radius: SettingsTheme.pillRadius
-
-                                        property bool isSelected: selectedKey === modelData[root.optionKeyField]
-                                        property bool isFocused: root.activeFocus
-                                                                 && !root.focusSave
-                                                                 && root.focusCard === cardIndex
-                                                                 && root.focusPill === index
-
-                                        color: isSelected ? SettingsTheme.accent : SettingsTheme.border
-                                        border.width: (isFocused || pillMa.containsMouse) ? 3 : 0
-                                        border.color: (isFocused || pillMa.containsMouse) ? SettingsTheme.text : "transparent"
-                                        scale: (isFocused || pillMa.containsMouse) ? 1.05 : 1.0
-
-                                        Behavior on scale { NumberAnimation { duration: 100 } }
-                                        Behavior on color { ColorAnimation { duration: SettingsTheme.animFast } }
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: modelData.label
-                                            color: isSelected ? SettingsTheme.background : SettingsTheme.textMuted
-                                            font.pixelSize: 13
-                                            font.weight: isSelected ? Font.DemiBold : Font.Normal
-                                            Behavior on color { ColorAnimation { duration: SettingsTheme.animFast } }
-                                        }
-
-                                        MouseArea {
-                                            id: pillMa
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.selectPill(cardIndex, index)
-                                        }
-                                    }
-                                }
+                                options: cardDelegate.cardData.options
+                                optionKeyField: root.optionKeyField
+                                selectedKey: cardDelegate.selectedKey
+                                pillHeight: 32
+                                focusScale: 1.05
+                                focusedIndex: (root.activeFocus && !root.focusSave
+                                               && root.focusCard === cardDelegate.cardIndex)
+                                              ? root.focusPill : -1
+                                onPillActivated: (index) => root.selectPill(cardDelegate.cardIndex, index)
                             }
                         }
                     }

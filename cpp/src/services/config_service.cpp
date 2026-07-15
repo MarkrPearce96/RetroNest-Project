@@ -507,7 +507,7 @@ void ConfigService::applyQuickAspectRatio(const QVariantMap& choices) {
             // off for anything else (Auto / 4:3 / …).
             const QString wsKey = adapter->widescreenOptionKey();
             if (!wsKey.isEmpty()) {
-                const bool wide = (value == QLatin1String("16:9"));
+                const bool wide = (value == adapter->widescreenTriggerValue());
                 writeLibretroOption(adapter, wsKey,
                                     wide ? adapter->widescreenEnabledValue()
                                          : adapter->widescreenDisabledValue());

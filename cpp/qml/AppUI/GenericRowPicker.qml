@@ -18,9 +18,7 @@ FocusScope {
     required property var applyChoices      // (choices: {emuId: chosenKey}) => void
     required property string optionKeyField // "value" or "label"
 
-    // No Save button — picking a pill applies immediately (with the backend's
-    // toast). Property kept for API parity with GenericMultiCardPicker.
-    property bool autoSave: true
+    // No Save button — picking a pill applies immediately (with the backend's toast).
 
     // --- State ---
     property var emuCards: []
@@ -167,50 +165,16 @@ FocusScope {
                         }
 
                         // Right: option pills — fill remaining width, evenly divided
-                        Row {
+                        PillRow {
                             Layout.fillWidth: true
-                            spacing: 6
-
-                            Repeater {
-                                model: rowCard.cardData.options
-
-                                delegate: Rectangle {
-                                    width: (parent.width - (rowCard.cardData.options.length - 1) * 6)
-                                           / rowCard.cardData.options.length
-                                    height: 36
-                                    radius: SettingsTheme.pillRadius
-
-                                    property bool isSelected: rowCard.selectedKey === modelData[root.optionKeyField]
-                                    property bool isFocused: root.activeFocus
-                                                             && root.focusRow === rowCard.rowIndex
-                                                             && root.focusPill === index
-
-                                    color: isSelected ? SettingsTheme.accent : SettingsTheme.border
-                                    border.width: (isFocused || pillMa.containsMouse) ? 3 : 0
-                                    border.color: (isFocused || pillMa.containsMouse) ? SettingsTheme.text : "transparent"
-                                    scale: (isFocused || pillMa.containsMouse) ? 1.03 : 1.0
-
-                                    Behavior on scale { NumberAnimation { duration: 100 } }
-                                    Behavior on color { ColorAnimation { duration: SettingsTheme.animFast } }
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: modelData.label
-                                        color: isSelected ? SettingsTheme.background : SettingsTheme.textMuted
-                                        font.pixelSize: 13
-                                        font.weight: isSelected ? Font.DemiBold : Font.Normal
-                                        Behavior on color { ColorAnimation { duration: SettingsTheme.animFast } }
-                                    }
-
-                                    MouseArea {
-                                        id: pillMa
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.selectPill(rowCard.rowIndex, index)
-                                    }
-                                }
-                            }
+                            options: rowCard.cardData.options
+                            optionKeyField: root.optionKeyField
+                            selectedKey: rowCard.selectedKey
+                            pillHeight: 36
+                            focusScale: 1.03
+                            focusedIndex: (root.activeFocus && root.focusRow === rowCard.rowIndex)
+                                          ? root.focusPill : -1
+                            onPillActivated: (index) => root.selectPill(rowCard.rowIndex, index)
                         }
                     }
                 }

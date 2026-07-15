@@ -365,6 +365,9 @@ public:
     virtual QString widescreenOptionKey() const { return {}; }
     virtual QString widescreenEnabledValue() const { return "enabled"; }
     virtual QString widescreenDisabledValue() const { return "disabled"; }
+    // The aspect value that turns widescreen ON (every other choice turns it
+    // off). Must be one of aspectRatioOptionShortlist()'s values.
+    virtual QString widescreenTriggerValue() const { return "16:9"; }
 
     /**
      * Return available controller types for this emulator.

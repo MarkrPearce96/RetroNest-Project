@@ -479,6 +479,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/GenericListPage.qml
         qml/AppUI/GenericMultiCardPicker.qml
         qml/AppUI/GenericRowPicker.qml
+        qml/AppUI/PillRow.qml
         qml/AppUI/FocusableItem.qml
         qml/AppUI/ConfirmDialog.qml
         qml/AppUI/FocusRing.qml
@@ -536,10 +537,6 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/ar/pcsx2-16x9.webp
         qml/AppUI/images/ar/duckstation-4x3.webp
         qml/AppUI/images/ar/duckstation-16x9.webp
-        qml/AppUI/images/res/duckstation-720p.webp
-        qml/AppUI/images/res/duckstation-1080p.webp
-        qml/AppUI/images/res/duckstation-1440p.webp
-        qml/AppUI/images/res/duckstation-4k.webp
         qml/AppUI/images/controllers/DualShock_2.svg
         qml/AppUI/images/controllers/analog_controller.svg
         qml/AppUI/images/controllers/PSP.svg
@@ -698,6 +695,10 @@ add_test(NAME PpssppLibretroBindings COMMAND test_ppsspp_libretro_bindings)
 add_executable(test_ppsspp_libretro_schema tests/test_ppsspp_libretro_schema.cpp)
 target_link_libraries(test_ppsspp_libretro_schema PRIVATE retronest_core Qt6::Test)
 add_test(NAME PpssppLibretroSchema COMMAND test_ppsspp_libretro_schema)
+
+add_executable(test_quick_settings_shortlist tests/test_quick_settings_shortlist.cpp)
+target_link_libraries(test_quick_settings_shortlist PRIVATE retronest_core Qt6::Test)
+add_test(NAME QuickSettingsShortlist COMMAND test_quick_settings_shortlist)
 
 # SP6 Task 10: DolphinLibretroAdapter settings schema shape guard.
 add_executable(test_dolphin_libretro_schema tests/test_dolphin_libretro_schema.cpp)

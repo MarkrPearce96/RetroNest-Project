@@ -21,14 +21,6 @@ QVector<PathDef> MgbaLibretroAdapter::pathsDefs() const {
     };
 }
 
-ResolutionOptions MgbaLibretroAdapter::resolutionOptions() const {
-    return {};
-}
-
-AspectRatioOptions MgbaLibretroAdapter::aspectRatioOptions() const {
-    return {};
-}
-
 QVector<ControllerTypeDef> MgbaLibretroAdapter::controllerTypes() const {
     return {
         { "GBA", "GBA Controller",
