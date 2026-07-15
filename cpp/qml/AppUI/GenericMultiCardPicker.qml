@@ -26,6 +26,9 @@ FocusScope {
     property int focusCard: 0
     property int focusPill: 0
     property bool focusSave: false
+    // When true, picking a pill applies immediately (with the backend's toast)
+    // and the Save button is hidden + dropped from keyboard nav.
+    property bool autoSave: false
 
     Component.onCompleted: { loadCards(); root.forceActiveFocus() }
     StackView.onActivated: root.forceActiveFocus()
@@ -55,11 +58,17 @@ FocusScope {
 
     function selectPill(cardIndex, pillIndex) {
         var card = emuCards[cardIndex]
+        var chosen = card.options[pillIndex][root.optionKeyField]
         var choices = Object.assign({}, pendingChoices)
-        choices[card.emuId] = card.options[pillIndex][root.optionKeyField]
+        choices[card.emuId] = chosen
         pendingChoices = choices
         focusCard = cardIndex
         focusPill = pillIndex
+        if (root.autoSave) {
+            var one = {}
+            one[card.emuId] = chosen
+            root.applyChoices(one)
+        }
     }
 
     function save() { root.applyChoices(pendingChoices) }
@@ -81,7 +90,7 @@ FocusScope {
         if (focusSave) return
         if (focusCard + colCount < emuCards.length) {
             focusCard += colCount; focusPill = 0
-        } else {
+        } else if (!root.autoSave) {
             focusSave = true
         }
     }
@@ -247,12 +256,14 @@ FocusScope {
                 }
             }
 
+            // Save button — hidden in autoSave mode (selection applies live).
             Item {
                 Layout.fillWidth: true
                 Layout.topMargin: 24
                 Layout.bottomMargin: 20
                 Layout.rightMargin: 24
                 height: 40
+                visible: !root.autoSave
 
                 Rectangle {
                     anchors.right: parent.right

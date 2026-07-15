@@ -65,7 +65,9 @@ private:
     // options. These intentionally drop the `ppsspp_` prefix because they
     // live in frontend.json shared across adapters (see mgba's pattern).
     static QSet<QString> knownFrontendKeys() {
-        return { "aspect_mode", "integer_scale" };
+        // Only Integer Scale — PPSSPP has no aspect setting (it renders at the
+        // game's native aspect; forcing one would distort widescreen titles).
+        return { "integer_scale" };
     }
 
 private slots:
@@ -86,8 +88,9 @@ private slots:
 
     void totalCount_matchesOverlay() {
         // 43 curated originals + 10 Recommended cross-listings
-        //  + 2 FrontendSetting rows in Recommended (aspect_mode, integer_scale) = 55.
-        QCOMPARE(schema_.size(), 55);
+        //  + 1 FrontendSetting row in Recommended (integer_scale) = 54.
+        //  (aspect_mode was removed — PPSSPP has no aspect setting.)
+        QCOMPARE(schema_.size(), 54);
     }
 
     void everyKey_hasValidShape() {
@@ -235,30 +238,24 @@ private slots:
         }
     }
 
-    void previewSpec_recommended_isAspect() {
-        // The Recommended card hosts the AspectRatioPreview pane, bound to
-        // aspect_mode. Other (category, subcategory) pairs return empty.
+    void previewSpec_hasNoAspectPreview() {
+        // PPSSPP has no aspect setting, so there's no AspectRatioPreview pane
+        // anywhere — every (category, subcategory) returns an empty spec.
         PpssppLibretroAdapter a;
-        const auto spec = a.previewSpec("Recommended", "");
-        QCOMPARE(spec.previewType, QStringLiteral("aspect"));
-        QVERIFY(spec.keyToProperty.contains("aspect_mode"));
-        QCOMPARE(spec.keyToProperty.value("aspect_mode"), QStringLiteral("aspectMode"));
-
-        // Sanity: other pages get no preview.
+        QVERIFY(a.previewSpec("Recommended", "").previewType.isEmpty());
         QVERIFY(a.previewSpec("System", "").previewType.isEmpty());
         QVERIFY(a.previewSpec("Video",  "").previewType.isEmpty());
         QVERIFY(a.previewSpec("Hacks",  "").previewType.isEmpty());
     }
 
-    void frontendSettingDefaults_includeAspectRows() {
-        // aspect_mode + integer_scale must be seeded into frontend.json so
-        // FrontendSettingsStore::get() returns sane defaults before the
-        // user touches anything.
+    void frontendSettingDefaults_integerScaleOnly() {
+        // Only integer_scale is seeded into frontend.json; aspect_mode was
+        // removed (no aspect setting for PPSSPP).
         PpssppLibretroAdapter a;
         const auto defs = a.frontendSettingDefaults();
         QHash<QString, QString> byKey;
         for (const auto& p : defs) byKey.insert(p.first, p.second);
-        QCOMPARE(byKey.value("aspect_mode"),   QStringLiteral("native"));
+        QVERIFY2(!byKey.contains("aspect_mode"), "PPSSPP should have no aspect_mode default");
         QCOMPARE(byKey.value("integer_scale"), QStringLiteral("OFF"));
     }
 

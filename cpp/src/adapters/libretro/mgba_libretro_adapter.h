@@ -6,6 +6,14 @@ class MgbaLibretroAdapter : public LibretroAdapter {
 public:
     QString coreId() const override { return "mgba"; }
 
+    // No internal-resolution scaling (GBA), so no Resolution tab entry. Aspect
+    // ratio is a RetroNest frontend setting (no aspect core option), surfaced
+    // on the quick Aspect Ratio tab via aspect_mode with a curated shortlist.
+    QString aspectRatioFrontendKey() const override { return "aspect_mode"; }
+    QVector<QPair<QString, QString>> aspectRatioOptionShortlist() const override {
+        return {{"native", "Auto"}, {"4_3", "4:3"}, {"16_9", "16:9"}};
+    }
+
     QVector<BiosDef> biosFiles() const override;
     QVector<PathDef> pathsDefs() const override;
     ResolutionOptions resolutionOptions() const override;

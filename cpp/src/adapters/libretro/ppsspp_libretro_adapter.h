@@ -10,6 +10,16 @@ class PpssppLibretroAdapter : public LibretroAdapter {
     Q_OBJECT
 public:
     QString coreId() const override { return "ppsspp"; }
+
+    // Quick-settings Resolution tab → core option + curated pill shortlist.
+    // No aspect ratio: PPSSPP renders games at their native aspect (many PSP
+    // titles are natively widescreen); forcing an aspect would distort them,
+    // so PPSSPP is intentionally absent from the Aspect Ratio tab and has no
+    // frontend aspect setting.
+    QString resolutionOptionKey() const override { return "ppsspp_internal_resolution"; }
+    QVector<QPair<QString, QString>> resolutionOptionShortlist() const override {
+        return {{"480x272", "1x"}, {"960x544", "2x"}, {"1920x1088", "4x"}, {"3840x2176", "8x"}};
+    }
     HardwareRenderBackend hardwareRenderBackend() const override {
         return HardwareRenderBackend::GL;
     }
@@ -19,13 +29,12 @@ public:
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
     // Packet 7 Stage 2: schema renders from the core's declared options
     // (LibretroAdapter::settingsSchema base merge) — this adapter supplies
-    // routing/curation only, plus the FrontendSetting aspect rows.
+    // routing/curation + one frontend row (Integer Scale). No aspect setting:
+    // PPSSPP renders at its games' native aspect (see the resolution note).
     QVector<OptionOverlay> optionOverlays() const override;
     QVector<SettingDef> extraSettings() const override;
     QVector<SettingsHubCard> settingsHubCards() const override;
     QVector<QPair<QString, QString>> frontendSettingDefaults() const override;
-    PreviewSpec previewSpec(const QString& category,
-                            const QString& subcategory) const override;
 
     QString extractSerial(const QString& romPath) const override;
 

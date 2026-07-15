@@ -1,17 +1,11 @@
 import QtQuick
 
-GenericMultiCardPicker {
+// Resolution uses the row layout (no preview image — a screenshot can't
+// convey an internal-resolution scale). Each installed emulator gets its own
+// row of resolution pills; picking one auto-saves.
+GenericRowPicker {
     optionsLoader:  (emuId) => app.quickResolutionOptions(emuId)
     currentLoader:  (emuId) => app.currentResolution(emuId)
     applyChoices:   (choices) => app.applyQuickResolution(choices)
     optionKeyField: "value"
-
-    previewImages: ({
-        "duckstation": {
-            "2": "images/res/duckstation-720p.webp",
-            "3": "images/res/duckstation-1080p.webp",
-            "4": "images/res/duckstation-1440p.webp",
-            "6": "images/res/duckstation-4k.webp"
-        }
-    })
 }

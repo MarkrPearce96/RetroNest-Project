@@ -12,6 +12,19 @@ class DolphinLibretroAdapter : public LibretroAdapter {
 public:
     QString coreId() const override { return "dolphin"; }
 
+    // Quick-settings tabs (Resolution / Aspect Ratio) → core options + a
+    // curated pill shortlist (full value set stays on the main settings page).
+    QString resolutionOptionKey() const override { return "dolphin_internal_resolution"; }
+    QString aspectRatioOptionKey() const override { return "dolphin_aspect_ratio"; }
+    QVector<QPair<QString, QString>> resolutionOptionShortlist() const override {
+        return {{"1x", "1x"}, {"2x", "2x"}, {"4x", "4x"}, {"8x", "8x"}};
+    }
+    QVector<QPair<QString, QString>> aspectRatioOptionShortlist() const override {
+        return {{"Auto", "Auto"}, {"4:3", "4:3"}, {"16:9", "16:9"}};
+    }
+    // 16:9 → enable the widescreen hack (enabled/disabled), else disable.
+    QString widescreenOptionKey() const override { return "dolphin_widescreen_hack"; }
+
     HardwareRenderBackend hardwareRenderBackend() const override {
         // SP2 built the Metal NSView handover path. SP4 will switch to
         // Vulkan when that work lands; until then the core only supports

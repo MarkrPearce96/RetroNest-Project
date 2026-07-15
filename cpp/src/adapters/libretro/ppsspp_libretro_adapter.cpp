@@ -78,22 +78,12 @@ QVector<SettingsHubCard> PpssppLibretroAdapter::settingsHubCards() const {
 }
 
 QVector<QPair<QString, QString>> PpssppLibretroAdapter::frontendSettingDefaults() const {
-    // PPSSPP's libretro core exposes no aspect/integer-scale options of its
-    // own — these are frontend concerns. Mirrors mgba_libretro_adapter.cpp:75.
+    // Integer Scale is a RetroNest frontend concern (not a core option). No
+    // aspect_mode: PPSSPP renders games at their native aspect — forcing one
+    // would distort natively-widescreen PSP titles.
     return {
-        { "aspect_mode",   "native" },
-        { "integer_scale", "OFF"    },
+        { "integer_scale", "OFF" },
     };
-}
-
-PreviewSpec PpssppLibretroAdapter::previewSpec(const QString& category,
-                                               const QString& subcategory) const {
-    // Recommended hosts a live AspectRatioPreview bound to aspect_mode for
-    // visual parity with PCSX2 / mgba. Other (category, subcategory) pairs
-    // get no preview (returns empty PreviewSpec).
-    if (category == "Recommended" && subcategory.isEmpty())
-        return { "aspect", { { "aspect_mode", "aspectMode" } } };
-    return {};
 }
 
 // Packet 7 Stage 2: the schema is rendered from the core's declared option
@@ -181,46 +171,22 @@ QVector<OptionOverlay> PpssppLibretroAdapter::optionOverlays() const {
 }
 
 QVector<SettingDef> PpssppLibretroAdapter::extraSettings() const {
-    // FrontendSetting rows — backed by frontend.json, not the core's
-    // options.json. PPSSPP libretro exposes no aspect/integer-scale options
-    // of its own, so the AspectRatioPreview rows on Recommended are wired
-    // through here. Mirrors mgba_libretro_adapter.cpp. extraSettings rows
-    // lead the merged schema, keeping these at the top of the Recommended
-    // card as before.
-    auto frontend = [](const QString& key, const QString& label,
-                       const QString& def, const QStringList& vals,
-                       const QString& category, const QString& tooltip) -> SettingDef {
-        SettingDef d;
-        d.storage = SettingDef::Storage::FrontendSetting;
-        d.key = key;
-        d.label = label;
-        d.defaultValue = def;
-        d.type = SettingDef::Combo;
-        for (const auto& v : vals)
-            d.options.append({ v, v });
-        d.category = category;
-        d.tooltip = tooltip;
-        return d;
-    };
-
-    return {
-        frontend("aspect_mode", "Aspect Ratio",
-                 "native",
-                 { "native", "square", "4_3", "16_9", "stretch" },
-                 "Recommended",
-                 "How the emulated frame is fitted into the window. "
-                 "'Native' preserves the PSP's natural aspect ratio. "
-                 "'Square Pixel' shows pixel-perfect 1:1. "
-                 "'4:3' / '16:9' force a TV-style aspect. "
-                 "'Stretch' fills the window ignoring aspect."),
-        frontend("integer_scale", "Integer Scale",
-                 "OFF",
-                 { "OFF", "ON" },
-                 "Recommended",
-                 "Snap the displayed frame to the largest integer multiple "
-                 "of native resolution that fits. Eliminates pixel shimmer "
-                 "at the cost of some unused screen area."),
-    };
+    // One FrontendSetting row — Integer Scale — backed by frontend.json, not
+    // the core's options.json. PPSSPP has no aspect row (removed: it renders
+    // at the game's native aspect; forcing one distorts widescreen titles).
+    SettingDef d;
+    d.storage = SettingDef::Storage::FrontendSetting;
+    d.key = "integer_scale";
+    d.label = "Integer Scale";
+    d.defaultValue = "OFF";
+    d.type = SettingDef::Combo;
+    d.options.append({ QStringLiteral("OFF"), QStringLiteral("OFF") });
+    d.options.append({ QStringLiteral("ON"),  QStringLiteral("ON") });
+    d.category = "Recommended";
+    d.tooltip = "Snap the displayed frame to the largest integer multiple "
+                "of native resolution that fits. Eliminates pixel shimmer "
+                "at the cost of some unused screen area.";
+    return { d };
 }
 
 QString PpssppLibretroAdapter::extractSerial(const QString& romPath) const {

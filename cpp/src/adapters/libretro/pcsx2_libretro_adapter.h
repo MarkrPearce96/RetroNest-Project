@@ -12,6 +12,19 @@ class Pcsx2LibretroAdapter : public LibretroAdapter {
     Q_OBJECT
 public:
     QString coreId() const override { return "pcsx2"; }
+
+    // Quick-settings tabs (Resolution / Aspect Ratio) → core options + a
+    // curated pill shortlist (full value set stays on the main settings page).
+    QString resolutionOptionKey() const override { return "pcsx2_upscale_multiplier"; }
+    QString aspectRatioOptionKey() const override { return "pcsx2_aspect_ratio"; }
+    QVector<QPair<QString, QString>> resolutionOptionShortlist() const override {
+        return {{"1", "1x"}, {"2", "2x"}, {"4", "4x"}, {"8", "8x"}};
+    }
+    QVector<QPair<QString, QString>> aspectRatioOptionShortlist() const override {
+        return {{"Auto 4:3/3:2", "Auto"}, {"4:3", "4:3"}, {"16:9", "16:9"}};
+    }
+    // 16:9 → enable widescreen patches (enabled/disabled), else disable.
+    QString widescreenOptionKey() const override { return "pcsx2_enable_widescreen_patches"; }
     HardwareRenderBackend hardwareRenderBackend() const override {
         return HardwareRenderBackend::MetalNSView;
     }

@@ -478,6 +478,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/ButtonHints.qml
         qml/AppUI/GenericListPage.qml
         qml/AppUI/GenericMultiCardPicker.qml
+        qml/AppUI/GenericRowPicker.qml
         qml/AppUI/FocusableItem.qml
         qml/AppUI/ConfirmDialog.qml
         qml/AppUI/FocusRing.qml

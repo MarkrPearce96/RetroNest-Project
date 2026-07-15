@@ -9,6 +9,21 @@ class DuckStationLibretroAdapter : public LibretroAdapter {
     Q_OBJECT
 public:
     QString coreId() const override { return "duckstation"; }
+
+    // Quick-settings tabs (Resolution / Aspect Ratio) → core options + a
+    // curated pill shortlist (full value set stays on the main settings page).
+    QString resolutionOptionKey() const override { return "duckstation_gpu_resolution_scale"; }
+    QString aspectRatioOptionKey() const override { return "duckstation_display_aspect_ratio"; }
+    QVector<QPair<QString, QString>> resolutionOptionShortlist() const override {
+        return {{"2", "2x"}, {"3", "3x"}, {"4", "4x"}, {"8", "8x"}};
+    }
+    QVector<QPair<QString, QString>> aspectRatioOptionShortlist() const override {
+        return {{"Auto (Game Native)", "Auto"}, {"4:3", "4:3"}, {"16:9", "16:9"}};
+    }
+    // 16:9 → enable the widescreen rendering hack (true/false), else disable.
+    QString widescreenOptionKey() const override { return "duckstation_gpu_widescreen_hack"; }
+    QString widescreenEnabledValue() const override { return "true"; }
+    QString widescreenDisabledValue() const override { return "false"; }
     int maxLibretroPlayers() const override { return 2; }
     HardwareRenderBackend hardwareRenderBackend() const override {
         return HardwareRenderBackend::MetalNSView;

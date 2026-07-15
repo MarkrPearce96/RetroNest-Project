@@ -4,6 +4,9 @@
 #include "adapters/adapter_registry.h"
 #include "adapters/libretro/libretro_adapter.h"
 #include "core/ini_file.h"
+#include "core/libretro/declared_options.h"
+#include "core/libretro/frontend_settings_store.h"
+#include "core/libretro/options_store.h"
 #include "core/libretro/libretro_hotkey_defs.h"
 #include "core/libretro/input_router.h"
 #include "core/path_overrides_store.h"
@@ -251,11 +254,127 @@ void ConfigService::resetConfiguration(const QString& emuId) {
 
 // ── Quick Settings ──────────────────────────────────────────
 
-QVariantList ConfigService::quickResolutionOptions(const QString& emuId) const {
-    QVariantList list;
-    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return list;
+// ── Quick-settings helpers (libretro options.json pipeline) ────────────────
+// The Resolution / Aspect Ratio tabs now read+write a designated core option
+// (adapter->resolutionOptionKey()/aspectRatioOptionKey()) through the same
+// OptionsStore + declared-options machinery the main settings page uses. The
+// legacy INI ResolutionOptions/AspectRatioOptions path remains as a fallback
+// for non-libretro adapters (setup wizard + tests).
 
+// {value,label} choices for a libretro option key. With a shortlist of
+// {value, short-label} pairs, returns just those (in order) using the short
+// label for the pill and skipping any value the core doesn't declare. Empty
+// shortlist = every declared value, using the core's own per-value label.
+static QVariantList declaredOptionChoices(EmulatorAdapter* adapter, const QString& key,
+                                          const QVector<QPair<QString, QString>>& shortlist = {}) {
+    QVariantList list;
+    if (key.isEmpty()) return list;
+    auto* lr = adapter ? adapter->asLibretro() : nullptr;
+    const DeclaredOptionsDoc* doc = lr ? lr->declaredOptions() : nullptr;
+
+    const DeclaredOption* found = nullptr;
+    if (doc)
+        for (const auto& opt : doc->options)
+            if (opt.key == key) { found = &opt; break; }
+
+    if (!shortlist.isEmpty()) {
+        for (const auto& entry : shortlist) {   // {value, short label}
+            // Validate against the core's declared values when we have them.
+            if (found) {
+                bool declared = false;
+                for (const auto& v : found->values)
+                    if (v.value == entry.first) { declared = true; break; }
+                if (!declared) continue;
+            }
+            QVariantMap item;
+            item["value"] = entry.first;
+            item["label"] = entry.second.isEmpty() ? entry.first : entry.second;
+            list.append(item);
+        }
+        return list;
+    }
+
+    // No shortlist: every declared value with the core's own label.
+    if (!found) return list;
+    for (const auto& v : found->values) {
+        QVariantMap item;
+        item["value"] = v.value;
+        item["label"] = v.label.isEmpty() ? v.value : v.label;
+        list.append(item);
+    }
+    return list;
+}
+
+// Current value of a libretro option key: the OptionsStore value, else the
+// core's declared default.
+static QString libretroOptionValue(EmulatorAdapter* adapter, const QString& key) {
+    if (key.isEmpty()) return {};
+    auto* lr = adapter ? adapter->asLibretro() : nullptr;
+    if (!lr) return {};
+    if (auto* store = lr->libretroOptionsStore()) {
+        const QString v = store->get(key);
+        if (!v.isEmpty()) return v;
+    }
+    if (const DeclaredOptionsDoc* doc = lr->declaredOptions())
+        for (const auto& o : doc->options)
+            if (o.key == key) return o.defaultValue;
+    return {};
+}
+
+// Write a libretro option value and persist it immediately (auto-save).
+static void writeLibretroOption(EmulatorAdapter* adapter, const QString& key,
+                                const QString& value) {
+    if (key.isEmpty()) return;
+    auto* lr = adapter ? adapter->asLibretro() : nullptr;
+    auto* store = lr ? lr->libretroOptionsStore() : nullptr;
+    if (!store) return;
+    store->set(key, value);
+    store->save();
+}
+
+// {value,label} choices straight from a shortlist (no declared-options doc —
+// used for FRONTEND-setting aspect, e.g. mGBA/PPSSPP aspect_mode).
+static QVariantList shortlistChoices(const QVector<QPair<QString, QString>>& shortlist) {
+    QVariantList list;
+    for (const auto& e : shortlist) {
+        QVariantMap item;
+        item["value"] = e.first;
+        item["label"] = e.second.isEmpty() ? e.first : e.second;
+        list.append(item);
+    }
+    return list;
+}
+
+// Current value of a RetroNest frontend setting (frontend.json).
+static QString frontendSettingValue(EmulatorAdapter* adapter, const QString& key) {
+    if (key.isEmpty()) return {};
+    auto* lr = adapter ? adapter->asLibretro() : nullptr;
+    auto* store = lr ? lr->frontendSettingsStore() : nullptr;
+    return store ? store->get(key) : QString();
+}
+
+// Write a frontend setting and persist it immediately (auto-save).
+static void writeFrontendSetting(EmulatorAdapter* adapter, const QString& key,
+                                 const QString& value) {
+    if (key.isEmpty()) return;
+    auto* lr = adapter ? adapter->asLibretro() : nullptr;
+    auto* store = lr ? lr->frontendSettingsStore() : nullptr;
+    if (!store) return;
+    store->set(key, value);
+    store->save();
+}
+
+QVariantList ConfigService::quickResolutionOptions(const QString& emuId) const {
+    auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
+    if (!adapter) return {};
+
+    // Preferred: libretro core-option path (curated pill shortlist).
+    const QString key = adapter->resolutionOptionKey();
+    if (!key.isEmpty())
+        return declaredOptionChoices(adapter, key, adapter->resolutionOptionShortlist());
+
+    // Legacy: INI ResolutionOptions (non-libretro adapters / tests).
+    QVariantList list;
     auto opts = adapter->resolutionOptions();
     for (const auto& opt : opts.options) {
         QVariantMap item;
@@ -270,12 +389,15 @@ QString ConfigService::currentResolution(const QString& emuId) const {
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return {};
 
+    const QString key = adapter->resolutionOptionKey();
+    if (!key.isEmpty())
+        return libretroOptionValue(adapter, key);
+
+    // Legacy INI path.
     auto opts = adapter->resolutionOptions();
     if (opts.options.isEmpty()) return {};
-
     QString configPath = resolveConfigPath(opts.iniFilePath, adapter);
     if (configPath.isEmpty()) return opts.defaultValue;
-
     IniFile ini;
     ini.load(configPath);
     QString val = ini.value(opts.section, opts.key);
@@ -290,29 +412,47 @@ void ConfigService::applyQuickResolution(const QVariantMap& choices) {
         auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
         if (!adapter) continue;
 
+        const QString key = adapter->resolutionOptionKey();
+        if (!key.isEmpty()) {
+            writeLibretroOption(adapter, key, value);
+            continue;
+        }
+
+        // Legacy INI path.
         auto opts = adapter->resolutionOptions();
         if (opts.options.isEmpty()) continue;
-
         QString configPath = resolveConfigPath(opts.iniFilePath, adapter);
         if (configPath.isEmpty()) continue;
-
         IniFile ini;
         ini.load(configPath);
         ini.setValue(opts.section, opts.key, value);
         ini.save(configPath);
     }
-    emit statusMessage("Resolution settings saved.");
+    emit statusMessage("Resolution saved.");
 }
 
 QVariantList ConfigService::quickAspectRatioOptions(const QString& emuId) const {
-    QVariantList list;
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
-    if (!adapter) return list;
+    if (!adapter) return {};
 
+    // Preferred: libretro core-option path (curated pill shortlist).
+    const QString key = adapter->aspectRatioOptionKey();
+    if (!key.isEmpty())
+        return declaredOptionChoices(adapter, key, adapter->aspectRatioOptionShortlist());
+
+    // Frontend-setting path (cores with no aspect core option — mGBA/PPSSPP).
+    if (!adapter->aspectRatioFrontendKey().isEmpty())
+        return shortlistChoices(adapter->aspectRatioOptionShortlist());
+
+    // Legacy: INI AspectRatioOptions (non-libretro adapters / tests). The
+    // legacy identity is the label; mirror it into "value" so the card UI
+    // (which now keys on "value") still works if ever shown.
+    QVariantList list;
     auto opts = adapter->aspectRatioOptions();
     for (const auto& opt : opts.options) {
         QVariantMap item;
         item["label"] = opt.label;
+        item["value"] = opt.label;
         list.append(item);
     }
     return list;
@@ -322,6 +462,16 @@ QString ConfigService::currentAspectRatio(const QString& emuId) const {
     auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
     if (!adapter) return {};
 
+    const QString key = adapter->aspectRatioOptionKey();
+    if (!key.isEmpty())
+        return libretroOptionValue(adapter, key);
+
+    // Frontend-setting path (mGBA/PPSSPP aspect_mode).
+    const QString feKey = adapter->aspectRatioFrontendKey();
+    if (!feKey.isEmpty())
+        return frontendSettingValue(adapter, feKey);
+
+    // Legacy INI path.
     auto opts = adapter->aspectRatioOptions();
     if (opts.options.isEmpty()) return {};
 
@@ -345,15 +495,39 @@ QString ConfigService::currentAspectRatio(const QString& emuId) const {
 void ConfigService::applyQuickAspectRatio(const QVariantMap& choices) {
     for (auto it = choices.constBegin(); it != choices.constEnd(); ++it) {
         const QString& emuId = it.key();
-        const QString label = it.value().toString();
+        const QString value = it.value().toString();
 
         auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
         if (!adapter) continue;
 
+        const QString key = adapter->aspectRatioOptionKey();
+        if (!key.isEmpty()) {
+            writeLibretroOption(adapter, key, value);
+            // Couple widescreen patches/hack to the aspect choice: on for 16:9,
+            // off for anything else (Auto / 4:3 / …).
+            const QString wsKey = adapter->widescreenOptionKey();
+            if (!wsKey.isEmpty()) {
+                const bool wide = (value == QLatin1String("16:9"));
+                writeLibretroOption(adapter, wsKey,
+                                    wide ? adapter->widescreenEnabledValue()
+                                         : adapter->widescreenDisabledValue());
+            }
+            continue;
+        }
+
+        // Frontend-setting path (mGBA/PPSSPP aspect_mode). No widescreen
+        // coupling — these systems have no widescreen-patches option.
+        const QString feKey = adapter->aspectRatioFrontendKey();
+        if (!feKey.isEmpty()) {
+            writeFrontendSetting(adapter, feKey, value);
+            continue;
+        }
+
+        // Legacy INI path (value is the option label).
         auto opts = adapter->aspectRatioOptions();
 
         for (const auto& opt : opts.options) {
-            if (opt.label != label) continue;
+            if (opt.label != value) continue;
 
             // Group patches by file so we load each file once.
             QMap<QString, QVector<IniPatch>> byFile;

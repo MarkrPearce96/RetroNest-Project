@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QPair>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -323,6 +324,47 @@ public:
      * Each option can patch multiple INI keys (e.g. aspect ratio + widescreen patches).
      */
     virtual AspectRatioOptions aspectRatioOptions() const { return {}; }
+
+    /**
+     * Libretro core-option keys the Resolution / Aspect Ratio quick-settings
+     * tabs read & write through the options.json pipeline (OptionsStore +
+     * declared options). Empty = this emulator has no such option, so it's
+     * omitted from that tab. This is the current mechanism; the INI-based
+     * resolutionOptions()/aspectRatioOptions() above are the legacy fallback
+     * for non-libretro adapters (and still drive the setup wizard/install).
+     */
+    virtual QString resolutionOptionKey() const { return {}; }
+    virtual QString aspectRatioOptionKey() const { return {}; }
+
+    /**
+     * Alternative aspect-ratio source for cores with no aspect CORE option
+     * (e.g. mGBA, PPSSPP): the RetroNest FRONTEND setting key (in frontend.json
+     * via frontendSettingsStore, e.g. "aspect_mode"). The quick Aspect Ratio
+     * tab uses this when aspectRatioOptionKey() is empty. Empty = no aspect tab
+     * entry for this emulator.
+     */
+    virtual QString aspectRatioFrontendKey() const { return {}; }
+
+    /**
+     * Optional curated pills for the quick Resolution / Aspect Ratio tab, as
+     * {core-option value, short display label} pairs in display order. The
+     * pill shows the short label (the core's own labels — "Force 16:9", "8x
+     * Native (4K)" — are too long for a pill) while the stored value is the
+     * real core value. Empty = show every declared value with the core's label.
+     * Entries whose value the core doesn't declare are silently skipped.
+     */
+    virtual QVector<QPair<QString, QString>> resolutionOptionShortlist() const { return {}; }
+    virtual QVector<QPair<QString, QString>> aspectRatioOptionShortlist() const { return {}; }
+
+    /**
+     * Optional widescreen-patches/hack core option coupled to the quick Aspect
+     * Ratio tab: enabled when the user picks 16:9, disabled for any other
+     * choice. Empty key = no coupling. On/off values vary by core (e.g.
+     * "true"/"false" vs "enabled"/"disabled").
+     */
+    virtual QString widescreenOptionKey() const { return {}; }
+    virtual QString widescreenEnabledValue() const { return "enabled"; }
+    virtual QString widescreenDisabledValue() const { return "disabled"; }
 
     /**
      * Return available controller types for this emulator.
