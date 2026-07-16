@@ -5,7 +5,7 @@
     "ps2":          { "name": "PlayStation 2",    "screenscraper_id": 58,  "ra_console_id": 21 },
     "psp":          { "name": "PSP",              "screenscraper_id": 61,  "ra_console_id": 41 },
     "nes":          { "name": "Nintendo NES",     "screenscraper_id": 3 },
-    "snes":         { "name": "Super Nintendo",   "screenscraper_id": 4 },
+    "snes":         { "name": "Super Nintendo",   "screenscraper_id": 4,   "ra_console_id": 3 },
     "n64":          { "name": "Nintendo 64",      "screenscraper_id": 14 },
     "gb":           { "name": "Game Boy",         "screenscraper_id": 9,   "ra_console_id": 4 },
     "gbc":          { "name": "Game Boy Color",   "screenscraper_id": 10,  "ra_console_id": 6 },

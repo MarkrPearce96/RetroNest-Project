@@ -92,6 +92,7 @@ add_library(retronest_core STATIC
     src/adapters/libretro/mgba_libretro_adapter.cpp
     src/adapters/libretro/pcsx2_libretro_adapter.cpp
     src/adapters/libretro/ppsspp_libretro_adapter.cpp
+    src/adapters/libretro/snes9x_libretro_adapter.cpp
     # core/libretro/
     src/core/libretro/options_store.cpp
     src/core/libretro/declared_options.cpp
@@ -144,6 +145,7 @@ add_library(retronest_core STATIC
     src/adapters/libretro/mgba_libretro_adapter.h
     src/adapters/libretro/pcsx2_libretro_adapter.h
     src/adapters/libretro/ppsspp_libretro_adapter.h
+    src/adapters/libretro/snes9x_libretro_adapter.h
     src/core/libretro/core_loader.h
     src/core/libretro/core_runtime.h
     src/core/libretro/rcheevos_runtime.h

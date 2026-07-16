@@ -34,14 +34,16 @@ private slots:
     void raConsoleIds() {
         QCOMPARE(SystemRegistry::raConsoleId("ps2"), 21);
         QCOMPARE(SystemRegistry::raConsoleId("wii"), 19);
+        QCOMPARE(SystemRegistry::raConsoleId("snes"), 3);   // Snes9x
         QCOMPARE(SystemRegistry::raConsoleId("nes"), -1);   // system known, no RA id
         QCOMPARE(SystemRegistry::raConsoleId("nosuch"), -1);
     }
-    void allRaConsoleIds_areTheEightSupported() {
+    void allRaConsoleIds_areTheNineSupported() {
         const QList<int> ids = SystemRegistry::allRaConsoleIds();
+        // snes (3) joins the set with the Snes9x adapter.
         QCOMPARE(QSet<int>(ids.begin(), ids.end()),
-                 QSet<int>({4, 5, 6, 12, 16, 19, 21, 41}));
-        QCOMPARE(ids.size(), 8);   // distinct — no dupes
+                 QSet<int>({3, 4, 5, 6, 12, 16, 19, 21, 41}));
+        QCOMPARE(ids.size(), 9);   // distinct — no dupes
     }
     void testAllSystemIdsReturnsEveryEntry() {
         QVERIFY(SystemRegistry::isLoaded());

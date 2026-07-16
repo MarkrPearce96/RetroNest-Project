@@ -1,0 +1,27 @@
+{
+  "manifest_version": 1,
+  "id": "snes9x",
+  "name": "Snes9x",
+  "description": "Super Nintendo (libretro)",
+  "systems": [
+    "snes"
+  ],
+  "github_repo": "MarkrPearce96/snes9x",
+  "executable": "snes9x_libretro.dylib",
+  "install_folder": "libretro",
+  "rom_extensions": [
+    "sfc",
+    "smc",
+    "swc",
+    "fig",
+    "bs",
+    "st",
+    "zip",
+    "7z"
+  ],
+  "launch_args": [],
+  "backend": "libretro",
+  "core_dylib": "snes9x_libretro.dylib",
+  "core_arch": "universal",
+  "logo": "qrc:/AppUI/qml/AppUI/images/snes9x_logo.png"
+}
