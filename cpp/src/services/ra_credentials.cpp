@@ -6,7 +6,6 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
 
 QString RACredentials::filePath() {
     return Paths::configDir() + "/retroachievements.json";
@@ -29,11 +28,6 @@ bool RACredentials::load() {
     soundEffects  = obj["soundEffects"].toBool(true);
     encoreMode    = obj["encoreMode"].toBool(false);
 
-    promptedEmulators.clear();
-    QJsonArray prompted = obj["promptedEmulators"].toArray();
-    for (const auto& val : prompted)
-        promptedEmulators.append(val.toString());
-
     return true;
 }
 
@@ -47,11 +41,6 @@ bool RACredentials::save() const {
     obj["notifications"] = notifications;
     obj["soundEffects"]  = soundEffects;
     obj["encoreMode"]    = encoreMode;
-
-    QJsonArray prompted;
-    for (const auto& emu : promptedEmulators)
-        prompted.append(emu);
-    obj["promptedEmulators"] = prompted;
 
     QString path = filePath();
     QDir().mkpath(QFileInfo(path).absolutePath());
@@ -73,6 +62,5 @@ void RACredentials::clearUser() {
     notifications = true;
     soundEffects = true;
     encoreMode = false;
-    promptedEmulators.clear();
     QFile::remove(filePath());
 }

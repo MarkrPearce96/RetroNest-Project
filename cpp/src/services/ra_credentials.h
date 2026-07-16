@@ -24,7 +24,6 @@ public:
      *  for streaming, testing the toast UI, or replaying favorite
      *  achievement moments. Off by default. */
     bool encoreMode = false;
-    QStringList promptedEmulators;
 
     /** Load from disk. Returns true if file was read (even if empty). */
     bool load();

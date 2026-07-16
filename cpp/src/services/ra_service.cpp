@@ -424,14 +424,6 @@ void RAService::setEncoreMode(bool enabled) {
     m_creds.save();
 }
 
-bool RAService::needsEmulatorLoginPrompt(const QString& emuId) {
-    if (!m_creds.hasCredentials()) return false;
-    if (m_creds.promptedEmulators.contains(emuId)) return false;
-    m_creds.promptedEmulators.append(emuId);
-    m_creds.save();
-    return true;
-}
-
 void RAService::preCacheGameLists() {
     QtConcurrent::run([this]() {
         QList<int> consoleIds = RAClient::allConsoleIds();

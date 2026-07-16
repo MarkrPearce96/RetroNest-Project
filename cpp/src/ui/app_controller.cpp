@@ -322,21 +322,13 @@ void AppController::importRomsFromDir(const QString& dir, const QString& systemF
 }
 
 void AppController::launchGame(int gameId, const QString& romPath, const QString& emuId) {
-    // Check if we need to show a one-time RA login prompt BEFORE launching
+    // Push the RA session settings (hardcore/notifications/sounds) into the
+    // core's runtime before launch. RetroNest owns RA login (Settings / setup
+    // wizard) and passes the token to each session's rc_client directly — there
+    // is no per-emulator login, so no "log in inside the emulator" prompt.
     if (m_raService.hasCredentials()) {
         auto* adapter = AdapterRegistry::instance().adapterFor(emuId);
         if (adapter && adapter->supportsRetroAchievements()) {
-            if (m_raService.needsEmulatorLoginPrompt(emuId)) {
-                auto* manifest = m_loader->emulatorById(emuId);
-                QString name = (manifest && !manifest->name.isEmpty()) ? manifest->name : emuId;
-                // Store pending launch info and show prompt — QML will call launchGame again after dismissal
-                m_pendingLaunchGameId = gameId;
-                m_pendingLaunchRom = romPath;
-                m_pendingLaunchEmu = emuId;
-                emit raEmulatorLoginPrompt(name);
-                return;  // don't launch yet
-            }
-
             adapter->patchRetroAchievements(
                 "", "",
                 true,
@@ -772,17 +764,6 @@ void AppController::raRequestGameIdLookup(const QString& title, const QString& s
     m_raService.requestGameIdLookup(title, system);
 }
 
-void AppController::raProceedAfterLoginPrompt() {
-    if (m_pendingLaunchRom.isEmpty()) return;
-    int gameId  = m_pendingLaunchGameId;
-    QString rom = m_pendingLaunchRom;
-    QString emu = m_pendingLaunchEmu;
-    m_pendingLaunchGameId = 0;
-    m_pendingLaunchRom.clear();
-    m_pendingLaunchEmu.clear();
-    // Re-call launchGame — prompt won't show again (already marked)
-    launchGame(gameId, rom, emu);
-}
 void AppController::raLoginWithPassword(const QString& username, const QString& password) {
     m_raService.loginWithPassword(username, password);
 }

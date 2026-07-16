@@ -231,7 +231,6 @@ public slots:
     Q_INVOKABLE void raRequestGameDetail(int raGameId);
     Q_INVOKABLE void raRequestGameIdLookup(const QString& title, const QString& system = {});
     Q_INVOKABLE QVariantMap currentGameInfo() const;
-    Q_INVOKABLE void raProceedAfterLoginPrompt();
     Q_INVOKABLE bool raHardcoreMode() const;
     Q_INVOKABLE void raSetHardcoreMode(bool enabled);
     Q_INVOKABLE bool raNotifications() const;
@@ -308,7 +307,6 @@ signals:
     void raSignedOut();
     void raLoginTokenChanged();
     void raLoginFailed(const QString& message);
-    void raEmulatorLoginPrompt(const QString& emulatorName);
     void raUserSummaryReady(const QVariantMap& summary);
     void raUserGamesReady(const QVariantList& games);
     void raGameDetailReady(int raGameId, const QVariantMap& detail);
@@ -350,11 +348,6 @@ private:
     RAService m_raService;
     HotkeyService m_hotkeyService;
     ConfigService m_configService;
-
-    // Pending launch (deferred while RA login prompt is shown)
-    int m_pendingLaunchGameId = 0;
-    QString m_pendingLaunchRom;
-    QString m_pendingLaunchEmu;
 
     QString m_statusMessage;
     QString m_currentSystem;

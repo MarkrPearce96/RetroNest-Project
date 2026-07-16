@@ -59,9 +59,6 @@ public:
     bool encoreMode() const;
     void setEncoreMode(bool enabled);
 
-    /** Returns true if this is the first RA-enabled launch for this emulator. Marks it as prompted. */
-    bool needsEmulatorLoginPrompt(const QString& emuId);
-
 public slots:
     /** Called by RcheevosRuntime via queued connection when an in-process
      *  achievement unlocks. Forwards to the achievementUnlocked signal

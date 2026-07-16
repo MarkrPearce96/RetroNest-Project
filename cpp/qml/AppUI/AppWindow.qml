@@ -174,7 +174,6 @@ ApplicationWindow {
     //   gameActionPopup        ✓               ✓           ✗            BaseModalCard; own Esc/Backspace/Back
     //   resumeStateDialog      ✓               ✓           ✗            BaseModalCard; own Esc/Backspace/Back
     //   settingsOverlay        ✓               ✗           ✓            Esc Shortcut MUST fire to drive goBack
-    //   raLoginPrompt          ✓               ✓           ✓            own Esc/Return/Back handler
     //   updateConfirm          ✓               ✓           ✓            own Esc/Backspace/Return handler
     //   updateProgressPopup    ✓               ✓           ✓            modal blocker
     //   updateNotification     ✗               ✗           ✓            clickable toast, not a modal
@@ -193,7 +192,6 @@ ApplicationWindow {
     readonly property bool anyModalVisible:
         gameActionPopup.visible
         || resumeStateDialog.visible
-        || raLoginPrompt.visible
         || updateConfirm.visible
         || updateProgressPopup.visible
         || inputManager.virtualKeyboardOpen
@@ -207,7 +205,6 @@ ApplicationWindow {
     // "unless another overlay still needs it" checks are gone.
     readonly property bool cursorNeeded:
         settingsOverlay.panelOpen
-        || raLoginPrompt.visible
         || updateConfirm.visible
         || updateProgressPopup.visible
         || updateNotification.visible
@@ -421,15 +418,6 @@ ApplicationWindow {
         }
     }
 
-    // RA first-launch login prompt
-    Connections {
-        target: app
-        function onRaEmulatorLoginPrompt(emulatorName) {
-            raLoginPrompt.emulatorName = emulatorName
-            raLoginPrompt.visible = true
-            raLoginPrompt.forceActiveFocus()
-        }
-    }
 
     // RA achievement unlock toast — fires when an in-process libretro
     // core triggers an achievement. Shows a richer top-right card with
@@ -463,97 +451,6 @@ ApplicationWindow {
             // SP3.5: skip for Pattern B HW-render cores — LibretroOverlayPanel handles it.
             if (app.gameUsesHardwareRender()) return;
             raIndicators.dispatch(kind, data)
-        }
-    }
-
-    // RA login prompt dialog
-    Item {
-        id: raLoginPrompt
-        anchors.fill: parent
-        visible: false
-        z: 250
-
-        property string emulatorName: ""
-
-        Rectangle {
-            anchors.fill: parent
-            color: Qt.rgba(0, 0, 0, 0.7)
-            // Scrim swallows clicks AND scroll (see BaseModalCard).
-            MouseArea {
-                anchors.fill: parent
-                onWheel: (wheel) => { wheel.accepted = true }
-            }
-        }
-
-        Rectangle {
-            anchors.centerIn: parent
-            width: 440
-            height: promptCol.height + 48
-            radius: 12
-            color: Qt.rgba(0.12, 0.12, 0.14, 0.95)
-            border.color: Qt.rgba(1, 1, 1, 0.1)
-            border.width: 1
-
-            Column {
-                id: promptCol
-                anchors {
-                    left: parent.left; right: parent.right
-                    top: parent.top; margins: 24
-                }
-                spacing: 12
-
-                Text {
-                    text: "RetroAchievements"
-                    font.pixelSize: 18
-                    font.bold: true
-                    color: "#ffffff"
-                }
-
-                Text {
-                    text: "To earn achievements, log into RetroAchievements in " +
-                          raLoginPrompt.emulatorName + "'s settings.\n\n" +
-                          "Open the emulator's Settings > Achievements and click Login."
-                    color: Qt.rgba(1, 1, 1, 0.6)
-                    font.pixelSize: 14
-                    wrapMode: Text.WordWrap
-                    width: parent.width
-                    lineHeight: 1.3
-                }
-
-                Item { width: 1; height: 4 }
-
-                Rectangle {
-                    width: parent.width
-                    height: 40
-                    radius: 6
-                    color: Qt.rgba(1, 1, 1, 0.15)
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Got it"
-                        color: "#ffffff"
-                        font.pixelSize: 15
-                        font.weight: Font.DemiBold
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            raLoginPrompt.visible = false
-                            app.raProceedAfterLoginPrompt()
-                        }
-                    }
-                }
-            }
-        }
-
-        Keys.onPressed: function(event) {
-            if (event.key === Qt.Key_Return || event.key === Qt.Key_Escape || event.key === Qt.Key_Back) {
-                raLoginPrompt.visible = false
-                app.raProceedAfterLoginPrompt()
-                event.accepted = true
-            }
         }
     }
 
