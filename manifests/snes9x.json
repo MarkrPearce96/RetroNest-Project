@@ -6,7 +6,7 @@
   "systems": [
     "snes"
   ],
-  "github_repo": "MarkrPearce96/snes9x",
+  "github_repo": "MarkrPearce96/snes9x-libretro",
   "executable": "snes9x_libretro.dylib",
   "install_folder": "libretro",
   "rom_extensions": [
