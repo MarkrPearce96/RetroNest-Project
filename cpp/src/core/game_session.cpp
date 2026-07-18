@@ -10,6 +10,7 @@
 #include "core/libretro/video_hardware_gl.h"
 #include "core/libretro/libretro_render_surface.h"
 #include "core/path_overrides_store.h"
+#include "core/platform/dylib_arch.h"
 #include "core/platform/host_arch.h"
 #include "core/sdl_input_manager.h"
 
@@ -83,7 +84,14 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
     // "universal" or undeclared core_arch never warns. Dismissable per
     // session. Reuses the existing generic info toast plumbing →
     // AchievementToast QML.
-    if (!m_slowModeNoticeShown) {
+    //
+    // core_arch describes the DISTRIBUTED artifact; the dylib on disk wins
+    // when the two disagree (native-arm transition: a universal/native core
+    // may be installed ahead of the manifest catching up). Probe the
+    // installed file and skip the advice when it already has our slice.
+    if (!m_slowModeNoticeShown
+        && !DylibArch::fileContainsHostArch(
+               LibretroAdapter::coreDylibPath(manifest))) {
         if (manifest.core_arch == QLatin1String("x86_64") && HostArch::isArm64()) {
             m_slowModeNoticeShown = true;
             emit raInfoToast(

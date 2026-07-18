@@ -174,9 +174,11 @@ public:
         return hardwareRenderBackend() != HardwareRenderBackend::None;
     }
 
-protected:
-    /** Static path: {root}/emulators/libretro/cores/{core_dylib} */
+    /** Static path: {root}/emulators/libretro/cores/{core_dylib}. Public:
+     *  GameSession probes the installed dylib's slices for arch advice. */
     static QString coreDylibPath(const EmulatorManifest& manifest);
+
+protected:
     /** Static path: {root}/emulators/libretro/{coreId}/declared_options.json */
     QString declaredOptionsSidecarPath() const;
     /** Install-path convention {root}/emulators/libretro/cores/{coreId}_libretro.dylib
