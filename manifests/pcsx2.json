@@ -21,7 +21,7 @@
   "launch_args": [],
   "backend": "libretro",
   "core_dylib": "pcsx2_libretro.dylib",
-  "core_arch": "x86_64",
+  "core_arch": "universal",
   "logo": "qrc:/AppUI/qml/AppUI/images/pcsx2_logo.png",
   "detail_page": {
     "has_patches": true
