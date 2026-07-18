@@ -490,11 +490,16 @@ public:
      * override assetMatchRules() instead.
      */
     virtual QString matchAsset(const QStringList& assetNames) const {
+        // Rules outer, assets inner: rule order IS the documented preference
+        // order. (Historically iterated assets outer, which silently made
+        // GitHub's asset listing order the tiebreak — harmless while every
+        // adapter had a single rule per platform, wrong once a preferred
+        // per-arch asset coexists with a fallback.)
         const auto rules = assetMatchRules();
-        for (const auto& name : assetNames) {
-            const QString lower = name.toLower();
-            for (const auto& rule : rules) {
+        for (const auto& rule : rules) {
+            for (const auto& name : assetNames) {
                 if (!name.endsWith(rule.extension)) continue;
+                const QString lower = name.toLower();
                 bool ok = true;
                 for (const auto& s : rule.substrings) {
                     if (!lower.contains(s.toLower())) { ok = false; break; }

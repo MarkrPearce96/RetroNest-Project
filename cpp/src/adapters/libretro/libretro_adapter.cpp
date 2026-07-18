@@ -1,6 +1,7 @@
 #include "libretro_adapter.h"
 #include "core/libretro/core_prober.h"
 #include "core/paths.h"
+#include "core/platform/host_arch.h"
 #include "core/ini_file.h"
 #include "core/setting_def.h"
 #include <QDebug>
@@ -269,12 +270,25 @@ LibretroAdapter::resolveDirectDownload(const EmulatorManifest& manifest) const {
 }
 
 QVector<EmulatorAdapter::AssetMatchRule> LibretroAdapter::assetMatchRules() const {
-    // One macOS asset per fork release, named "<core>_libretro.dylib.zip".
-    // No substring requirement. mGBA has no distribution source at all
-    // (no github_repo / core_buildbot_path — local universal build only),
-    // so it never reaches matchAsset and this rule is inert for it.
+    // Preference order (first rule wins — matchAsset walks rules outer):
+    //   1. arm64 hosts only: a per-arch zip "<core>_libretro-macos-arm64.zip"
+    //      (pcsx2 native-arm transition). Each app slice downloads a core its
+    //      own process can dlopen; HostArch is compile-time per-slice, so the
+    //      Rosetta x86 slice never prefers the arm64 asset.
+    //   2. The historical single asset "<core>_libretro.dylib.zip" (universal
+    //      or x86-only depending on the fork's CI). The per-arch name
+    //      deliberately does NOT end in ".dylib.zip", so x86 hosts can't
+    //      accidentally match the arm64 zip here either.
+    // Forks without a per-arch asset simply never match rule 1. mGBA has no
+    // distribution source at all (no github_repo / core_buildbot_path —
+    // local universal build only), so it never reaches matchAsset.
     // Field order is {substrings, extension} (see EmulatorAdapter::AssetMatchRule).
-    return { AssetMatchRule{ /*substrings*/ {}, /*extension*/ ".dylib.zip" } };
+    QVector<AssetMatchRule> rules;
+    if (HostArch::isArm64())
+        rules.append(AssetMatchRule{ /*substrings*/ {QStringLiteral("-macos-arm64")},
+                                     /*extension*/ ".zip" });
+    rules.append(AssetMatchRule{ /*substrings*/ {}, /*extension*/ ".dylib.zip" });
+    return rules;
 }
 
 QString LibretroAdapter::findResumeFile(const QString& /*serial*/) const {

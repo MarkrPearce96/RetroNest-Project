@@ -636,6 +636,10 @@ add_executable(test_bitmask_helpers tests/test_bitmask_helpers.cpp)
 target_link_libraries(test_bitmask_helpers PRIVATE retronest_core Qt6::Test)
 add_test(NAME BitmaskHelpers COMMAND test_bitmask_helpers)
 
+add_executable(test_asset_match tests/test_asset_match.cpp)
+target_link_libraries(test_asset_match PRIVATE retronest_core Qt6::Test)
+add_test(NAME AssetMatch COMMAND test_asset_match)
+
 add_executable(test_setting_dependency tests/test_setting_dependency.cpp)
 target_link_libraries(test_setting_dependency PRIVATE retronest_core Qt6::Test)
 add_test(NAME SettingDependency COMMAND test_setting_dependency)
