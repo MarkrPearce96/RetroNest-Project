@@ -57,12 +57,20 @@ The user switches between native arm64 and Rosetta x86_64 via Finder →
 Get Info → "Open using Rosetta" on the .app. RetroNest does no auto-
 relaunching; dyld picks the matching dylib slice automatically.
 
-**Arch policy (real, per core — declared as `core_arch` in each manifest):**
-universal everywhere is the goal, but today's truth is per-source:
-- **duckstation** (local package.sh) and **ppsspp** (CI release): universal.
-- **pcsx2** and **dolphin** GitHub releases: **x86_64-only** (pcsx2's CI
-  builds under Rosetta; dolphin mirrors it). Local dolphin deploys via
-  tools/deploy.sh ARE universal — only the downloadable zips aren't.
+**Arch policy — STANDING (2026-07-19): every core ships UNIVERSAL macOS
+builds** (arm64 + x86_64 in one dylib, one zip under the historical asset
+name; `core_arch: universal` in the manifest). Intel, Rosetta, and Apple
+Silicon are all served by the same install — arch-invisible, no per-arch
+flip-flop. New cores and CI changes MUST follow this. Proven CI recipe:
+per-arch build + per-arch dep-bundle (package-core.sh), then pairwise lipo
+of dylib + bundled libs, re-sign, verify (both slices, no Homebrew refs,
+lib-set parity guard) — see dolphin's and pcsx2's libretro_release.yml.
+(A future Windows port ships separate per-platform assets, e.g. win-x86_64.)
+Per-core status:
+- **pcsx2**: universal since v2026.07.19 (arm64 slice = ARMSX2 recompilers,
+  built from the fork's `arm64-merge` branch; x86_64 = upstream recompilers).
+- **dolphin**: universal since v2026.07.18.
+- **duckstation** (local package.sh + private CI) and **ppsspp**: universal.
 - **mgba**: universal, via a PUBLIC CI release (2026-07-10) — like ppsspp.
   `manifests/mgba.json` carries `github_repo: MarkrPearce96/mgba-libretro`
   (public, no `"private"` flag: mGBA is MPL 2.0, redistribution allowed). That
@@ -84,26 +92,24 @@ universal everywhere is the goal, but today's truth is per-source:
   distributed (CC BY-NC-ND preserved). A tag push builds it x86_64-only via
   the fork's `.github/workflows/libretro_release.yml`; local dev still uses
   its `package.sh` (universal). This replaces the former "no github_repo /
-  core never leaves this machine" stance.
-Consequence: while the daily driver is the x86_64 app this all works; a
-return to native arm64 requires pcsx2/dolphin release pipelines to go
-universal first (tracked in the suite review, packet 6/7).
+  core never leaves this machine" stance. NOTE: the private CI still tags
+  x86_64-only zips — bring it under the universal policy on its next release.
 `scripts/verify-universal.sh` checks every core named in manifests/
 against its declared core_arch.
 
-### Current run mode: x86_64 (Rosetta) for everything (as of 2026-06-04)
+### Current run mode: native arm64 preferred (since 2026-07-19)
 
-The daily-driver build is the **x86_64** RetroNest app run under Rosetta —
-**not** the native arm64 `build/`. Reason: PCSX2 only runs well on x86, and
-RetroNest loads libretro cores **in-process**, so one running app is a single
-architecture — every core in a session must match the host arch (you can't run
-an arm64 DuckStation session and an x86_64 PCSX2 session in the same launch).
-Running everything x86 avoids quitting/relaunching to switch emulators.
-DuckStation/PPSSPP run fine under Rosetta (Metal/GPU is native; only CPU is
-translated).
+With every shipping core universal, the **native arm64 `cpp/build/` app is
+the preferred build** — PS2 (ARMSX2 recompilers) and Dolphin verified
+running natively in it. RetroNest loads cores **in-process**, so one running
+app is a single architecture; with universal cores both app builds work from
+the same installs, so switching apps is per-launch, not per-install.
+Remaining Rosetta uses: N64 is paused pending its native-arm unpause, and
+the x86_64 app stays a working fallback until Rosetta retirement. Dolphin
+(and x86-PCSX2 ↔ ARMSX2) save STATES are arch-sensitive; in-game saves port.
 
-Build + run the x86 app directly (skip the full `build-universal.sh`, which
-also rebuilds PCSX2/mGBA cores):
+Fallback: build + run the x86 app directly (skip the full
+`build-universal.sh`, which also rebuilds PCSX2/mGBA cores):
 ```sh
 arch -x86_64 /usr/local/bin/cmake -S cpp -B cpp/build-x86_64 \
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
