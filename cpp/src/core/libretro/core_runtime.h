@@ -47,6 +47,7 @@ public:
         bool raHardcore = false;
         bool raEncore = false;   // see LibretroRaConfig::encore
         QHash<QString, QString> schemaOptionDefaults;  // {libretro_key → adapter schema default}
+        bool glFlipPresentY = false;  // GL cores: flip the present→IOSurface blit (see LibretroAdapter::glPresentFlipY)
     };
 
     explicit CoreRuntime(QObject* parent = nullptr);

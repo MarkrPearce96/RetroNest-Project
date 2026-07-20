@@ -166,6 +166,7 @@ bool GameSession::startLibretro(const EmulatorManifest& manifest,
 
     CoreRuntime::StartConfig cfg;
     cfg.emuId    = manifest.id;
+    cfg.glFlipPresentY = lr->glPresentFlipY();
     cfg.corePath = lr->resolveExecutable(manifest, Paths::emulatorsDir(manifest.install_folder));
     cfg.romPath = romPath;
     // System dir: shared bios/ by default, unless the adapter ships its

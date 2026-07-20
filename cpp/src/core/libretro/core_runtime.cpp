@@ -781,6 +781,7 @@ bool CoreRuntime::installHwRender(retro_hw_render_callback* cb) {
     if (!m_videoHW) {
         m_videoHW = std::make_unique<VideoHardwareGL>();
     }
+    m_videoHW->setFlipBlit(m_cfg.glFlipPresentY);
     if (!m_videoHW->init(cb->version_major, cb->version_minor)) {
         qCritical("[CoreRuntime] installHwRender: VideoHardwareGL::init() failed; "
                   "dropping HW context and falling back to software path");

@@ -62,6 +62,7 @@ struct VideoHardwareGL::Impl {
     GLuint               presentFbo   = 0;
     GLuint               presentTex   = 0;   // GL_TEXTURE_2D color attachment
     GLuint               presentDepth = 0;   // 0 when fboHasDepth==false
+    bool                 flipBlit     = false; // per-core present orientation
 };
 
 VideoHardwareGL::VideoHardwareGL(QObject* parent)
@@ -425,16 +426,26 @@ void VideoHardwareGL::submitFrame(int width, int height) {
         const int w = m_impl->fboWidth, h = m_impl->fboHeight;
         glBindFramebuffer(GL_READ_FRAMEBUFFER, m_impl->presentFbo);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_impl->fboId);
-        // 1:1 copy — same orientation the core wrote, so the existing
-        // MirrorVertically compositing stays correct.
-        glBlitFramebuffer(0, 0, w, h, 0, 0, w, h,
-                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        // Per-core orientation: GLideN64 (N64) presents top-down relative to
+        // the compositor's MirrorVertically convention and needs a flipped
+        // blit; PPSSPP presents bottom-up and needs the 1:1 copy. Driven by
+        // LibretroAdapter::glPresentFlipY via StartConfig.
+        if (m_impl->flipBlit)
+            glBlitFramebuffer(0, 0, w, h, 0, h, w, 0,
+                              GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        else
+            glBlitFramebuffer(0, 0, w, h, 0, 0, w, h,
+                              GL_COLOR_BUFFER_BIT, GL_NEAREST);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)prevRead);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)prevDraw);
     }
 
     glFlush();
     emit frameReady(width, height);
+}
+
+void VideoHardwareGL::setFlipBlit(bool flip) {
+    m_impl->flipBlit = flip;
 }
 
 bool VideoHardwareGL::isReady() const {

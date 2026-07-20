@@ -35,6 +35,12 @@ public:
         return HardwareRenderBackend::GL;
     }
 
+    // GLideN64's present writes the frame top-down relative to the
+    // compositor's MirrorVertically convention (empirically verified;
+    // core-side invertY does not affect the libretro present path), so the
+    // present→IOSurface blit must flip. PPSSPP keeps the base 1:1 blit.
+    bool glPresentFlipY() const override { return true; }
+
     // GameSession writes "<basename>.resume" under the n64 savestates dir;
     // locate it at next launch (mirrors the other libretro adapters).
     QString findResumeFile(const QString& serial) const override;
