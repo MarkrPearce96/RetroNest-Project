@@ -18,6 +18,6 @@
   "launch_args": [],
   "backend": "libretro",
   "core_dylib": "mupen64plus_next_libretro.dylib",
-  "core_arch": "x86_64",
+  "core_arch": "universal",
   "logo": "qrc:/AppUI/qml/AppUI/images/mupen64plus_logo.png"
 }
