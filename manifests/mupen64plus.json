@@ -13,9 +13,7 @@
     "z64",
     "n64",
     "v64",
-    "bin",
-    "zip",
-    "7z"
+    "bin"
   ],
   "launch_args": [],
   "backend": "libretro",

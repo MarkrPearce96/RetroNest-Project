@@ -440,7 +440,13 @@ void CoreRuntime::runLoop() {
     // them reject the game ("failed to load ROM", is_valid_rom on 0 bytes).
     // info.path stays set regardless: cores use it for sidecar files (N64 .ndd
     // disk / .gb transfer-pak) and save-file naming. romData must outlive the
-    // retro_load_game call below.
+    // retro_load_game call below — and only that call: every shipped
+    // need_fullpath=false core (mupen64plus-next, snes9x, mGBA) copies the
+    // buffer synchronously inside retro_load_game, and RetroNest does not
+    // implement SET_CONTENT_INFO_OVERRIDE (so no core can claim
+    // persistent_data). It is released right after the call to avoid holding
+    // a full ROM image in memory for the whole session. Re-verify the
+    // copy-on-load property when adding a new need_fullpath=false core.
     QByteArray romData;
     {
         retro_system_info sysinfo{};
@@ -459,7 +465,12 @@ void CoreRuntime::runLoop() {
             info.size = static_cast<size_t>(romData.size());
         }
     }
-    if (!s.retro_load_game(&info)) {
+    const bool loadOk = s.retro_load_game(&info);
+    info.data = nullptr;
+    info.size = 0;
+    romData.clear();
+    romData.squeeze();
+    if (!loadOk) {
         emit errorOccurred("retro_load_game failed");
         s.retro_deinit();
         emit finished(true);
@@ -781,7 +792,6 @@ bool CoreRuntime::installHwRender(retro_hw_render_callback* cb) {
     if (!m_videoHW) {
         m_videoHW = std::make_unique<VideoHardwareGL>();
     }
-    m_videoHW->setFlipBlit(m_cfg.glFlipPresentY);
     if (!m_videoHW->init(cb->version_major, cb->version_minor)) {
         qCritical("[CoreRuntime] installHwRender: VideoHardwareGL::init() failed; "
                   "dropping HW context and falling back to software path");

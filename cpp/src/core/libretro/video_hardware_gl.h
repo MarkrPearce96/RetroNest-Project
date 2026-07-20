@@ -69,11 +69,6 @@ public:
     // when data == RETRO_HW_FRAME_BUFFER_VALID. Triggers frameReady.
     void submitFrame(int width, int height);
 
-    // Per-core present orientation: when true, submitFrame's
-    // present→IOSurface blit flips vertically (GLideN64/N64). See
-    // LibretroAdapter::glPresentFlipY.
-    void setFlipBlit(bool flip);
-
     // Did init() complete successfully?
     bool isReady() const;
 

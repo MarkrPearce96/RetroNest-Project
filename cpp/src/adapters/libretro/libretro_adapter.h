@@ -165,12 +165,6 @@ public:
         return HardwareRenderBackend::None;
     }
 
-    /** GL backend only: true when the core's present writes the frame
-     *  top-down relative to the compositor's bottom-left-origin convention,
-     *  so the present→IOSurface blit must flip vertically. GLideN64 (N64)
-     *  needs this; PPSSPP does not. */
-    virtual bool glPresentFlipY() const { return false; }
-
     /**
      * Convenience predicate retained for callers that only need to know
      * whether the core wants ANY HW context. Returns true unless the

@@ -1,10 +1,11 @@
 #pragma once
 #include "libretro_adapter.h"
 
-// Mupen64Plus-Next — stock upstream N64 libretro core (GLideN64 GL render +
-// HLE RSP + x64 recompiler). Built x86_64-only (recompiler runs under Rosetta
-// with RetroNest's allow-jit entitlement, like pcsx2/dolphin), so the manifest
-// declares core_arch "x86_64". No BIOS.
+// Mupen64Plus-Next — N64 libretro core from the fork
+// MarkrPearce96/mupen64plus-libretro-nx (GLideN64 GL render + HLE RSP +
+// new_dynarec recompilers: aarch64 native on Apple Silicon, x86_64 under
+// Rosetta). Ships UNIVERSAL per the standing arch policy; the manifest's
+// core_arch must be "universal" once the universal CI release is live. No BIOS.
 //
 // N64 is NOT a RetroPad reference layout: the core's default descriptor maps
 // RetroPad slots onto N64 buttons in a fixed non-1:1 way (A→JOYPAD_B,
@@ -34,12 +35,6 @@ public:
     HardwareRenderBackend hardwareRenderBackend() const override {
         return HardwareRenderBackend::GL;
     }
-
-    // GLideN64's present writes the frame top-down relative to the
-    // compositor's MirrorVertically convention (empirically verified;
-    // core-side invertY does not affect the libretro present path), so the
-    // present→IOSurface blit must flip. PPSSPP keeps the base 1:1 blit.
-    bool glPresentFlipY() const override { return true; }
 
     // GameSession writes "<basename>.resume" under the n64 savestates dir;
     // locate it at next launch (mirrors the other libretro adapters).
