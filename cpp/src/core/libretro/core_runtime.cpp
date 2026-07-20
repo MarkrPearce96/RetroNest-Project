@@ -432,6 +432,33 @@ void CoreRuntime::runLoop() {
     info.path = romPathBytes.constData();
     info.data = nullptr;
     info.size = 0;
+
+    // Honor the core's need_fullpath contract. Most RetroNest cores set
+    // need_fullpath=true and read the ROM from info.path themselves. But some
+    // (mupen64plus-next) set need_fullpath=false and require the ROM loaded
+    // into memory via info.data/info.size — passing a null data pointer makes
+    // them reject the game ("failed to load ROM", is_valid_rom on 0 bytes).
+    // info.path stays set regardless: cores use it for sidecar files (N64 .ndd
+    // disk / .gb transfer-pak) and save-file naming. romData must outlive the
+    // retro_load_game call below.
+    QByteArray romData;
+    {
+        retro_system_info sysinfo{};
+        s.retro_get_system_info(&sysinfo);
+        if (!sysinfo.need_fullpath) {
+            QFile romFile(m_cfg.romPath);
+            if (!romFile.open(QIODevice::ReadOnly)) {
+                emit errorOccurred("failed to open ROM for in-memory load");
+                s.retro_deinit();
+                emit finished(true);
+                g_current = nullptr;
+                return;
+            }
+            romData = romFile.readAll();
+            info.data = romData.constData();
+            info.size = static_cast<size_t>(romData.size());
+        }
+    }
     if (!s.retro_load_game(&info)) {
         emit errorOccurred("retro_load_game failed");
         s.retro_deinit();
@@ -754,7 +781,7 @@ bool CoreRuntime::installHwRender(retro_hw_render_callback* cb) {
     if (!m_videoHW) {
         m_videoHW = std::make_unique<VideoHardwareGL>();
     }
-    if (!m_videoHW->init()) {
+    if (!m_videoHW->init(cb->version_major, cb->version_minor)) {
         qCritical("[CoreRuntime] installHwRender: VideoHardwareGL::init() failed; "
                   "dropping HW context and falling back to software path");
         m_videoHW.reset();

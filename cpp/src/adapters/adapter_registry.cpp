@@ -5,6 +5,7 @@
 #include "libretro/pcsx2_libretro_adapter.h"
 #include "libretro/ppsspp_libretro_adapter.h"
 #include "libretro/snes9x_libretro_adapter.h"
+#include "libretro/mupen64plus_libretro_adapter.h"
 
 #include <QDebug>
 
@@ -20,6 +21,7 @@ void AdapterRegistry::registerBuiltinAdapters() {
     registerAdapter("mgba", std::make_unique<MgbaLibretroAdapter>());
     registerAdapter("pcsx2", std::make_unique<Pcsx2LibretroAdapter>());
     registerAdapter("snes9x", std::make_unique<Snes9xLibretroAdapter>());
+    registerAdapter("mupen64plus", std::make_unique<Mupen64PlusLibretroAdapter>());
 }
 
 void AdapterRegistry::registerAdapter(const QString& id, std::unique_ptr<EmulatorAdapter> adapter) {

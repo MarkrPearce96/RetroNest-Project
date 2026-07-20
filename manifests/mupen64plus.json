@@ -1,0 +1,25 @@
+{
+  "manifest_version": 1,
+  "id": "mupen64plus",
+  "name": "Mupen64Plus",
+  "description": "Nintendo 64 (libretro)",
+  "systems": [
+    "n64"
+  ],
+  "github_repo": "MarkrPearce96/mupen64plus-libretro-nx",
+  "executable": "mupen64plus_next_libretro.dylib",
+  "install_folder": "libretro",
+  "rom_extensions": [
+    "z64",
+    "n64",
+    "v64",
+    "bin",
+    "zip",
+    "7z"
+  ],
+  "launch_args": [],
+  "backend": "libretro",
+  "core_dylib": "mupen64plus_next_libretro.dylib",
+  "core_arch": "x86_64",
+  "logo": "qrc:/AppUI/qml/AppUI/images/mupen64plus_logo.png"
+}

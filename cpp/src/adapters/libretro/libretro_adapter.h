@@ -181,9 +181,15 @@ public:
 protected:
     /** Static path: {root}/emulators/libretro/{coreId}/declared_options.json */
     QString declaredOptionsSidecarPath() const;
-    /** Install-path convention {root}/emulators/libretro/cores/{coreId}_libretro.dylib
-     *  (matches every manifest's core_dylib) — used by the prober fallback. */
+    /** Install path {root}/emulators/libretro/cores/{coreDylibFileName()} —
+     *  used by the prober fallback (no manifest in scope here). */
     QString coreDylibInstallPath() const;
+    /** The installed core dylib's filename. Defaults to the
+     *  `{coreId}_libretro.dylib` convention every core follows EXCEPT ones
+     *  whose upstream dylib stem differs from their coreId (mupen64plus →
+     *  mupen64plus_next_libretro.dylib); those override this to match the
+     *  manifest's core_dylib. */
+    virtual QString coreDylibFileName() const { return coreId() + "_libretro.dylib"; }
     /** Static path: {root}/emulators/libretro/{coreId}/options.json */
     QString optionsJsonPath() const;
     /** Static path: {root}/emulators/libretro/{coreId}/controls.ini */
