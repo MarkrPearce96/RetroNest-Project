@@ -66,6 +66,16 @@ public:
     /** Per-frame tick. Cheap when no session is active or RA is disabled. */
     void frame();
 
+    /** True once rc_libretro memory regions resolved (achievements can read
+     *  guest memory). */
+    bool memoryReady() const { return m_regionsInited; }
+    /** Retry rc_libretro_memory_init with a (late-arriving) memory map.
+     *  Some cores publish SET_MEMORY_MAPS only after emulation starts
+     *  (mupen64plus-next), i.e. after beginSession's attempt failed — the
+     *  run loop calls this when a new map generation appears. Core-thread
+     *  only (same thread as frame()). */
+    void retryMemoryInit(const retro_memory_map* map);
+
     /** Propagate pref changes from the settings UI into the live rc_client. */
     void setHardcore(bool on);
     void setEnabled(bool on);

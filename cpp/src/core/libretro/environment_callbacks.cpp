@@ -326,8 +326,10 @@ bool environmentDispatch(EnvironmentContext* ctx, unsigned cmd, void* data) {
             ctx->memoryMap.num_descriptors =
                 static_cast<unsigned>(ctx->memoryDescriptors.size());
             ctx->memoryMapSet = true;
+            ctx->memoryMapGeneration++;
             qInfo() << "[libretro/env] SET_MEMORY_MAPS captured"
-                    << ctx->memoryDescriptors.size() << "descriptors";
+                    << ctx->memoryDescriptors.size() << "descriptors (gen"
+                    << ctx->memoryMapGeneration << ")";
             return true;
         }
         default: {

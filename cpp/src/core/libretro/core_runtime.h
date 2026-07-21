@@ -231,6 +231,9 @@ private:
     InputRouter m_input;
     OptionsStore m_options;
     RcheevosRuntime m_rcheevos;
+    // Last SET_MEMORY_MAPS generation for which a late rcheevos memory-init
+    // retry was attempted (see the run loop). Reset at session start.
+    int m_memMapGenTried = 0;
 
     QThread* m_thread = nullptr;
     std::atomic<bool> m_stopRequested{false};

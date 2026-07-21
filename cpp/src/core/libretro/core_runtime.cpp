@@ -548,6 +548,9 @@ void CoreRuntime::runLoop() {
     // like mGBA where IWRAM and EWRAM are non-contiguous).
     const retro_memory_map* mmap =
         m_envCtx.memoryMapSet ? &m_envCtx.memoryMap : nullptr;
+    // The generation consumed here is "already tried" — the run loop only
+    // retries memory init for generations captured after this point.
+    m_memMapGenTried = m_envCtx.memoryMapGeneration;
     m_rcheevos.beginSession(s, m_cfg.romPath, QString::fromUtf8(m_envCtx.raHash),
                             m_cfg.raConsoleId,
                             m_cfg.raUsername, m_cfg.raToken, m_cfg.raHardcore,
@@ -589,6 +592,15 @@ void CoreRuntime::runLoop() {
             frame_start = clock::now();
             s.retro_run();
             frame_end = clock::now();
+            // Some cores publish SET_MEMORY_MAPS only after emulation starts
+            // (mupen64plus-next sends it on execute, AFTER beginSession's
+            // memory-init attempt). Retry once per new map generation so
+            // achievements can resolve guest memory.
+            if (!m_rcheevos.memoryReady() && m_envCtx.memoryMapSet &&
+                m_envCtx.memoryMapGeneration != m_memMapGenTried) {
+                m_memMapGenTried = m_envCtx.memoryMapGeneration;
+                m_rcheevos.retryMemoryInit(&m_envCtx.memoryMap);
+            }
             m_rcheevos.frame();
             flushPendingSaveState(s);
         }

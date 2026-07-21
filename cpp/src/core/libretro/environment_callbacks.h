@@ -56,6 +56,11 @@ struct EnvironmentContext {
     QVector<QByteArray> memoryAddrspaces;   // backing storage for descriptor.addrspace
     retro_memory_map memoryMap{};            // points into memoryDescriptors
     bool memoryMapSet = false;
+    // Bumped on every SET_MEMORY_MAPS capture. Some cores publish their map
+    // only after emulation starts (mupen64plus-next sends it from the emu
+    // thread on execute), i.e. AFTER the rcheevos session began — the run
+    // loop watches this generation to retry rc_libretro_memory_init.
+    int memoryMapGeneration = 0;
 
     // Captured from RETRONEST_ENVIRONMENT_SET_GAME_IDENTITY: the game's RA hash
     // and serial, computed by the core via DiscIO (works for RVZ). raHash drives

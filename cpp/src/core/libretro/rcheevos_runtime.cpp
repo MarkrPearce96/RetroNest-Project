@@ -490,6 +490,20 @@ void RcheevosRuntime::frame() {
     if (m_client && m_inSession) rc_client_do_frame(m_client);
 }
 
+void RcheevosRuntime::retryMemoryInit(const retro_memory_map* map) {
+    if (m_regionsInited || !map || !g_syms) return;
+    if (rc_libretro_memory_init(&m_regions, map,
+                                 rcheevos_get_core_memory_info,
+                                 static_cast<uint32_t>(m_pendingConsoleId))) {
+        m_regionsInited = true;
+        qInfo() << "[rcheevos] memory regions initialized on retry (console"
+                << m_pendingConsoleId << ") — achievements can now unlock.";
+    } else {
+        qWarning() << "[rcheevos] memory-init retry failed for console"
+                   << m_pendingConsoleId;
+    }
+}
+
 void RcheevosRuntime::setHardcore(bool on) {
     if (m_client)
         rc_client_set_hardcore_enabled(m_client, on ? 1 : 0);
