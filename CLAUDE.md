@@ -97,52 +97,33 @@ Per-core status:
 `scripts/verify-universal.sh` checks every core named in manifests/
 against its declared core_arch.
 
-### Current run mode: native arm64 preferred (since 2026-07-19)
+### Current run mode: native arm64 — Rosetta retired (2026-07-21)
 
-With every shipping core universal, the **native arm64 `cpp/build/` app is
-the preferred build** — PS2 (ARMSX2 recompilers) and Dolphin verified
-running natively in it. RetroNest loads cores **in-process**, so one running
-app is a single architecture; with universal cores both app builds work from
-the same installs, so switching apps is per-launch, not per-install.
-Remaining Rosetta uses: N64 is paused pending its native-arm unpause, and
-the x86_64 app stays a working fallback until Rosetta retirement. Dolphin
-(and x86-PCSX2 ↔ ARMSX2) save STATES are arch-sensitive; in-game saves port.
-
-Fallback: build + run the x86 app directly (skip the full
-`build-universal.sh`, which also rebuilds PCSX2/mGBA cores):
-```sh
-arch -x86_64 /usr/local/bin/cmake -S cpp -B cpp/build-x86_64 \
-    -DCMAKE_OSX_ARCHITECTURES=x86_64 \
-    -DCMAKE_PREFIX_PATH="/usr/local/opt/qt;/usr/local/opt/sdl2"
-arch -x86_64 /usr/local/bin/cmake --build cpp/build-x86_64 -j 6
-# FIRST deploy of a fresh build dir only — after that a POST_BUILD hook
-# re-runs macdeployqt automatically whenever the app binary relinks:
-arch -x86_64 /usr/local/opt/qt/bin/macdeployqt cpp/build-x86_64/RetroNest.app \
-    -qmldir=cpp/qml -no-codesign -always-overwrite
-# pure-x86 binary → auto-runs under Rosetta, no Finder toggle:
-cpp/build-x86_64/RetroNest.app/Contents/MacOS/RetroNest > /tmp/rn.log 2>&1
-```
-- Building the default `all` is fine (shared sources live in the
-  `retronest_core`/`retronest_ui` static libraries — tests no longer carry
-  hand-copied source lists). Run the suite after building:
-  `arch -x86_64 /usr/local/bin/ctest --test-dir cpp/build-x86_64 --output-on-failure`.
-  CI (`.github/workflows/tests.yml`) runs the same suite natively on arm64
-  for every push/PR to main.
+The **native arm64 `cpp/build/` app is THE build**. Every shipping core is
+universal (N64 included since its v2026.07.21 release — the last holdout),
+and all seven emulators are verified running natively. The x86_64 fallback
+app workflow is RETIRED: `cpp/build-x86_64/` was deleted 2026-07-21; if an
+x86 app is ever needed again, `scripts/build-universal.sh` regenerates it
+(and the direct-build recipe lives in git history of this file). RetroNest
+loads cores **in-process**, so one running app is a single architecture;
+universal cores make installs arch-invisible regardless.
+- Run the suite after building: `ctest --test-dir cpp/build
+  --output-on-failure`. CI (`.github/workflows/tests.yml`) runs the same
+  suite natively on arm64 for every push/PR to main.
 - **macdeployqt is self-maintaining**: once a bundle has been deployed once,
-  every relink re-runs it via a POST_BUILD hook (takes a few minutes under
-  Rosetta — that's the hook working, not a hang). The old failure mode
+  every relink re-runs it via a POST_BUILD hook. The old failure mode
   (incremental rebuild → Qt double-load abort at launch) is gone.
 - The DuckStation libretro core must be **universal**: build via its
   `package.sh` with **no** `--arm64-only` flag.
 - **Dolphin save states are arch-sensitive** — states made under arm64 won't
-  load under x86_64 (PCSX2/PPSSPP/DuckStation states do carry over). Make fresh
-  Dolphin states after the switch.
-- **Future:** when PCSX2 is arm64-native, switch back to the native arm64
-  `build/` and this Rosetta detour goes away.
-- **x86_64 builds of the core forks** (pcsx2/dolphin build dirs) must use
-  `arch -x86_64 /usr/local/bin/cmake` — bare `arch -x86_64 cmake` resolves to
-  the arm64 Homebrew cmake and dies with "Bad CPU type" (and if you pipe the
-  build output, the failure is silently masked by the pipe's exit status).
+  load under x86_64 (PCSX2/PPSSPP/DuckStation states do carry over).
+- **x86_64 builds of the core forks** (pcsx2/dolphin build dirs, CI-mirrored
+  local slices) must use `arch -x86_64 /usr/local/bin/cmake` — bare
+  `arch -x86_64 cmake` resolves to the arm64 Homebrew cmake and dies with
+  "Bad CPU type" (and if you pipe the build output, the failure is silently
+  masked by the pipe's exit status). The x86_64 Homebrew toolchain at
+  `/usr/local` stays installed — CI recipes and local core-slice builds
+  (e.g. mupen's nasm) depend on it.
 
 ## Architecture
 - **retronest-libretro contract package** (`vendor/retronest-libretro/`) =
