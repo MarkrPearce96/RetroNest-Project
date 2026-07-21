@@ -52,7 +52,7 @@ QString LibretroAdapter::declaredOptionsSidecarPath() const {
 }
 
 QString LibretroAdapter::coreDylibInstallPath() const {
-    return Paths::emulatorsDir("libretro") + "/cores/" + coreId() + "_libretro.dylib";
+    return Paths::emulatorsDir("libretro") + "/cores/" + coreDylibFileName();
 }
 
 const DeclaredOptionsDoc* LibretroAdapter::declaredOptions() const {

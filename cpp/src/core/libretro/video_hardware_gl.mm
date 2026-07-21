@@ -49,6 +49,19 @@ struct VideoHardwareGL::Impl {
     GLuint               colorTex   = 0;   // GL_TEXTURE_RECTANGLE bound to ioSurface
     GLuint               depthRbo   = 0;   // 0 when fboHasDepth==false
     IOSurfaceRef         ioSurface  = nullptr;   // CoreFoundation refcount, not ARC
+    // Intermediate present FBO: the core renders into THIS (a plain
+    // GL_TEXTURE_2D-attachment FBO), and submitFrame glBlitFramebuffers it
+    // into fboId (the IOSurface's GL_TEXTURE_RECTANGLE FBO). Rationale:
+    // GLideN64's copy-shader present draw raises GL_INVALID_OPERATION when
+    // the bound draw framebuffer's color attachment is a RECTANGLE texture
+    // (macOS core profile); rendering into a 2D FBO and blitting sidesteps
+    // it (glBlitFramebuffer to a rectangle attachment is legal). The
+    // rectangle FBO thus becomes a blit destination only, never a draw
+    // target. get_current_framebuffer returns presentFbo; the IOSurface
+    // still receives every frame via the blit.
+    GLuint               presentFbo   = 0;
+    GLuint               presentTex   = 0;   // GL_TEXTURE_2D color attachment
+    GLuint               presentDepth = 0;   // 0 when fboHasDepth==false
 };
 
 VideoHardwareGL::VideoHardwareGL(QObject* parent)
@@ -61,8 +74,17 @@ VideoHardwareGL::~VideoHardwareGL() {
     shutdown();
 }
 
-bool VideoHardwareGL::init() {
+bool VideoHardwareGL::init(unsigned reqMajor, unsigned reqMinor) {
     if (m_impl->initialised) return true;
+
+    // macOS has exactly two Core profiles: 3.2 and 4.1. Pick 4.1 Core when the
+    // core asks for anything past 3.2 (GLideN64 requests 3.3 and compiles GLSL
+    // #version 330 shaders, impossible on a 3.2 Core context → black screen);
+    // otherwise keep 3.2 Core (PPSSPP). 4.1 Core is a strict superset, so the
+    // higher context never regresses a ≤3.2 core.
+    const bool useGL41 = (reqMajor > 3) || (reqMajor == 3 && reqMinor > 2);
+    const NSOpenGLPixelFormatAttribute glProfile =
+        useGL41 ? NSOpenGLProfileVersion4_1Core : NSOpenGLProfileVersion3_2Core;
 
     // Pixel format mirrors RetroArch's cocoa_gl_ctx.m:399-409 — the
     // exact attribute set that ships in their production buildbot core.
@@ -75,15 +97,16 @@ bool VideoHardwareGL::init() {
     //   (relevant on multi-GPU macs).
     // - DepthSize 16: PPSSPP observed request has depth=1; 16 bits is
     //   sufficient for PSP-accuracy depth tests.
-    // - OpenGLProfile Version3_2Core: PPSSPP requests OPENGL_CORE 3.1.
-    //   macOS only ships 3.2 Core (no 3.1 Core); 3.2 is a strict
-    //   superset so PPSSPP's resolution succeeds.
+    // - OpenGLProfile: 3.2 Core for cores that ask for ≤3.2 (PPSSPP requests
+    //   OPENGL_CORE 3.1; macOS has no 3.1 Core, and 3.2 is a strict superset);
+    //   4.1 Core for cores that ask past 3.2 (GLideN64 → GLSL 330). Selected
+    //   above from the core's SET_HW_RENDER version.
     NSOpenGLPixelFormatAttribute attributes[] = {
         NSOpenGLPFAColorSize,            24,
         NSOpenGLPFADoubleBuffer,
         NSOpenGLPFAAllowOfflineRenderers,
         NSOpenGLPFADepthSize,            16,
-        NSOpenGLPFAOpenGLProfile,        NSOpenGLProfileVersion3_2Core,
+        NSOpenGLPFAOpenGLProfile,        glProfile,
         0
     };
     m_impl->pixelFormat =
@@ -137,7 +160,7 @@ bool VideoHardwareGL::init() {
     }
     s_activeInstance = this;
     qInfo("[VideoHardwareGL] init OK — pixel format + 2 shared NSOpenGLContexts "
-          "(GL 3.2 Core, depth=16)");
+          "(GL %s Core, depth=16)", useGL41 ? "4.1" : "3.2");
     return true;
 }
 
@@ -147,11 +170,15 @@ void VideoHardwareGL::shutdown() {
     // Tear down FBO + attachments on the HW context (same one that
     // allocated them — FBO IDs are per-context). Without makeCurrent
     // the driver leaks the handles.
-    if (m_impl->fboId || m_impl->colorTex || m_impl->depthRbo) {
+    if (m_impl->fboId || m_impl->colorTex || m_impl->depthRbo ||
+        m_impl->presentFbo || m_impl->presentTex || m_impl->presentDepth) {
         [m_impl->hwCtx makeCurrentContext];
         if (m_impl->fboId)    { glDeleteFramebuffers(1, &m_impl->fboId);   m_impl->fboId   = 0; }
         if (m_impl->colorTex) { glDeleteTextures(1, &m_impl->colorTex);    m_impl->colorTex = 0; }
         if (m_impl->depthRbo) { glDeleteRenderbuffers(1, &m_impl->depthRbo); m_impl->depthRbo = 0; }
+        if (m_impl->presentFbo)   { glDeleteFramebuffers(1, &m_impl->presentFbo);    m_impl->presentFbo   = 0; }
+        if (m_impl->presentTex)   { glDeleteTextures(1, &m_impl->presentTex);        m_impl->presentTex   = 0; }
+        if (m_impl->presentDepth) { glDeleteRenderbuffers(1, &m_impl->presentDepth); m_impl->presentDepth = 0; }
         [NSOpenGLContext clearCurrentContext];
     }
     if (m_impl->ioSurface) {
@@ -291,13 +318,59 @@ bool VideoHardwareGL::allocateFbo(int width, int height, bool depth) {
         return false;
     }
 
+    // 5) Intermediate present FBO (plain GL_TEXTURE_2D color) that the core
+    // actually renders into — see the Impl comment. Same size + depth as the
+    // IOSurface FBO so it is a drop-in default framebuffer for the core.
+    if (m_impl->presentTex)   { glDeleteTextures(1, &m_impl->presentTex);        m_impl->presentTex   = 0; }
+    if (m_impl->presentDepth) { glDeleteRenderbuffers(1, &m_impl->presentDepth); m_impl->presentDepth = 0; }
+    if (m_impl->presentFbo)   { glDeleteFramebuffers(1, &m_impl->presentFbo);    m_impl->presentFbo   = 0; }
+    glGenTextures(1, &m_impl->presentTex);
+    glBindTexture(GL_TEXTURE_2D, m_impl->presentTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+                 GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    if (depth) {
+        glGenRenderbuffers(1, &m_impl->presentDepth);
+        glBindRenderbuffer(GL_RENDERBUFFER, m_impl->presentDepth);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    }
+    glGenFramebuffers(1, &m_impl->presentFbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_impl->presentFbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D, m_impl->presentTex, 0);
+    if (depth) {
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                  GL_RENDERBUFFER, m_impl->presentDepth);
+    }
+    const GLenum presentStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (presentStatus != GL_FRAMEBUFFER_COMPLETE) {
+        qCritical("[VideoHardwareGL] present FBO incomplete: status=0x%X", presentStatus);
+        glDeleteFramebuffers(1, &m_impl->presentFbo);    m_impl->presentFbo   = 0;
+        if (m_impl->presentDepth) { glDeleteRenderbuffers(1, &m_impl->presentDepth); m_impl->presentDepth = 0; }
+        glDeleteTextures(1, &m_impl->presentTex);        m_impl->presentTex   = 0;
+        glDeleteFramebuffers(1, &m_impl->fboId);         m_impl->fboId    = 0;
+        if (m_impl->depthRbo) { glDeleteRenderbuffers(1, &m_impl->depthRbo); m_impl->depthRbo = 0; }
+        glDeleteTextures(1, &m_impl->colorTex);          m_impl->colorTex = 0;
+        CFRelease(m_impl->ioSurface);                    m_impl->ioSurface = nullptr;
+        [NSOpenGLContext clearCurrentContext];
+        return false;
+    }
+
     m_impl->fboWidth = width;
     m_impl->fboHeight = height;
     m_impl->fboHasDepth = depth;
     [NSOpenGLContext clearCurrentContext];
-    qInfo("[VideoHardwareGL] allocateFbo OK: %dx%d depth=%d fbo=%u tex=%u rbo=%u",
+    qInfo("[VideoHardwareGL] allocateFbo OK: %dx%d depth=%d fbo=%u tex=%u rbo=%u "
+          "presentFbo=%u presentTex=%u",
           width, height, depth ? 1 : 0,
-          m_impl->fboId, m_impl->colorTex, m_impl->depthRbo);
+          m_impl->fboId, m_impl->colorTex, m_impl->depthRbo,
+          m_impl->presentFbo, m_impl->presentTex);
     return true;
 }
 
@@ -318,12 +391,13 @@ void VideoHardwareGL::makeMainCurrent() {
 }
 
 uintptr_t VideoHardwareGL::getCurrentFramebufferThunk() {
-    // Return our IOSurface-backed FBO directly. Task-#7 diagnostic
-    // (2026-05-22 evening) showed PPSSPP issues exactly 1 render pass
-    // per frame to whatever g_defaultFBO points at — software rendering
-    // mode does present-via-texture-draw. So just point it at our FBO
-    // and skip the offscreen-NSView + FBO-0 detour from Path A.
-    if (!s_activeInstance || !s_activeInstance->m_impl->fboId) return 0;
+    // Return the intermediate GL_TEXTURE_2D present FBO — the core renders
+    // here, and submitFrame blits it into the IOSurface (rectangle) FBO.
+    // See the Impl struct comment for why the core must not draw straight
+    // into the rectangle attachment. Falls back to the IOSurface FBO if the
+    // present FBO wasn't allocated (keeps a valid target no matter what).
+    if (!s_activeInstance) return 0;
+    if (s_activeInstance->m_impl->presentFbo) return s_activeInstance->m_impl->presentFbo;
     return s_activeInstance->m_impl->fboId;
 }
 
@@ -338,9 +412,30 @@ retro_proc_address_t VideoHardwareGL::getProcAddressThunk(const char* sym) {
 }
 
 void VideoHardwareGL::submitFrame(int width, int height) {
-    // PPSSPP already rendered directly into our FBO (get_current_framebuffer
-    // returns m_impl->fboId). Just flush so the IOSurface texture sees the
-    // writes, then notify the QML composite side.
+    // The core rendered into the intermediate GL_TEXTURE_2D present FBO
+    // (get_current_framebuffer returns presentFbo). Blit it into the
+    // IOSurface-backed rectangle FBO so the Metal compositor sees the frame,
+    // then flush and notify the QML side. Save/restore the FBO bindings
+    // around the blit so glsm's (and the core's) cached binding state stays
+    // consistent — the blit uses raw GL that glsm doesn't observe.
+    if (m_impl->presentFbo && m_impl->fboId) {
+        GLint prevDraw = 0, prevRead = 0;
+        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &prevDraw);
+        glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &prevRead);
+        const int w = m_impl->fboWidth, h = m_impl->fboHeight;
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, m_impl->presentFbo);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_impl->fboId);
+        // 1:1 copy — same orientation the core wrote, so the existing
+        // MirrorVertically compositing stays correct. Every GL core presents
+        // bottom-left-origin here (GLideN64's present pre-flips via
+        // blitParams.invertY on its enableOverscan==0 path, which the fork
+        // forces on Apple; PPSSPP renders GL-conventional natively).
+        glBlitFramebuffer(0, 0, w, h, 0, 0, w, h,
+                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)prevRead);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)prevDraw);
+    }
+
     glFlush();
     emit frameReady(width, height);
 }

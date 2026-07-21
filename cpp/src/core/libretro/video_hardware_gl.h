@@ -28,7 +28,16 @@ public:
 
     // Initialise the context pair + pixel format. Must succeed before
     // any FBO allocation. Idempotent — second call is a no-op.
-    bool init();
+    //
+    // reqMajor/reqMinor are the GL version the core requested via
+    // SET_HW_RENDER. macOS only ships two Core profiles (3.2 and 4.1), so we
+    // pick 4.1 Core when the core wants anything past 3.2 (e.g. mupen64plus's
+    // GLideN64 asks 3.3 and its shaders are GLSL #version 330, which a 3.2
+    // Core context — capped at GLSL 150 — cannot compile → black screen) and
+    // keep 3.2 Core otherwise (PPSSPP, verified working). 4.1 Core is a strict
+    // superset of 3.2 Core on macOS, so the higher context never regresses a
+    // ≤3.2 core.
+    bool init(unsigned reqMajor = 3, unsigned reqMinor = 2);
 
     // Tear down FBO, contexts, pixel format. Safe to call from any
     // thread that isn't currently executing a GL operation.

@@ -15,9 +15,7 @@
     "swc",
     "fig",
     "bs",
-    "st",
-    "zip",
-    "7z"
+    "st"
   ],
   "launch_args": [],
   "backend": "libretro",
