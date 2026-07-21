@@ -457,6 +457,7 @@ qt_add_qml_module(setupwizard_backing
         qml/AppUI/images/ppsspp_logo.png
         qml/AppUI/images/dolphin_logo.png
         qml/AppUI/images/mgba_logo.png
+        qml/AppUI/images/mupen64plus_logo.png
     RESOURCE_PREFIX /
 )
 
@@ -534,6 +535,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/ppsspp_logo.png
         qml/AppUI/images/dolphin_logo.png
         qml/AppUI/images/mgba_logo.png
+        qml/AppUI/images/mupen64plus_logo.png
         qml/AppUI/images/retroachievements_logo.png
         qml/AppUI/images/screenscraper_logo.png
         qml/AppUI/images/empty-state-bg.webp
@@ -547,6 +549,7 @@ qt_add_qml_module(appui_backing
         qml/AppUI/images/controllers/GameCube.svg
         qml/AppUI/images/controllers/Wii_classiccontroller.svg
         qml/AppUI/images/controllers/Gameboy.svg
+        qml/AppUI/images/controllers/Nintendo64.svg
         qml/AppUI/images/hud/resume.svg
         qml/AppUI/images/hud/achievements.svg
         qml/AppUI/images/hud/save_state.svg

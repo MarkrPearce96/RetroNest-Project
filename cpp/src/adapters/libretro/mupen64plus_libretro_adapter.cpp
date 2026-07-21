@@ -28,21 +28,29 @@ QVector<BindingDef> Mupen64PlusLibretroAdapter::controllerBindingDefsForType(con
     // JOYPAD_R2→N64 R, JOYPAD_SELECT→N64 L. The defaults below reproduce the
     // standard RetroArch N64 feel on a modern pad. The N64 analog stick is the
     // host left stick, fixed-routed by SdlInputManager (no controls.ini row).
+    // Spotlight coordinates are in the SVG's viewBox coordinate SYSTEM but
+    // relative to the viewBox ORIGIN (the view maps spotlightX*scale without
+    // subtracting vb.x/y — all controller SVGs before this one had 0,0
+    // origins). Nintendo64.svg's viewBox is "38 87 425 388", so these are
+    // (imageX-38, imageY-87) of button centers measured by color-clustering
+    // the artwork (C cluster = yellow, A = blue, B = green, Start = red,
+    // D-pad = dark cross; Z is the underside trigger — spotlit at the center
+    // prong; L/R sit on the top edge).
     return {
-        { BindingDef::Button, "D-Pad Up",    "D-Pad",     "Pad1", "Up",     "SDL-0/DPadUp",        "DPad",         0, 0, 0 },
-        { BindingDef::Button, "D-Pad Down",  "D-Pad",     "Pad1", "Down",   "SDL-0/DPadDown",      "DPad",         0, 0, 0 },
-        { BindingDef::Button, "D-Pad Left",  "D-Pad",     "Pad1", "Left",   "SDL-0/DPadLeft",      "DPad",         0, 0, 0 },
-        { BindingDef::Button, "D-Pad Right", "D-Pad",     "Pad1", "Right",  "SDL-0/DPadRight",     "DPad",         0, 0, 0 },
-        { BindingDef::Button, "A",           "Buttons",   "Pad1", "B",      "SDL-0/FaceSouth",     "FaceButtons",  0, 0, 0 },
-        { BindingDef::Button, "B",           "Buttons",   "Pad1", "Y",      "SDL-0/FaceWest",      "FaceButtons",  0, 0, 0 },
-        { BindingDef::Button, "C-Up",        "C Buttons", "Pad1", "X",      "SDL-0/FaceNorth",     "RightAnalog",  0, 0, 0 },
-        { BindingDef::Button, "C-Down",      "C Buttons", "Pad1", "A",      "SDL-0/FaceEast",      "RightAnalog",  0, 0, 0 },
-        { BindingDef::Button, "C-Left",      "C Buttons", "Pad1", "L",      "SDL-0/LeftShoulder",  "RightAnalog",  0, 0, 0 },
-        { BindingDef::Button, "C-Right",     "C Buttons", "Pad1", "R",      "SDL-0/RightShoulder", "RightAnalog",  0, 0, 0 },
-        { BindingDef::Button, "Z Trigger",   "Triggers",  "Pad1", "L2",     "SDL-0/+LeftTrigger",  "Shoulders",    0, 0, 0 },
-        { BindingDef::Button, "L",           "Triggers",  "Pad1", "Select", "SDL-0/Back",          "Shoulders",    0, 0, 0 },
-        { BindingDef::Button, "R",           "Triggers",  "Pad1", "R2",     "SDL-0/+RightTrigger", "Shoulders",    0, 0, 0 },
-        { BindingDef::Button, "Start",       "System",    "Pad1", "Start",  "SDL-0/Start",         "System",       0, 0, 0 },
+        { BindingDef::Button, "D-Pad Up",    "D-Pad",     "Pad1", "Up",     "SDL-0/DPadUp",        "DPad",         89, 106, 13 },
+        { BindingDef::Button, "D-Pad Down",  "D-Pad",     "Pad1", "Down",   "SDL-0/DPadDown",      "DPad",         89, 144, 13 },
+        { BindingDef::Button, "D-Pad Left",  "D-Pad",     "Pad1", "Left",   "SDL-0/DPadLeft",      "DPad",         70, 125, 13 },
+        { BindingDef::Button, "D-Pad Right", "D-Pad",     "Pad1", "Right",  "SDL-0/DPadRight",     "DPad",        108, 125, 13 },
+        { BindingDef::Button, "A",           "Buttons",   "Pad1", "B",      "SDL-0/FaceSouth",     "FaceButtons", 314, 166, 16 },
+        { BindingDef::Button, "B",           "Buttons",   "Pad1", "Y",      "SDL-0/FaceWest",      "FaceButtons", 287, 140, 16 },
+        { BindingDef::Button, "C-Up",        "C Buttons", "Pad1", "X",      "SDL-0/FaceNorth",     "RightAnalog", 345,  91, 13 },
+        { BindingDef::Button, "C-Down",      "C Buttons", "Pad1", "A",      "SDL-0/FaceEast",      "RightAnalog", 345, 138, 13 },
+        { BindingDef::Button, "C-Left",      "C Buttons", "Pad1", "L",      "SDL-0/LeftShoulder",  "RightAnalog", 321, 115, 13 },
+        { BindingDef::Button, "C-Right",     "C Buttons", "Pad1", "R",      "SDL-0/RightShoulder", "RightAnalog", 369, 115, 13 },
+        { BindingDef::Button, "Z Trigger",   "Triggers",  "Pad1", "L2",     "SDL-0/+LeftTrigger",  "Shoulders",   211, 258, 18 },
+        { BindingDef::Button, "L",           "Triggers",  "Pad1", "Select", "SDL-0/Back",          "Shoulders",    72,  58, 16 },
+        { BindingDef::Button, "R",           "Triggers",  "Pad1", "R2",     "SDL-0/+RightTrigger", "Shoulders",   350,  58, 16 },
+        { BindingDef::Button, "Start",       "System",    "Pad1", "Start",  "SDL-0/Start",         "System",      211, 143, 16 },
     };
 }
 
