@@ -115,8 +115,11 @@ QVector<SettingDef> LibretroAdapter::settingsSchema() const {
                 def.suffix = ov.suffix;
                 def.dependsOn = ov.dependsOn;
                 def.recommendedValue = ov.recommendedValue;
-                for (const auto& v : d->values)
+                for (const auto& v : d->values) {
+                    if (ov.excludedValues.contains(v.value))
+                        continue;
                     def.options.append({ v.label.isEmpty() ? v.value : v.label, v.value });
+                }
                 rows.append(def);
             }
         }

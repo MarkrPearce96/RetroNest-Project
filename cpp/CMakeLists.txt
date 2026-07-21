@@ -718,6 +718,11 @@ add_executable(test_duckstation_libretro_schema tests/test_duckstation_libretro_
 target_link_libraries(test_duckstation_libretro_schema PRIVATE retronest_core Qt6::Test)
 add_test(NAME DuckStationLibretroSchema COMMAND test_duckstation_libretro_schema)
 
+# Mupen64PlusLibretroAdapter settings-schema shape guard (N64 curation).
+add_executable(test_mupen64plus_libretro_schema tests/test_mupen64plus_libretro_schema.cpp)
+target_link_libraries(test_mupen64plus_libretro_schema PRIVATE retronest_core Qt6::Test)
+add_test(NAME Mupen64PlusLibretroSchema COMMAND test_mupen64plus_libretro_schema)
+
 # Pcsx2LibretroAdapter settings-schema + hub/preview/controller shape guard
 # (restores the coverage lost when the SP8 tools/test_core_options harness
 # was retired).

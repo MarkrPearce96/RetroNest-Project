@@ -46,6 +46,94 @@ QVector<BindingDef> Mupen64PlusLibretroAdapter::controllerBindingDefsForType(con
     };
 }
 
+// Schema curation: the core declares (keys/values/defaults/labels via the
+// declared_options.json sidecar), this overlay only routes options into UI
+// categories. Deliberately HIDDEN (uncurated — valid in options.json but no
+// UI row): cpucore (footgun — seeding bugs already bit us once), the legacy
+// 43screensize/169screensize fixed-size lists (redundant with — and only
+// active without — the native-res factor, which we default to the
+// equivalent 2x so the fallback never engages), rdp/rsp
+// plugin selection (GLideN64+HLE is the only shipped config; parallel/
+// angrylion aren't built), ThreadedRenderer, CountPerOp*, Framerate,
+// IgnoreTLBExceptions, FrameDuping (frontend paces), Overscan* (the overscan
+// pass is disabled on macOS — see the fork's Config_mupenplus), FBEmulation +
+// RDRAM-copy accuracy toggles (load-bearing for the present path), and the
+// pak2-4 / c-button remaps (multiplayer + niche remapping, revisit with
+// multi-pad support).
+QVector<OptionOverlay> Mupen64PlusLibretroAdapter::optionOverlays() const {
+    auto ov = [](const QString& key, const QStringList& categories,
+                 const QString& dependsOn = QString()) {
+        OptionOverlay o;
+        o.key = key;
+        for (const auto& c : categories)
+            o.placements.append({ c, {}, {} });
+        o.dependsOn = dependsOn;
+        return o;
+    };
+    // Deliberate RetroNest default (rare defaultOverride): factor "2" is the
+    // same effective quality as the core's stock fallback (factor 0 →
+    // 43screensize 640x480 = 2x native 320x240), but keeps the UI out of the
+    // "Disabled" state whose behavior lives in the hidden legacy size lists.
+    OptionOverlay resFactor = ov("mupen64plus-EnableNativeResFactor",
+                                 { "Recommended", "Graphics" });
+    resFactor.defaultOverride = "2";
+    // "0"/Disabled is a dead end here (its behavior lives in the hidden
+    // legacy size lists) — trim it from the UI row.
+    resFactor.excludedValues = { "0" };
+    return {
+        // Recommended (cross-listed; same OptionsStore keys)
+        resFactor,
+        ov("mupen64plus-aspect",                { "Recommended", "Graphics" }),
+        ov("mupen64plus-MultiSampling",         { "Recommended", "Graphics" }),
+        ov("mupen64plus-BilinearMode",          { "Recommended", "Graphics" }),
+        ov("mupen64plus-FXAA",              { "Graphics" }),
+        ov("mupen64plus-HybridFilter",      { "Graphics" }),
+        ov("mupen64plus-EnableHWLighting",  { "Graphics" }),
+        ov("mupen64plus-EnableLODEmulation",{ "Graphics" }),
+        // Textures
+        ov("mupen64plus-txFilterMode",      { "Textures" }),
+        ov("mupen64plus-txEnhancementMode", { "Textures" }),
+        ov("mupen64plus-txHiresEnable",     { "Textures" }),
+        // Input
+        ov("mupen64plus-astick-deadzone",    { "Input" }),
+        ov("mupen64plus-astick-sensitivity", { "Input" }),
+        ov("mupen64plus-pak1",               { "Input" }),
+    };
+}
+
+QVector<SettingsHubCard> Mupen64PlusLibretroAdapter::settingsHubCards() const {
+    return {
+        // Row 0: Recommended — full-width curated card (fleet convention).
+        {QStringLiteral("\U0001F4A1"), "Recommended",
+         "Most-tweaked settings — resolution, aspect, anti-aliasing",
+         "Recommended", 0, 0, 1, 3},
+        // Row 1: Graphics · Textures · Input
+        {QStringLiteral("\U0001F5BC"), "Graphics",
+         "Resolution, aspect ratio, filtering, lighting",
+         "Graphics", 1, 0},
+        {QStringLiteral("\U0001F3A8"), "Textures",
+         "Texture filtering and enhancement",
+         "Textures", 1, 1},
+        {QStringLiteral("\U0001F3AE"), "Input",
+         "Analog stick response, controller pak",
+         "Input", 1, 2},
+    };
+}
+
+PreviewSpec Mupen64PlusLibretroAdapter::previewSpec(const QString& category,
+                                                    const QString& subcategory) const {
+    if (category == "Recommended" && subcategory.isEmpty()) {
+        // Aspect-ratio preview pane on the Recommended page — mirrors
+        // PCSX2/DuckStation/Dolphin. Bound to the same mupen64plus-aspect
+        // key the Recommended card lists ("4:3" / "16:9" / "16:9 adjusted";
+        // AspectRatioPreview::fromSchemaValue maps all three).
+        return {"aspect", {
+            {"mupen64plus-aspect", "aspectMode"},
+        }};
+    }
+    return {};
+}
+
 QString Mupen64PlusLibretroAdapter::findResumeFile(const QString& serial) const {
     if (serial.isEmpty())
         return {};

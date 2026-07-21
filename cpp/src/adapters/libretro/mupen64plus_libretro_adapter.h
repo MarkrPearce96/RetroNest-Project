@@ -25,6 +25,27 @@ public:
     QVector<ControllerTypeDef> controllerTypes() const override;
     QVector<BindingDef> controllerBindingDefsForType(const QString& type) const override;
 
+    // Settings curation (schema = core-declared table × these overlays).
+    QVector<OptionOverlay> optionOverlays() const override;
+    QVector<SettingsHubCard> settingsHubCards() const override;
+    PreviewSpec previewSpec(const QString& category,
+                            const QString& subcategory) const override;
+
+    // Quick-settings tabs read/write these core option keys through the
+    // options.json pipeline. Resolution = GLideN64's native-res multiplier
+    // (0 = the classic 4:3/16:9 fixed-size lists, gated in the overlay);
+    // curated pill shortlist (full value set stays on the main settings page).
+    QString resolutionOptionKey() const override { return "mupen64plus-EnableNativeResFactor"; }
+    QString aspectRatioOptionKey() const override { return "mupen64plus-aspect"; }
+    QVector<QPair<QString, QString>> resolutionOptionShortlist() const override {
+        // N64 native is 320x240 — 1x..8x spans 240p to supersampled ~1920p.
+        return {{"1", "1x"}, {"2", "2x"}, {"4", "4x"}, {"8", "8x"}};
+    }
+    QVector<QPair<QString, QString>> aspectRatioOptionShortlist() const override {
+        return {{"4:3", "4:3"}, {"16:9", "16:9 Stretched"},
+                {"16:9 adjusted", "16:9 Adjusted"}};
+    }
+
     // Libretro adapters have no INI — settings dispatch via SettingDef::Storage.
     QString configFilePath() const override { return {}; }
 

@@ -51,4 +51,10 @@ struct OptionOverlay {
 
     QString dependsOn;        // gate expression (see setting_def.h)
     QString recommendedValue; // description-bar hint
+
+    // Declared values to omit from the rendered row (they stay VALID in
+    // OptionsStore — this only trims the UI). For values that are dead ends
+    // in RetroNest's configuration, e.g. mupen's native-res factor
+    // "0"/Disabled, whose behavior lives in legacy options we hide.
+    QStringList excludedValues;
 };

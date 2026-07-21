@@ -99,6 +99,10 @@ AspectRatioPreview::fromSchemaValue(const QString& v) {
     if (v == "16:9")           return AspectRatio::R16_9;
     if (v == "10:7")           return AspectRatio::R10_7;
 
+    // GLideN64 (mupen64plus-aspect): "16:9 adjusted" is the widescreen-hack
+    // variant — same 16:9 output frame for preview purposes.
+    if (v == "16:9 adjusted")  return AspectRatio::R16_9;
+
     // Dolphin's aspect core option stores a plain "Auto" string (the numeric
     // "0" handled above is GFX.ini's AspectMode enum, not the option value).
     // Auto on GC/Wii is the 4:3 family — show the "Auto 4 : 3" preview/label.

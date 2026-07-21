@@ -1,0 +1,2806 @@
+{
+    "categories": [
+        {
+            "info": "Configure Core Pak/Controller Options.",
+            "key": "input",
+            "label": "Pak/Controller Options"
+        },
+        {
+            "info": "Configure GLideN64 Options.",
+            "key": "gliden64",
+            "label": "GLideN64"
+        },
+        {
+            "info": "Configure Angrylion Options.",
+            "key": "angrylion",
+            "label": "Angrylion"
+        }
+    ],
+    "core_library_version": "2.8-OpenGL d421d68",
+    "format": 1,
+    "options": [
+        {
+            "category": "",
+            "default": "gliden64",
+            "info": "Select a RDP Plugin, use Angrylion (if available) for best compability, GLideN64 for Performance",
+            "key": "mupen64plus-rdp-plugin",
+            "label": "RDP Plugin",
+            "values": [
+                {
+                    "label": "Angrylion",
+                    "value": "angrylion"
+                },
+                {
+                    "label": "GLideN64",
+                    "value": "gliden64"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "640x480",
+            "info": "Select Render Viewport dimensions (4:3).",
+            "key": "mupen64plus-43screensize",
+            "label": "4:3 Resolution",
+            "values": [
+                {
+                    "label": "",
+                    "value": "320x240"
+                },
+                {
+                    "label": "",
+                    "value": "640x480"
+                },
+                {
+                    "label": "",
+                    "value": "960x720"
+                },
+                {
+                    "label": "",
+                    "value": "1280x960"
+                },
+                {
+                    "label": "",
+                    "value": "1440x1080"
+                },
+                {
+                    "label": "",
+                    "value": "1600x1200"
+                },
+                {
+                    "label": "",
+                    "value": "1920x1440"
+                },
+                {
+                    "label": "",
+                    "value": "2240x1680"
+                },
+                {
+                    "label": "",
+                    "value": "2560x1920"
+                },
+                {
+                    "label": "",
+                    "value": "2880x2160"
+                },
+                {
+                    "label": "",
+                    "value": "3200x2400"
+                },
+                {
+                    "label": "",
+                    "value": "3520x2640"
+                },
+                {
+                    "label": "",
+                    "value": "3840x2880"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "960x540",
+            "info": "Select Render Viewport dimensions for wider resolutions.",
+            "key": "mupen64plus-169screensize",
+            "label": "Wide Resolution",
+            "values": [
+                {
+                    "label": "640x360 (16:9)",
+                    "value": "640x360"
+                },
+                {
+                    "label": "960x540 (16:9)",
+                    "value": "960x540"
+                },
+                {
+                    "label": "1280x720 (16:9)",
+                    "value": "1280x720"
+                },
+                {
+                    "label": "1706x720 (64:27)",
+                    "value": "1706x720"
+                },
+                {
+                    "label": "1366x768 (16:9)",
+                    "value": "1366x768"
+                },
+                {
+                    "label": "1920x810 (64:27)",
+                    "value": "1920x810"
+                },
+                {
+                    "label": "1920x1080 (16:9)",
+                    "value": "1920x1080"
+                },
+                {
+                    "label": "2560x1080 (64:27)",
+                    "value": "2560x1080"
+                },
+                {
+                    "label": "2560x1440 (16:9)",
+                    "value": "2560x1440"
+                },
+                {
+                    "label": "3414x1440 (64:27)",
+                    "value": "3414x1440"
+                },
+                {
+                    "label": "3840x2160 (16:9)",
+                    "value": "3840x2160"
+                },
+                {
+                    "label": "4096x2160 (17:9)",
+                    "value": "4096x2160"
+                },
+                {
+                    "label": "5120x1440 (32:9)",
+                    "value": "5120x1440"
+                },
+                {
+                    "label": "5120x2160 (64:27)",
+                    "value": "5120x2160"
+                },
+                {
+                    "label": "7680x3240 (64:27)",
+                    "value": "7680x3240"
+                },
+                {
+                    "label": "7680x4320 (16:9)",
+                    "value": "7680x4320"
+                },
+                {
+                    "label": "7680x2160 (32:9)",
+                    "value": "7680x2160"
+                },
+                {
+                    "label": "10240x4320 (64:27)",
+                    "value": "10240x4320"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "4:3",
+            "info": "Select the aspect ratio. 'adjusted' means essentially Widescreen hacks.",
+            "key": "mupen64plus-aspect",
+            "label": "Aspect Ratio",
+            "values": [
+                {
+                    "label": "Original (4:3)",
+                    "value": "4:3"
+                },
+                {
+                    "label": "Wide (Stretched)",
+                    "value": "16:9"
+                },
+                {
+                    "label": "Wide (Adjusted)",
+                    "value": "16:9 adjusted"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "0",
+            "info": "Render at N times the native resolution.",
+            "key": "mupen64plus-EnableNativeResFactor",
+            "label": "Native Resolution Factor",
+            "values": [
+                {
+                    "label": "Disabled",
+                    "value": "0"
+                },
+                {
+                    "label": "1x",
+                    "value": "1"
+                },
+                {
+                    "label": "2x",
+                    "value": "2"
+                },
+                {
+                    "label": "3x",
+                    "value": "3"
+                },
+                {
+                    "label": "4x",
+                    "value": "4"
+                },
+                {
+                    "label": "5x",
+                    "value": "5"
+                },
+                {
+                    "label": "6x",
+                    "value": "6"
+                },
+                {
+                    "label": "7x",
+                    "value": "7"
+                },
+                {
+                    "label": "8x",
+                    "value": "8"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Use the Threaded Renderer, improves performance but increases input lag.",
+            "key": "mupen64plus-ThreadedRenderer",
+            "label": "Threaded Renderer",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "True"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "False"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "standard",
+            "info": "Select a Bilinear filtering method, 3point is the original system specific way.",
+            "key": "mupen64plus-BilinearMode",
+            "label": "Bilinear filtering mode",
+            "values": [
+                {
+                    "label": "",
+                    "value": "3point"
+                },
+                {
+                    "label": "",
+                    "value": "standard"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "True",
+            "info": "Hybrid integer scaling filter, this can be slow with low-end GPUs.",
+            "key": "mupen64plus-HybridFilter",
+            "label": "Hybrid Filter",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "True"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "False"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Applies dithering pattern to output image.",
+            "key": "mupen64plus-DitheringPattern",
+            "label": "Dithering",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "True"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "False"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Dither with color quantization.",
+            "key": "mupen64plus-DitheringQuantization",
+            "label": "Dithering Quantization",
+            "values": [
+                {
+                    "label": "Enabled",
+                    "value": "True"
+                },
+                {
+                    "label": "Disabled",
+                    "value": "False"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Dithering mode for image in RDRAM.",
+            "key": "mupen64plus-RDRAMImageDitheringMode",
+            "label": "Image Dithering Mode",
+            "values": [
+                {
+                    "label": "Disabled",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "Bayer"
+                },
+                {
+                    "label": "Magic Square",
+                    "value": "MagicSquare"
+                },
+                {
+                    "label": "Blue Noise",
+                    "value": "BlueNoise"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "0",
+            "info": "Anti-Aliasing level (0 = disabled).",
+            "key": "mupen64plus-MultiSampling",
+            "label": "MSAA level",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "8"
+                },
+                {
+                    "label": "",
+                    "value": "16"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "0",
+            "info": "Fast Approximate Anti-Aliasing shader, moderately blur textures (0 = disabled).",
+            "key": "mupen64plus-FXAA",
+            "label": "FXAA",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "True",
+            "info": "Calculate per-pixel Level Of Details to select texture mip levels and blend them with each other using LOD fraction.",
+            "key": "mupen64plus-EnableLODEmulation",
+            "label": "LOD Emulation",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "True",
+            "info": "Frame/depth buffer emulation. Disabling it can shorten input lag for particular games, but also break some special effects.",
+            "key": "mupen64plus-EnableFBEmulation",
+            "label": "Framebuffer Emulation",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Copy auxiliary buffers to RDRAM (fixes some Game artifacts like Paper Mario Intro).",
+            "key": "mupen64plus-EnableCopyAuxToRDRAM",
+            "label": "Copy auxiliary buffers to RDRAM",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "Async",
+            "info": "Color buffer copy to RDRAM (Off will trade compatibility for Performance).",
+            "key": "mupen64plus-EnableCopyColorToRDRAM",
+            "label": "Color buffer to RDRAM",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Off"
+                },
+                {
+                    "label": "",
+                    "value": "Sync"
+                },
+                {
+                    "label": "DoubleBuffer",
+                    "value": "Async"
+                },
+                {
+                    "label": "TripleBuffer",
+                    "value": "TripleBuffer"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Enable color buffer copy from RDRAM.",
+            "key": "mupen64plus-EnableCopyColorFromRDRAM",
+            "label": "Enable color buffer copy from RDRAM",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "Software",
+            "info": "Depth buffer copy to RDRAM (Off will trade compatibility for Performance).",
+            "key": "mupen64plus-EnableCopyDepthToRDRAM",
+            "label": "Depth buffer to RDRAM",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Off"
+                },
+                {
+                    "label": "",
+                    "value": "Software"
+                },
+                {
+                    "label": "",
+                    "value": "FromMem"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "OnePiece",
+            "info": "Render backgrounds mode (HLE only). One piece (fast), Stripped (precise).",
+            "key": "mupen64plus-BackgroundMode",
+            "label": "Background Mode",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Stripped"
+                },
+                {
+                    "label": "",
+                    "value": "OnePiece"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Standard per-vertex lighting when disabled. Slightly different rendering.",
+            "key": "mupen64plus-EnableHWLighting",
+            "label": "Hardware per-pixel lighting",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "Off",
+            "info": "Make texrect coordinates continuous to avoid black lines between them.",
+            "key": "mupen64plus-CorrectTexrectCoords",
+            "label": "Continuous texrect coords",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Off"
+                },
+                {
+                    "label": "",
+                    "value": "Auto"
+                },
+                {
+                    "label": "",
+                    "value": "Force"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Enables inaccurate texture coordinate calculations. This can improve performance and texture pack compatibity at the cost of accuracy.",
+            "key": "mupen64plus-EnableInaccurateTextureCoordinates",
+            "label": "Enable inaccurate texture coordinates",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Bound texture rectangle texture coordinates to the values they take in native resolutions. It prevents garbage due to fetching out of texture bounds, but can result in hard edges.",
+            "key": "mupen64plus-EnableTexCoordBounds",
+            "label": "Enable native-res boundaries for texture coordinates",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "Disabled",
+            "info": "Render 2D texrects in native resolution to fix misalignment between parts of 2D image (example: Mario Kart driver selection portraits).",
+            "key": "mupen64plus-EnableNativeResTexrects",
+            "label": "Native res. 2D texrects",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Disabled"
+                },
+                {
+                    "label": "",
+                    "value": "Unoptimized"
+                },
+                {
+                    "label": "",
+                    "value": "Optimized"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Do not use shaders to emulate N64 blending modes. Works faster on slow GPU. Can cause glitches.",
+            "key": "mupen64plus-EnableLegacyBlending",
+            "label": "Less accurate blending mode",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "True",
+            "info": "Enable writing of fragment depth. Some mobile GPUs do not support it, thus it's optional. Leave enabled.",
+            "key": "mupen64plus-EnableFragmentDepthWrite",
+            "label": "GPU shader depth write",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Enable N64 depth compare instead of OpenGL standard one. Experimental, Fast mode will have more glitches.",
+            "key": "mupen64plus-EnableN64DepthCompare",
+            "label": "N64 Depth Compare",
+            "values": [
+                {
+                    "label": "Off",
+                    "value": "False"
+                },
+                {
+                    "label": "Fast",
+                    "value": "True"
+                },
+                {
+                    "label": "",
+                    "value": "Compatible"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "True",
+            "info": "Use persistent storage for compiled shaders.",
+            "key": "mupen64plus-EnableShadersStorage",
+            "label": "Cache GPU Shaders",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "True",
+            "info": "Save texture cache to hard disk.",
+            "key": "mupen64plus-EnableTextureCache",
+            "label": "Cache Textures",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "Enabled",
+            "info": "Crop black borders from the overscan region around the screen.",
+            "key": "mupen64plus-EnableOverscan",
+            "label": "Overscan",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Disabled"
+                },
+                {
+                    "label": "",
+                    "value": "Enabled"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "0",
+            "info": "Overscan Top Offset.",
+            "key": "mupen64plus-OverscanTop",
+            "label": "Overscan Offset (Top)",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "3"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                },
+                {
+                    "label": "",
+                    "value": "6"
+                },
+                {
+                    "label": "",
+                    "value": "7"
+                },
+                {
+                    "label": "",
+                    "value": "8"
+                },
+                {
+                    "label": "",
+                    "value": "9"
+                },
+                {
+                    "label": "",
+                    "value": "10"
+                },
+                {
+                    "label": "",
+                    "value": "11"
+                },
+                {
+                    "label": "",
+                    "value": "12"
+                },
+                {
+                    "label": "",
+                    "value": "13"
+                },
+                {
+                    "label": "",
+                    "value": "14"
+                },
+                {
+                    "label": "",
+                    "value": "15"
+                },
+                {
+                    "label": "",
+                    "value": "16"
+                },
+                {
+                    "label": "",
+                    "value": "17"
+                },
+                {
+                    "label": "",
+                    "value": "18"
+                },
+                {
+                    "label": "",
+                    "value": "19"
+                },
+                {
+                    "label": "",
+                    "value": "20"
+                },
+                {
+                    "label": "",
+                    "value": "21"
+                },
+                {
+                    "label": "",
+                    "value": "22"
+                },
+                {
+                    "label": "",
+                    "value": "23"
+                },
+                {
+                    "label": "",
+                    "value": "24"
+                },
+                {
+                    "label": "",
+                    "value": "25"
+                },
+                {
+                    "label": "",
+                    "value": "26"
+                },
+                {
+                    "label": "",
+                    "value": "27"
+                },
+                {
+                    "label": "",
+                    "value": "28"
+                },
+                {
+                    "label": "",
+                    "value": "29"
+                },
+                {
+                    "label": "",
+                    "value": "30"
+                },
+                {
+                    "label": "",
+                    "value": "31"
+                },
+                {
+                    "label": "",
+                    "value": "32"
+                },
+                {
+                    "label": "",
+                    "value": "33"
+                },
+                {
+                    "label": "",
+                    "value": "34"
+                },
+                {
+                    "label": "",
+                    "value": "35"
+                },
+                {
+                    "label": "",
+                    "value": "36"
+                },
+                {
+                    "label": "",
+                    "value": "37"
+                },
+                {
+                    "label": "",
+                    "value": "38"
+                },
+                {
+                    "label": "",
+                    "value": "39"
+                },
+                {
+                    "label": "",
+                    "value": "40"
+                },
+                {
+                    "label": "",
+                    "value": "41"
+                },
+                {
+                    "label": "",
+                    "value": "42"
+                },
+                {
+                    "label": "",
+                    "value": "43"
+                },
+                {
+                    "label": "",
+                    "value": "44"
+                },
+                {
+                    "label": "",
+                    "value": "45"
+                },
+                {
+                    "label": "",
+                    "value": "46"
+                },
+                {
+                    "label": "",
+                    "value": "47"
+                },
+                {
+                    "label": "",
+                    "value": "48"
+                },
+                {
+                    "label": "",
+                    "value": "49"
+                },
+                {
+                    "label": "",
+                    "value": "50"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "0",
+            "info": "Overscan Left Offset.",
+            "key": "mupen64plus-OverscanLeft",
+            "label": "Overscan Offset (Left)",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "3"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                },
+                {
+                    "label": "",
+                    "value": "6"
+                },
+                {
+                    "label": "",
+                    "value": "7"
+                },
+                {
+                    "label": "",
+                    "value": "8"
+                },
+                {
+                    "label": "",
+                    "value": "9"
+                },
+                {
+                    "label": "",
+                    "value": "10"
+                },
+                {
+                    "label": "",
+                    "value": "11"
+                },
+                {
+                    "label": "",
+                    "value": "12"
+                },
+                {
+                    "label": "",
+                    "value": "13"
+                },
+                {
+                    "label": "",
+                    "value": "14"
+                },
+                {
+                    "label": "",
+                    "value": "15"
+                },
+                {
+                    "label": "",
+                    "value": "16"
+                },
+                {
+                    "label": "",
+                    "value": "17"
+                },
+                {
+                    "label": "",
+                    "value": "18"
+                },
+                {
+                    "label": "",
+                    "value": "19"
+                },
+                {
+                    "label": "",
+                    "value": "20"
+                },
+                {
+                    "label": "",
+                    "value": "21"
+                },
+                {
+                    "label": "",
+                    "value": "22"
+                },
+                {
+                    "label": "",
+                    "value": "23"
+                },
+                {
+                    "label": "",
+                    "value": "24"
+                },
+                {
+                    "label": "",
+                    "value": "25"
+                },
+                {
+                    "label": "",
+                    "value": "26"
+                },
+                {
+                    "label": "",
+                    "value": "27"
+                },
+                {
+                    "label": "",
+                    "value": "28"
+                },
+                {
+                    "label": "",
+                    "value": "29"
+                },
+                {
+                    "label": "",
+                    "value": "30"
+                },
+                {
+                    "label": "",
+                    "value": "31"
+                },
+                {
+                    "label": "",
+                    "value": "32"
+                },
+                {
+                    "label": "",
+                    "value": "33"
+                },
+                {
+                    "label": "",
+                    "value": "34"
+                },
+                {
+                    "label": "",
+                    "value": "35"
+                },
+                {
+                    "label": "",
+                    "value": "36"
+                },
+                {
+                    "label": "",
+                    "value": "37"
+                },
+                {
+                    "label": "",
+                    "value": "38"
+                },
+                {
+                    "label": "",
+                    "value": "39"
+                },
+                {
+                    "label": "",
+                    "value": "40"
+                },
+                {
+                    "label": "",
+                    "value": "41"
+                },
+                {
+                    "label": "",
+                    "value": "42"
+                },
+                {
+                    "label": "",
+                    "value": "43"
+                },
+                {
+                    "label": "",
+                    "value": "44"
+                },
+                {
+                    "label": "",
+                    "value": "45"
+                },
+                {
+                    "label": "",
+                    "value": "46"
+                },
+                {
+                    "label": "",
+                    "value": "47"
+                },
+                {
+                    "label": "",
+                    "value": "48"
+                },
+                {
+                    "label": "",
+                    "value": "49"
+                },
+                {
+                    "label": "",
+                    "value": "50"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "0",
+            "info": "Overscan Right Offset.",
+            "key": "mupen64plus-OverscanRight",
+            "label": "Overscan Offset (Right)",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "3"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                },
+                {
+                    "label": "",
+                    "value": "6"
+                },
+                {
+                    "label": "",
+                    "value": "7"
+                },
+                {
+                    "label": "",
+                    "value": "8"
+                },
+                {
+                    "label": "",
+                    "value": "9"
+                },
+                {
+                    "label": "",
+                    "value": "10"
+                },
+                {
+                    "label": "",
+                    "value": "11"
+                },
+                {
+                    "label": "",
+                    "value": "12"
+                },
+                {
+                    "label": "",
+                    "value": "13"
+                },
+                {
+                    "label": "",
+                    "value": "14"
+                },
+                {
+                    "label": "",
+                    "value": "15"
+                },
+                {
+                    "label": "",
+                    "value": "16"
+                },
+                {
+                    "label": "",
+                    "value": "17"
+                },
+                {
+                    "label": "",
+                    "value": "18"
+                },
+                {
+                    "label": "",
+                    "value": "19"
+                },
+                {
+                    "label": "",
+                    "value": "20"
+                },
+                {
+                    "label": "",
+                    "value": "21"
+                },
+                {
+                    "label": "",
+                    "value": "22"
+                },
+                {
+                    "label": "",
+                    "value": "23"
+                },
+                {
+                    "label": "",
+                    "value": "24"
+                },
+                {
+                    "label": "",
+                    "value": "25"
+                },
+                {
+                    "label": "",
+                    "value": "26"
+                },
+                {
+                    "label": "",
+                    "value": "27"
+                },
+                {
+                    "label": "",
+                    "value": "28"
+                },
+                {
+                    "label": "",
+                    "value": "29"
+                },
+                {
+                    "label": "",
+                    "value": "30"
+                },
+                {
+                    "label": "",
+                    "value": "31"
+                },
+                {
+                    "label": "",
+                    "value": "32"
+                },
+                {
+                    "label": "",
+                    "value": "33"
+                },
+                {
+                    "label": "",
+                    "value": "34"
+                },
+                {
+                    "label": "",
+                    "value": "35"
+                },
+                {
+                    "label": "",
+                    "value": "36"
+                },
+                {
+                    "label": "",
+                    "value": "37"
+                },
+                {
+                    "label": "",
+                    "value": "38"
+                },
+                {
+                    "label": "",
+                    "value": "39"
+                },
+                {
+                    "label": "",
+                    "value": "40"
+                },
+                {
+                    "label": "",
+                    "value": "41"
+                },
+                {
+                    "label": "",
+                    "value": "42"
+                },
+                {
+                    "label": "",
+                    "value": "43"
+                },
+                {
+                    "label": "",
+                    "value": "44"
+                },
+                {
+                    "label": "",
+                    "value": "45"
+                },
+                {
+                    "label": "",
+                    "value": "46"
+                },
+                {
+                    "label": "",
+                    "value": "47"
+                },
+                {
+                    "label": "",
+                    "value": "48"
+                },
+                {
+                    "label": "",
+                    "value": "49"
+                },
+                {
+                    "label": "",
+                    "value": "50"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "0",
+            "info": "Overscan Bottom Offset.",
+            "key": "mupen64plus-OverscanBottom",
+            "label": "Overscan Offset (Bottom)",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "3"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                },
+                {
+                    "label": "",
+                    "value": "6"
+                },
+                {
+                    "label": "",
+                    "value": "7"
+                },
+                {
+                    "label": "",
+                    "value": "8"
+                },
+                {
+                    "label": "",
+                    "value": "9"
+                },
+                {
+                    "label": "",
+                    "value": "10"
+                },
+                {
+                    "label": "",
+                    "value": "11"
+                },
+                {
+                    "label": "",
+                    "value": "12"
+                },
+                {
+                    "label": "",
+                    "value": "13"
+                },
+                {
+                    "label": "",
+                    "value": "14"
+                },
+                {
+                    "label": "",
+                    "value": "15"
+                },
+                {
+                    "label": "",
+                    "value": "16"
+                },
+                {
+                    "label": "",
+                    "value": "17"
+                },
+                {
+                    "label": "",
+                    "value": "18"
+                },
+                {
+                    "label": "",
+                    "value": "19"
+                },
+                {
+                    "label": "",
+                    "value": "20"
+                },
+                {
+                    "label": "",
+                    "value": "21"
+                },
+                {
+                    "label": "",
+                    "value": "22"
+                },
+                {
+                    "label": "",
+                    "value": "23"
+                },
+                {
+                    "label": "",
+                    "value": "24"
+                },
+                {
+                    "label": "",
+                    "value": "25"
+                },
+                {
+                    "label": "",
+                    "value": "26"
+                },
+                {
+                    "label": "",
+                    "value": "27"
+                },
+                {
+                    "label": "",
+                    "value": "28"
+                },
+                {
+                    "label": "",
+                    "value": "29"
+                },
+                {
+                    "label": "",
+                    "value": "30"
+                },
+                {
+                    "label": "",
+                    "value": "31"
+                },
+                {
+                    "label": "",
+                    "value": "32"
+                },
+                {
+                    "label": "",
+                    "value": "33"
+                },
+                {
+                    "label": "",
+                    "value": "34"
+                },
+                {
+                    "label": "",
+                    "value": "35"
+                },
+                {
+                    "label": "",
+                    "value": "36"
+                },
+                {
+                    "label": "",
+                    "value": "37"
+                },
+                {
+                    "label": "",
+                    "value": "38"
+                },
+                {
+                    "label": "",
+                    "value": "39"
+                },
+                {
+                    "label": "",
+                    "value": "40"
+                },
+                {
+                    "label": "",
+                    "value": "41"
+                },
+                {
+                    "label": "",
+                    "value": "42"
+                },
+                {
+                    "label": "",
+                    "value": "43"
+                },
+                {
+                    "label": "",
+                    "value": "44"
+                },
+                {
+                    "label": "",
+                    "value": "45"
+                },
+                {
+                    "label": "",
+                    "value": "46"
+                },
+                {
+                    "label": "",
+                    "value": "47"
+                },
+                {
+                    "label": "",
+                    "value": "48"
+                },
+                {
+                    "label": "",
+                    "value": "49"
+                },
+                {
+                    "label": "",
+                    "value": "50"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "0",
+            "info": "Limit High-Res textures size in VRAM (in MB, 0 = no limit).",
+            "key": "mupen64plus-MaxHiResTxVramLimit",
+            "label": "Max High-Res VRAM Limit",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "500"
+                },
+                {
+                    "label": "",
+                    "value": "1000"
+                },
+                {
+                    "label": "",
+                    "value": "1500"
+                },
+                {
+                    "label": "",
+                    "value": "2000"
+                },
+                {
+                    "label": "",
+                    "value": "2500"
+                },
+                {
+                    "label": "",
+                    "value": "3000"
+                },
+                {
+                    "label": "",
+                    "value": "3500"
+                },
+                {
+                    "label": "",
+                    "value": "4000"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "8000",
+            "info": "Set Max texture cache size (in elements). Reduce it if you experience black textures leading to a crash.",
+            "key": "mupen64plus-MaxTxCacheSize",
+            "label": "Max texture cache size",
+            "values": [
+                {
+                    "label": "",
+                    "value": "1500"
+                },
+                {
+                    "label": "",
+                    "value": "4000"
+                },
+                {
+                    "label": "",
+                    "value": "8000"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "None",
+            "info": "Select Texture Filtering mode.",
+            "key": "mupen64plus-txFilterMode",
+            "label": "Texture filter",
+            "values": [
+                {
+                    "label": "",
+                    "value": "None"
+                },
+                {
+                    "label": "",
+                    "value": "Smooth filtering 1"
+                },
+                {
+                    "label": "",
+                    "value": "Smooth filtering 2"
+                },
+                {
+                    "label": "",
+                    "value": "Smooth filtering 3"
+                },
+                {
+                    "label": "",
+                    "value": "Smooth filtering 4"
+                },
+                {
+                    "label": "",
+                    "value": "Sharp filtering 1"
+                },
+                {
+                    "label": "",
+                    "value": "Sharp filtering 2"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "None",
+            "info": "Various Texture Filters ('As-Is' will just cache).",
+            "key": "mupen64plus-txEnhancementMode",
+            "label": "Texture Enhancement",
+            "values": [
+                {
+                    "label": "",
+                    "value": "None"
+                },
+                {
+                    "label": "",
+                    "value": "As Is"
+                },
+                {
+                    "label": "",
+                    "value": "X2"
+                },
+                {
+                    "label": "",
+                    "value": "X2SAI"
+                },
+                {
+                    "label": "",
+                    "value": "HQ2X"
+                },
+                {
+                    "label": "",
+                    "value": "HQ2XS"
+                },
+                {
+                    "label": "",
+                    "value": "LQ2X"
+                },
+                {
+                    "label": "",
+                    "value": "LQ2XS"
+                },
+                {
+                    "label": "",
+                    "value": "HQ4X"
+                },
+                {
+                    "label": "",
+                    "value": "2xBRZ"
+                },
+                {
+                    "label": "",
+                    "value": "3xBRZ"
+                },
+                {
+                    "label": "",
+                    "value": "4xBRZ"
+                },
+                {
+                    "label": "",
+                    "value": "5xBRZ"
+                },
+                {
+                    "label": "",
+                    "value": "6xBRZ"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "True",
+            "info": "Ignore filtering for Background Textures.",
+            "key": "mupen64plus-txFilterIgnoreBG",
+            "label": "Don't filter background textures",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Enable High-Res Texture packs if available.",
+            "key": "mupen64plus-txHiresEnable",
+            "label": "Use High-Res textures",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "True",
+            "info": "Compress created texture caches.",
+            "key": "mupen64plus-txCacheCompression",
+            "label": "Use High-Res Texture Cache Compression",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "This should be enabled unless it's a old RICE Texture pack.",
+            "key": "mupen64plus-txHiresFullAlphaChannel",
+            "label": "Use High-Res Full Alpha Channel",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Use in addition to Texture cache, will use lazy loading and trade memory consumption against loading speeds.",
+            "key": "mupen64plus-EnableEnhancedTextureStorage",
+            "label": "Use enhanced Texture Storage",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Use an alternative method for High-Res paletted textures CRC calculations.",
+            "key": "mupen64plus-EnableHiResAltCRC",
+            "label": "Use alternative method for High-Res Checksums",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "False",
+            "info": "Use in addition to High-Res textures, will use lazy loading and trade memory consumption against loading speeds.",
+            "key": "mupen64plus-EnableEnhancedHighResStorage",
+            "label": "Use enhanced Hi-Res Storage",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "gliden64",
+            "default": "late",
+            "info": "Specifies INI Settings behaviour. This should really only contain essential options. Changing this can and will break ROM's, if the correct options aren't set manually. Some options may only be set via INI (fbInfoDisabled).",
+            "key": "mupen64plus-GLideN64IniBehaviour",
+            "label": "INI Behaviour",
+            "values": [
+                {
+                    "label": "Prioritize INI over Core Options",
+                    "value": "late"
+                },
+                {
+                    "label": "Prioritize Core Options over INI",
+                    "value": "early"
+                },
+                {
+                    "label": "Disable INI",
+                    "value": "disabled"
+                }
+            ]
+        },
+        {
+            "category": "angrylion",
+            "default": "Filtered",
+            "info": "Select VI Overlay filtering. 'Filtered' is the original system rendering.",
+            "key": "mupen64plus-angrylion-vioverlay",
+            "label": "VI Overlay",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Filtered"
+                },
+                {
+                    "label": "",
+                    "value": "AA+Blur"
+                },
+                {
+                    "label": "",
+                    "value": "AA+Dedither"
+                },
+                {
+                    "label": "",
+                    "value": "AA only"
+                },
+                {
+                    "label": "",
+                    "value": "Unfiltered"
+                },
+                {
+                    "label": "",
+                    "value": "Depth"
+                },
+                {
+                    "label": "",
+                    "value": "Coverage"
+                }
+            ]
+        },
+        {
+            "category": "angrylion",
+            "default": "Low",
+            "info": "Select Sync level (trades accuracy for performance).",
+            "key": "mupen64plus-angrylion-sync",
+            "label": "Thread sync level",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Low"
+                },
+                {
+                    "label": "",
+                    "value": "Medium"
+                },
+                {
+                    "label": "",
+                    "value": "High"
+                }
+            ]
+        },
+        {
+            "category": "angrylion",
+            "default": "all threads",
+            "info": "Default 'all threads' is prefered to have it match your Physical CPU Core count. '1' should behave as the original angrylion, possibly fixing some bugs.",
+            "key": "mupen64plus-angrylion-multithread",
+            "label": "Multi-threading",
+            "values": [
+                {
+                    "label": "",
+                    "value": "all threads"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "3"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                },
+                {
+                    "label": "",
+                    "value": "6"
+                },
+                {
+                    "label": "",
+                    "value": "7"
+                },
+                {
+                    "label": "",
+                    "value": "8"
+                },
+                {
+                    "label": "",
+                    "value": "9"
+                },
+                {
+                    "label": "",
+                    "value": "10"
+                },
+                {
+                    "label": "",
+                    "value": "11"
+                },
+                {
+                    "label": "",
+                    "value": "12"
+                },
+                {
+                    "label": "",
+                    "value": "13"
+                },
+                {
+                    "label": "",
+                    "value": "14"
+                },
+                {
+                    "label": "",
+                    "value": "15"
+                },
+                {
+                    "label": "",
+                    "value": "16"
+                },
+                {
+                    "label": "",
+                    "value": "17"
+                },
+                {
+                    "label": "",
+                    "value": "18"
+                },
+                {
+                    "label": "",
+                    "value": "19"
+                },
+                {
+                    "label": "",
+                    "value": "20"
+                },
+                {
+                    "label": "",
+                    "value": "21"
+                },
+                {
+                    "label": "",
+                    "value": "22"
+                },
+                {
+                    "label": "",
+                    "value": "23"
+                },
+                {
+                    "label": "",
+                    "value": "24"
+                },
+                {
+                    "label": "",
+                    "value": "25"
+                },
+                {
+                    "label": "",
+                    "value": "26"
+                },
+                {
+                    "label": "",
+                    "value": "27"
+                },
+                {
+                    "label": "",
+                    "value": "28"
+                },
+                {
+                    "label": "",
+                    "value": "29"
+                },
+                {
+                    "label": "",
+                    "value": "30"
+                },
+                {
+                    "label": "",
+                    "value": "31"
+                },
+                {
+                    "label": "",
+                    "value": "32"
+                },
+                {
+                    "label": "",
+                    "value": "33"
+                },
+                {
+                    "label": "",
+                    "value": "34"
+                },
+                {
+                    "label": "",
+                    "value": "35"
+                },
+                {
+                    "label": "",
+                    "value": "36"
+                },
+                {
+                    "label": "",
+                    "value": "37"
+                },
+                {
+                    "label": "",
+                    "value": "38"
+                },
+                {
+                    "label": "",
+                    "value": "39"
+                },
+                {
+                    "label": "",
+                    "value": "40"
+                },
+                {
+                    "label": "",
+                    "value": "41"
+                },
+                {
+                    "label": "",
+                    "value": "42"
+                },
+                {
+                    "label": "",
+                    "value": "43"
+                },
+                {
+                    "label": "",
+                    "value": "44"
+                },
+                {
+                    "label": "",
+                    "value": "45"
+                },
+                {
+                    "label": "",
+                    "value": "46"
+                },
+                {
+                    "label": "",
+                    "value": "47"
+                },
+                {
+                    "label": "",
+                    "value": "48"
+                },
+                {
+                    "label": "",
+                    "value": "49"
+                },
+                {
+                    "label": "",
+                    "value": "50"
+                },
+                {
+                    "label": "",
+                    "value": "51"
+                },
+                {
+                    "label": "",
+                    "value": "52"
+                },
+                {
+                    "label": "",
+                    "value": "53"
+                },
+                {
+                    "label": "",
+                    "value": "54"
+                },
+                {
+                    "label": "",
+                    "value": "55"
+                },
+                {
+                    "label": "",
+                    "value": "56"
+                },
+                {
+                    "label": "",
+                    "value": "57"
+                },
+                {
+                    "label": "",
+                    "value": "58"
+                },
+                {
+                    "label": "",
+                    "value": "59"
+                },
+                {
+                    "label": "",
+                    "value": "60"
+                },
+                {
+                    "label": "",
+                    "value": "61"
+                },
+                {
+                    "label": "",
+                    "value": "62"
+                },
+                {
+                    "label": "",
+                    "value": "63"
+                },
+                {
+                    "label": "",
+                    "value": "75"
+                }
+            ]
+        },
+        {
+            "category": "angrylion",
+            "default": "disabled",
+            "info": "Hide overscan borders.",
+            "key": "mupen64plus-angrylion-overscan",
+            "label": "Hide overscan",
+            "values": [
+                {
+                    "label": "",
+                    "value": "disabled"
+                },
+                {
+                    "label": "",
+                    "value": "enabled"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "dynamic_recompiler",
+            "info": "Select the R4300 CPU Backend, use Interpreter for best compability",
+            "key": "mupen64plus-cpucore",
+            "label": "CPU Core",
+            "values": [
+                {
+                    "label": "Pure Interpreter",
+                    "value": "pure_interpreter"
+                },
+                {
+                    "label": "Cached Interpreter",
+                    "value": "cached_interpreter"
+                },
+                {
+                    "label": "Dynarec",
+                    "value": "dynamic_recompiler"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "hle",
+            "info": "Select a RSP Plugin, use HLE for best performance, ParaLLEl for best LLE Performance and CXD4 as LLE fallback",
+            "key": "mupen64plus-rsp-plugin",
+            "label": "RSP Plugin",
+            "values": [
+                {
+                    "label": "CXD4",
+                    "value": "cxd4"
+                },
+                {
+                    "label": "HLE",
+                    "value": "hle"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "False",
+            "info": "Enable Frame duplication to improve smoothing on low-end. Different from frameskip.",
+            "key": "mupen64plus-FrameDuping",
+            "label": "Frame Duplication",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Original",
+            "info": "Fullspeed will enforce Count per Op 1 and FBEmu settings, this will break some games!",
+            "key": "mupen64plus-Framerate",
+            "label": "Framerate",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Original"
+                },
+                {
+                    "label": "",
+                    "value": "Fullspeed"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "Auto",
+            "info": "Select a VI Refresh clock, Auto does not impact behaviour, other values override CountPerScanline.",
+            "key": "mupen64plus-virefresh",
+            "label": "VI Refresh (Overclock)",
+            "values": [
+                {
+                    "label": "",
+                    "value": "Auto"
+                },
+                {
+                    "label": "",
+                    "value": "1500"
+                },
+                {
+                    "label": "",
+                    "value": "2200"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "False",
+            "info": "Force disable Expansion Pak (might improve performance for some games while reducing emulation accuracy, will break games that require it).",
+            "key": "mupen64plus-ForceDisableExtraMem",
+            "label": "Disable Expansion Pak",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "False",
+            "info": "(HACK) Ignore emulated TLB Exceptions, this might fix some broken romhacks. This option might be removed in the future.",
+            "key": "mupen64plus-IgnoreTLBExceptions",
+            "label": "Ignore emulated TLB Exceptions",
+            "values": [
+                {
+                    "label": "Don't Ignore",
+                    "value": "False"
+                },
+                {
+                    "label": "Ignore TLB Exceptions if not using TLB",
+                    "value": "OnlyNotEnabled"
+                },
+                {
+                    "label": "Always Ignore TLB Exceptions",
+                    "value": "AlwaysIgnoreTLB"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Count per Op is used to approximate the Counter reg, 0 will use the embedded Database (or default to 2). Changing this will break stuff!",
+            "key": "mupen64plus-CountPerOp",
+            "label": "Count Per Op",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "3"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                }
+            ]
+        },
+        {
+            "category": "",
+            "default": "0",
+            "info": "Denominator for Count per Op (allowing sub-1 Count per Op in practice). Changing this can break stuff!",
+            "key": "mupen64plus-CountPerOpDenomPot",
+            "label": "Count Per Op Divider (Overclock)",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "1"
+                },
+                {
+                    "label": "",
+                    "value": "2"
+                },
+                {
+                    "label": "",
+                    "value": "3"
+                },
+                {
+                    "label": "",
+                    "value": "4"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                },
+                {
+                    "label": "",
+                    "value": "6"
+                },
+                {
+                    "label": "",
+                    "value": "7"
+                },
+                {
+                    "label": "",
+                    "value": "8"
+                },
+                {
+                    "label": "",
+                    "value": "9"
+                },
+                {
+                    "label": "",
+                    "value": "10"
+                },
+                {
+                    "label": "",
+                    "value": "11"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "15",
+            "info": "Size of the non responsive area around an analog stick.",
+            "key": "mupen64plus-astick-deadzone",
+            "label": "Analog Deadzone (percent)",
+            "values": [
+                {
+                    "label": "",
+                    "value": "0"
+                },
+                {
+                    "label": "",
+                    "value": "5"
+                },
+                {
+                    "label": "",
+                    "value": "10"
+                },
+                {
+                    "label": "",
+                    "value": "15"
+                },
+                {
+                    "label": "",
+                    "value": "20"
+                },
+                {
+                    "label": "",
+                    "value": "25"
+                },
+                {
+                    "label": "",
+                    "value": "30"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "100",
+            "info": "Adjust how far the stick needs to be moved to reach its max value.",
+            "key": "mupen64plus-astick-sensitivity",
+            "label": "Analog Sensitivity (percent)",
+            "values": [
+                {
+                    "label": "",
+                    "value": "50"
+                },
+                {
+                    "label": "",
+                    "value": "55"
+                },
+                {
+                    "label": "",
+                    "value": "60"
+                },
+                {
+                    "label": "",
+                    "value": "65"
+                },
+                {
+                    "label": "",
+                    "value": "70"
+                },
+                {
+                    "label": "",
+                    "value": "75"
+                },
+                {
+                    "label": "",
+                    "value": "80"
+                },
+                {
+                    "label": "",
+                    "value": "85"
+                },
+                {
+                    "label": "",
+                    "value": "90"
+                },
+                {
+                    "label": "",
+                    "value": "95"
+                },
+                {
+                    "label": "",
+                    "value": "100"
+                },
+                {
+                    "label": "",
+                    "value": "105"
+                },
+                {
+                    "label": "",
+                    "value": "110"
+                },
+                {
+                    "label": "",
+                    "value": "115"
+                },
+                {
+                    "label": "",
+                    "value": "120"
+                },
+                {
+                    "label": "",
+                    "value": "125"
+                },
+                {
+                    "label": "",
+                    "value": "130"
+                },
+                {
+                    "label": "",
+                    "value": "135"
+                },
+                {
+                    "label": "",
+                    "value": "140"
+                },
+                {
+                    "label": "",
+                    "value": "145"
+                },
+                {
+                    "label": "",
+                    "value": "150"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "C1",
+            "info": "Select Right C Button mapping.",
+            "key": "mupen64plus-r-cbutton",
+            "label": "Right C Button",
+            "values": [
+                {
+                    "label": "",
+                    "value": "C1"
+                },
+                {
+                    "label": "",
+                    "value": "C2"
+                },
+                {
+                    "label": "",
+                    "value": "C3"
+                },
+                {
+                    "label": "",
+                    "value": "C4"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "C2",
+            "info": "Select Left C Button mapping.",
+            "key": "mupen64plus-l-cbutton",
+            "label": "Left C Button",
+            "values": [
+                {
+                    "label": "",
+                    "value": "C1"
+                },
+                {
+                    "label": "",
+                    "value": "C2"
+                },
+                {
+                    "label": "",
+                    "value": "C3"
+                },
+                {
+                    "label": "",
+                    "value": "C4"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "C3",
+            "info": "Select Down C Button mapping.",
+            "key": "mupen64plus-d-cbutton",
+            "label": "Down C Button",
+            "values": [
+                {
+                    "label": "",
+                    "value": "C1"
+                },
+                {
+                    "label": "",
+                    "value": "C2"
+                },
+                {
+                    "label": "",
+                    "value": "C3"
+                },
+                {
+                    "label": "",
+                    "value": "C4"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "C4",
+            "info": "Select Up C Button mapping.",
+            "key": "mupen64plus-u-cbutton",
+            "label": "Up C Button",
+            "values": [
+                {
+                    "label": "",
+                    "value": "C1"
+                },
+                {
+                    "label": "",
+                    "value": "C2"
+                },
+                {
+                    "label": "",
+                    "value": "C3"
+                },
+                {
+                    "label": "",
+                    "value": "C4"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "False",
+            "info": "Use an alternate control scheme, useful for some 3rdparty controllers.",
+            "key": "mupen64plus-alt-map",
+            "label": "Independent C-button Controls",
+            "values": [
+                {
+                    "label": "",
+                    "value": "False"
+                },
+                {
+                    "label": "",
+                    "value": "True"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "memory",
+            "info": "Select Player 1 Controller Pak.",
+            "key": "mupen64plus-pak1",
+            "label": "Player 1 Pak",
+            "values": [
+                {
+                    "label": "",
+                    "value": "none"
+                },
+                {
+                    "label": "",
+                    "value": "memory"
+                },
+                {
+                    "label": "",
+                    "value": "rumble"
+                },
+                {
+                    "label": "",
+                    "value": "transfer"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "none",
+            "info": "Select Player 2 Controller Pak.",
+            "key": "mupen64plus-pak2",
+            "label": "Player 2 Pak",
+            "values": [
+                {
+                    "label": "",
+                    "value": "none"
+                },
+                {
+                    "label": "",
+                    "value": "memory"
+                },
+                {
+                    "label": "",
+                    "value": "rumble"
+                },
+                {
+                    "label": "",
+                    "value": "transfer"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "none",
+            "info": "Select Player 3 Controller Pak.",
+            "key": "mupen64plus-pak3",
+            "label": "Player 3 Pak",
+            "values": [
+                {
+                    "label": "",
+                    "value": "none"
+                },
+                {
+                    "label": "",
+                    "value": "memory"
+                },
+                {
+                    "label": "",
+                    "value": "rumble"
+                },
+                {
+                    "label": "",
+                    "value": "transfer"
+                }
+            ]
+        },
+        {
+            "category": "input",
+            "default": "none",
+            "info": "Select Player 4 Controller Pak.",
+            "key": "mupen64plus-pak4",
+            "label": "Player 4 Pak",
+            "values": [
+                {
+                    "label": "",
+                    "value": "none"
+                },
+                {
+                    "label": "",
+                    "value": "memory"
+                },
+                {
+                    "label": "",
+                    "value": "rumble"
+                },
+                {
+                    "label": "",
+                    "value": "transfer"
+                }
+            ]
+        }
+    ]
+}
